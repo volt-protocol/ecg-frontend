@@ -1,5 +1,4 @@
-import { Address, signTypedData } from '@wagmi/core';
-import Web3, { Bytes } from 'web3';
+import { signTypedData } from '@wagmi/core';
 import { splitSignature } from '@ethersproject/bytes';
 
 function secondsToAppropriateUnit(seconds: number): string {

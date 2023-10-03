@@ -1,12 +1,10 @@
 import axios from 'axios'
 
+const apiUrl = 'https://api.staging.ecg.la-tribu.xyz/api/'
 
 const request = axios.create({
     withCredentials: false,
-    baseURL: process.env.REACT_APP_API_URL,
-    headers: {
-        Authorization: process.env.publicKey
-    }
+    baseURL: apiUrl
 })
 
 

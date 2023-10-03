@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from "react";
-import Dropdown from "components/dropdown";
+// import Dropdown from "components/dropdown";
 import { FiAlignJustify } from "react-icons/fi";
 import { Link, useLocation, useParams } from "react-router-dom";
-import navbarimage from "assets/img/layout/Navbar.png";
-import { BsArrowBarUp } from "react-icons/bs";
-import { FiSearch } from "react-icons/fi";
+// import navbarimage from "assets/img/layout/Navbar.png";
+// import { BsArrowBarUp } from "react-icons/bs";
+// import { FiSearch } from "react-icons/fi";
 import { RiMoonFill, RiSunFill } from "react-icons/ri";
 import {
   IoMdNotificationsOutline,
   IoMdInformationCircleOutline,
 } from "react-icons/io";
-import avatar from "assets/img/avatars/avatar4.png";
+// import avatar from "assets/img/avatars/avatar4.png";
 
 import { useAccount, useConnect, useDisconnect, useEnsName } from "wagmi";
-import { InjectedConnector } from "wagmi/connectors/injected";
+// import { InjectedConnector } from "wagmi/connectors/injected";
 import Store from "store";
 import { lendingTerms } from "types/lending";
 

@@ -71,7 +71,7 @@ function LendingTerm() {
    
     async function getCreditAllocated() :Promise<void> {
       const result = await readContract({
-        address: process.env.REACT_APP_SURPLUS_GUILD_MINTER_ADDRESS as Address,
+        address: import.meta.env.VITE_SURPLUS_GUILD_MINTER_ADDRESS as Address,
         abi: surplusGuildMinterAbi,
         functionName: "stakes",
         args: [contractAddress,address],
@@ -80,7 +80,7 @@ function LendingTerm() {
     }
     async function getCreditdAvailable():Promise<void>  {
       const result = await readContract({
-        address:process.env.REACT_APP_CREDIT_ADDRESS as Address,
+        address:import.meta.env.VITE_CREDIT_ADDRESS as Address,
         abi: creditAbi,
         functionName: "balanceOf",
         args: [address],

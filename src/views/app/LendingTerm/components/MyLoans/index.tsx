@@ -146,7 +146,7 @@ function Myloans(props: {
 
     try {
       const approve = await writeContract({
-        address: process.env.REACT_APP_CREDIT_ADDRESS,
+        address: import.meta.env.VITE_CREDIT_ADDRESS,
         abi: creditAbi,
         functionName: "approve",
         args: [smartContractAddress, UnitToDecimal(inputValue, 18)],
@@ -182,6 +182,7 @@ function Myloans(props: {
     } catch (e) {
       setLoading(false);
       toastError("transaction failed");
+      console.log(e)
     }
   }
 
@@ -213,7 +214,7 @@ function Myloans(props: {
       setLoading(true);
 
       const approve = await writeContract({
-        address: process.env.REACT_APP_CREDIT_ADDRESS,
+        address: import.meta.env.VITE_CREDIT_ADDRESS,
         abi: creditAbi,
         functionName: "approve",
         args: [smartContractAddress, UnitToDecimal(borrowCredit, 18)],

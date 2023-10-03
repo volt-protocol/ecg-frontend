@@ -86,7 +86,7 @@ function CreateLoan({
       // check si il y a un  open fees ==> approve credit
       if (openingFee > 0) {
         const approveCredit = await writeContract({
-          address: process.env.REACT_APP_CREDIT_ADDRESS,
+          address: import.meta.env.VITE_CREDIT_ADDRESS,
           abi: creditAbi,
           functionName: "approve",
           args: [contractAddress, UnitToDecimal(borrowAmount * openingFee, 18)],

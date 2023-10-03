@@ -50,7 +50,7 @@ function Swap({
         toastError("not enough guild");
       } else {
         const { hash } = await writeContract({
-          address: process.env.REACT_APP_GUILD_ADDRESS,
+          address: import.meta.env.VITE_GUILD_ADDRESS,
           abi: guildAbi,
           functionName: "incrementGauge",
           args: [smartContractAddress, UnitToDecimal(value, 18)],
@@ -62,7 +62,7 @@ function Swap({
         toastError("not enough guild allocated");
       } else {
         const { hash } = await writeContract({
-          address: process.env.REACT_APP_GUILD_ADDRESS,
+          address: import.meta.env.VITE_GUILD_ADDRESS,
           abi: guildAbi,
           functionName: "decrementGauge",
           args: [smartContractAddress, UnitToDecimal(value, 18)],

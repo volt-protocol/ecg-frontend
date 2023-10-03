@@ -60,11 +60,11 @@ function Stack({
           return;
         } else {
           const approve = await writeContract({
-            address: process.env.REACT_APP_CREDIT_ADDRESS,
+            address: import.meta.env.VITE_CREDIT_ADDRESS,
             abi: creditAbi,
             functionName: "approve",
             args: [
-              process.env.REACT_APP_SURPLUS_GUILD_MINTER_ADDRESS,
+              import.meta.env.VITE_SURPLUS_GUILD_MINTER_ADDRESS,
               UnitToDecimal(value, 18),
             ],
           });
@@ -79,7 +79,7 @@ function Stack({
             return;
           }
           const { hash } = await writeContract({
-            address: process.env.REACT_APP_SURPLUS_GUILD_MINTER_ADDRESS,
+            address: import.meta.env.VITE_SURPLUS_GUILD_MINTER_ADDRESS,
             abi: surplusGuildMinterAbi,
             functionName: "stake",
             args: [termAddress, UnitToDecimal(value, 18)],
@@ -105,7 +105,7 @@ function Stack({
           return;
         } else {
           const { hash } = await writeContract({
-            address: process.env.REACT_APP_SURPLUS_GUILD_MINTER_ADDRESS,
+            address: import.meta.env.VITE_SURPLUS_GUILD_MINTER_ADDRESS,
             abi: surplusGuildMinterAbi,
             functionName: "unstake",
             args: [termAddress],

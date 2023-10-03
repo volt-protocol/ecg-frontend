@@ -30,7 +30,7 @@ async function call(loandId: string, collateralAmount: number){
   setLoading(true);
   if(callFee > 0){
     const { hash } = await writeContract({
-      address: process.env.REACT_APP_CREDIT_ADDRESS,
+      address: import.meta.env.VITE_CREDIT_ADDRESS,
       abi: creditAbi,
       functionName: "approve",
       args: [termAddress, UnitToDecimal(callFee*collateralAmount, 18) ],

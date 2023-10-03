@@ -87,7 +87,8 @@ const routes : RoutesType[] = [
     path: "lendingTerms/:contractAddress",
     icon: <GiBanknote className="h-6 w-6 " />,
     component: <LendingTerm />,
-    showInSidebar:false
+    showInSidebar:false,
+    secondary:true
   },
 
 ];

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Dropdown from "components/dropdown";
 import { FiAlignJustify } from "react-icons/fi";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import navbarimage from "assets/img/layout/Navbar.png";
 import { BsArrowBarUp } from "react-icons/bs";
 import { FiSearch } from "react-icons/fi";
@@ -14,6 +14,8 @@ import avatar from "assets/img/avatars/avatar4.png";
 
 import { useAccount, useConnect, useDisconnect, useEnsName } from "wagmi";
 import { InjectedConnector } from "wagmi/connectors/injected";
+import Store from "store";
+import { lendingTerms } from "types/lending";
 
 const Navbar = (props: {
   onOpenSidenav: () => void;
@@ -22,6 +24,8 @@ const Navbar = (props: {
 }) => {
   const { onOpenSidenav, brandText } = props;
   const [darkmode, setDarkmode] = React.useState(false);
+  const store = Store();
+  const location = useLocation();
 
   function ConnectWallet() {
     const { connector: activeConnector, address, isConnected } = useAccount();
@@ -41,26 +45,37 @@ const Navbar = (props: {
       <>
         {connectors.map((connector: any) => (
           <button
-            className="rounded-xl bg-blueSecondary px-6 py-4 font-poppins text-white"
+            className="cursor-pointer rounded-xl bg-blueSecondary px-6 py-4 font-poppins text-white"
             disabled={!connector.ready}
             key={connector.id}
             onClick={() => connect({ connector })}
           >
             {!isLoading && "Connect Wallet"}
-          
+
             {isLoading &&
               pendingConnector?.id === connector.id &&
-             connector.name + " (connecting)"}
+              connector.name + " (connecting)"}
           </button>
         ))}{" "}
       </>
     );
   }
 
+  function TermName(): string | null {
+    if (!location.state) {
+      return null;
+    }
+    const address = location.state.collateralAddress;
+    const item = store.lendingTermsState.find(
+      (entry: lendingTerms) => entry.collateralAddress === address
+    );
+    return item ? item.collateral : null;
+  }
+
   return (
     <nav className="sticky top-4 z-40 flex flex-row flex-wrap items-center justify-between rounded-xl bg-white/10 p-2 backdrop-blur-xl dark:bg-[#0b14374d]">
       <div className="ml-[6px]">
-        <div className="h-6 w-[224px] pt-1">
+        {/* <div className="h-6 w-[224px] pt-1">
           <a
             className="text-sm font-normal text-navy-700 hover:underline dark:text-white dark:hover:text-white"
             href=" "
@@ -77,13 +92,13 @@ const Navbar = (props: {
           >
             {brandText}
           </Link>
-        </div>
+        </div> */}
         <p className="shrink text-[33px] capitalize text-navy-700 dark:text-white">
           <Link
             to="#"
             className="font-bold capitalize hover:text-navy-700 dark:hover:text-white"
           >
-            {brandText}
+            {brandText === "Lending Term Details" ? TermName() : brandText}
           </Link>
         </p>
       </div>

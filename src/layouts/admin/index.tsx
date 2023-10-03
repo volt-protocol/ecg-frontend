@@ -22,17 +22,20 @@ export default function Admin(props: { [x: string]: any }) {
 
   const getActiveRoute = (routes: RoutesType[]): string | boolean => {
     let activeRoute = "Main Dashboard";
+  
     for (let i = 0; i < routes.length; i++) {
-      if (
-        window.location.href.indexOf(
-          routes[i].layout + "/" + routes[i].path
-        ) !== -1
-      ) {
+      // Convertir le path en une expression régulière
+      const regexPath = new RegExp("^" + routes[i].layout + "/" + routes[i].path.replace(/:\w+/g, "\\w+") + "$");
+  
+      if (regexPath.test(window.location.pathname)) {
         setCurrentRoute(routes[i].name);
+        return routes[i].name;
       }
     }
     return activeRoute;
   };
+  
+  
   const getActiveNavbar = (routes: RoutesType[]): string | boolean => {
     let activeNavbar = false;
     for (let i = 0; i < routes.length; i++) {

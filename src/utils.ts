@@ -108,12 +108,18 @@ return {
 
 }
 
+function preciseRound(value: number, decimals: number): number {
+  const factor = Math.pow(10, decimals);
+  return Math.round(value * factor) / factor;
+}
+
 
 export {
   secondsToAppropriateUnit,
   formatCurrencyValue,
   DecimalToUnit,
   UnitToDecimal,
-  signTransferPermit
+  signTransferPermit,
+  preciseRound
   
 };

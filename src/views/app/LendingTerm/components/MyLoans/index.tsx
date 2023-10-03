@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Card from "components/card";
 import {
-    CellContext,
+  CellContext,
   createColumnHelper,
   flexRender,
   getCoreRowModel,
@@ -10,84 +10,90 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import Progress from "components/progress";
-import { waitForTransaction, WaitForTransactionArgs, writeContract, WriteContractResult } from "@wagmi/core";
+import {
+  waitForTransaction,
+  WaitForTransactionArgs,
+  writeContract,
+  WriteContractResult,
+} from "@wagmi/core";
 import { creditAbi, termAbi } from "guildAbi";
 import { signTransferPermit, UnitToDecimal } from "utils";
 import { toastError, toastRocket } from "toast";
+import { LoansObj } from "types/lending";
+import SpinnerLoader from "components/spinner";
 
-type MyLoansObj = {
-  loadId: string;
-  address: string;
-  name: string;
-  collateralCredit: number;
-  borrowCredit: number;
-  ltv: number;
-};
+const columnHelper = createColumnHelper<LoansObj>();
 
-
-
-
-const columnHelper = createColumnHelper<MyLoansObj>();
-
-function Myloans(props: { tableData: any, smartContractAddress: string}) {
+function Myloans(props: {
+  tableData: LoansObj[];
+  smartContractAddress: string;
+}) {
   const inputRefs = React.useRef<{
     [key: string]: React.RefObject<HTMLInputElement>;
   }>({});
 
-// const { account, chainId, provider } = useWeb3React()
+  // const { account, chainId, provider } = useWeb3React()
   const [values, setValues] = React.useState<{ [key: string]: number }>({});
-  const { tableData,smartContractAddress } = props;
+  const { tableData, smartContractAddress } = props;
   const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [loading, setLoading] = React.useState(false);
+
   let defaultData = tableData;
   const columns = [
-    columnHelper.accessor("loadId", {
+    columnHelper.accessor("id", {
       id: "loadId",
       header: "Loan ID",
-      cell: (info) => info.getValue().slice(0, 8)
+      cell: (info) => info.getValue().slice(0, 8),
     }),
-    columnHelper.accessor("name", {
-      id: "name",
-      header: "name",
+    columnHelper.accessor("lendingTermAddress", {
+      id: "lendingTermAddress",
+      header: "Lending Term Address",
       cell: (info) => info.getValue(),
     }),
-    columnHelper.accessor("address", {
-      id: "address",
-      header: "Address",
-      cell: (info) => info.getValue(),
-    }),
-    columnHelper.accessor("collateralCredit", {
-      id: "collateralCredit",
-      header: "Collateral Credit",
+    columnHelper.accessor("collateralAmount", {
+      id: "collateralAmount",
+      header: "Collateral Amount",
       cell: (info) => info.getValue().toString(),
     }),
-    columnHelper.accessor("borrowCredit", {
+    columnHelper.accessor("borrowAmount", {
       id: "borrowCredit",
-      header: "Borrow Credit",
+      header: "Credit Borrowed",
       cell: (info) => info.getValue().toString(),
     }),
-    columnHelper.accessor("ltv", {
+    {
       id: "ltv",
       header: "LTV",
-      cell: (info) => `${info.getValue()}%`,
-    }),
+      cell: (info: any) => {
+        return (
+          <p>
+            {Math.round(
+              (parseFloat(info.row.original.borrowAmount) /
+                parseFloat(info.row.original.collateralAmount)) *
+                100
+            )}
+            %
+          </p>
+        );
+      },
+    },
     {
       id: "partialRepay",
       header: "Partial Repay",
-      cell: (info :any) => {
-        if (!inputRefs.current[info.row.original.loadId]) {
-          inputRefs.current[info.row.original.loadId] = React.createRef();
+      cell: (info: any) => {
+        if (!inputRefs.current[info.row.original.id]) {
+          inputRefs.current[info.row.original.id] = React.createRef();
         }
 
         return (
           <div className="flex items-center">
             <input
-              ref={inputRefs.current[info.row.original.loadId]}
+              ref={inputRefs.current[info.row.original.id]}
               type="number"
-              className="mr-2 rounded-2xl"
+              className="mr-2 rounded-2xl  number-spinner-off dark:text-black"
               placeholder="0"
             />
             <button
-              onClick={() => partialRepay(info.row.original.loadId)}
+              onClick={() => partialRepay(info.row.original.id)}
               className="min-w-[8rem] rounded-2xl bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500 px-3 py-1 text-white"
             >
               Partial Repay
@@ -100,13 +106,23 @@ function Myloans(props: { tableData: any, smartContractAddress: string}) {
       id: "fullRepay",
       header: "Repay",
       cell: (info: any) => (
-        <button onClick={()=>repay(info.row.original.loadId, info.row.original.borrowCredit)} className="min-w-[8rem] rounded-2xl bg-green-500 px-3 py-1 text-white ">
+        <button
+          onClick={() =>
+            repay(info.row.original.id, info.row.original.borrowAmount)
+          }
+          className="min-w-[8rem] rounded-2xl bg-green-500 px-3 py-1 text-white "
+        >
           Repay
         </button>
       ),
     },
   ]; // eslint-disable-next-line
-  const [data, setData] = React.useState(() => [...defaultData]);
+  const [data, setData] = React.useState(() =>
+    defaultData.filter((loan) => loan.status !== "closed")
+  );
+  useEffect(() => {
+    setData(defaultData.filter((loan) => loan.status !== "closed"));
+  }, [defaultData]);
   const table = useReactTable({
     data,
     columns,
@@ -120,115 +136,128 @@ function Myloans(props: { tableData: any, smartContractAddress: string}) {
   });
 
   async function partialRepay(loanId: string) {
+    setLoading(true);
+    const inputValue = Number(inputRefs.current[loanId].current?.value);
+
+    if (inputValue <= 0 || inputValue === null || inputValue === undefined) {
+      setLoading(false);
+      return toastError("Please enter a value");
+    }
+
+    try {
+      const approve = await writeContract({
+        address: process.env.REACT_APP_CREDIT_ADDRESS,
+        abi: creditAbi,
+        functionName: "approve",
+        args: [smartContractAddress, UnitToDecimal(inputValue, 18)],
+      });
+
+      const data = await waitForTransaction({
+        hash: approve.hash,
+      });
+
+      if (data.status != "success") {
+        setLoading(false);
+        return toastError("You don't have enough credit");
+      }
+
+      const { hash } = await writeContract({
+        address: smartContractAddress,
+        abi: termAbi,
+        functionName: "partialRepay",
+        args: [loanId, UnitToDecimal(inputValue, 18)],
+      });
+
+      const checkPartialPay = await waitForTransaction({
+        hash: hash,
+      });
+
+      if (checkPartialPay.status === "success") {
+        setLoading(false);
+        toastRocket("transaction success");
+      } else {
+        setLoading(false);
+        toastError("transaction failed");
+      }
+    } catch (e) {
+      setLoading(false);
+      toastError("transaction failed");
+    }
+  }
+
+  async function partialRepayWithPermit(loanId: string) {
     const inputValue = inputRefs.current[loanId].current?.value;
 
     if (inputValue && /^\d*$/.test(inputValue)) {
       const valueToRepay = Number(inputValue);
       if (valueToRepay === 0) return toastError("Please enter a value");
 
-    //  try{
-
-      const  approve   = await writeContract({
-        address:process.env.REACT_APP_CREDIT_ADDRESS,
-        abi: creditAbi,
-        functionName: "approve",
-        args: [smartContractAddress, UnitToDecimal(valueToRepay, 18)],
-      });
-
-
-      const data = await waitForTransaction({
-        hash: approve.hash,
-      })
-
-      
-
-      if (data.status ==="success"){
-      const { hash } = await writeContract({
-        address: smartContractAddress,
-        abi: termAbi,
-        functionName: "partialRepay",
-        args: [loanId, UnitToDecimal(valueToRepay, 18)],
-      });
-
-      const data = await waitForTransaction({
-        hash: hash,
-      })
-
-      if (data.status ==="success"){
-        toastRocket("transaction success")
-      }
-
-    }else toastError("Approve transaction failed")
-  // }
-  // catch(e){
-  //   toastError("transaction failed")
-  // }
-
-    }
-  }
-
-  async function partialRepayWithPermit(loanId:string){
-    const inputValue = inputRefs.current[loanId].current?.value;
-
-    if (inputValue && /^\d*$/.test(inputValue)) {
-      const valueToRepay = Number(inputValue);
-      if (valueToRepay === 0) return toastError("Please enter a value"); 
-      console.log(UnitToDecimal(valueToRepay, 18), "valueToRepay");
-
-      const {r,s,v,deadline}= await signTransferPermit(valueToRepay);
+      const { r, s, v, deadline } = await signTransferPermit(valueToRepay);
 
       const { hash } = await writeContract({
         address: smartContractAddress,
         abi: termAbi,
         functionName: "partialRepayWithPermit",
-        args: [loanId, UnitToDecimal(valueToRepay, 18),deadline,{v:v,r:r,s:s}],
+        args: [
+          loanId,
+          UnitToDecimal(valueToRepay, 18),
+          deadline,
+          { v: v, r: r, s: s },
+        ],
       });
+    }
   }
-}
 
   async function repay(loanId: string, borrowCredit: number) {
-      try{
+    try {
+      setLoading(true);
 
-        const  approve   = await writeContract({
-          address:process.env.REACT_APP_CREDIT_ADDRESS,
-          abi: creditAbi,
-          functionName: "approve",
-          args: [smartContractAddress, UnitToDecimal(borrowCredit, 18)],
-        });
-  
-        const data  = await waitForTransaction({
-          hash: approve.hash,
-        })
+      const approve = await writeContract({
+        address: process.env.REACT_APP_CREDIT_ADDRESS,
+        abi: creditAbi,
+        functionName: "approve",
+        args: [smartContractAddress, UnitToDecimal(borrowCredit, 18)],
+      });
 
-          
-        if (data.status ==="success"){
-          const { hash } = await writeContract({
-            address: smartContractAddress,
-            abi: termAbi,
-            functionName: "repay",
-            args: [loanId],
-          });
-  
-        const data = await waitForTransaction({
-          hash: hash,
-        })
-  
-        if (data.status ==="success"){
-          toastRocket("transaction success")
-        }
-  
-      }else toastError("Approve transaction failed")
-    }
-    catch(e){
-      toastError("transaction failed")
+      const data = await waitForTransaction({
+        hash: approve.hash,
+      });
+
+      if (data.status != "success") {
+        setLoading(false);
+        return toastError("You don't have enough credit");
+      }
+
+      const { hash } = await writeContract({
+        address: smartContractAddress,
+        abi: termAbi,
+        functionName: "repay",
+        args: [loanId],
+      });
+
+      const checkRepay = await waitForTransaction({
+        hash: hash,
+      });
+
+      if (checkRepay.status === "success") {
+        toastRocket("transaction success");
+        setLoading(false);
+      } else toastError("repay transaction failed");
+    } catch (e) {
+      toastError("transaction failed");
+      console.log(e); 
+      setLoading(false);
     }
   }
-
-
-
 
   return (
     <Card extra={"w-full h-full px-6 pb-6 sm:overflow-x-auto"}>
+      {loading && (
+        <div className="absolute h-screen w-full">
+          <SpinnerLoader />
+        </div>
+      )}
+
       <div className="relative flex items-center justify-between pt-4">
         <div className="text-xl font-bold text-navy-700 dark:text-white">
           My Active Loans

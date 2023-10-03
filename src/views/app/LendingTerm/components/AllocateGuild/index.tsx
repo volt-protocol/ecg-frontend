@@ -1,12 +1,13 @@
 import React, { useState } from "react";
-import { writeContract } from "@wagmi/core";
-import {guildAbi} from "guildAbi";
+import { waitForTransaction, writeContract } from "@wagmi/core";
+import { guildAbi } from "guildAbi";
 import { UnitToDecimal } from "utils";
 import { toastError, toastRocket } from "toast";
+import SpinnerLoader from "components/spinner";
 
 const style = {
-  wrapper: `w-screen flex items-center justify-center mt-14 `,
-  content: `bg-transparent w-full  rounded-2xl px-4 text-white`,
+  wrapper: `w-screen flex  items-center justify-center mt-14 `,
+  content: `bg-transparent w-full   rounded-2xl px-4 text-white`,
   formHeader: `px-2 flex items-center justify-between font-semibold text-xl`,
   transferPropContainer: `bg-transparent my-3 rounded-2xl p-4 text-xl border border-white hover:border-[#41444F]  flex justify-between items-center`,
   transferPropInput: `bg-transparent placeholder:text-[#B2B9D2] outline-none w-full text-2xl  `,
@@ -30,7 +31,7 @@ function AllocateGuild({
   smartContractAddress: string;
 }) {
   const [value, setValue] = useState<number>(0);
-
+  const [loading, setLoading] = useState<boolean>(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -41,42 +42,84 @@ function AllocateGuild({
     }
   };
 
-  async function handleVote() {
-    
-    if (value == 0) return toastError("Please enter a value");
-    if (textButton === "Increment") {
-      if ((value as number) > availableGuild) {
-        toastError("not enough guild");
-      } else {
-        const { hash } = await writeContract({
-          address: process.env.REACT_APP_GUILD_ADDRESS,
-          abi: guildAbi,
-          functionName: "incrementGauge",
-          args: [smartContractAddress, UnitToDecimal(value, 18)],
-        });
-        toastRocket(`Transaction sent with hash ${hash} `);
+  async function handleVote(): Promise<void> {
+    try {
+      if (value == 0) {
+        toastError("Please enter a value");
+        return;
       }
-    } else if (textButton === "Decrement") {
-      if ((value as number) > allocatedGuild) {
-        toastError("not enough guild allocated");
-      } else {
-        const { hash } = await writeContract({
-          address: process.env.REACT_APP_GUILD_ADDRESS,
-          abi: guildAbi,
-          functionName: "decrementGauge",
-          args: [smartContractAddress, UnitToDecimal(value, 18)],
-        });
-        toastRocket(`Transaction sent with hash ${hash} `);
+      setLoading(true);
+      if (textButton === "Increment") {
+        if ((value as number) > availableGuild) {
+          setLoading(false);
+         toastError("not enough guild");
+         return ;
+        } else {
+          const { hash } = await writeContract({
+            address: process.env.REACT_APP_GUILD_ADDRESS,
+            abi: guildAbi,
+            functionName: "incrementGauge",
+            args: [smartContractAddress, UnitToDecimal(value, 18)],
+          });
+          const checkAllocate = await waitForTransaction({
+            hash: hash,
+          });
+          if (checkAllocate.status != "success") {
+            toastError("Allocate transaction failed");
+            setLoading(false);
+            return;
+          }
+          toastRocket(`Your guilds have been stacked`);
+          setLoading(false);
+        }
+      } else if (textButton === "Decrement") {
+        if ((value as number) > allocatedGuild) {
+          toastError("not enough guild allocated");
+          setLoading(false);
+          return;
+        } else {
+          const { hash } = await writeContract({
+            address: process.env.REACT_APP_GUILD_ADDRESS,
+            abi: guildAbi,
+            functionName: "decrementGauge",
+            args: [smartContractAddress, UnitToDecimal(value, 18)],
+          });
+          const checkUnstack = await waitForTransaction({
+            hash: hash,
+          });
+          if (checkUnstack.status != "success") {
+            toastError("Unstack transaction failed");
+            setLoading(false);
+            return;
+          }
+          toastRocket(`Your guilds have been unstacked`);
+          setLoading(false);
+        }
       }
+    } catch (e) {
+      toastError("transaction failed");
+      console.log(e);
+      setLoading(false);
     }
   }
 
   return (
     <div className={style.content}>
-      <div className={style.formHeader}>
-      </div>
-      <div className="my-5">
-        <p className="text-2xl">Your current guild stacked : <span className="text-3xl">{allocatedGuild}</span> </p>
+      {loading && (
+        <div className="absolute h-screen w-full">
+          <SpinnerLoader />
+        </div>
+      )}
+      <div className={style.formHeader}></div>
+      <div className="my-2 grid grid-cols-2">
+        <p className="font-semibold">
+          Your current guilds stacked :{" "}
+          <span className="text-xl">{allocatedGuild}</span>{" "}
+        </p>
+        <p className="font-semibold">
+          Your available guilds :{" "}
+          <span className="text-xl">{availableGuild}</span>{" "}
+        </p>
       </div>
       <div className={style.transferPropContainer}>
         <input
@@ -87,22 +130,26 @@ function AllocateGuild({
           pattern="^[0-9]*[.,]?[0-9]*$"
         />
         <div className="w-full justify-end text-xl">
-          {textButton === "Increment" ? (<p> Guild you want to stack</p>):(<p> Guild you want to unstack</p>)}
-         
+          {textButton === "Increment" ? (
+            <p> Guilds you want to stack</p>
+          ) : (
+            <p> Guild you want to unstack</p>
+          )}
         </div>
       </div>
       {textButton === "Increment" ? (
         <>
-          <p>Your guild will increase the buffer cap by {value}</p>
+          <p>Your guilds will increase the buffer cap by {value}</p>
           <p>Estimated credit/guild yearly</p>
         </>
-      ) : (<>
-        <p>Your guild will decrease the buffer cap by {value}</p>
-        <br/>
+      ) : (
+        <>
+          <p>Your guilds will decrease the buffer cap by {value}</p>
+          <br />
         </>
       )}
       <div onClick={handleVote} className={style.confirmButton}>
-        {textButton === "Increment" ? "Stack" : "Unstack"}
+        {textButton === "Increment" ? "Stake" : "Unstake"}
       </div>
     </div>
   );

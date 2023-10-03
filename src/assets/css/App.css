@@ -6,4 +6,15 @@ body {
 option {
   color: black;
 }
+/* For Firefox */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* For Chrome, Safari, Edge */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
 

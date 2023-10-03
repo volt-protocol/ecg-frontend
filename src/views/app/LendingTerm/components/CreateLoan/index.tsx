@@ -1,8 +1,9 @@
 import { waitForTransaction, writeContract } from "@wagmi/core";
+import SpinnerLoader from "components/spinner";
 import { creditAbi, termAbi, usdcAbi } from "guildAbi";
 import React, { useEffect, useState } from "react";
 import { toastError, toastRocket } from "toast";
-import { UnitToDecimal, signTransferPermit } from "utils";
+import { UnitToDecimal, preciseRound, signTransferPermit } from "utils";
 import { keccak256 } from "viem";
 import { useSignMessage } from "wagmi";
 
@@ -15,7 +16,7 @@ function CreateLoan({
   minBorrow,
   borrowRatio,
   callFee,
-  interestRate,
+  currentDebt,
   availableDebt,
 }: {
   owner: string;
@@ -26,87 +27,106 @@ function CreateLoan({
   minBorrow: number;
   borrowRatio: number;
   callFee: number;
-  interestRate: number;
+  currentDebt: number;
   availableDebt: number;
 }) {
   const [borrowAmount, setBorrowAmount] = useState<number>(0);
   const [collateralAmount, setCollateralAmount] = useState<number>(0);
   const [minCollateralAmount, setMinCollateralAmount] = useState<number>(0);
+  // const [bigIntCollateralAmount, setBigIntCollateralAmount] = useState<BigInt>(BigInt(0));
   const [permitMessage, setPermitMessage] = useState("");
-  
+  const [loading, setLoading] = useState(false);
 
   // borrow function :
   //borrow amount
   // collateral amount
 
   async function borrow() {
-    //check ratio
-    if (collateralAmount < minCollateralAmount) {
-      toastError(
-        `Collateral amount can't be below than ${minCollateralAmount} `
-      );
-      return;
-    }
-    if (borrowAmount > availableDebt) {
-      toastError(
-        `the max borrow amount is ${availableDebt} `
-      );
-      return;
-    }
-    // approve collateral first
-    const approve = await writeContract({
-      address: collateralAddress,
-      abi: usdcAbi,
-      functionName: "approve",
-      args: [contractAddress, UnitToDecimal(collateralAmount, collateralDecimals)],
-    });
-
-    const checkApprove = await waitForTransaction({
-      hash: approve.hash,
-    });
-
-    if (checkApprove.status != "success") {
-      toastError("Approve transaction failed");
-      return;
-    }
-
-    // check si il y a un  open fees ==> approve credit
-    console.log(openingFee,"openingFee")
-    if (openingFee > 0) {
-      const approveCredit = await writeContract({
-        address: process.env.REACT_APP_CREDIT_ADDRESS,
-        abi: creditAbi,
-        functionName: "approve",
-        args: [contractAddress, UnitToDecimal(collateralAmount * openingFee, 18)],
-      });
-      const checkApproveCredit = await waitForTransaction({
-        hash: approveCredit.hash,
-      });
-
-      if (checkApproveCredit.status != "success") {
-        toastError("You don't have enough credit");
+    try {
+      //check ratio
+      if (collateralAmount < minCollateralAmount) {
+        toastError(
+          `Collateral amount can't be below than ${minCollateralAmount} `
+        );
         return;
       }
-    }
-      // appeller la function
+      if (borrowAmount > availableDebt) {
+        toastError(`the max borrow amount is ${availableDebt} `);
+        return;
+      }
+
+      if(borrowAmount < minBorrow){
+        toastError(`the min borrow amount is ${minBorrow} `);
+        return;
+      }
+
+      setLoading(true);
+
+      // approve collateral first
+      const approve = await writeContract({
+        address: collateralAddress,
+        abi: usdcAbi,
+        functionName: "approve",
+        args: [
+          contractAddress,
+          UnitToDecimal(collateralAmount, collateralDecimals),
+        ],
+      });
+
+      const checkApprove = await waitForTransaction({
+        hash: approve.hash,
+      });
+
+      if (checkApprove.status != "success") {
+        toastError("Approve transaction failed");
+        setLoading(false);
+        return;
+      }
+
+      // check si il y a un  open fees ==> approve credit
+      if (openingFee > 0) {
+        const approveCredit = await writeContract({
+          address: process.env.REACT_APP_CREDIT_ADDRESS,
+          abi: creditAbi,
+          functionName: "approve",
+          args: [contractAddress, UnitToDecimal(borrowAmount * openingFee, 18)],
+        });
+        const checkApproveCredit = await waitForTransaction({
+          hash: approveCredit.hash,
+        });
+
+        if (checkApproveCredit.status != "success") {
+          toastError("You don't have enough credit");
+          setLoading(false);
+          return;
+        }
+      }
+
       const borrow = await writeContract({
         address: contractAddress,
         abi: termAbi,
         functionName: "borrow",
-        args: [UnitToDecimal(borrowAmount,18), UnitToDecimal(collateralAmount ,18)],
+        args: [
+          UnitToDecimal(borrowAmount, 18),
+          UnitToDecimal(collateralAmount, collateralDecimals),
+        ],
       });
       const checkBorrow = await waitForTransaction({
         hash: borrow.hash,
       });
 
       if (checkBorrow.status === "success") {
-        toastRocket('transaction has been successfull ')
+        toastRocket("transaction has been successfull ");
+        setLoading(false);
         return;
-      }
-      else
-      toastError("erreur with the borrow transaction")
+      } else toastError("Error with the borrow transaction");
+      setLoading(false);
+    } catch (e) {
+      toastError("Error with the borrow transaction");
+      setLoading(false);
+      console.log(e);
+    }
   }
-
 
   const style = {
     wrapper: `w-screen flex items-center justify-center mt-14 `,
@@ -139,21 +159,34 @@ function CreateLoan({
     } else setBorrowAmount(0);
   };
 
+  // setBigIntCollateralAmount(BigInt(UnitToDecimal(borrowAmount,collateralDecimals).toString())/BigInt(1e18 *borrowRatio))
   useEffect(() => {
-    setCollateralAmount(borrowAmount + borrowAmount * (1 - borrowRatio) + borrowAmount*callFee);
-    setMinCollateralAmount(borrowAmount + borrowAmount * (1 - borrowRatio) + borrowAmount*callFee);
+    const collateralAmount: number = preciseRound(
+      borrowAmount / borrowRatio,
+      collateralDecimals
+    );
+    setCollateralAmount(collateralAmount);
+    setMinCollateralAmount(collateralAmount);
   }, [borrowAmount]);
   return (
     <>
       <div className="rounded-xl bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500 text-white">
+        {loading && (
+            <div className="absolute h-screen w-full">
+              <SpinnerLoader />
+            </div>
+   
+        )}
         <h2 className="mt-6 text-center text-3xl font-bold">New Loan</h2>
-        <div className="mt-14 grid grid-cols-2  font-semibold ml-6 ">
-          <div className="flex">Available Debt : {Math.round(availableDebt)}</div>
+        <div className="ml-6 mt-8 grid  grid-cols-2 font-semibold ">
+          <div className="flex">
+            Available Debt : {Math.round(availableDebt)}
+          </div>
           <div className="flex">Open Fees : {openingFee}</div>
           <div className="flex">Min Borrow : {minBorrow}</div>
           <div className="flex">Borrow Ratio : {borrowRatio}</div>
           <div className="flex">Call Fee: {callFee}</div>
-          <div className="flex">Interest Rate : {interestRate}</div>
+          <div className="flex">Current Debt : {currentDebt}</div>
         </div>
         <div className={style.content}>
           <div className={style.formHeader}>

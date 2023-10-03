@@ -19,7 +19,7 @@ const style = {
   confirmButton: `bg-purple my-2 rounded-2xl py-4 px-8 text-xl font-semibold flex items-center justify-center cursor-pointer border border-purple hover:border-[#234169]`,
 };
 
-function Stack({
+function Swap({
   textButton,
   allocatedGuild,
   availableGuild,
@@ -117,4 +117,4 @@ function Stack({
   );
 }
 
-export default Stack;
+export default Swap;

@@ -140,6 +140,7 @@ module.exports = {
       blueSecondary: "#4318FF",
       brandLinear: "#868CFF",
       transparent: 'transparent',
+      primary: '#868CFF',
       gray: {
         50: "#f8f9fa",
         100: "#edf2f7",
@@ -325,5 +326,20 @@ module.exports = {
       },
     }),
   },
-  plugins: [require("tailwindcss-rtl"),require('flowbite/plugin')],
+  plugins: [require("tailwindcss-rtl"),require('flowbite/plugin'),function ({ addUtilities }) {
+    const newUtilities = {
+      '.number-spinner-off::-webkit-inner-spin-button': {
+        '-webkit-appearance': 'none',
+        'margin': '0',
+      },
+      '.number-spinner-off::-webkit-outer-spin-button': {
+        '-webkit-appearance': 'none',
+        'margin': '0',
+      },
+      '.number-spinner-off': {
+        '-moz-appearance': 'textfield',
+      },
+    };
+    addUtilities(newUtilities, ['responsive', 'hover']);
+  },],
 };

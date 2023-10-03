@@ -7,11 +7,15 @@ import AuthLayout from "layouts/auth";
 import {config} from 'wagmiConfig'
 import './index.css';
 import { ToastContainer } from "react-toastify";
+import {
+  RecoilRoot,
 
+} from 'recoil';
 
 
 const App = () => {
   return (
+    <RecoilRoot>
     <WagmiConfig config={config}>
       <ToastContainer />
     <Routes>
@@ -21,6 +25,7 @@ const App = () => {
       <Route path="/" element={<Navigate to="/app" replace />} />
     </Routes>
     </WagmiConfig>
+    </RecoilRoot>
   );
 };
 

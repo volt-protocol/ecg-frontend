@@ -16,25 +16,10 @@ import {
   secondsToAppropriateUnit,
 } from "../../../../utils";
 import { Link } from "react-router-dom";
+import { lendingTerms } from "types/lending";
 
 
-type lendingTerms = {
-  address: string;
-  collateral: string;
-  collateralAddress: string;
-  collateralDecimals: number;
-  interestRate: number;
-  borrowRatio:number;
-  callFee: number;
-  callPeriodSeconds: number;
-  availableDebt: number;
-  currentDebt: number;
-  openingFee: number; 
-  minPartialRepayPercent: number;
-  maxDelayBetweenPartialRepay: number;
-  ltvBuffer: number;
-  minBorrow: number;
-};
+
 
 function CheckTable(props: { tableData: any }) {
   const { tableData } = props;
@@ -271,9 +256,10 @@ function CheckTable(props: { tableData: any }) {
                         >
                           <Link
                             to={`/app/lendingTerms/${row.original.address}`}
-                            state={{ collateralAddress: row.original.collateralAddress, collateralDecimals: row.original.collateralDecimals, openingFee:row.original.openingFee,minBorrow:row.original.minBorrow,borrowRatio:row.original.borrowRatio,callFee:row.original.callFee,interestRate:row.original.interestRate,availableDebt:row.original.availableDebt  }}
+                            state={{ collateralAddress: row.original.collateralAddress, collateralDecimals: row.original.collateralDecimals, openingFee:row.original.openingFee,minBorrow:row.original.minBorrow,borrowRatio:row.original.borrowRatio,callFee:row.original.callFee,interestRate:row.original.interestRate,availableDebt:row.original.availableDebt, currentDebt: row.original.currentDebt  }}
                             className="hover:cursor-pointer"
                           >
+                            
                             {flexRender(
                               cell.column.columnDef.cell,
                               cell.getContext()

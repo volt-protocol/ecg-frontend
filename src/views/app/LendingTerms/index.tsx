@@ -5,18 +5,23 @@ import { lendingTermsAtom } from "../../../store/index";
 import SpinnerLoader from "components/spinner";
 
 function LendingTerms() {
-  const [lendingTermsState, setLendingTermsState] =
-    useRecoilState(lendingTermsAtom);
+  const [lendingTermsState, setLendingTermsState] =useRecoilState(lendingTermsAtom);
+  const [data, setData] = useState([]);
+
+  useEffect(() => {
+    setData(lendingTermsState);
+  } , [lendingTermsState]);
+  
 
   return (
     <>
-      {lendingTermsState.length <= 0 ? (
+      {data.length <= 0 ? (
         <div className="absolute h-screen w-full">
           <SpinnerLoader />
         </div>
       ) : (
         <div className="mt-3">
-          <CheckTable tableData={lendingTermsState} />
+          <CheckTable tableData={data} />
         </div>
       )}
     </>

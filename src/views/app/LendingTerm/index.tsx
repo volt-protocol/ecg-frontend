@@ -130,10 +130,10 @@ function LendingTerm() {
         <TotalSpent name="Earning vs time" percentage="2.45%" />
       </div>
       <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2 ">
-        <Card extra={userActiveLoans.length>0?"col-span-2 order-1":"col-span-1 order-2"}>
+        <Card extra={userActiveLoans.length>0?"md:col-span-2 order-1":"md:col-span-1 order-2"}>
           <Myloans tableData={userActiveLoans} collateralName={lendingTermData.collateral}   smartContractAddress={contractAddress}/>
         </Card>
-        <Card extra={userActiveLoans.length>0?"order-4":""}>
+        <Card extra={userActiveLoans.length>0?"order-4 ":""}>
           <CreateLoan name={lendingTermData.collateral} contractAddress={contractAddress} collateralAddress={lendingTermData.collateralAddress} openingFee={lendingTermData.openingFee} minBorrow={lendingTermData.minBorrow} borrowRatio={lendingTermData.borrowRatio} callFee={lendingTermData.callFee} currentDebt={lendingTermData.currentDebt} availableDebt={lendingTermData.availableDebt} collateralDecimals={lendingTermData.collateralDecimals} />
         </Card>
         <Card extra="order-3">
@@ -220,7 +220,7 @@ function LendingTerm() {
           </div>
           </div>
         </Card>
-        <Card extra={"order-5 col-span-2"}>
+        <Card extra={"order-5 md:col-span-2"}>
           <ActiveLoans termAddress={contractAddress} activeLoans={activeLoans} callFee={lendingTermData.callFee} collateralAddress={lendingTermData.collateralAddress}/>
           </Card>
         </div>

@@ -146,7 +146,7 @@ function CreateLoan({
     wrapper: `w-screen flex items-center justify-center mt-14 `,
     content: `bg-transparent w-full   rounded-2xl px-4 text-black dark:text-white`,
     formHeader: `px-2 flex items-center justify-between font-semibold text-xl`,
-    transferPropContainer: `border-[#41444F] bg-transparent my-3 rounded-2xl p-4 text-xl border border-white hover:border-[#41444F]  flex justify-between items-center`,
+    transferPropContainer: `border-[#41444F] bg-transparent my-3 rounded-2xl p-4 text-xl border dark:border-white hover:border-[#41444F]  flex justify-between items-center`,
     transferPropInput: `bg-transparent placeholder:text-[#B2B9D2] outline-none w-full text-2xl  `,
     currencySelector: `flex w-2/4 justify-end `,
     currencySelectorContent: ` w-full h-min flex justify-between items-center bg-[#2D2F36] hover:bg-[#41444F] rounded-2xl text-xl font-medium cursor-pointer p-2 mt-[-0.2rem]`,

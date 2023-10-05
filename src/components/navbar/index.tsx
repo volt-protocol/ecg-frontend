@@ -16,6 +16,9 @@ import { useAccount, useConnect, useDisconnect, useEnsName } from "wagmi";
 // import { InjectedConnector } from "wagmi/connectors/injected";
 import Store from "store";
 import { lendingTerms } from "types/lending";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { CustomConnectButton } from "components/connectButton";
+import { preciseRound } from "utils";
 
 const Navbar = (props: {
   onOpenSidenav: () => void;
@@ -27,40 +30,6 @@ const Navbar = (props: {
   const store = Store();
   const location = useLocation();
 
-  function ConnectWallet() {
-    const { connector: activeConnector, address, isConnected } = useAccount();
-    const { data: ensName } = useEnsName({ address });
-    const { disconnect } = useDisconnect();
-    const { connect, connectors, error, isLoading, pendingConnector } =
-      useConnect();
-    if (isConnected) {
-      return (
-        <button onClick={() => disconnect()}>
-          {" "}
-          {address.slice(0, 4)}...{address.slice(38, 42)}
-        </button>
-      );
-    }
-    return (
-      <>
-        {connectors.map((connector: any) => (
-          <button
-            className="cursor-pointer rounded-xl bg-blueSecondary px-6 py-4 font-poppins text-white"
-            disabled={!connector.ready}
-            key={connector.id}
-            onClick={() => connect({ connector })}
-          >
-            {!isLoading && "Connect Wallet"}
-
-            {isLoading &&
-              pendingConnector?.id === connector.id &&
-              connector.name + " (connecting)"}
-          </button>
-        ))}{" "}
-      </>
-    );
-  }
-
   function TermName(): string | null {
     if (!location.state) {
       return null;
@@ -69,7 +38,7 @@ const Navbar = (props: {
     const item = store.lendingTermsState.find(
       (entry: lendingTerms) => entry.collateralAddress === address
     );
-    return item ? item.collateral : null;
+    return item ? `${item.collateral}-${item.interestRate*100}%-${preciseRound(item.borrowRatio,2)}` : null;
   }
 
   return (
@@ -93,13 +62,13 @@ const Navbar = (props: {
             {brandText}
           </Link>
         </div> */}
-        <p className="shrink text-[33px] capitalize text-navy-700 dark:text-white">
-          <Link
+        <p className="shrink font-bold text-[33px] capitalize text-navy-700 dark:text-white">
+          {/* <Link
             to="#"
             className="font-bold capitalize hover:text-navy-700 dark:hover:text-white"
-          >
+          > */}
             {brandText === "Lending Term Details" ? TermName() : brandText}
-          </Link>
+          {/* </Link> */}
         </p>
       </div>
 
@@ -233,7 +202,8 @@ const Navbar = (props: {
         </div>
         {/* Profile & Dropdown */}
 
-        <ConnectWallet />
+        
+        <ConnectButton   />
 
         {/* <Dropdown
           button={

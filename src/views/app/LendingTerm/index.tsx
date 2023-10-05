@@ -12,7 +12,7 @@ import { DecimalToUnit } from "utils";
 import { useLocation, useParams } from "react-router-dom";
 import Myloans from "./components/MyLoans";
 import CreateLoan from "./components/CreateLoan";
-import Stack from "./components/Stack";
+import Stake from "./components/Stake";
 import ActiveLoans from "./components/ActiveLoans";
 import { LoansObj, lendingTerms } from "types/lending";
 import api from "api";
@@ -129,43 +129,47 @@ function LendingTerm() {
         <TotalSpent name="utilization/cap vs time" percentage="2.45%" />
         <TotalSpent name="Earning vs time" percentage="2.45%" />
       </div>
-      <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-1 ">
-        <Card>
-          
-          <Myloans tableData={userActiveLoans}  smartContractAddress={contractAddress}/>
-        </Card>
-      </div>
       <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2 ">
-        <Card>
-          <div className=" h-full bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500 rounded-xl">
-          <h2 className="text-center text-3xl font-bold mt-6 text-white">Guild votes</h2>
+        <Card extra={userActiveLoans.length>0?"col-span-2 order-1":"col-span-1 order-2"}>
+          <Myloans tableData={userActiveLoans} collateralName={lendingTermData.collateral}   smartContractAddress={contractAddress}/>
+        </Card>
+        <Card extra={userActiveLoans.length>0?"order-4":""}>
+          <CreateLoan name={lendingTermData.collateral} contractAddress={contractAddress} collateralAddress={lendingTermData.collateralAddress} openingFee={lendingTermData.openingFee} minBorrow={lendingTermData.minBorrow} borrowRatio={lendingTermData.borrowRatio} callFee={lendingTermData.callFee} currentDebt={lendingTermData.currentDebt} availableDebt={lendingTermData.availableDebt} collateralDecimals={lendingTermData.collateralDecimals} />
+        </Card>
+        <Card extra="order-3">
+          <div className=" h-full  rounded-xl">
+          <h2 className="text-center text-3xl font-bold mt-6 text-black dark:text-white">Stake GUILD</h2>
           <div className=" mt-6 space-y-8">
             <div className="rounded-xl ">
               <Flowbite theme={{ theme: customTheme }}>
                 <Tabs.Group
                   aria-label="Tabs with underline"
                   style="underline"
-                  className="text-white"
+                
                 >
                   <Tabs.Item
                     active
                     className=""
                     icon={BsArrowUpRight}
-                    title="Stake Guild"
+                    title="Stake GUILD"
                   >
                     <AllocateGuild
                       textButton="Increment"
                       allocatedGuild={guildAllocated}
                       availableGuild={guildAvailable}
                       smartContractAddress={contractAddress}
+                      currentDebt={lendingTermData.currentDebt}
+                      availableDebt={lendingTermData.availableDebt}
                     ></AllocateGuild>
                   </Tabs.Item>
-                  <Tabs.Item icon={BsArrowDownLeft} title="Unstake Guild">
+                  <Tabs.Item icon={BsArrowDownLeft} title="Unstake GUILD">
                     <AllocateGuild
                       textButton="Decrement"
                       allocatedGuild={guildAllocated}
                       availableGuild={guildAvailable}
                       smartContractAddress={contractAddress}
+                      currentDebt={lendingTermData.currentDebt}
+                      availableDebt={lendingTermData.availableDebt}
                     ></AllocateGuild>
                   </Tabs.Item>
                 </Tabs.Group>
@@ -174,14 +178,11 @@ function LendingTerm() {
           </div>
           </div>
         </Card>
-        <Card>
-          <CreateLoan owner={address} contractAddress={contractAddress} collateralAddress={lendingTermData.collateralAddress} openingFee={lendingTermData.openingFee} minBorrow={lendingTermData.minBorrow} borrowRatio={lendingTermData.borrowRatio} callFee={lendingTermData.callFee} currentDebt={lendingTermData.currentDebt} availableDebt={lendingTermData.availableDebt} collateralDecimals={lendingTermData.collateralDecimals} />
-        </Card>
-      </div>
-      <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2 ">
-      <Card >
-          <div className=" bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500 rounded-xl">
-          <h2 className="text-center text-3xl font-bold mt-6 text-white">Stack Credit</h2>
+        
+     
+      <Card extra="order-4" >
+          <div className="  rounded-xl">
+          <h2 className="text-center text-3xl font-bold mt-6 text-black dark:text-white">Stake CREDIT</h2>
           <div className=" mt-8 space-y-8">
             <div className="rounded-xl ">
               <Flowbite theme={{ theme: customTheme }}>
@@ -196,22 +197,22 @@ function LendingTerm() {
                     icon={BsArrowUpRight}
                     title="Stake Credit"
                   >
-                    <Stack
-                      textButton="Stack"
+                    <Stake
+                      textButton="stake"
                       allocatedCredit={creditAllocated}
                       availableCredit={creditAvailable}
                       termAddress={contractAddress}
                       interestRate={lendingTermData.interestRate}
-                    ></Stack>
+                    ></Stake>
                   </Tabs.Item>
                   <Tabs.Item icon={BsArrowDownLeft} title="Unstake Credit">
-                    <Stack
-                      textButton="Unstack"
+                    <Stake
+                      textButton="Unstake"
                       allocatedCredit={creditAllocated}
                       availableCredit={creditAvailable}
                       termAddress={contractAddress}
                       interestRate={lendingTermData.interestRate}
-                    ></Stack>
+                    ></Stake>
                   </Tabs.Item>
                 </Tabs.Group>
               </Flowbite>
@@ -219,11 +220,11 @@ function LendingTerm() {
           </div>
           </div>
         </Card>
-        <Card>
+        <Card extra={"order-5 col-span-2"}>
           <ActiveLoans termAddress={contractAddress} activeLoans={activeLoans} callFee={lendingTermData.callFee} collateralAddress={lendingTermData.collateralAddress}/>
           </Card>
         </div>
-    </div>
+        </div>
      )}
     </>
   );

@@ -24,8 +24,8 @@ const customTheme: CustomFlowbiteTheme = {
           underline: {
             base: "rounded-t-lg",
             active: {
-              on: "text-white rounded-t-lg   active dark:text-white-500 ",
-              off: "border-b-2 border-transparent text-black hover:border-gray-300 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300"
+              on: "text-black rounded-t-lg   active dark:text-white",
+              off: "border-b-2 border-transparent text-gray-400 hover:border-gray-300 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300"
             }
           },
           pills: {

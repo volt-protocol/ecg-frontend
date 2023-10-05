@@ -17,14 +17,16 @@ import {
   WriteContractResult,
 } from "@wagmi/core";
 import { creditAbi, termAbi } from "guildAbi";
-import { signTransferPermit, UnitToDecimal } from "utils";
+import { preciseRound, signTransferPermit, UnitToDecimal } from "utils";
 import { toastError, toastRocket } from "toast";
 import { LoansObj } from "types/lending";
 import SpinnerLoader from "components/spinner";
+import { useAccount } from "wagmi";
 
 const columnHelper = createColumnHelper<LoansObj>();
 
 function Myloans(props: {
+  collateralName: string;
   tableData: LoansObj[];
   smartContractAddress: string;
 }) {
@@ -34,9 +36,11 @@ function Myloans(props: {
 
   // const { account, chainId, provider } = useWeb3React()
   const [values, setValues] = React.useState<{ [key: string]: number }>({});
-  const { tableData, smartContractAddress } = props;
+  const { tableData, smartContractAddress,collateralName } = props;
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [loading, setLoading] = React.useState(false);
+  const { address, isConnected, isDisconnected } = useAccount();
+  
 
   let defaultData = tableData;
   const columns = [
@@ -48,30 +52,28 @@ function Myloans(props: {
     columnHelper.accessor("lendingTermAddress", {
       id: "lendingTermAddress",
       header: "Lending Term Address",
-      cell: (info) => info.getValue(),
+      cell: (info) => info.getValue().slice(0, 4) + "..."+info.getValue().slice(-4),
     }),
     columnHelper.accessor("collateralAmount", {
       id: "collateralAmount",
       header: "Collateral Amount",
-      cell: (info) => info.getValue().toString(),
+      cell: (info) => preciseRound(parseFloat(info.getValue().toString()),2),
     }),
     columnHelper.accessor("borrowAmount", {
       id: "borrowCredit",
       header: "Credit Borrowed",
-      cell: (info) => info.getValue().toString(),
+      cell: (info) => preciseRound(parseFloat(info.getValue().toString()),2),
     }),
     {
       id: "ltv",
-      header: "LTV",
+      header: `CREDIT / ${collateralName}`,
       cell: (info: any) => {
         return (
           <p>
             {Math.round(
               (parseFloat(info.row.original.borrowAmount) /
-                parseFloat(info.row.original.collateralAmount)) *
-                100
+                parseFloat(info.row.original.collateralAmount)) 
             )}
-            %
           </p>
         );
       },
@@ -174,14 +176,14 @@ function Myloans(props: {
 
       if (checkPartialPay.status === "success") {
         setLoading(false);
-        toastRocket("transaction success");
+        toastRocket("Transaction success");
       } else {
         setLoading(false);
-        toastError("transaction failed");
+        toastError("Transaction failed");
       }
     } catch (e) {
       setLoading(false);
-      toastError("transaction failed");
+      toastError("Transaction failed");
       console.log(e)
     }
   }
@@ -241,11 +243,11 @@ function Myloans(props: {
       });
 
       if (checkRepay.status === "success") {
-        toastRocket("transaction success");
+        toastRocket("Transaction success");
         setLoading(false);
-      } else toastError("repay transaction failed");
+      } else toastError("Repay transaction failed");
     } catch (e) {
-      toastError("transaction failed");
+      toastError("Transaction failed");
       console.log(e); 
       setLoading(false);
     }
@@ -264,8 +266,11 @@ function Myloans(props: {
           My Active Loans
         </div>
       </div>
-
-      <div className="mt-8 overflow-x-scroll xl:overflow-x-scroll">
+      {!isConnected? (<div className="flex flex-grow justify-center items-center text-gray-500 font-semibold "><p >You need to be connected to see your active loans</p></div>):(
+        defaultData.length === 0 ? (
+          <div className="flex flex-grow justify-center items-center text-gray-500 font-semibold "> <p>You do not have active loans on this term yet</p></div>
+      ):(
+      <div className="mt-8 overflow-auto xl:overflow-auto">
         <table className="w-full">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -320,6 +325,7 @@ function Myloans(props: {
           </tbody>
         </table>
       </div>
+      ))}
     </Card>
   );
 }

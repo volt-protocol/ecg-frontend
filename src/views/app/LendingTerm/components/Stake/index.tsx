@@ -6,21 +6,9 @@ import { UnitToDecimal } from "utils";
 import DefaultSpinner from "components/spinner";
 import SpinnerLoader from "components/spinner";
 
-const style = {
-  wrapper: `w-screen flex items-center justify-center mt-14 `,
-  content: `bg-transparent w-full  rounded-2xl px-4 text-white`,
-  formHeader: `px-2 flex items-center justify-between font-semibold text-xl`,
-  transferPropContainer: `bg-transparent my-3 rounded-2xl p-4 text-xl border border-white hover:border-[#41444F]  flex justify-between items-center`,
-  transferPropInput: `bg-transparent placeholder:text-[#B2B9D2] outline-none w-full text-2xl  `,
-  currencySelector: `flex w-2/4 justify-end `,
-  currencySelectorContent: `w-full h-min flex justify-between items-center bg-[#2D2F36] hover:bg-[#41444F] rounded-2xl text-xl font-medium cursor-pointer p-2 mt-[-0.2rem]`,
-  currencySelectorIcon: `flex items-center`,
-  currencySelectorTicker: `mx-2`,
-  currencySelectorArrow: `text-lg`,
-  confirmButton: `bg-purple my-2 rounded-2xl py-4 px-8 text-xl font-semibold flex items-center justify-center cursor-pointer border border-purple hover:border-[#234169]`,
-};
 
-function Stack({
+
+function Stake({
   allocatedCredit,
   textButton,
   availableCredit,
@@ -45,17 +33,31 @@ function Stack({
     }
   };
 
-  async function handleStack(): Promise<void> {
+  const style = {
+    wrapper: `w-screen flex items-center justify-center mt-14 `,
+    content: `bg-transparent w-full   rounded-2xl px-4 text-black dark:text-white`,
+    formHeader: `px-2 flex items-center justify-between font-semibold text-xl`,
+    transferPropContainer: `border-[#41444F] bg-transparent my-3 rounded-2xl p-4 text-xl border border-white hover:border-[#41444F]  flex justify-between items-center`,
+    transferPropInput: `bg-transparent placeholder:text-[#B2B9D2] outline-none w-full text-2xl  `,
+    currencySelector: `flex w-2/4 justify-end `,
+    currencySelectorContent: ` w-full h-min flex justify-between items-center bg-[#2D2F36] hover:bg-[#41444F] rounded-2xl text-xl font-medium cursor-pointer p-2 mt-[-0.2rem]`,
+    currencySelectorIcon: `flex items-center`,
+    currencySelectorTicker: `mx-2`,
+    currencySelectorArrow: `text-lg`,
+    confirmButton: ` w-full bg-purple my-2 rounded-2xl py-4 px-8 text-xl font-semibold flex items-center justify-center cursor-pointer border border-purple hover:border-[#234169]  ${(allocatedCredit ==0 && textButton ==="Unstake") || (value>availableCredit && textButton ==="stake") ? "bg-gray-400  text-gray-700 !cursor-default" :"bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500  text-white"}  `,
+  };
+
+  async function handlestake(): Promise<void> {
     try {
       setLoading(true);
-      if (textButton === "Stack") {
+      if (textButton === "stake") {
         if (value == 0) {
           toastError("Please enter a value");
           setLoading(false);
           return;
         }
         if ((value as number) > availableCredit) {
-          toastError("not enough credit");
+          toastError("Not enough CREDIT");
           setLoading(false);
           return;
         } else {
@@ -95,12 +97,12 @@ function Stack({
             return;
           }
 
-          toastRocket(`Stake transaction successfull`);
+          toastRocket(`Stake transaction successful`);
           setLoading(false);
         }
-      } else if (textButton === "Unstack") {
+      } else if (textButton === "Unstake") {
         if ((value as number) > allocatedCredit) {
-          toastError("not enough credit allocated");
+          toastError("Not enough CREDIT allocated");
           setLoading(false);
           return;
         } else {
@@ -121,13 +123,13 @@ function Stack({
             return;
           }
 
-          toastRocket(`Unstake transaction successfull`);
+          toastRocket(`Unstake transaction successful`);
           setLoading(false);
         }
       }
     } catch (e) {
       console.log(e);
-      toastError("transaction failed");
+      toastError("Transaction failed");
       setLoading(false);
     }
   }
@@ -140,21 +142,21 @@ function Stack({
       )}
       <div className={style.content}>
         <div className={style.formHeader}></div>
-        <div className="my-2 grid grid-cols-2 gap-y-2">
-          <p className="font-semibold">
-            Your credits stacked :{" "}
+        <div className="my-2 grid grid-cols-2 -mt-1 gap-y-1">
+          <p className="font-semibold col-span-2">
+            Your CREDIT staked:{" "}
             <span className="text-xl">{allocatedCredit}</span>{" "}
           </p>
-          <p className="font-semibold">
-            Your available credits :{" "}
+          <p className="font-semibold col-span-2">
+            CREDIT in your wallet :{" "}
             <span className="text-xl">{availableCredit}</span>{" "}
           </p>
-          <p className="font-semibold">
+          {/* <p className="font-semibold">
             Current interest rate:{" "}
             <span className="text-xl">{interestRate * 100 + "%"}</span>{" "}
-          </p>
+          </p> */}
         </div>
-        {textButton === "Stack" ? (
+        {textButton === "stake" ? (
           <div className={style.transferPropContainer}>
             <input
               onChange={handleInputChange}
@@ -164,30 +166,30 @@ function Stack({
               pattern="^[0-9]*[.,]?[0-9]*$"
             />
             <div className="w-full justify-end text-xl">
-              {textButton === "Stack" ? (
-                <p> Credits you want to stack</p>
+              {textButton === "stake" ? (
+                <p>CREDIT to stake</p>
               ) : (
-                <p> Credits you want to unstack</p>
+                <p> </p>
               )}
             </div>
           </div>
         ) : (
           <></>
         )}
-        {textButton === "Stack" ? (
+        {textButton === "stake" ? (
           <>
-            <p>Estimated credits {value * interestRate} yearly</p>
-            <p>Estimated guilds per year</p>
+            {/* <p>Estimated credits {value * interestRate} yearly</p>
+            <p>Estimated guilds per year</p> */}
           </>
         ) : (
           <></>
         )}
-        <div onClick={handleStack} className={`${style.confirmButton}`}>
-          {textButton === "Stack" ? "Stake" : "Unstake"}
-        </div>
+        <button onClick={handlestake} disabled={(allocatedCredit==0 && textButton ==="Unstake") ||(value>availableCredit && textButton ==="stake") ?true:false} className={`${style.confirmButton} `}>
+          {textButton === "stake" ? "Stake" : "Unstake"}
+        </button>
       </div>
     </>
   );
 }
 
-export default Stack;
+export default Stake;

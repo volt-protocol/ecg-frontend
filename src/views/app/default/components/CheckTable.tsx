@@ -13,10 +13,15 @@ import {
 } from "@tanstack/react-table";
 import {
   formatCurrencyValue,
+  preciseRound,
   secondsToAppropriateUnit,
 } from "../../../../utils";
 import { Link } from "react-router-dom";
 import { lendingTerms } from "types/lending";
+import Progress from "components/progress";
+import { color } from "@chakra-ui/system";
+import TooltipHorizon from "components/tooltip";
+import { AiOutlineQuestionCircle } from "react-icons/ai";
 
 
 
@@ -26,6 +31,7 @@ function CheckTable(props: { tableData: any }) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   let defaultData = tableData;
   const columns = [
+    
     columnHelper.accessor("collateral", {
       id: "name",
       header: () => (
@@ -41,6 +47,7 @@ function CheckTable(props: { tableData: any }) {
         </div>
       ),
     }),
+    
     columnHelper.accessor("interestRate", {
       id: "interestRate",
       header: () => (
@@ -50,7 +57,7 @@ function CheckTable(props: { tableData: any }) {
       ),
       cell: (info) => (
         <p className="text-sm font-bold text-navy-700 dark:text-white">
-          {info.getValue()}%
+          {preciseRound(info.getValue()*100,2)}%
         </p>
       ),
     }),
@@ -63,62 +70,35 @@ function CheckTable(props: { tableData: any }) {
       ),
       cell: (info) => (
         <p className="text-sm font-bold text-navy-700 dark:text-white">
-          {info.getValue()}
+          {preciseRound(info.getValue(),2) }
         </p>
       ),
     }),
-    columnHelper.accessor("callFee", {
-      id: "CallFee",
+    {
+      id: "usage",
       header: () => (
         <p className="text-sm font-bold text-gray-600 dark:text-white">
-          CallFee
+          Usage
         </p>
       ),
-      cell: (info) => (
-        <p className="text-sm font-bold text-navy-700 dark:text-white">
-          {info.getValue()}
-        </p>
+      cell: (info:any) => (
+        <div className="flex items-center">
+    <Progress width="w-[108px]" value={(info.row.original.currentDebt/(info.row.original.currentDebt+info.row.original.availableDebt))*100} color="purple" />
+    <div>
+      <TooltipHorizon extra="dark:text-white " content={
+          <>
+            <p>Current Debt : {formatCurrencyValue(preciseRound(info.row.original.currentDebt,2))}</p>
+            <p>Available Debt : {formatCurrencyValue(preciseRound(info.row.original.availableDebt,2))}</p>
+            <p>Total Debt : {formatCurrencyValue(preciseRound(info.row.original.currentDebt+info.row.original.availableDebt,2))}</p>
+          </>
+        } 
+        trigger={<div className="mb-5"><AiOutlineQuestionCircle color="gray"/></div>} 
+        placement="right"
+      />
+    </div>
+  </div>
       ),
-    }),
-    columnHelper.accessor("callPeriodSeconds", {
-      id: "CallPeriod",
-      header: () => (
-        <p className="text-sm font-bold text-gray-600 dark:text-white">
-          Call Period
-        </p>
-      ),
-      cell: (info) => (
-        <p className="text-sm font-bold text-navy-700 dark:text-white">
-          {secondsToAppropriateUnit(info.getValue())}
-        </p>
-      ),
-    }),
-    columnHelper.accessor("availableDebt", {
-      id: "AvailableDebt",
-      header: () => (
-        <p className="text-sm font-bold text-gray-600 dark:text-white">
-          AvailableDebt
-        </p>
-      ),
-      cell: (info) => (
-        <p className="text-sm font-bold text-navy-700 dark:text-white">
-          {formatCurrencyValue(info.getValue())}
-        </p>
-      ),
-    }),
-    columnHelper.accessor("currentDebt", {
-      id: "CurrentDebt",
-      header: () => (
-        <p className="text-sm font-bold text-gray-600 dark:text-white">
-          Current Debt
-        </p>
-      ),
-      cell: (info) => (
-        <p className="text-sm font-bold text-navy-700 dark:text-white">
-          {formatCurrencyValue(info.getValue())}
-        </p>
-      ),
-    }),
+    },
     columnHelper.accessor("openingFee", {
       id: "openingFee",
       header: () => (
@@ -128,7 +108,7 @@ function CheckTable(props: { tableData: any }) {
       ),
       cell: (info) => (
         <p className="text-sm font-bold text-navy-700 dark:text-white">
-          {formatCurrencyValue(info.getValue())}
+          {preciseRound(info.getValue()*100,2)}%
         </p>
       ),
     }),
@@ -141,7 +121,7 @@ function CheckTable(props: { tableData: any }) {
       ),
       cell: (info) => (
         <p className="text-sm font-bold text-navy-700 dark:text-white">
-          {formatCurrencyValue(info.getValue())}
+          {preciseRound(info.getValue()*100,2)}%
         </p>
       ),
     }),
@@ -154,36 +134,20 @@ function CheckTable(props: { tableData: any }) {
       ),
       cell: (info) => (
         <p className="text-sm font-bold text-navy-700 dark:text-white">
-          {formatCurrencyValue(info.getValue())}
+          {/* {secondsToAppropriateUnit(info.getValue())} */}
+          {info.getValue() !=0 ? <div>Yes  <TooltipHorizon extra=" " content={
+          <>
+            <p>Max Delay : {secondsToAppropriateUnit(info.row.original.maxDelayBetweenPartialRepay)}</p>
+          </>
+        } 
+        trigger={<AiOutlineQuestionCircle color="gray"/>} 
+        placement="right"
+      /></div> : "No"} 
+       
         </p>
       ),
     }),
-    columnHelper.accessor("minBorrow", {
-      id: "minBorrow",
-      header: () => (
-        <p className="text-sm font-bold text-gray-600 dark:text-white">
-        Min Borrow
-        </p>
-      ),
-      cell: (info) => (
-        <p className="text-sm font-bold text-navy-700 dark:text-white">
-          {formatCurrencyValue(info.getValue())}
-        </p>
-      ),
-    }),
-    columnHelper.accessor("ltvBuffer", {
-      id: "ltvBuffer",
-      header: () => (
-        <p className="text-sm font-bold text-gray-600 dark:text-white">
-       Ltv Buffer
-        </p>
-      ),
-      cell: (info) => (
-        <p className="text-sm font-bold text-navy-700 dark:text-white">
-          {formatCurrencyValue(info.getValue())}
-        </p>
-      ),
-    }),
+   
   ]; // eslint-disable-next-line
   const [data, setData] = React.useState([tableData]);
 
@@ -212,7 +176,7 @@ function CheckTable(props: { tableData: any }) {
         {/* <CardMenu /> */}
       </header>
 
-      <div className="mt-8 overflow-x-scroll xl:overflow-x-scroll">
+      <div className="mt-8 overflow-auto xl:overflow-auto">
         <table className="w-full">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -247,24 +211,31 @@ function CheckTable(props: { tableData: any }) {
               .rows.slice(0, 10)
               .map((row) => {
                 return (
-                  <tr key={row.id} className="hover:bg-gray-200">
+                  <tr key={row.id} className="hover:bg-gray-300">
                     {row.getVisibleCells().map((cell) => {
                       return (
                         <td
                           key={cell.id}
                           className="min-w-[150px] border-white/0 py-3  pr-4"
                         >
+                          {cell.column.id != "usage" && cell.column.id != "maxDelayBetweenPartialRepay"  ? (<>
                           <Link
                             to={`/app/lendingTerms/${row.original.address}`}
                             state={{ collateralAddress: row.original.collateralAddress, collateralDecimals: row.original.collateralDecimals, openingFee:row.original.openingFee,minBorrow:row.original.minBorrow,borrowRatio:row.original.borrowRatio,callFee:row.original.callFee,interestRate:row.original.interestRate,availableDebt:row.original.availableDebt, currentDebt: row.original.currentDebt  }}
                             className="hover:cursor-pointer"
                           >
+                         
                             
                             {flexRender(
                               cell.column.columnDef.cell,
                               cell.getContext()
                             )}
+                               
                           </Link>
+                          </>):(flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            ))}
                         </td>
                       );
                     })}

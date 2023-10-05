@@ -2,14 +2,9 @@ import React from "react";
 
 // Admin Imports
 import MainDashboard from "views/app/default";
-import NFTMarketplace from "views/app/marketplace";
-import Profile from "views/app/profile";
-import DataTables from "views/app/tables";
-import RTLDefault from "views/rtl/default";
 import LendingTerms from "views/app/LendingTerms";
 
-// Auth Imports
-import SignIn from "views/auth/SignIn";
+
 
 // Icon Imports
 import {
@@ -21,7 +16,11 @@ import {
 } from "react-icons/md";
 
 import { GiBanknote } from "react-icons/gi";
+import { GoLaw } from "react-icons/go";
+import { MdOutlineSavings } from "react-icons/md";
 import LendingTerm from "views/app/LendingTerm";
+import Governance from "views/app/Governance";
+import SavingRate from "views/app/SavingRate";
 
 const routes : RoutesType[] = [
   {
@@ -30,47 +29,6 @@ const routes : RoutesType[] = [
     path: "default",
     icon: <MdHome className="h-6 w-6" />,
     component: <MainDashboard />,
-    showInSidebar:true
-  },
-  {
-    name: "NFT Marketplace",
-    layout: "/app",
-    path: "nft-marketplace",
-    icon: <MdOutlineShoppingCart className="h-6 w-6" />,
-    component: <NFTMarketplace />,
-    secondary: true,
-    showInSidebar:true
-  },
-  {
-    name: "Data Tables",
-    layout: "/app",
-    icon: <MdBarChart className="h-6 w-6" />,
-    path: "data-tables",
-    component: <DataTables />,
-    showInSidebar:true
-  },
-  {
-    name: "Profile",
-    layout: "/app",
-    path: "profile",
-    icon: <MdPerson className="h-6 w-6" />,
-    component: <Profile />,
-    showInSidebar:true
-  },
-  {
-    name: "Sign In",
-    layout: "/auth",
-    path: "sign-in",
-    icon: <MdLock className="h-6 w-6" />,
-    component: <SignIn />,
-    showInSidebar:true
-  },
-  {
-    name: "RTL Admin",
-    layout: "/rtl",
-    path: "rtl",
-    icon: <MdHome className="h-6 w-6" />,
-    component: <RTLDefault />,
     showInSidebar:true
   },
   {
@@ -88,6 +46,24 @@ const routes : RoutesType[] = [
     icon: <GiBanknote className="h-6 w-6 " />,
     component: <LendingTerm />,
     showInSidebar:false,
+    secondary:true
+  },
+  {
+    name: "Saving Rate",
+    layout: "/app",
+    path: "savingRate",
+    icon: <MdOutlineSavings className="h-6 w-6 " />,
+    component: <SavingRate />,
+    showInSidebar:true,
+    secondary:true
+  },
+  {
+    name: "Governance",
+    layout: "/app",
+    path: "governance",
+    icon: <GoLaw className="h-6 w-6 " />,
+    component: <Governance />,
+    showInSidebar:true,
     secondary:true
   },
 

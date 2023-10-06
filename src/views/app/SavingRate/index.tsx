@@ -64,7 +64,7 @@ function SavingRate() {
       </div>
       <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
       <Card extra='space-y-5 p-4'> 
-        <p className='font-semibold mt-5'>Your current CREDIT balance is {creditAvailable} </p>
+        <p className='font-semibold mt-5'>Your current CREDIT balance is : {creditAvailable} </p>
         <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2 gap-x-10 font-semibold text-white">
         <button onClick={()=>saving("enterRebase")} className='bg-primary rounded-lg'>Start Saving</button>
         <button onClick={()=>saving("exitRebase")} className='bg-red-500 rounded-lg'>Stop Saving</button>

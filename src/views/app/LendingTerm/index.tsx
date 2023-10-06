@@ -12,7 +12,7 @@ import { DecimalToUnit } from "utils";
 import { useLocation, useParams } from "react-router-dom";
 import Myloans from "./components/MyLoans";
 import CreateLoan from "./components/CreateLoan";
-import Stake from "./components/Stake";
+import Stake from "./components/StakeCredit";
 import ActiveLoans from "./components/ActiveLoans";
 import { LoansObj, lendingTerms } from "types/lending";
 import api from "api";

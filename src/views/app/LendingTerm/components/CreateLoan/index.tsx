@@ -50,6 +50,7 @@ function CreateLoan({
         functionName: "balanceOf",
         args: [address],
       });
+      console.log(DecimalToUnit(result as bigint, collateralDecimals),"result");
       setCollateralAmountAvailable(DecimalToUnit(result as bigint, collateralDecimals));
     }
     getCollateralAmountAvailable();
@@ -58,9 +59,9 @@ function CreateLoan({
   async function borrow() {
     try {
       //check ratio
-      if (collateralAmount < minBorrow) {
+      if (borrowAmount < minBorrow) {
         toastError(
-          `Collateral amount can't be below than ${minBorrow} `
+          `Borrow amount can't be below than ${minBorrow} `
         );
         return;
       }
@@ -198,7 +199,7 @@ function CreateLoan({
           <div className="flex">
             Available Debt : {formatCurrencyValue(availableDebt)}
           </div>
-          <div className="flex">Open Fees : {preciseRound(openingFee *100,2)} %</div>
+          <div className="flex">Open Fee : {preciseRound(openingFee *100,2)} %</div>
           <div className="flex">Min Borrow : {minBorrow}</div>
           <div className="col-span-2">Borrow Ratio : {preciseRound(borrowRatio,2)} CREDIT / {name}</div>
         </div>
@@ -206,7 +207,7 @@ function CreateLoan({
         <div className={style.content}>
           
           <div className={style.formHeader}>
-          <div className="col-span-2">Your DAI Balance : {formatCurrencyValue(collateralAmountAvailable)} {name}</div>
+          <div className="col-span-2">Your {name} Balance : {preciseRound(collateralAmountAvailable,2)} {name}</div>
             {/* <div>Swap your credits to native tokens </div> */}
             <div></div>
           </div>

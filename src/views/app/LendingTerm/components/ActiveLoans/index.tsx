@@ -89,7 +89,7 @@ async function call(loandId: string, collateralAmount: number){
   columnHelper.accessor("collateralAmount", {
     id: "collateralCredit",
     header: "Collateral amount",
-    cell: (info) => info.getValue(),
+    cell: (info) => preciseRound(info.getValue(),2),
   }),
   columnHelper.accessor("borrowAmount", {
     id: "borrowCredit",

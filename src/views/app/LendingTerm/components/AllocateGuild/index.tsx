@@ -4,6 +4,7 @@ import { guildAbi } from "guildAbi";
 import { DecimalToUnit, UnitToDecimal } from "utils";
 import { toastError, toastRocket } from "toast";
 import SpinnerLoader from "components/spinner";
+import { useAccount } from "wagmi";
 
 
 
@@ -25,6 +26,7 @@ function AllocateGuild({
   const [value, setValue] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [gaugeWeight, setGaugeWeight] = useState<number>(0);
+  const { address, isConnected, isDisconnected } = useAccount();
 
   const style = {
     wrapper: `w-screen flex  items-center justify-center mt-14 `,
@@ -115,8 +117,8 @@ function AllocateGuild({
     const result = await readContract({
       address: import.meta.env.VITE_GUILD_ADDRESS as Address,
       abi: guildAbi,
-      functionName: "getGaugeWeight",
-      args: [smartContractAddress],
+      functionName: "getUserGaugeWeight",
+      args: [address, smartContractAddress],
     });
     setGaugeWeight( Number(DecimalToUnit(result as bigint,18)));
   }

@@ -11,19 +11,22 @@ import {
 } from "@tanstack/react-table";
 import Progress from "components/progress";
 import {
+  readContract,
   waitForTransaction,
   WaitForTransactionArgs,
   writeContract,
   WriteContractResult,
 } from "@wagmi/core";
-import { creditAbi, termAbi } from "guildAbi";
+import { creditAbi, profitManager, termAbi } from "guildAbi";
 import { preciseRound, signTransferPermit, UnitToDecimal } from "utils";
 import { toastError, toastRocket } from "toast";
 import { LoansObj } from "types/lending";
 import SpinnerLoader from "components/spinner";
 import { useAccount } from "wagmi";
+import axios from "axios";
 
 const columnHelper = createColumnHelper<LoansObj>();
+
 
 function Myloans(props: {
   collateralName: string;
@@ -40,7 +43,35 @@ function Myloans(props: {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [loading, setLoading] = React.useState(false);
   const { address, isConnected, isDisconnected } = useAccount();
-  
+  const [creditMultiplier, setCreditMultiplier] = React.useState(0);
+
+
+useEffect(() => {
+  async function getcreditMultiplier() {
+    const creditMultiplier  = await readContract({
+      address: import.meta.env.VITE_PROFIT_MANAGER_ADDRESS,
+      abi: profitManager,
+      functionName: "creditMultiplier",
+    });
+    setCreditMultiplier(Number(creditMultiplier));
+    console.log(creditMultiplier);
+  }
+  async function getCollateralPrice() {
+    //requête axios en post vers coinmarketcap avec sort au name et limit à 1.
+
+    const response = await axios.get('https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest', {
+      headers: {
+        'X-CMC_PRO_API_KEY': "9cf5dd6e-43b1-42ff-993c-91f6f08e81d8",
+      },
+      params:{
+          symbol: 'USDC'
+      }
+    });
+    console.log(response,"collateralPrice")
+  }
+  getcreditMultiplier();
+  getCollateralPrice();
+}, []);
 
   let defaultData = tableData;
   const columns = [
@@ -49,31 +80,24 @@ function Myloans(props: {
       header: "Loan ID",
       cell: (info) => info.getValue().slice(0, 8),
     }),
-    columnHelper.accessor("lendingTermAddress", {
-      id: "lendingTermAddress",
-      header: "Lending Term Address",
-      cell: (info) => info.getValue().slice(0, 4) + "..."+info.getValue().slice(-4),
-    }),
-    columnHelper.accessor("collateralAmount", {
-      id: "collateralAmount",
-      header: "Collateral Amount",
-      cell: (info) => preciseRound(parseFloat(info.getValue().toString()),2),
-    }),
-    columnHelper.accessor("borrowAmount", {
-      id: "borrowCredit",
-      header: "Credit Borrowed",
-      cell: (info) => preciseRound(parseFloat(info.getValue().toString()),2),
-    }),
+    // columnHelper.accessor("collateralAmount", {
+    //   id: "collateralAmount",
+    //   header: "Collateral Amount",
+    //   cell: (info) => preciseRound(parseFloat(info.getValue().toString()),2),
+    // }),
+    // columnHelper.accessor("borrowAmount", {
+    //   id: "borrowCredit",
+    //   header: "Credit Borrowed",
+    //   cell: (info) => preciseRound(parseFloat(info.getValue().toString()),2),
+    // }),
     {
       id: "ltv",
-      header: `CREDIT / ${collateralName}`,
+      header:"Loan Health",
       cell: (info: any) => {
         return (
           <p>
-            {Math.round(
-              (parseFloat(info.row.original.borrowAmount) /
-                parseFloat(info.row.original.collateralAmount)) 
-            )}
+            {info.row.original.borrowAmount* creditMultiplier / 1e18 * 1}
+            
           </p>
         );
       },

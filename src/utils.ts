@@ -30,8 +30,9 @@ function formatCurrencyValue(value: number): string {
 
 function DecimalToUnit(number:bigint, decimals:number):number {
   const divider = BigInt(Math.pow(10, decimals));
-  return Number(number / divider) ;
+  return Number(number) / Number(divider);
 }
+
 
 function UnitToDecimal(number: number, decimals: number): number {
   const multiplier = Math.pow(10, decimals);
@@ -106,11 +107,11 @@ return {
 };
 
 }
-
-function preciseRound(value: number, decimals: number): number {
+function preciseRound(value: number, decimals: number): string {
   const factor = Math.pow(10, decimals);
-  return Math.round(value * factor) / factor;
+  return (Math.round(value * factor) / factor).toFixed(decimals);
 }
+
 
 
 export {

@@ -62,6 +62,7 @@ useEffect(() => {
     const response = await axios.get('https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest', {
       headers: {
         'X-CMC_PRO_API_KEY': "9cf5dd6e-43b1-42ff-993c-91f6f08e81d8",
+        'Access-Control-Allow-Origin': '*',
       },
       params:{
           symbol: 'USDC'

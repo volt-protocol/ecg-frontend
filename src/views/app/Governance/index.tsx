@@ -4,7 +4,7 @@ import Card from 'components/card'
 import { Flowbite, Tabs } from 'flowbite-react'
 import customTheme from 'customThemeFlowbite'
 import { BsArrowUpRight } from 'react-icons/bs'
-import Delegate from './components/Delegate'
+// import Delegate from './components/Delegate'
 
 function Governance() {
   return (

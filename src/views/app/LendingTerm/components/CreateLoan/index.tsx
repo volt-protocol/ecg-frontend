@@ -177,10 +177,10 @@ function CreateLoan({
 
   // setBigIntCollateralAmount(BigInt(UnitToDecimal(borrowAmount,collateralDecimals).toString())/BigInt(1e18 *borrowRatio))
   useEffect(() => {
-    const collateralAmount: number = preciseRound(
+    const collateralAmount: number = Number(preciseRound(
       borrowAmount / borrowRatio,
       collateralDecimals
-    );
+    ));
     setCollateralAmount(collateralAmount);
     setMinCollateralAmount(collateralAmount);
   }, [borrowAmount]);

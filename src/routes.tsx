@@ -20,7 +20,9 @@ import { GoLaw } from "react-icons/go";
 import { MdOutlineSavings } from "react-icons/md";
 import LendingTerm from "views/app/LendingTerm";
 import Governance from "views/app/Governance";
-import SavingRate from "views/app/SavingRate";
+import SavingRate from "views/app/MintAndSaving";
+import MintAndCredit from "views/app/MintAndSaving";
+import MintAndSaving from "views/app/MintAndSaving";
 
 const routes : RoutesType[] = [
   {
@@ -49,11 +51,11 @@ const routes : RoutesType[] = [
     secondary:true
   },
   {
-    name: "Saving Rate",
+    name: "Mint & Saving",
     layout: "/app",
-    path: "savingRate",
+    path: "mintAndSaving",
     icon: <MdOutlineSavings className="h-6 w-6 " />,
-    component: <SavingRate />,
+    component: <MintAndSaving />,
     showInSidebar:true,
     secondary:true
   },

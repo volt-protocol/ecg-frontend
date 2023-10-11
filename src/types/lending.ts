@@ -35,6 +35,8 @@ export type LoansObj = {
     maxDelayBetweenPartialRepay: number;
     ltvBuffer: number;
     minBorrow: number;
+    status: string;
+    label: string;
   };
 
   export  interface LendingTerms{
@@ -43,3 +45,8 @@ export type LoansObj = {
     lastUpdateTimestamp: number;
     lendingTerms: lendingTerms[];
   }
+
+  export type userData = {
+    address: string; 
+    isConnected: boolean;
+  };

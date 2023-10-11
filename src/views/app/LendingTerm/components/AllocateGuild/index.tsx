@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Address, readContract, waitForTransaction, writeContract } from "@wagmi/core";
 import { guildAbi } from "guildAbi";
-import { DecimalToUnit, UnitToDecimal } from "utils";
+import { DecimalToUnit, UnitToDecimal, formatCurrencyValue, preciseRound } from "utils";
 import { toastError, toastRocket } from "toast";
 import SpinnerLoader from "components/spinner";
+import { useAccount } from "wagmi";
 
 
 
@@ -13,7 +14,10 @@ function AllocateGuild({
   availableGuild,
   smartContractAddress,
   currentDebt,
-  availableDebt
+  availableDebt,
+  gaugeWeight,
+  totalWeight,
+  creditTotalSupply,
 }: {
   textButton: string;
   allocatedGuild: number;
@@ -21,10 +25,15 @@ function AllocateGuild({
   smartContractAddress: string;
   currentDebt: number;
   availableDebt: number;
+  gaugeWeight: number;
+  totalWeight: number;
+  creditTotalSupply: number;
 }) {
   const [value, setValue] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
-  const [gaugeWeight, setGaugeWeight] = useState<number>(0);
+ 
+
+  const { address, isConnected, isDisconnected } = useAccount();
 
   const style = {
     wrapper: `w-screen flex  items-center justify-center mt-14 `,
@@ -37,7 +46,7 @@ function AllocateGuild({
     currencySelectorIcon: `flex items-center`,
     currencySelectorTicker: `mx-2`,
     currencySelectorArrow: `text-lg`,
-    confirmButton: ` w-full bg-purple my-2 rounded-2xl py-4 px-8 text-xl font-semibold flex items-center justify-center cursor-pointer border border-purple hover:border-[#234169] ${(value> availableGuild && textButton=="Increment") || (value > allocatedGuild && textButton=='Decrement') ? "bg-gray-400  text-gray-700 !cursor-default" :"bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500  text-white"}  `,
+    confirmButton: ` w-full bg-purple my-2 rounded-2xl py-4 px-8 text-xl font-semibold flex items-center justify-center cursor-pointer border border-purple hover:border-[#234169] ${((value> availableGuild || value===0)&& textButton=="Increment") || ((value > allocatedGuild || value ===0) && textButton=='Decrement') ? "bg-gray-400  text-gray-700 !cursor-default" :"bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500  text-white"}  `,
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,18 +119,18 @@ function AllocateGuild({
     }
   }
 
-  useEffect(() => {
-    async function getGaugeWeight():Promise<void> {
-    const result = await readContract({
-      address: import.meta.env.VITE_GUILD_ADDRESS as Address,
-      abi: guildAbi,
-      functionName: "getGaugeWeight",
-      args: [smartContractAddress],
-    });
-    setGaugeWeight( Number(DecimalToUnit(result as bigint,18)));
-  }
-  getGaugeWeight();
- }, []);
+  
+
+
+ function getDebtCeileingIncrease():string {
+  const percentBefore = gaugeWeight/totalWeight;
+  const percentAfter = (gaugeWeight+value)/(totalWeight);
+  const debCeilingBefore = creditTotalSupply*percentBefore *1.2;
+  const debCeilingAfter = creditTotalSupply*percentAfter *1.2;
+  const debtCeilingIncrease = debCeilingAfter - debCeilingBefore;
+  return formatCurrencyValue(debtCeilingIncrease);
+
+ }
 
 
 
@@ -135,13 +144,13 @@ function AllocateGuild({
       )}
       <div className={style.formHeader}></div>
       <div className="my-2 grid grid-cols-2">
-        <p className="font-semibold col-span-2">
+        <p className=" col-span-2">
           Your current GUILD staked :{" "}
-          <span className="text-xl">{allocatedGuild}</span>{" "}
+          <span className="font-semibold">{allocatedGuild}</span>{" "}
         </p>
-        <p className="font-semibold col-span-2">
+        <p className=" col-span-2">
           Your available GUILD :{" "}
-          <span className="text-xl">{availableGuild}</span>{" "}
+          <span className="font-semibold">{availableGuild}</span>{" "}
         </p>
       </div>
       <div className={style.transferPropContainer}>
@@ -164,7 +173,7 @@ function AllocateGuild({
       {textButton === "Increment" ? (
         <>
         {console.log(currentDebt, availableDebt, currentDebt+availableDebt,gaugeWeight,value, gaugeWeight+value,)}
-          <p>Your GUILD stake will allow {(currentDebt+availableDebt)*(gaugeWeight+value)-(currentDebt+availableDebt)} more CREDIT to be borrowed from this term </p>
+          <p>Your GUILD stake will allow {getDebtCeileingIncrease()} more CREDIT to be borrowed from this term </p>
         </>
       ) : (
         <>

@@ -1,12 +1,17 @@
-import React, { useState } from "react";
-import { waitForTransaction, writeContract } from "@wagmi/core";
+import React, { useEffect, useState } from "react";
+import {
+  Address,
+  readContract,
+  waitForTransaction,
+  writeContract,
+} from "@wagmi/core";
 import { toastError, toastRocket } from "toast";
 import { creditAbi, surplusGuildMinterAbi } from "guildAbi";
-import { UnitToDecimal } from "utils";
+import { DecimalToUnit, UnitToDecimal } from "utils";
 import DefaultSpinner from "components/spinner";
 import SpinnerLoader from "components/spinner";
-
-
+import TooltipHorizon from "components/tooltip";
+import { useAccount } from "wagmi";
 
 function Stake({
   allocatedCredit,
@@ -23,6 +28,10 @@ function Stake({
 }) {
   const [value, setValue] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
+  const [ratioGuildCredit, setRatioGuildCredit] = useState<number>(0);
+  const [stakeRatio, setStakeRatio] = useState<number>(0);
+
+  const { address, isConnected } = useAccount();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -44,8 +53,39 @@ function Stake({
     currencySelectorIcon: `flex items-center`,
     currencySelectorTicker: `mx-2`,
     currencySelectorArrow: `text-lg`,
-    confirmButton: ` w-full bg-purple my-2 rounded-2xl py-4 px-8 text-xl font-semibold flex items-center justify-center cursor-pointer border border-purple hover:border-[#234169]  ${(allocatedCredit ==0 && textButton ==="Unstake") || (value>availableCredit && textButton ==="stake") ? "bg-gray-400  text-gray-700 !cursor-default" :"bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500  text-white"}  `,
+    confirmButton: ` w-full bg-purple my-2 rounded-2xl py-4 px-8 text-xl font-semibold flex items-center justify-center cursor-pointer border border-purple hover:border-[#234169]  ${
+      (allocatedCredit == 0 && textButton === "Unstake") ||
+      ((value > availableCredit || value === 0) && textButton === "stake")
+        ? "bg-gray-400  text-gray-700 !cursor-default"
+        : "bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500  text-white"
+    }  `,
   };
+
+  useEffect(() => {
+    async function getRationGUILDCREDIT() {
+      const ratio = await readContract({
+        address: import.meta.env.VITE_SURPLUS_GUILD_MINTER_ADDRESS as Address,
+        abi: surplusGuildMinterAbi,
+        functionName: "ratio",
+      });
+      setRatioGuildCredit(DecimalToUnit(ratio as bigint, 18));
+    }
+    getRationGUILDCREDIT();
+  }, []);
+
+  useEffect(() => {
+    async function getStakeRatio() {
+      const ratio = await readContract({
+        address: import.meta.env.VITE_SURPLUS_GUILD_MINTER_ADDRESS as Address,
+        abi: surplusGuildMinterAbi,
+        functionName: "stakeRatio",
+        args: [address, termAddress],
+      });
+      setStakeRatio(DecimalToUnit(ratio as bigint, 18));
+    }
+
+    getStakeRatio();
+  }, [value]);
 
   async function handlestake(): Promise<void> {
     try {
@@ -133,6 +173,7 @@ function Stake({
       setLoading(false);
     }
   }
+  console.log(allocatedCredit, "allocatedCredit");
   return (
     <>
       {loading && (
@@ -142,15 +183,59 @@ function Stake({
       )}
       <div className={style.content}>
         <div className={style.formHeader}></div>
-        <div className="my-2 grid grid-cols-2 -mt-1 gap-y-1">
-          <p className="font-semibold col-span-2">
-            Your CREDIT staked:{" "}
-            <span className="text-xl">{allocatedCredit}</span>{" "}
-          </p>
-          <p className="font-semibold col-span-2">
+        <div className="my-2 -mt-1 grid grid-cols-2 gap-y-1 ">
+          <div className="col-span-1">
+            <TooltipHorizon
+              extra="col-span-1"
+              trigger={
+                <p className=" ">
+                  Your CREDIT staked:{" "}
+                  <span className="font-semibold ">{allocatedCredit}</span>{" "}
+                </p>
+              }
+              content={
+                <div className="">
+                  <p>
+                    Equivalent to{" "}
+                    <span className="font-semibold ">
+                      {allocatedCredit * stakeRatio}
+                    </span>{" "}
+                    GUILD{" "}
+                  </p>
+                </div>
+              }
+              placement="right"
+            ></TooltipHorizon>
+          </div>
+          <div className="col-span-1">
+            <TooltipHorizon
+              extra=""
+              trigger={
+                <p className="">
+                  GUILD / CREDIT ratio :{" "}
+                  <span className="font-semibold">{ratioGuildCredit}</span>{" "}
+                </p>
+              }
+              content={
+                <div className="w-[15rem] p-2">
+                  <p>
+                    When you stake <span className="font-semibold">CREDIT</span>{" "}
+                    , you provide first-loss capital on this term, and in
+                    exchange an amount of{" "}
+                    <span className="font-semibold">GUILD</span> will be minted
+                    to vote for this term
+                  </p>
+                </div>
+              }
+              placement="right"
+            ></TooltipHorizon>
+          </div>
+
+          <p className="col-span-2">
             CREDIT in your wallet :{" "}
-            <span className="text-xl">{availableCredit}</span>{" "}
+            <span className="font-semibold ">{availableCredit}</span>{" "}
           </p>
+          
           {/* <p className="font-semibold">
             Current interest rate:{" "}
             <span className="text-xl">{interestRate * 100 + "%"}</span>{" "}
@@ -166,11 +251,7 @@ function Stake({
               pattern="^[0-9]*[.,]?[0-9]*$"
             />
             <div className="w-full justify-end text-xl">
-              {textButton === "stake" ? (
-                <p>CREDIT to stake</p>
-              ) : (
-                <p> </p>
-              )}
+              {textButton === "stake" ? <p>CREDIT to stake</p> : <p> </p>}
             </div>
           </div>
         ) : (
@@ -184,7 +265,17 @@ function Stake({
         ) : (
           <></>
         )}
-        <button onClick={handlestake} disabled={(allocatedCredit==0 && textButton ==="Unstake") ||(value>availableCredit && textButton ==="stake") ?true:false} className={`${style.confirmButton} `}>
+
+        <button
+          onClick={handlestake}
+          disabled={
+            (allocatedCredit == 0 && textButton === "Unstake") ||
+            (value > availableCredit && textButton === "stake")
+              ? true
+              : false
+          }
+          className={`${style.confirmButton} `}
+        >
           {textButton === "stake" ? "Stake" : "Unstake"}
         </button>
       </div>

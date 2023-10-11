@@ -50,23 +50,24 @@ function LendingTerm() {
 
 
   useEffect(() => {
-    async function getGuildAvailable():Promise<void> {
-      const result = await readContract({
-        address: "0x3F5252562b9446fBC7A9d432A60F739054B2c253",
-        abi: guildAbi,
-        functionName: "balanceOf",
-        args: [address],
-      });
-      setGuildAvailable(DecimalToUnit(result as bigint,18));
-    }
     async function getGuildAllocated():Promise<void>  {
       const result = await readContract({
-        address: "0x3F5252562b9446fBC7A9d432A60F739054B2c253",
+        address: import.meta.env.VITE_GUILD_ADDRESS,
         abi: guildAbi,
         functionName: "getUserGaugeWeight",
         args: [address, contractAddress],
       });
       setGuildAllocated(DecimalToUnit(result as bigint,18));
+    }
+    async function getGuildAvailable():Promise<void> {
+      const balance = await readContract({
+        address: import.meta.env.VITE_GUILD_ADDRESS,
+        abi: guildAbi,
+        functionName: "balanceOf",
+        args: [address],
+      });
+      const result = DecimalToUnit(balance as bigint,18) - guildAllocated 
+      setGuildAvailable(result );
     }
    
     async function getCreditAllocated() :Promise<void> {
@@ -74,7 +75,7 @@ function LendingTerm() {
         address: import.meta.env.VITE_SURPLUS_GUILD_MINTER_ADDRESS as Address,
         abi: surplusGuildMinterAbi,
         functionName: "stakes",
-        args: [contractAddress,address],
+        args: [address,contractAddress],
       });
       setCreditAllocated(DecimalToUnit(result as bigint,18));
     }
@@ -130,15 +131,15 @@ function LendingTerm() {
         <TotalSpent name="Earning vs time" percentage="2.45%" />
       </div>
       <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2 ">
-        <Card extra={userActiveLoans.length>0?"md:col-span-2 order-1":"md:col-span-1 order-2"}>
+        <Card extra="md:col-span-1 order-2">
           <Myloans tableData={userActiveLoans} collateralName={lendingTermData.collateral}   smartContractAddress={contractAddress}/>
         </Card>
-        <Card extra={userActiveLoans.length>0?"order-4 ":""}>
+        <Card extra={userActiveLoans.length>0?"order-2 ":""}>
           <CreateLoan name={lendingTermData.collateral} contractAddress={contractAddress} collateralAddress={lendingTermData.collateralAddress} openingFee={lendingTermData.openingFee} minBorrow={lendingTermData.minBorrow} borrowRatio={lendingTermData.borrowRatio} callFee={lendingTermData.callFee} currentDebt={lendingTermData.currentDebt} availableDebt={lendingTermData.availableDebt} collateralDecimals={lendingTermData.collateralDecimals} />
         </Card>
         <Card extra="order-3">
           <div className=" h-full  rounded-xl">
-          <h2 className="text-center text-3xl font-bold mt-6 text-black dark:text-white">Stake GUILD</h2>
+          <h2 className="mt-4 text-start ml-6 text-xl font-semibold text-navy-700  dark:text-white">Stake GUILD</h2>
           <div className=" mt-6 space-y-8">
             <div className="rounded-xl ">
               <Flowbite theme={{ theme: customTheme }}>
@@ -182,7 +183,7 @@ function LendingTerm() {
      
       <Card extra="order-4" >
           <div className="  rounded-xl">
-          <h2 className="text-center text-3xl font-bold mt-6 text-black dark:text-white">Stake CREDIT</h2>
+          <h2 className="mt-4 text-start ml-6 text-xl font-semibold text-navy-700  dark:text-white">Stake CREDIT</h2>
           <div className=" mt-8 space-y-8">
             <div className="rounded-xl ">
               <Flowbite theme={{ theme: customTheme }}>
@@ -221,7 +222,7 @@ function LendingTerm() {
           </div>
         </Card>
         <Card extra={"order-5 md:col-span-2"}>
-          <ActiveLoans termAddress={contractAddress} activeLoans={activeLoans} callFee={lendingTermData.callFee} collateralAddress={lendingTermData.collateralAddress}/>
+          <ActiveLoans maxDelayBetweenPartialRepay={lendingTermData.maxDelayBetweenPartialRepay} collateralName={lendingTermData.collateral}  termAddress={contractAddress} activeLoans={activeLoans} callFee={lendingTermData.callFee} collateralAddress={lendingTermData.collateralAddress}/>
           </Card>
         </div>
         </div>

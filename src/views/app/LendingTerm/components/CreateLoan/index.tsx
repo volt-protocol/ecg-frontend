@@ -3,7 +3,13 @@ import SpinnerLoader from "components/spinner";
 import { creditAbi, termAbi, usdcAbi } from "guildAbi";
 import React, { useEffect, useState } from "react";
 import { toastError, toastRocket } from "toast";
-import { DecimalToUnit, UnitToDecimal, formatCurrencyValue, preciseRound, signTransferPermit } from "utils";
+import {
+  DecimalToUnit,
+  UnitToDecimal,
+  formatCurrencyValue,
+  preciseRound,
+  signTransferPermit,
+} from "utils";
 import { Address } from "viem";
 import { useAccount } from "wagmi";
 
@@ -35,7 +41,8 @@ function CreateLoan({
   // const [bigIntCollateralAmount, setBigIntCollateralAmount] = useState<BigInt>(BigInt(0));
   const [permitMessage, setPermitMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [collateralAmountAvailable, setCollateralAmountAvailable] = useState<number>(0);
+  const [collateralAmountAvailable, setCollateralAmountAvailable] =
+    useState<number>(0);
   const { address, isConnected, isDisconnected } = useAccount();
 
   // borrow function :
@@ -50,28 +57,26 @@ function CreateLoan({
         functionName: "balanceOf",
         args: [address],
       });
-      console.log(DecimalToUnit(result as bigint, collateralDecimals),"result");
-      setCollateralAmountAvailable(DecimalToUnit(result as bigint, collateralDecimals));
+      console.log(
+        DecimalToUnit(result as bigint, collateralDecimals),
+        "result"
+      );
+      setCollateralAmountAvailable(
+        DecimalToUnit(result as bigint, collateralDecimals)
+      );
     }
     getCollateralAmountAvailable();
-  } , []);
+  }, []);
 
   async function borrow() {
     try {
       //check ratio
       if (borrowAmount < minBorrow) {
-        toastError(
-          `Borrow amount can't be below than ${minBorrow} `
-        );
+        toastError(`Borrow amount can't be below than ${minBorrow} `);
         return;
       }
       if (borrowAmount > availableDebt) {
         toastError(`The max borrow amount is ${availableDebt} `);
-        return;
-      }
-
-      if(borrowAmount < minBorrow){
-        toastError(`The min borrow amount is ${minBorrow} `);
         return;
       }
 
@@ -146,7 +151,7 @@ function CreateLoan({
   const style = {
     wrapper: `w-screen flex items-center justify-center mt-14 `,
     content: `bg-transparent w-full   rounded-2xl px-4 text-black dark:text-white`,
-    formHeader: `px-2 flex items-center justify-between font-semibold text-xl`,
+    formHeader: `px-2 flex items-center justify-between  text-xl`,
     transferPropContainer: `border-[#41444F] bg-transparent my-3 rounded-2xl p-4 text-xl border dark:border-white hover:border-[#41444F]  flex justify-between items-center`,
     transferPropInput: `bg-transparent placeholder:text-[#B2B9D2] outline-none w-full text-2xl  `,
     currencySelector: `flex w-2/4 justify-end `,
@@ -154,9 +159,12 @@ function CreateLoan({
     currencySelectorIcon: `flex items-center`,
     currencySelectorTicker: `mx-2`,
     currencySelectorArrow: `text-lg`,
-    confirmButton: `mt-5   rounded-2xl py-4 px-8 text-xl font-semibold flex items-center justify-center cursor-pointer border  hover:border-[#234169] w-full ${borrowAmount < minBorrow && borrowAmount !=0 ? "bg-gray-400 text-gray-700  cursor-default z-10 " : "!text-white bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500 "}}`,
+    confirmButton: `mt-2 mb-2  rounded-2xl py-4 px-8 text-xl font-semibold flex items-center justify-center cursor-pointer border  hover:border-[#234169] w-full ${
+      borrowAmount < minBorrow
+        ? "bg-gray-400 text-gray-700  cursor-default z-10 "
+        : "!text-white bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500 "
+    }}`,
   };
-  
 
   const handleBorrowChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -177,37 +185,59 @@ function CreateLoan({
 
   // setBigIntCollateralAmount(BigInt(UnitToDecimal(borrowAmount,collateralDecimals).toString())/BigInt(1e18 *borrowRatio))
   useEffect(() => {
-    const collateralAmount: number = Number(preciseRound(
-      borrowAmount / borrowRatio,
-      collateralDecimals
-    ));
+    const collateralAmount: number = Number(
+      preciseRound(borrowAmount / borrowRatio, collateralDecimals)
+    );
     setCollateralAmount(collateralAmount);
     setMinCollateralAmount(collateralAmount);
   }, [borrowAmount]);
   return (
     <>
-      <div className="rounded-xl h-full text-black dark:text-white">
+      <div className="h-full rounded-xl text-black dark:text-white ">
         {loading && (
-            <div className="absolute h-screen w-full">
-              <SpinnerLoader />
-            </div>
-   
-        )}
-        <h2 className="mt-6 text-center text-3xl font-bold ">New Loan</h2>
-        <div className="ml-6 mt-8 grid  grid-cols-2 font-semibold ">
-        <div className="flex">Current Debt : {formatCurrencyValue(currentDebt)}</div>
-          <div className="flex">
-            Available Debt : {formatCurrencyValue(availableDebt)}
+          <div className="absolute h-screen w-full">
+            <SpinnerLoader />
           </div>
-          <div className="flex">Open Fee : {preciseRound(openingFee *100,2)} %</div>
-          <div className="flex">Min Borrow : {minBorrow}</div>
-          <div className="col-span-2">Borrow Ratio : {preciseRound(borrowRatio,2)} CREDIT / {name}</div>
+        )}
+        <h2 className="ml-6 mt-4 text-start text-xl font-semibold text-navy-700 dark:text-white ">
+          New Loan
+        </h2>
+        <div className=" ml-6 mt-8 grid grid-cols-2  ">
+          <div className="">
+            Available Debt :   <span className="font-semibold">{formatCurrencyValue(availableDebt)}</span>
+          </div>
+          <div className="">
+            Open Fee :{" "}
+            <span className="font-semibold">
+              {preciseRound(openingFee * 100, 2)}{" "}
+            </span>
+            %
+          </div>
+          <div className="">
+            Current Debt :{" "}
+            <span className="font-semibold">
+              {formatCurrencyValue(currentDebt)}
+            </span>
+          </div>
+          <div className="">
+            Min Borrow : <span className="font-semibold">{minBorrow}</span>
+          </div>
+          <div className="col-span-2">
+            Borrow Ratio :{" "}
+            <span className="font-semibold">
+              {" "}
+              {preciseRound(borrowRatio, 2)} CREDIT / {name}
+            </span>
+          </div>
+          <div className="col-span-2">
+              Your {name} Balance :<span className="font-semibold"> {preciseRound(collateralAmountAvailable, 2)}{" "}
+              {name}</span>
+            </div>
         </div>
-        
+
         <div className={style.content}>
-          
           <div className={style.formHeader}>
-          <div className="col-span-2">Your {name} Balance : {preciseRound(collateralAmountAvailable,2)} {name}</div>
+          
             {/* <div>Swap your credits to native tokens </div> */}
             <div></div>
           </div>
@@ -232,9 +262,25 @@ function CreateLoan({
             />
             <div className="w-full">Collateral amount</div>
           </div>
-          <button onClick={borrow} className={style.confirmButton + "text-white"} disabled={borrowAmount < minBorrow ? true : false}>
+          <button
+            onClick={borrow}
+            className={style.confirmButton + "text-white"}
+            disabled={borrowAmount < minBorrow ? true : false}
+          >
             Borrow
           </button>
+          {openingFee > 0 && (
+            <div className="my-2 ">
+              <p>
+                You will have to pay{" "}
+                <span className="font-semibold">
+                  {" "}
+                  {borrowAmount * openingFee} CREDIT{" "}
+                </span>{" "}
+                to open this loan
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </>

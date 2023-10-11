@@ -39,7 +39,7 @@ function AllocateGuild({
     currencySelectorIcon: `flex items-center`,
     currencySelectorTicker: `mx-2`,
     currencySelectorArrow: `text-lg`,
-    confirmButton: ` w-full bg-purple my-2 rounded-2xl py-4 px-8 text-xl font-semibold flex items-center justify-center cursor-pointer border border-purple hover:border-[#234169] ${(value> availableGuild && textButton=="Increment") || (value > allocatedGuild && textButton=='Decrement') ? "bg-gray-400  text-gray-700 !cursor-default" :"bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500  text-white"}  `,
+    confirmButton: ` w-full bg-purple my-2 rounded-2xl py-4 px-8 text-xl font-semibold flex items-center justify-center cursor-pointer border border-purple hover:border-[#234169] ${((value> availableGuild || value===0)&& textButton=="Increment") || ((value > allocatedGuild || value ===0) && textButton=='Decrement') ? "bg-gray-400  text-gray-700 !cursor-default" :"bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500  text-white"}  `,
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,13 +137,13 @@ function AllocateGuild({
       )}
       <div className={style.formHeader}></div>
       <div className="my-2 grid grid-cols-2">
-        <p className="font-semibold col-span-2">
+        <p className=" col-span-2">
           Your current GUILD staked :{" "}
-          <span className="text-xl">{allocatedGuild}</span>{" "}
+          <span className="font-semibold">{allocatedGuild}</span>{" "}
         </p>
-        <p className="font-semibold col-span-2">
+        <p className=" col-span-2">
           Your available GUILD :{" "}
-          <span className="text-xl">{availableGuild}</span>{" "}
+          <span className="font-semibold">{availableGuild}</span>{" "}
         </p>
       </div>
       <div className={style.transferPropContainer}>

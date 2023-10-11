@@ -109,7 +109,8 @@ return {
 }
 function preciseRound(value: number, decimals: number): string {
   const factor = Math.pow(10, decimals);
-  return (Math.round(value * factor) / factor).toFixed(decimals);
+  //use of math.ceil to round up to the nearest integer to avoid decimal errors with smart contracts
+  return (Math.ceil(value * factor) / factor).toFixed(decimals);
 }
 
 

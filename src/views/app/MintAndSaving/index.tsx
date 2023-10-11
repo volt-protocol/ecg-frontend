@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import TotalSpent from "../default/components/TotalSpent";
 import Card from "components/card";
@@ -12,9 +13,9 @@ import { readContract, waitForTransaction, writeContract } from "@wagmi/core";
 import { DecimalToUnit, preciseRound } from "utils";
 import { toastError, toastRocket } from "toast";
 import SpinnerLoader from "components/spinner";
-import TooltipHorizon from "components/tooltip";
-import { AiOutlineQuestionCircle } from "react-icons/ai";
 import MintOrRedeem from "./components/MintOrRedeem";
+import { ToggleSwitch } from "flowbite-react";
+
 
 function MintAndSaving() {
   const [creditAvailable, setCreditAvailable] = React.useState(0);
@@ -27,6 +28,16 @@ function MintAndSaving() {
   });
   const [isRebasing, setIsRebasing] = React.useState(false);
 
+  async function Rebasing(): Promise<void> {
+    const result = await readContract({
+      address: import.meta.env.VITE_CREDIT_ADDRESS as Address,
+      abi: creditAbi,
+      functionName: "isRebasing",
+      args: [address],
+    });
+    setIsRebasing(result as boolean);
+  }
+
   useEffect(() => {
     async function getCreditAvailable(): Promise<void> {
       const result = await readContract({
@@ -37,19 +48,9 @@ function MintAndSaving() {
       });
       setCreditAvailable(DecimalToUnit(result as bigint, 18));
     }
-
-    async function isRebasing(): Promise<void> {
-      const result = await readContract({
-        address: import.meta.env.VITE_CREDIT_ADDRESS as Address,
-        abi: creditAbi,
-        functionName: "isRebasing",
-        args: [address],
-      });
-      setIsRebasing(result as boolean);
-    }
     if (isConnected) {
       getCreditAvailable();
-      isRebasing();
+      Rebasing();
     } else setCreditAvailable(0);
   }, [isConnected]);
 
@@ -108,6 +109,7 @@ function MintAndSaving() {
           : "Stop Saving transaction success"
       );
       setLoading(false);
+      Rebasing();
     } catch (error) {
       toastError(
         rebaseMode === "enterRebase"
@@ -115,6 +117,7 @@ function MintAndSaving() {
           : "Stop Saving transaction failed"
       );
       setLoading(false);
+      
       console.log(error);
     }
   }
@@ -127,51 +130,48 @@ function MintAndSaving() {
       </div>
       <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
         <Card extra="space-y-7 p-4">
-          <h2 className="text-xl font-semibold">CREDIT saving</h2>
-          <div className="flex space-x-2  ">
-            {creditAvailable && isRebasing ? (
-              <p>
-                Your are currently saving :
-                <span className="font-semibold"> {creditAvailable}</span>
-              </p>
-            ) : (
-              <p>
-                You are <span className="font-semibold">not</span> currently
-                saving
-              </p>
-            )}
-          </div>
+          <div className="flex justify-between ">
+            <h2 className="text-xl font-semibold">CREDIT saving</h2>
+            <div>
+            <ToggleSwitch
+        checked={isRebasing}
+        label="Saving"
+        color="purple"
+        onChange={function () { {isRebasing ? saving("exitRebase") : saving("enterRebase")}}}
+      />
+      </div>
+                </div>
           <div>
-          <p className="text-sm">
-            When you are saving, the CREDIT balance in your wallet will increase
-            automatically when the protocol earns fees from interest payments.
-            The current profit sharing configuration is :</p>
+            <p className="text-sm">
+              If you elect to receive the savings rate, the CREDIT balance of
+              your wallet will automatically rebase up when the protocol earn
+              fees. The protocol profit sharing can be updated by governance,
+              and is configured as follow :
+            </p>
             <p>
-            <br></br>{" "}
-            <span className="font-semibold ">{profitSharing.creditSplit}</span>%
-            to CREDIT savers, <br></br>{" "}
-            <span className="font-semibold">{profitSharing.guildSplit}</span>%
-            to GUILD voters,{" "} <br></br>
-            <span className="font-semibold">
-              {profitSharing.surplusBufferSplit}
-            </span>
-            % to surplus buffer
-        </p>
-        </div>
-          <div className="mt-5 grid grid-cols-1 gap-5 gap-x-10 font-semibold text-white md:grid-cols-2">
-            <button
-              onClick={() => saving("enterRebase")}
-              className="rounded-lg bg-primary"
-            >
-              Start Saving
-            </button>
-            <button
-              onClick={() => saving("exitRebase")}
-              className="rounded-lg bg-red-500"
-            >
-              Stop Saving
-            </button>
+              <br></br>{" "}
+              <span className="font-semibold ">
+                {profitSharing.creditSplit}
+              </span>
+              % to CREDIT savers (through rebase), <br></br>{" "}
+              <span className="font-semibold">
+                {profitSharing.surplusBufferSplit}
+              </span>
+              % to the Surplus Buffer, a first-loss capital reserve shared among
+              all terms, <br></br>{" "}
+              <span className="font-semibold">{profitSharing.guildSplit}</span>%
+              to GUILD token holders who stake their tokens to increase the debt
+              ceiling of terms,
+            </p>
           </div>
+          <div className="flex flex-col space-y-2 ">
+            <p>
+              Your current CREDIT Balance :
+              <span className="font-semibold"> {creditAvailable}</span>
+            </p>
+            <p>Your current rebasing status : {isRebasing ? "Yes" : "No"}</p>
+          </div>
+         
         </Card>
         <Card extra="space-y-5 p-4">
           <MintOrRedeem />

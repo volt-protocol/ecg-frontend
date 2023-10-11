@@ -35,10 +35,11 @@ import { AiOutlineQuestionCircle } from "react-icons/ai";
 
 const columnHelper = createColumnHelper<LoansObj>();
 
-function Myloans(props: {
+function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice} : {
   collateralName: string;
   tableData: LoansObj[];
   smartContractAddress: string;
+  collateralPrice: number;
 }) {
   const inputRefs = React.useRef<{
     [key: string]: React.RefObject<HTMLInputElement>;
@@ -46,13 +47,12 @@ function Myloans(props: {
 
   // const { account, chainId, provider } = useWeb3React()
   const [values, setValues] = React.useState<{ [key: string]: number }>({});
-  const { tableData, smartContractAddress, collateralName } = props;
+
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [loading, setLoading] = React.useState(false);
   const { address, isConnected, isDisconnected } = useAccount();
   const [creditMultiplier, setCreditMultiplier] = React.useState(0);
-  const [collateralPrice, setCollateralPrice] = React.useState(0);
-
+  
   function TableCell({ original }: { original: LoansObj }) {
     const [inputValue, setInputValue] = useState("");
     const [match, setMatch] = useState(false);
@@ -106,20 +106,9 @@ function Myloans(props: {
       });
       setCreditMultiplier(Number(creditMultiplier));
     }
-    async function getCollateralPrice() {
-      //requête axios en post vers coinmarketcap avec sort au name et limit à 1.
-      const nameCG = nameCoinGecko.find(
-        (name) => name.nameECG === collateralName
-      )?.nameCG;
-      const response = await axios.get(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${nameCG}&vs_currencies=usd`,
-        {}
-      );
-
-      setCollateralPrice(response.data[nameCG].usd);
-    }
+   
     getcreditMultiplier();
-    getCollateralPrice();
+
   }, []);
   let defaultData = tableData;
   const columns = [
@@ -347,6 +336,7 @@ function Myloans(props: {
   }
 
   return (
+    
     <Card extra={"w-full h-full px-6 pb-6 sm:overflow-x-auto"}>
       {loading && (
         <div className="absolute h-screen w-full">

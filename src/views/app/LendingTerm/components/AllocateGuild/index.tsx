@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Address, readContract, waitForTransaction, writeContract } from "@wagmi/core";
 import { guildAbi } from "guildAbi";
-import { DecimalToUnit, UnitToDecimal } from "utils";
+import { DecimalToUnit, UnitToDecimal, formatCurrencyValue, preciseRound } from "utils";
 import { toastError, toastRocket } from "toast";
 import SpinnerLoader from "components/spinner";
 import { useAccount } from "wagmi";
@@ -14,7 +14,10 @@ function AllocateGuild({
   availableGuild,
   smartContractAddress,
   currentDebt,
-  availableDebt
+  availableDebt,
+  gaugeWeight,
+  totalWeight,
+  creditTotalSupply,
 }: {
   textButton: string;
   allocatedGuild: number;
@@ -22,10 +25,14 @@ function AllocateGuild({
   smartContractAddress: string;
   currentDebt: number;
   availableDebt: number;
+  gaugeWeight: number;
+  totalWeight: number;
+  creditTotalSupply: number;
 }) {
   const [value, setValue] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
-  const [gaugeWeight, setGaugeWeight] = useState<number>(0);
+ 
+
   const { address, isConnected, isDisconnected } = useAccount();
 
   const style = {
@@ -112,18 +119,18 @@ function AllocateGuild({
     }
   }
 
-  useEffect(() => {
-    async function getGaugeWeight():Promise<void> {
-    const result = await readContract({
-      address: import.meta.env.VITE_GUILD_ADDRESS as Address,
-      abi: guildAbi,
-      functionName: "getUserGaugeWeight",
-      args: [address, smartContractAddress],
-    });
-    setGaugeWeight( Number(DecimalToUnit(result as bigint,18)));
-  }
-  getGaugeWeight();
- }, []);
+  
+
+
+ function getDebtCeileingIncrease():string {
+  const percentBefore = gaugeWeight/totalWeight;
+  const percentAfter = (gaugeWeight+value)/(totalWeight);
+  const debCeilingBefore = creditTotalSupply*percentBefore *1.2;
+  const debCeilingAfter = creditTotalSupply*percentAfter *1.2;
+  const debtCeilingIncrease = debCeilingAfter - debCeilingBefore;
+  return formatCurrencyValue(debtCeilingIncrease);
+
+ }
 
 
 
@@ -166,7 +173,7 @@ function AllocateGuild({
       {textButton === "Increment" ? (
         <>
         {console.log(currentDebt, availableDebt, currentDebt+availableDebt,gaugeWeight,value, gaugeWeight+value,)}
-          <p>Your GUILD stake will allow {(currentDebt+availableDebt)*(gaugeWeight+value)-(currentDebt+availableDebt)} more CREDIT to be borrowed from this term </p>
+          <p>Your GUILD stake will allow {getDebtCeileingIncrease()} more CREDIT to be borrowed from this term </p>
         </>
       ) : (
         <>

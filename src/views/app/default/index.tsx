@@ -63,9 +63,9 @@ const Dashboard = () => {
 
       <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-2">
         {/* Check Table */}
-        <div>
+        {/* <div>
           <CheckTable tableData={tableDataCheck} />
-        </div>
+        </div> */}
 
         {/* Traffic chart & Pie Chart */}
 

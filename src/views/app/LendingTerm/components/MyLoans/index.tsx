@@ -176,9 +176,9 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
                       (1e18 *
                         Number(
                           collateralPrice * info.row.original.collateralAmount
-                        )),
+                        ))*100 ,
                     2
-                  )}
+                  )}%
                 </p>
                 <div className="mb-2 ml-1">
                   <AiOutlineQuestionCircle color="gray" />
@@ -402,7 +402,7 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
                         return (
                           <td
                             key={cell.id}
-                            className="relative border-white/0   py-3 pr-4  xl:min-w-[90px] 3xl:min-w-[150px]"
+                            className="relative border-white/0 min-w-[75px] lg:min-w-[69px]   py-3 pr-4  xl:min-w-[90px] 3xl:min-w-[150px]"
                           >
                             {flexRender(
                               cell.column.columnDef.cell,

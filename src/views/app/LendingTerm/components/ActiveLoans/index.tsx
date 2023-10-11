@@ -21,7 +21,12 @@ import {
 } from "@wagmi/core";
 import { toastError, toastRocket } from "toast";
 import { creditAbi, guildAbi, profitManager, termAbi, usdcAbi } from "guildAbi";
-import { DecimalToUnit, preciseRound, secondsToAppropriateUnit, UnitToDecimal } from "utils";
+import {
+  DecimalToUnit,
+  preciseRound,
+  secondsToAppropriateUnit,
+  UnitToDecimal,
+} from "utils";
 import SpinnerLoader from "components/spinner";
 import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
@@ -153,29 +158,28 @@ function ActiveLoans({
     }
   }
   async function callMany() {
-    try{
-    setLoading(true);
-    const responde = await writeContract({
-      address: termAddress,
-      abi: termAbi,
-      functionName: "callMany",
-      args: [data.map((loan) => loan.id)],
-    });
-    const checkCall = await waitForTransaction({
-      hash: responde.hash,
-    });
-    if (checkCall.status != "success") {
-      toastError("Call transaction failed");
+    try {
+      setLoading(true);
+      const responde = await writeContract({
+        address: termAddress,
+        abi: termAbi,
+        functionName: "callMany",
+        args: [data.map((loan) => loan.id)],
+      });
+      const checkCall = await waitForTransaction({
+        hash: responde.hash,
+      });
+      if (checkCall.status != "success") {
+        toastError("Call transaction failed");
+        setLoading(false);
+        return;
+      }
       setLoading(false);
-      return;
+      toastRocket("Call transaction success");
+    } catch (e) {
+      setLoading(false);
+      toastError("Call transaction failed");
     }
-    setLoading(false);
-    toastRocket("Call transaction success");
-  }
-  catch(e){
-    setLoading(false);
-    toastError("Call transaction failed");
-  }
   }
 
   useEffect(() => {
@@ -188,7 +192,6 @@ function ActiveLoans({
 
       setCreditMultiplier(Number(creditMultiplier));
     }
-   
 
     async function getCollateralPrice() {
       //requête axios en post vers coinmarketcap avec sort au name et limit à 1.
@@ -302,15 +305,18 @@ function ActiveLoans({
             trigger={
               <div className="flex ">
                 <p>
-                {preciseRound(
+                  {preciseRound(
                     (info.row.original.borrowAmount * creditMultiplier) /
-                      (1e18 * Number(collateralPrice*info.row.original.collateralAmount)),
+                      (1e18 *
+                        Number(
+                          collateralPrice * info.row.original.collateralAmount
+                        ))*100,
                     2
-                  )}
+                  )}%
                 </p>
                 <div className="mb-2 ml-1">
-                <AiOutlineQuestionCircle color="gray" />
-              </div>
+                  <AiOutlineQuestionCircle color="gray" />
+                </div>
               </div>
             }
             placement="right"
@@ -322,15 +328,20 @@ function ActiveLoans({
       id: "nextPaymentDue",
       header: "Next Payment Due",
       cell: (info: any) => {
-        const isOverdue=Date.now()/1000-
-        (repays[info.row.original.id] +
-        maxDelayBetweenPartialRepay)
+        const currentDateInSeconds = Date.now() / 1000;
+        const sumOfTimestamps =
+          repays[info.row.original.id] + maxDelayBetweenPartialRepay;
+
         return (
           <>
             <p>
-              { maxDelayBetweenPartialRepay === 0
+              {maxDelayBetweenPartialRepay === 0
                 ? "n/a"
-                :isOverdue  < 0? "Overdue":secondsToAppropriateUnit(isOverdue)  }
+                : sumOfTimestamps < currentDateInSeconds
+                ? "Overdue"
+                : secondsToAppropriateUnit(
+                    sumOfTimestamps - currentDateInSeconds
+                  )}
             </p>
           </>
         );
@@ -378,14 +389,14 @@ function ActiveLoans({
       )}
       <div className="relative flex items-center justify-between pt-4">
         <div className="text-xl font-bold text-navy-700 dark:text-white">
-          Active Loans
+          Active Loans : {data.length}
         </div>
         <div>
           <button
-            disabled={isGauge || data.length===0}
+            disabled={isGauge || data.length === 0}
             onClick={callMany}
             className={`cursor-default rounded-2xl px-4 py-1 font-semibold text-white ${
-              isGauge || data.length===0
+              isGauge || data.length === 0
                 ? " bg-gray-500"
                 : " bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500 "
             } `}
@@ -400,69 +411,71 @@ function ActiveLoans({
           {" "}
           <p>There are no active loans on this term yet</p>
         </div>
-      ):(
-
-      <div className="mt-8  h-full xl:overflow-auto">
-        <table className="w-full">
-          <thead>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id} className="!border-px !border-gray-400">
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <th
-                      key={header.id}
-                      colSpan={header.colSpan}
-                      onClick={header.column.getToggleSortingHandler()}
-                      className="cursor-pointer border-b-[1px] border-gray-200 pb-2 pr-4 pt-4 text-start"
-                    >
-                      <div
-                        className={`text-gray-black items-center justify-between text-xs ${
-                          header.id === "loadId" || header.id === "borrower"
-                            ? "font-mono"
-                            : ""
-                        } `}
+      ) : (
+        <div className="mt-8  h-full xl:overflow-auto">
+          <table className="w-full">
+            <thead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr
+                  key={headerGroup.id}
+                  className="!border-px !border-gray-400"
+                >
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <th
+                        key={header.id}
+                        colSpan={header.colSpan}
+                        onClick={header.column.getToggleSortingHandler()}
+                        className="cursor-pointer border-b-[1px] border-gray-200 pb-2 pr-4 pt-4 text-start"
                       >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                        {{
-                          asc: "",
-                          desc: "",
-                        }[header.column.getIsSorted() as string] ?? null}
-                      </div>
-                    </th>
-                  );
-                })}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {table
-              .getRowModel()
-              .rows.slice(0, 5)
-              .map((row) => {
-                return (
-                  <tr key={row.id}>
-                    {row.getVisibleCells().map((cell) => {
-                      return (
-                        <td
-                          key={cell.id}
-                          className="min-w-[150px] border-white/0 py-3  pr-4 "
+                        <div
+                          className={`text-gray-black items-center justify-between text-xs ${
+                            header.id === "loadId" || header.id === "borrower"
+                              ? "font-mono"
+                              : ""
+                          } `}
                         >
                           {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
+                            header.column.columnDef.header,
+                            header.getContext()
                           )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-          </tbody>
-        </table>
-      </div>
+                          {{
+                            asc: "",
+                            desc: "",
+                          }[header.column.getIsSorted() as string] ?? null}
+                        </div>
+                      </th>
+                    );
+                  })}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {table
+                .getRowModel()
+                .rows.slice(0, 5)
+                .map((row) => {
+                  return (
+                    <tr key={row.id}>
+                      {row.getVisibleCells().map((cell) => {
+                        return (
+                          <td
+                            key={cell.id}
+                            className="min-w-[150px] border-white/0 py-3  pr-4 "
+                          >
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
+        </div>
       )}
     </Card>
   );

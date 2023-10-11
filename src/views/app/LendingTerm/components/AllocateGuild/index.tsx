@@ -46,7 +46,7 @@ function AllocateGuild({
     currencySelectorIcon: `flex items-center`,
     currencySelectorTicker: `mx-2`,
     currencySelectorArrow: `text-lg`,
-    confirmButton: ` w-full bg-purple my-2 rounded-2xl py-4 px-8 text-xl font-semibold flex items-center justify-center cursor-pointer border border-purple hover:border-[#234169] ${((value> availableGuild || value===0)&& textButton=="Increment") || ((value > allocatedGuild || value ===0) && textButton=='Decrement') ? "bg-gray-400  text-gray-700 !cursor-default" :"bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500  text-white"}  `,
+    confirmButton: ` w-full bg-purple my-2 rounded-2xl py-4 px-8 text-xl font-semibold flex items-center justify-center cursor-pointer border border-purple hover:border-[#234169] ${((value> availableGuild || value<=0)&& textButton=="Increment") || ((value > allocatedGuild || value <=0) && textButton=='Decrement') ? "bg-gray-400  text-gray-700 !cursor-default" :"bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500  text-white"}  `,
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,11 +124,11 @@ function AllocateGuild({
 
  function getDebtCeileingIncrease():string {
   const percentBefore = gaugeWeight/totalWeight;
-  const percentAfter = (gaugeWeight+value)/(totalWeight);
+  const percentAfter = (gaugeWeight+Number(value))/(totalWeight);
   const debCeilingBefore = creditTotalSupply*percentBefore *1.2;
   const debCeilingAfter = creditTotalSupply*percentAfter *1.2;
   const debtCeilingIncrease = debCeilingAfter - debCeilingBefore;
-  return formatCurrencyValue(debtCeilingIncrease);
+  return formatCurrencyValue(Number(preciseRound(debtCeilingIncrease,2)));
 
  }
 
@@ -172,7 +172,7 @@ function AllocateGuild({
       </div>
       {textButton === "Increment" ? (
         <>
-        {console.log(currentDebt, availableDebt, currentDebt+availableDebt,gaugeWeight,value, gaugeWeight+value,)}
+        
           <p>Your GUILD stake will allow {getDebtCeileingIncrease()} more CREDIT to be borrowed from this term </p>
         </>
       ) : (
@@ -180,7 +180,7 @@ function AllocateGuild({
           <p>Your GUILD unstake will decrease the borrow capacity on this term by {value} CREDIT</p>
         </>
       )}
-      <button onClick={handleVote} className={style.confirmButton} disabled={(value> availableGuild && textButton=="Increment")||(value>allocatedGuild && textButton=='Decrement')? true:false } >
+      <button onClick={handleVote} className={style.confirmButton} disabled={(value> availableGuild && textButton=="Increment")||(value>allocatedGuild && textButton=='Decrement') || value<=0? true:false } >
         {textButton === "Increment" ? "Stake" : "Unstake"}
       </button>
     </div>

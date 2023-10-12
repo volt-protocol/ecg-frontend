@@ -38,7 +38,7 @@ function CheckTable(props: { tableData: lendingTerms[], name: string }) {
       ),
       cell: (info: any) => (
         <div className="flex items-center">
-          {/* <img src={info.getValue()[1]} alt="" className="w-10 h-10 rounded-full" /> */}
+          
 
           <p className="ml-3 text-sm font-bold text-navy-700 dark:text-white">
             {info.row.original.collateral}-

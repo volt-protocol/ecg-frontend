@@ -1,11 +1,13 @@
+import { ReactJSXElement } from "@emotion/react/types/jsx-namespace";
 import Card from "components/card";
 
 const Widget = (props: {
   icon: JSX.Element;
   title: string;
   subtitle: string;
+  extra?: ReactJSXElement;
 }) => {
-  const { icon, title, subtitle } = props;
+  const { icon, title, subtitle,extra } = props;
   return (
     <Card extra="!flex-row flex-grow items-center rounded-[20px]">
       <div className="ml-[18px] flex h-[90px] w-auto flex-row items-center">
@@ -18,9 +20,12 @@ const Widget = (props: {
 
       <div className="h-50 ml-4 flex w-auto flex-col justify-center">
         <p className="font-dm text-sm font-medium text-gray-600">{title}</p>
+        <div className="flex flex-row space-x-1">
         <h4 className="text-xl font-bold text-navy-700 dark:text-white">
           {subtitle}
         </h4>
+        {extra}
+        </div>
       </div>
     </Card>
   );

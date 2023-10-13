@@ -35,11 +35,12 @@ import { AiOutlineQuestionCircle } from "react-icons/ai";
 
 const columnHelper = createColumnHelper<LoansObj>();
 
-function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice} : {
+function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice,interestRate} : {
   collateralName: string;
   tableData: LoansObj[];
   smartContractAddress: string;
   collateralPrice: number;
+  interestRate: number;
 }) {
   const inputRefs = React.useRef<{
     [key: string]: React.RefObject<HTMLInputElement>;
@@ -125,20 +126,56 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
           <TooltipHorizon
             extra="dark:text-white"
             content={
-              <div className="space-y-2 p-2">
+              <div className="space-y-4 p-2 mt-4 ">
+              <div className="space-y-2">
+                <p>
+                   Borrowed CREDIT :{" "}
+                  <span className="font-semibold">
+                    {" "}
+                    {preciseRound(info.row.original.borrowAmount,2)}{" "}
+                  </span>{" "}
+                </p>
+                <p>
+                   Borrow Interest :{" "}
+                  <span className="font-semibold">
+                    <strong>
+                    {" "}
+                    {interestRate}
+                    {" "}
+                    CREDIT
+                    </strong>
+                  </span>
+                </p>
+                <p>
+                   Borrowed Value :{" "}
+                  <span className="font-semibold">
+                    {" "}
+                    {preciseRound(DecimalToUnit(
+                      BigInt(info.row.original.borrowAmount * creditMultiplier),
+                      18
+                    ),2)}
+                    {" "}{collateralName}
+                  </span>
+                </p>
+                <p>
+                   Borrowed Value :{" "}
+                  <span className="font-semibold">
+                    {" "}
+                    {preciseRound(DecimalToUnit(
+                      BigInt(info.row.original.borrowAmount * creditMultiplier),
+                      18
+                    ),2)}
+                    $
+                  </span>
+                </p>
+                </div>
+                <div className="space-y-2">
                 <p>
                   Collateral Amount :{" "}
                   <span className="font-semibold">
                     {" "}
-                    {info.row.original.collateralAmount}{" "}
+                    {(info.row.original.collateralAmount)}{" "}
                   </span>
-                </p>
-                <p>
-                  CREDIT Borrowed :{" "}
-                  <span className="font-semibold">
-                    {" "}
-                    {info.row.original.borrowAmount}{" "}
-                  </span>{" "}
                 </p>
                 <p>
                   Collateral Price:{" "}
@@ -155,17 +192,8 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
                     ${" "}
                   </span>
                 </p>
-                <p>
-                  Value Borrowed :{" "}
-                  <span className="font-semibold">
-                    {" "}
-                    {DecimalToUnit(
-                      BigInt(info.row.original.borrowAmount * creditMultiplier),
-                      18
-                    )}
-                    $
-                  </span>
-                </p>
+                </div>
+                <p>Price sources : <strong> Coingecko API</strong></p>
               </div>
             }
             trigger={
@@ -199,10 +227,10 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
     },
   ]; // eslint-disable-next-line
   const [data, setData] = React.useState(() =>
-    defaultData.filter((loan) => loan.status !== "closed")
+    defaultData.filter((loan) => loan.status !== "closed" && loan.callTime===0)
   );
   useEffect(() => {
-    setData(defaultData.filter((loan) => loan.status !== "closed"));
+    setData(defaultData.filter((loan) => loan.status !== "closed" && loan.callTime===0));
   }, [defaultData]);
   const table = useReactTable({
     data,
@@ -353,7 +381,7 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
         <div className="flex flex-grow items-center justify-center font-semibold text-gray-500 ">
           <p>You need to be connected to see your active loans</p>
         </div>
-      ) : defaultData.length === 0 ? (
+      ) : data.length === 0 ? (
         <div className="flex flex-grow items-center justify-center font-semibold text-gray-500 ">
           {" "}
           <p>You do not have active loans on this term yet</p>

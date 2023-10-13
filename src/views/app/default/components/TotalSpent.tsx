@@ -5,7 +5,6 @@ import {
 } from "react-icons/md";
 import Card from "components/card";
 import {
-  lineChartDataTotalSpent,
   lineChartOptionsTotalSpent,
 } from "variables/charts";
 import LineChart from "components/charts/LineChart";
@@ -13,10 +12,11 @@ import LineChart from "components/charts/LineChart";
 type TotalSpentProps = {
   name: string;
   percentage: string;
+  data : any;
 };
 
 
-const TotalSpent: React.FC<TotalSpentProps> = ({name,percentage}:{name:string,percentage:string}) => {
+const TotalSpent: React.FC<TotalSpentProps> = ({name,percentage, data}:{name:string,percentage:string,data:any}) => {
   return (
     <Card extra="!p-[20px] text-center">
       <div className="flex justify-between">
@@ -45,7 +45,7 @@ const TotalSpent: React.FC<TotalSpentProps> = ({name,percentage}:{name:string,pe
         <div className="h-full w-full">
           <LineChart
             chartOptions={lineChartOptionsTotalSpent}
-            chartData={lineChartDataTotalSpent}
+            chartData={data}
           />
         </div>
       </div>

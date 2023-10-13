@@ -31,15 +31,13 @@ const Navbar = (props: {
   const location = useLocation();
 
   function TermName(): string | null {
-    if (!location.state) {
-      return null;
-    }
-    const address = location.state.collateralAddress;
-    const item = store.lendingTermsState.find(
-      (entry: lendingTerms) => entry.collateralAddress === address
+    const address = location.pathname.split('/').pop();
+    const item:lendingTerms = store.lendingTermsState.find(
+      (entry: lendingTerms) => entry.address === address
     );
-    return item ? `${item.collateral}-${item.interestRate*100}%-${preciseRound(item.borrowRatio,2)}` : null;
+    return item ? `${item.label}` : null;
   }
+  
 
   return (
     <nav className="sticky top-4 z-40 flex flex-row flex-wrap items-center justify-between rounded-xl bg-white/10 p-2 backdrop-blur-xl dark:bg-[#0b14374d]">
@@ -67,6 +65,7 @@ const Navbar = (props: {
             to="#"
             className="font-bold capitalize hover:text-navy-700 dark:hover:text-white"
           > */}
+          
             {brandText === "Lending Term Details" ? TermName() : brandText}
           {/* </Link> */}
         </p>

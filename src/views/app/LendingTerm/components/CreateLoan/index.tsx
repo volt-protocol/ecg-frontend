@@ -1,7 +1,10 @@
 import { readContract, waitForTransaction, writeContract } from "@wagmi/core";
 import SpinnerLoader from "components/spinner";
+import StepModal from "components/stepLoader";
+import { Step } from "components/stepLoader/stepType";
 import { creditAbi, termAbi, usdcAbi } from "guildAbi";
 import React, { useEffect, useState } from "react";
+import { MdOutlineError } from "react-icons/md";
 import { toastError, toastRocket } from "toast";
 import {
   DecimalToUnit,
@@ -38,16 +41,26 @@ function CreateLoan({
   const [borrowAmount, setBorrowAmount] = useState<number>(0);
   const [collateralAmount, setCollateralAmount] = useState<number>(0);
   const [minCollateralAmount, setMinCollateralAmount] = useState<number>(0);
-  // const [bigIntCollateralAmount, setBigIntCollateralAmount] = useState<BigInt>(BigInt(0));
   const [permitMessage, setPermitMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [collateralAmountAvailable, setCollateralAmountAvailable] =
     useState<number>(0);
   const { address, isConnected, isDisconnected } = useAccount();
+  const [showModal, setShowModal] = useState(false);
+  const createSteps = (): Step[] => {
+    const baseSteps = [
+      { name: "Approve", status: "notStarted" },
+      { name: "Borrow", status: "notStarted" },
+    ];
 
-  // borrow function :
-  //borrow amount
-  // collateral amount
+    if (openingFee > 0) {
+      baseSteps.splice(2, 0, { name: "approveCredit", status: "notStarted" });
+    }
+
+    return baseSteps;
+  };
+
+  const [steps, setSteps] = useState<Step[]>(createSteps());
 
   useEffect(() => {
     async function getCollateralAmountAvailable(): Promise<void> {
@@ -66,10 +79,16 @@ function CreateLoan({
       );
     }
     getCollateralAmountAvailable();
-  }, []);
+  }, [isConnected]);
 
   async function borrow() {
-    try {
+
+    if (isConnected == false) {
+      toastError("Please connect your wallet");
+      setLoading(false);
+      return;
+    }
+
       //check ratio
       if (borrowAmount < minBorrow) {
         toastError(`Borrow amount can't be below than ${minBorrow} `);
@@ -79,10 +98,17 @@ function CreateLoan({
         toastError(`The max borrow amount is ${availableDebt} `);
         return;
       }
-
-      setLoading(true);
-
+      const updateStepStatus = (stepName: string, status: Step["status"]) => {
+        setSteps((prevSteps) =>
+          prevSteps.map((step) =>
+            step.name === stepName ? { ...step, status } : step
+          )
+        );
+      };
+      setShowModal(true);
+      updateStepStatus("Approve", "inProgress");
       // approve collateral first
+      try {
       const approve = await writeContract({
         address: collateralAddress,
         abi: usdcAbi,
@@ -91,20 +117,31 @@ function CreateLoan({
           contractAddress,
           UnitToDecimal(collateralAmount, collateralDecimals),
         ],
-      });
-
+      });  
       const checkApprove = await waitForTransaction({
         hash: approve.hash,
       });
 
       if (checkApprove.status != "success") {
         toastError("Approve transaction failed");
+
         setLoading(false);
         return;
       }
+    }
+      catch (e) {
+        console.log(e);
+        updateStepStatus("Approve", "error");
+        return;
+      } 
+
+     
+      updateStepStatus("Approve", "success");
 
       // check si il y a un  open fees ==> approve credit
       if (openingFee > 0) {
+        updateStepStatus("approveCredit", "inProgress");
+        try{
         const approveCredit = await writeContract({
           address: import.meta.env.VITE_CREDIT_ADDRESS,
           abi: creditAbi,
@@ -120,8 +157,15 @@ function CreateLoan({
           setLoading(false);
           return;
         }
+      } catch (e) {
+        console.log(e);
+        updateStepStatus("approveCredit", "error");
+        return;
       }
-
+      }
+    
+      updateStepStatus("Borrow", "inProgress");
+      try {
       const borrow = await writeContract({
         address: contractAddress,
         abi: termAbi,
@@ -134,18 +178,18 @@ function CreateLoan({
       const checkBorrow = await waitForTransaction({
         hash: borrow.hash,
       });
-
+    
       if (checkBorrow.status === "success") {
+        updateStepStatus("Borrow", "success");
         toastRocket("Transaction has been successful ");
-        setLoading(false);
         return;
       } else toastError("Error with the borrow transaction");
-      setLoading(false);
-    } catch (e) {
-      toastError("Error with the borrow transaction");
-      setLoading(false);
+    }catch (e) {
       console.log(e);
+      updateStepStatus("Borrow", "error");
+      return;
     }
+   
   }
 
   const style = {
@@ -193,6 +237,8 @@ function CreateLoan({
   }, [borrowAmount]);
   return (
     <>
+      {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
+
       <div className="h-full rounded-xl text-black dark:text-white ">
         {loading && (
           <div className="absolute h-screen w-full">
@@ -204,7 +250,10 @@ function CreateLoan({
         </h2>
         <div className=" ml-6 mt-8 grid grid-cols-2  ">
           <div className="">
-            Available Debt :   <span className="font-semibold">{formatCurrencyValue(availableDebt)}</span>
+            Available Debt :{" "}
+            <span className="font-semibold">
+              {formatCurrencyValue(availableDebt)}
+            </span>
           </div>
           <div className="">
             Open Fee :{" "}
@@ -230,14 +279,16 @@ function CreateLoan({
             </span>
           </div>
           <div className="col-span-2">
-              Your {name} Balance :<span className="font-semibold"> {preciseRound(collateralAmountAvailable, 2)}{" "}
-              {name}</span>
-            </div>
+            Your {name} Balance :
+            <span className="font-semibold">
+              {" "}
+              {preciseRound(collateralAmountAvailable, 2)} {name}
+            </span>
+          </div>
         </div>
 
         <div className={style.content}>
           <div className={style.formHeader}>
-          
             {/* <div>Swap your credits to native tokens </div> */}
             <div></div>
           </div>
@@ -270,7 +321,8 @@ function CreateLoan({
             Borrow
           </button>
           {openingFee > 0 && (
-            <div className="my-2 ">
+            <div className="my-2 flex items-center ">
+               <MdOutlineError className="text-amber-500 me-1 dark:text-amber-300" />
               <p>
                 You will have to pay{" "}
                 <span className="font-semibold">

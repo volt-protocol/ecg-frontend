@@ -1,37 +1,46 @@
-import React, { useEffect, useState } from "react";
-import { Address, readContract, waitForTransaction, writeContract } from "@wagmi/core";
+import React, { Dispatch, SetStateAction, useEffect, useState } from "react";
+import {
+  Address,
+  readContract,
+  waitForTransaction,
+  writeContract,
+} from "@wagmi/core";
 import { guildAbi } from "guildAbi";
-import { DecimalToUnit, UnitToDecimal, formatCurrencyValue, preciseRound } from "utils";
+import {
+  DecimalToUnit,
+  UnitToDecimal,
+  formatCurrencyValue,
+  preciseRound,
+} from "utils";
 import { toastError, toastRocket } from "toast";
 import SpinnerLoader from "components/spinner";
 import { useAccount } from "wagmi";
 
-
-
 function AllocateGuild({
   textButton,
   allocatedGuild,
-  availableGuild,
+  guildBalance,
   smartContractAddress,
-  currentDebt,
-  availableDebt,
   gaugeWeight,
   totalWeight,
   creditTotalSupply,
+  guildAvailableToStake,
+  reload,
 }: {
   textButton: string;
   allocatedGuild: number;
-  availableGuild: number;
+  guildBalance: number;
   smartContractAddress: string;
   currentDebt: number;
   availableDebt: number;
   gaugeWeight: number;
   totalWeight: number;
   creditTotalSupply: number;
+  guildAvailableToStake: number; 
+  reload:Dispatch<SetStateAction<boolean>>
 }) {
   const [value, setValue] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
- 
 
   const { address, isConnected, isDisconnected } = useAccount();
 
@@ -46,7 +55,12 @@ function AllocateGuild({
     currencySelectorIcon: `flex items-center`,
     currencySelectorTicker: `mx-2`,
     currencySelectorArrow: `text-lg`,
-    confirmButton: ` w-full bg-purple my-2 rounded-2xl py-4 px-8 text-xl font-semibold flex items-center justify-center cursor-pointer border border-purple hover:border-[#234169] ${((value> availableGuild || value<=0)&& textButton=="Increment") || ((value > allocatedGuild || value <=0) && textButton=='Decrement') ? "bg-gray-400  text-gray-700 !cursor-default" :"bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500  text-white"}  `,
+    confirmButton: ` w-full bg-purple my-2 rounded-2xl py-4 px-8 text-xl font-semibold flex items-center justify-center cursor-pointer border border-purple hover:border-[#234169] ${
+      ((value >guildBalance- guildAvailableToStake || value <= 0) && textButton == "Increment") ||
+      ((value > allocatedGuild || value <= 0) && textButton == "Decrement")
+        ? "bg-gray-400  text-gray-700 !cursor-default"
+        : "bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500  text-white"
+    }  `,
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,12 +78,17 @@ function AllocateGuild({
         toastError("Please enter a value");
         return;
       }
+      if (isConnected == false) {
+        toastError("Please connect your wallet");
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       if (textButton === "Increment") {
-        if ((value as number) > availableGuild) {
+        if ((value as number) > guildBalance-guildAvailableToStake) {
           setLoading(false);
-         toastError("Not enough guild");
-         return ;
+          toastError("Not enough guild");
+          return;
         } else {
           const { hash } = await writeContract({
             address: import.meta.env.VITE_GUILD_ADDRESS,
@@ -87,6 +106,7 @@ function AllocateGuild({
           }
           toastRocket(`Your GUILD have been staked`);
           setLoading(false);
+          reload(true)
         }
       } else if (textButton === "Decrement") {
         if ((value as number) > allocatedGuild) {
@@ -110,6 +130,7 @@ function AllocateGuild({
           }
           toastRocket(`Your GUILD have been unstaked`);
           setLoading(false);
+          reload(true)
         }
       }
     } catch (e) {
@@ -119,21 +140,14 @@ function AllocateGuild({
     }
   }
 
-  
-
-
- function getDebtCeileingIncrease():string {
-  const percentBefore = gaugeWeight/totalWeight;
-  const percentAfter = (gaugeWeight+Number(value))/(totalWeight);
-  const debCeilingBefore = creditTotalSupply*percentBefore *1.2;
-  const debCeilingAfter = creditTotalSupply*percentAfter *1.2;
-  const debtCeilingIncrease = debCeilingAfter - debCeilingBefore;
-  return formatCurrencyValue(Number(preciseRound(debtCeilingIncrease,2)));
-
- }
-
-
-
+  function getDebtCeileing(): string {
+    const percentBefore = gaugeWeight / totalWeight;
+    const percentAfter = (gaugeWeight + Number(value)) / totalWeight;
+    const debCeilingBefore = creditTotalSupply * percentBefore * 1.2;
+    const debCeilingAfter = creditTotalSupply * percentAfter * 1.2;
+    const debtCeilingIncrease = debCeilingAfter - debCeilingBefore;
+    return formatCurrencyValue(Number(preciseRound(debtCeilingIncrease, 2)));
+  }
 
   return (
     <div className={style.content}>
@@ -146,19 +160,22 @@ function AllocateGuild({
       <div className="my-2 grid grid-cols-2">
         <p className=" col-span-2">
           Your current GUILD staked :{" "}
-          <span className="font-semibold">{allocatedGuild}</span>{" "}
+          <span className="font-semibold">{allocatedGuild?allocatedGuild:"?"}</span>{" "}
         </p>
         <p className=" col-span-2">
-          Your available GUILD :{" "}
-          <span className="font-semibold">{availableGuild}</span>{" "}
-        </p>
+        Your GUILD available to stake :{" "}
+        {guildBalance?(
+          <>
+          <span className="font-semibold">{preciseRound(guildBalance-guildAvailableToStake,2)}</span>{" "}/
+          <span className="font-semibold">{preciseRound(guildBalance,2)}</span>{" "}
+          </> ):<span className="font-semibold">?</span>}
+          </p>
       </div>
       <div className={style.transferPropContainer}>
         <input
-          
           onChange={handleInputChange}
           value={value as number}
-          className={style.transferPropInput   }
+          className={style.transferPropInput}
           placeholder="0"
           pattern="^[0-9]*[.,]?[0-9]*$"
         />
@@ -172,15 +189,30 @@ function AllocateGuild({
       </div>
       {textButton === "Increment" ? (
         <>
-        
-          <p>Your GUILD stake will allow {getDebtCeileingIncrease()} more CREDIT to be borrowed from this term </p>
+          <p>
+            Your GUILD stake will allow {getDebtCeileing()} more CREDIT to be
+            borrowed from this term{" "}
+          </p>
         </>
       ) : (
         <>
-          <p>Your GUILD unstake will decrease the borrow capacity on this term by {value} CREDIT</p>
+          <p>
+            Your GUILD unstake will decrease the borrow capacity on this term by{" "}
+            {getDebtCeileing()} CREDIT
+          </p>
         </>
       )}
-      <button onClick={handleVote} className={style.confirmButton} disabled={(value> availableGuild && textButton=="Increment")||(value>allocatedGuild && textButton=='Decrement') || value<=0? true:false } >
+      <button
+        onClick={handleVote}
+        className={style.confirmButton}
+        disabled={
+          (value > guildBalance- guildAvailableToStake && textButton == "Increment") ||
+          (value > allocatedGuild && textButton == "Decrement") ||
+          value <= 0
+            ? true
+            : false
+        }
+      >
         {textButton === "Increment" ? "Stake" : "Unstake"}
       </button>
     </div>

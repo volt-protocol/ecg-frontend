@@ -19,8 +19,8 @@ function MintOrRedeem() {
   const [valuetoSend, setValuetoSend] = useState<number>(0);
   const [valueToReceive, setValueToReceive] = useState<number>(0);
   const [loading, setLoading] = useState(false);
-  const [usdcBalance, setUsdcBalance] = useState<number>(0);
-  const [creditBalance, setCreditBalance] = useState<number>(0);
+  const [usdcBalance, setUsdcBalance] = useState<number>();
+  const [creditBalance, setCreditBalance] = useState<number>();
   const { address, isConnected, isDisconnected } = useAccount();
   const [conversionRate, setConversionRate] = useState<number>(0);
   const [status, setStatus] = useState<string>("Mint");
@@ -77,7 +77,7 @@ function MintOrRedeem() {
     getCreditBalance();
     getUsdcBalance();
     getUsdcAvailableToRedeem();
-  }, [creditBalance]);
+  }, [creditBalance,isConnected]);
 
   async function mint() {
     try {
@@ -238,7 +238,7 @@ function MintOrRedeem() {
         <div className=" space-y-6">
           <button
             onClick={() => setStatus("Mint")}
-            className={`px-6 hover:border-b-4  ${
+            className={`px-6 border-b-4 border-transparent   hover:border-gray-200  ${
               status == "Mint" ? "text-black dark:text-white" : "text-gray-400"
             } `}
           >
@@ -246,7 +246,7 @@ function MintOrRedeem() {
           </button>
           <button
             onClick={() => setStatus("Redeem")}
-            className={`px-6 hover:border-b-4  ${
+            className={`px-6 border-b-4 border-b-transparent hover:border-gray-200  ${
               status == "Redeem"
                 ? "text-black dark:text-white"
                 : "text-gray-400"
@@ -258,11 +258,11 @@ function MintOrRedeem() {
         <div className=" ml-6 mt-8 grid grid-cols-2  ">
           <div className="">
             Your USDC balance :{" "}
-            <span className="font-semibold">{usdcBalance}</span>
+            <span className="font-semibold">{usdcBalance?formatCurrencyValue(usdcBalance):"?"}</span>
           </div>
           <div className="">
             Your CREDIT balance :{" "}
-            <span className="font-semibold">{creditBalance}</span>
+            <span className="font-semibold">{creditBalance?formatCurrencyValue(creditBalance):"?"}</span>
           </div>
           <div className=" col-span-2">
             USDC available to redeem :{" "}

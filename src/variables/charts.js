@@ -256,14 +256,27 @@ export const barChartOptionsWeeklyRevenue = {
   },
 };
 
-export const lineChartDataTotalSpent = [
+export const lineChartDataDebtCeiling = [
   {
-    name: "Revenue",
+    name: "DebCeiling",
     data: [50, 64, 48, 66, 49, 68],
     color: "#4318FF",
   },
   {
-    name: "Profit",
+    name: "Utilization",
+    data: [30, 40, 24, 46, 20, 46],
+    color: "#6AD2FF",
+  },
+];
+
+export const lineChartDataEarning = [
+  {
+    name: "DebCeiling",
+    data: [50, 64, 48, 66, 49, 68],
+    color: "#4318FF",
+  },
+  {
+    name: "Utilization",
     data: [30, 40, 24, 46, 20, 46],
     color: "#6AD2FF",
   },

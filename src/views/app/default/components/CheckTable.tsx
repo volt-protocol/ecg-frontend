@@ -165,7 +165,7 @@ function CheckTable(props: { tableData: lendingTerms[], name: string }) {
       id: "maxDelayBetweenPartialRepay",
       header: () => (
         <p className="text-sm font-bold text-gray-600 dark:text-white">
-          Periodic repayments
+          Periodic Payments
         </p>
       ),
       cell: (info) => (

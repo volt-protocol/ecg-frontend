@@ -1,13 +1,7 @@
-
 import React, { useEffect } from "react";
 import TotalSpent from "../default/components/TotalSpent";
 import Card from "components/card";
-import {
-  Address,
-  useAccount,
-  useContractWrite,
-  usePrepareContractWrite,
-} from "wagmi";
+import { Address, useAccount } from "wagmi";
 import { creditAbi, profitManager } from "guildAbi";
 import { readContract, waitForTransaction, writeContract } from "@wagmi/core";
 import { DecimalToUnit, preciseRound } from "utils";
@@ -15,7 +9,6 @@ import { toastError, toastRocket } from "toast";
 import SpinnerLoader from "components/spinner";
 import MintOrRedeem from "./components/MintOrRedeem";
 import { ToggleSwitch } from "flowbite-react";
-
 
 function MintAndSaving() {
   const [creditAvailable, setCreditAvailable] = React.useState(0);
@@ -61,6 +54,7 @@ function MintAndSaving() {
         abi: profitManager,
         functionName: "getProfitSharingConfig",
       });
+
       if (Array.isArray(result) && result.length >= 3) {
         setProfitSharing({
           creditSplit: preciseRound(
@@ -117,31 +111,51 @@ function MintAndSaving() {
           : "Stop Saving transaction failed"
       );
       setLoading(false);
-      
+
       console.log(error);
     }
   }
+  const lineChartDataDebtCeiling = [
+    {
+      name: "DebCeiling",
+      data: [50, 64, 48, 66, 49, 68],
+      color: "#4318FF",
+    },
+    {
+      name: "Utilization",
+      data: [30, 40, 24, 46, 20, 46],
+      color: "#6AD2FF",
+    },
+  ];
 
   return (
-    <div className="mt-10 space-y-10">
+    <div className="mt-10 space-y-10 ">
       {loading && <SpinnerLoader />}
-      <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-1">
-        <TotalSpent name="Earning/Drawddowns" percentage="2.45%" />
+      <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-1">
+        <TotalSpent
+          name="Earning/Drawddowns"
+          percentage="2.45%"
+          data={lineChartDataDebtCeiling}
+        />
       </div>
-      <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
-        <Card extra="space-y-7 p-4">
-          <div className="flex justify-between ">
+      <div className=" mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
+        <Card extra="space-y-7 p-4 ">
+          <div className="ml-6 flex justify-between ">
             <h2 className="text-xl font-semibold">CREDIT saving</h2>
             <div>
-            <ToggleSwitch
-        checked={isRebasing}
-        label="Saving"
-        color="purple"
-        onChange={function () { {isRebasing ? saving("exitRebase") : saving("enterRebase")}}}
-      />
-      </div>
-                </div>
-          <div>
+              <ToggleSwitch
+                checked={isRebasing}
+                label="Saving"
+                color="purple"
+                onChange={function () {
+                  {
+                    isRebasing ? saving("exitRebase") : saving("enterRebase");
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <div className="ml-6">
             <p className="text-sm">
               If you elect to receive the savings rate, the CREDIT balance of
               your wallet will automatically rebase up when the protocol earn
@@ -164,14 +178,13 @@ function MintAndSaving() {
               ceiling of terms,
             </p>
           </div>
-          <div className="flex flex-col space-y-2 ">
+          <div className="flex flex-col space-y-2 ml-6">
             <p>
               Your current CREDIT Balance :
-              <span className="font-semibold"> {creditAvailable}</span>
+              <span className="font-semibold"> {preciseRound(creditAvailable,2)}</span>
             </p>
             <p>Your current rebasing status : {isRebasing ? "Yes" : "No"}</p>
           </div>
-         
         </Card>
         <Card extra="space-y-5 p-4">
           <MintOrRedeem />

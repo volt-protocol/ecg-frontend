@@ -7,29 +7,40 @@ import {
 } from "@wagmi/core";
 import { toastError, toastRocket } from "toast";
 import { creditAbi, surplusGuildMinterAbi } from "guildAbi";
-import { DecimalToUnit, UnitToDecimal } from "utils";
+import { DecimalToUnit, UnitToDecimal, formatCurrencyValue, preciseRound } from "utils";
 import DefaultSpinner from "components/spinner";
 import SpinnerLoader from "components/spinner";
 import TooltipHorizon from "components/tooltip";
 import { useAccount } from "wagmi";
+import { AiOutlineQuestionCircle } from "react-icons/ai";
 
 function Stake({
   allocatedCredit,
   textButton,
   availableCredit,
   termAddress,
-  interestRate,
+  gaugeWeight,
+  totalWeight,
+  creditTotalSupply,
+  ratioGuildCredit,
+  reload,
 }: {
   allocatedCredit: number;
   textButton: string;
   availableCredit: number;
   termAddress: string;
   interestRate: number;
+  gaugeWeight: number;
+  totalWeight: number;
+  creditTotalSupply: number;
+  ratioGuildCredit:number;
+  reload: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const [value, setValue] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
-  const [ratioGuildCredit, setRatioGuildCredit] = useState<number>(0);
+
   const [stakeRatio, setStakeRatio] = useState<number>(0);
+
 
   const { address, isConnected } = useAccount();
 
@@ -55,23 +66,13 @@ function Stake({
     currencySelectorArrow: `text-lg`,
     confirmButton: ` w-full bg-purple my-2 rounded-2xl py-4 px-8 text-xl font-semibold flex items-center justify-center cursor-pointer border border-purple hover:border-[#234169]  ${
       (allocatedCredit == 0 && textButton === "Unstake") ||
-      ((value > availableCredit || value === 0) && textButton === "stake")
+      ((value > availableCredit || value <=0) && textButton === "stake")
         ? "bg-gray-400  text-gray-700 !cursor-default"
         : "bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500  text-white"
     }  `,
   };
 
-  useEffect(() => {
-    async function getRationGUILDCREDIT() {
-      const ratio = await readContract({
-        address: import.meta.env.VITE_SURPLUS_GUILD_MINTER_ADDRESS as Address,
-        abi: surplusGuildMinterAbi,
-        functionName: "ratio",
-      });
-      setRatioGuildCredit(DecimalToUnit(ratio as bigint, 18));
-    }
-    getRationGUILDCREDIT();
-  }, []);
+
 
   useEffect(() => {
     async function getStakeRatio() {
@@ -91,6 +92,11 @@ function Stake({
     try {
       setLoading(true);
       if (textButton === "stake") {
+        if (isConnected == false) {
+          toastError("Please connect your wallet");
+          setLoading(false);
+          return;
+        }
         if (value == 0) {
           toastError("Please enter a value");
           setLoading(false);
@@ -138,6 +144,7 @@ function Stake({
           }
 
           toastRocket(`Stake transaction successful`);
+          reload(true);
           setLoading(false);
         }
       } else if (textButton === "Unstake") {
@@ -164,6 +171,7 @@ function Stake({
           }
 
           toastRocket(`Unstake transaction successful`);
+          reload(true);
           setLoading(false);
         }
       }
@@ -173,7 +181,17 @@ function Stake({
       setLoading(false);
     }
   }
-  console.log(allocatedCredit, "allocatedCredit");
+
+  function getDebtCeileingIncrease():string {
+    let guildAmount = value * ratioGuildCredit
+    const percentBefore = gaugeWeight/totalWeight;
+    const percentAfter = (gaugeWeight+guildAmount)/(totalWeight);
+    const debCeilingBefore = creditTotalSupply*percentBefore *1.2;
+    const debCeilingAfter = creditTotalSupply*percentAfter *1.2;
+    const debtCeilingIncrease = debCeilingAfter - debCeilingBefore;
+    return formatCurrencyValue(Number(preciseRound(debtCeilingIncrease,2)));
+  
+   }
   return (
     <>
       {loading && (
@@ -186,12 +204,15 @@ function Stake({
         <div className="my-2 -mt-1 grid grid-cols-2 gap-y-1 ">
           <div className="col-span-1">
             <TooltipHorizon
-              extra="col-span-1"
+              extra=""
               trigger={
-                <p className=" ">
+                <div className="flex space-x-1 ">
+                <p >
                   Your CREDIT staked:{" "}
-                  <span className="font-semibold ">{allocatedCredit}</span>{" "}
+                  <span className="font-semibold ">{allocatedCredit?allocatedCredit:"?"}</span>{" "}
                 </p>
+                <AiOutlineQuestionCircle color="gray" />
+                </div>
               }
               content={
                 <div className="">
@@ -210,11 +231,13 @@ function Stake({
           <div className="col-span-1">
             <TooltipHorizon
               extra=""
-              trigger={
+              trigger={<div className="flex space-x-1">
                 <p className="">
                   GUILD / CREDIT ratio :{" "}
                   <span className="font-semibold">{ratioGuildCredit}</span>{" "}
                 </p>
+                <AiOutlineQuestionCircle color="gray" />
+                </div>
               }
               content={
                 <div className="w-[15rem] p-2">
@@ -233,7 +256,7 @@ function Stake({
 
           <p className="col-span-2">
             CREDIT in your wallet :{" "}
-            <span className="font-semibold ">{availableCredit}</span>{" "}
+            <span className="font-semibold ">{availableCredit?availableCredit:"?"}</span>{" "}
           </p>
           
           {/* <p className="font-semibold">
@@ -259,8 +282,8 @@ function Stake({
         )}
         {textButton === "stake" ? (
           <>
-            {/* <p>Estimated credits {value * interestRate} yearly</p>
-            <p>Estimated guilds per year</p> */}
+            <p>Your CREDIT stake will allow {getDebtCeileingIncrease()} more CREDIT to be borrowed from this term</p>
+           
           </>
         ) : (
           <></>

@@ -40,17 +40,16 @@ const columnHelper = createColumnHelper<LoansObj>();
 function ActiveLoans({
   termAddress,
   activeLoans,
-  callFee,
-  collateralAddress,
   collateralName,
   maxDelayBetweenPartialRepay,
+  interestRate,
 }: {
   termAddress: string;
   activeLoans: LoansObj[];
-  callFee: number;
   collateralAddress: string;
   collateralName: string;
   maxDelayBetweenPartialRepay: number;
+  interestRate: number;
 }) {
   let defaultData = activeLoans;
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -87,12 +86,11 @@ function ActiveLoans({
       }
       isCallable();
     }, []);
-
     return (
       <div className="flex items-center">
         <button
           onClick={() => call(original.id, original.collateralAmount)}
-          disabled={isCallable}
+          disabled={isCallable?false:true}
           className={`min-w-[8rem] rounded-2xl  px-3 py-1 text-white ${
             isCallable
               ? "bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500"
@@ -116,32 +114,18 @@ function ActiveLoans({
 
   async function call(loandId: string, collateralAmount: number) {
     try {
-      setLoading(true);
-      if (callFee > 0) {
-        const { hash } = await writeContract({
-          address: import.meta.env.VITE_CREDIT_ADDRESS,
-          abi: creditAbi,
-          functionName: "approve",
-          args: [termAddress, UnitToDecimal(callFee * collateralAmount, 18)],
-        });
-        const checkApprove: WaitForTransactionResult = await waitForTransaction(
-          {
-            hash: hash,
-          }
-        );
-        if (checkApprove.status != "success") {
-          toastError("Approve transaction failed");
-          setLoading(false);
-          return;
-        }
+      if (isConnected == false) {
+        toastError("Please connect your wallet");
+        setLoading(false);
+        return;
       }
+      setLoading(true); 
       const { hash } = await writeContract({
         address: termAddress,
         abi: termAbi,
         functionName: "call",
         args: [loandId],
       });
-
       const checkCall = await waitForTransaction({
         hash: hash,
       });
@@ -153,12 +137,18 @@ function ActiveLoans({
       }
       toastRocket("Call transaction success");
     } catch (e) {
+      console.log(e)
       toastError("Call transaction failed");
       setLoading(false);
     }
   }
   async function callMany() {
     try {
+      if (isConnected == false) {
+        toastError("Please connect your wallet");
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       const responde = await writeContract({
         address: termAddress,
@@ -220,17 +210,6 @@ function ActiveLoans({
     fetchRepays();
   }, [activeLoans]);
 
-  useEffect(() => {
-    const fetchRepays = async () => {
-      const newRepays: Record<string, number> = {};
-      for (let loan of activeLoans) {
-        newRepays[loan.id] = await lastPartialRepay(loan.id);
-      }
-      setRepays(newRepays);
-    };
-
-    fetchRepays();
-  }, [activeLoans]);
 
   const columns = [
     columnHelper.accessor("id", {
@@ -259,20 +238,56 @@ function ActiveLoans({
           <TooltipHorizon
             extra="dark:text-white"
             content={
-              <div className="space-y-2 p-2">
+              <div className="space-y-4 p-2 mt-4 ">
+              <div className="space-y-2">
+                <p>
+                   Borrowed CREDIT :{" "}
+                  <span className="font-semibold">
+                    {" "}
+                    {preciseRound(info.row.original.borrowAmount,2)}{" "}
+                  </span>{" "}
+                </p>
+                <p>
+                   Borrow Interest :{" "}
+                  <span className="font-semibold">
+                    <strong>
+                    {" "}
+                    {interestRate}
+                    {" "}
+                    CREDIT
+                    </strong>
+                  </span>
+                </p>
+                <p>
+                   Borrowed Value :{" "}
+                  <span className="font-semibold">
+                    {" "}
+                    {preciseRound(DecimalToUnit(
+                      BigInt(info.row.original.borrowAmount * creditMultiplier),
+                      18
+                    ),2)}
+                    {" "}{collateralName}
+                  </span>
+                </p>
+                <p>
+                   Borrowed Value :{" "}
+                  <span className="font-semibold">
+                    {" "}
+                    {preciseRound(DecimalToUnit(
+                      BigInt(info.row.original.borrowAmount * creditMultiplier),
+                      18
+                    ),2)}
+                    $
+                  </span>
+                </p>
+                </div>
+                <div className="space-y-2">
                 <p>
                   Collateral Amount :{" "}
                   <span className="font-semibold">
                     {" "}
-                    {info.row.original.collateralAmount}{" "}
+                    {(info.row.original.collateralAmount)}{" "}
                   </span>
-                </p>
-                <p>
-                  CREDIT Borrowed :{" "}
-                  <span className="font-semibold">
-                    {" "}
-                    {info.row.original.borrowAmount}{" "}
-                  </span>{" "}
                 </p>
                 <p>
                   Collateral Price:{" "}
@@ -289,17 +304,8 @@ function ActiveLoans({
                     ${" "}
                   </span>
                 </p>
-                <p>
-                  Value Borrowed :{" "}
-                  <span className="font-semibold">
-                    {" "}
-                    {DecimalToUnit(
-                      BigInt(info.row.original.borrowAmount * creditMultiplier),
-                      18
-                    )}
-                    $
-                  </span>
-                </p>
+                </div>
+                <p>Price sources : <strong> Coingecko API</strong></p>
               </div>
             }
             trigger={
@@ -365,7 +371,7 @@ function ActiveLoans({
     defaultData.filter((loan) => loan.status !== "closed")
   );
   useEffect(() => {
-    setData(defaultData.filter((loan) => loan.status !== "closed"));
+    setData(defaultData.filter((loan) => loan.status !== "closed" && loan.callTime === 0));
   }, [defaultData]);
 
   const table = useReactTable({
@@ -406,7 +412,7 @@ function ActiveLoans({
         </div>
       </div>
 
-      {defaultData.length === 0 ? (
+      {data.length === 0 ? (
         <div className="flex flex-grow items-center justify-center font-semibold text-gray-500 ">
           {" "}
           <p>There are no active loans on this term yet</p>

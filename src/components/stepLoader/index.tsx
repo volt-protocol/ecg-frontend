@@ -16,8 +16,8 @@ function StepModal({
   const [showCloseButton, setShowCloseButton] = React.useState(false);
 
   useEffect(() => {
-    const hasError = steps.some((step) => step.status === "error");
-    const allSuccess = steps.every((step) => step.status === "success");
+    const hasError = steps.some((step) => step.status === "Error");
+    const allSuccess = steps.every((step) => step.status === "Success");
     if (hasError || allSuccess) {
       setShowCloseButton(true);
     }
@@ -31,17 +31,17 @@ function StepModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center text-black">
       <div
         className="fixed inset-0 bg-black opacity-50 backdrop-blur-md"
         onClick={handleClose}
       ></div>
-      <div className="z-10 w-96 rounded-lg bg-white p-6 shadow-lg">
-        <h2 className="mb-4 text-lg font-semibold">Processing</h2>
+      <div className="z-10 w-96 rounded-lg bg-white p-6 shadow-lg  dark:bg-navy-800 dark:text-white">
+        <h2 className="mb-4 text-lg font-semibold ">Processing</h2>
         <div className="flex flex-col space-y-4">
           {steps.map((step, index) => (
             <div key={step.name} className="flex items-center">
-              {step.status === "inProgress" && (
+              {step.status === "In Progress" && (
                 <Spinner
                   aria-label="Purple spinner example"
                   color="purple"
@@ -50,11 +50,11 @@ function StepModal({
               )}
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full  ${
-                  step.status === "inProgress" ? "absolute" : ""
+                  step.status === "In Progress" ? "absolute" : ""
                 }  ${
-                  step.status === "success"
+                  step.status === "Success"
                     ? "border-purple-500 bg-purple-500"
-                    : step.status === "error"
+                    : step.status === "Error"
                     ? "border-red-500 bg-red-500"
                     : ""
                 }`}

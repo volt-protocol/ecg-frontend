@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { config } from "wagmiConfig";
 import { LoansObj } from "types/lending";
 import {
@@ -34,6 +34,8 @@ import TooltipHorizon from "components/tooltip";
 import { nameCoinGecko } from "coinGecko";
 import axios from "axios";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
+import { Step } from "components/stepLoader/stepType";
+import StepModal from "components/stepLoader";
 
 const columnHelper = createColumnHelper<LoansObj>();
 
@@ -51,16 +53,31 @@ function ActiveLoans({
   maxDelayBetweenPartialRepay: number;
   interestRate: number;
 }) {
+  
   let defaultData = activeLoans;
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [loading, setLoading] = React.useState(false);
   const { address, isConnected } = useAccount();
-
   const [creditMultiplier, setCreditMultiplier] = React.useState(0);
   const [collateralPrice, setCollateralPrice] = React.useState(0);
   const [isGauge, setIsGauge] = React.useState(false);
   // const [isRepayPassed, setIsRepayPassed] = React.useState(false);
   const [repays, setRepays] = React.useState<Record<string, number>>({});
+  const [showModal, setShowModal] = useState(false);
+  const createSteps = (): Step[] => {
+    const baseSteps = [
+      { name: "Call", status: "Not Started" },
+     
+    ];
+
+    // if (match) {
+    //   baseSteps.splice(1, 1, { name: "Repay", status: "Not Started" });
+    // }
+
+    return baseSteps;
+  };
+
+  const [steps, setSteps] = useState<Step[]>(createSteps());
 
   function CallableButton({ original }: { original: LoansObj }) {
     const [isCallable, setIsCallable] = React.useState(true);
@@ -111,15 +128,30 @@ function ActiveLoans({
     });
     return Number(response);
   }
-
+  function updateStepName(oldName: string, newName: string) {
+    setSteps(prevSteps => 
+      prevSteps.map(step => 
+        step.name === oldName ? { ...step, name: newName } : step
+      )
+    );
+  }
+  
   async function call(loandId: string, collateralAmount: number) {
-    try {
+    const updateStepStatus = (stepName: string, status: Step["status"]) => {
+      setSteps((prevSteps) =>
+        prevSteps.map((step) =>
+          step.name === stepName ? { ...step, status } : step
+        )
+      );
+    };
       if (isConnected == false) {
         toastError("Please connect your wallet");
         setLoading(false);
         return;
       }
-      setLoading(true); 
+      try {
+      setShowModal(true);
+      updateStepStatus("Call", "In Progress");  
       const { hash } = await writeContract({
         address: termAddress,
         abi: termAbi,
@@ -131,19 +163,26 @@ function ActiveLoans({
       });
 
       if (checkCall.status != "success") {
-        toastError("Call transaction failed");
-        setLoading(false);
+        updateStepStatus("Call", "Error");
         return;
       }
-      toastRocket("Call transaction success");
+      updateStepStatus("Call", "Success");
     } catch (e) {
       console.log(e)
-      toastError("Call transaction failed");
-      setLoading(false);
+      updateStepStatus("Call", "Error");
     }
   }
   async function callMany() {
+    const updateStepStatus = (stepName: string, status: Step["status"]) => {
+      setSteps((prevSteps) =>
+        prevSteps.map((step) =>
+          step.name === stepName ? { ...step, status } : step
+        )
+      );
+    };
+    updateStepName("Call", "Call Many");
     try {
+      updateStepStatus("Call Many", "In Progress");
       if (isConnected == false) {
         toastError("Please connect your wallet");
         setLoading(false);
@@ -160,15 +199,13 @@ function ActiveLoans({
         hash: responde.hash,
       });
       if (checkCall.status != "success") {
-        toastError("Call transaction failed");
-        setLoading(false);
+        updateStepStatus("Call Many", "Error");
         return;
       }
-      setLoading(false);
-      toastRocket("Call transaction success");
+      updateStepStatus("Call Many", "Success");
     } catch (e) {
-      setLoading(false);
-      toastError("Call transaction failed");
+      console.log(e);
+      updateStepStatus("Call Many", "Error");
     }
   }
 
@@ -234,6 +271,23 @@ function ActiveLoans({
       id: "ltv",
       header: "LTV",
       cell: (info: any) => {
+        const LTV = preciseRound(
+          (info.row.original.borrowAmount * creditMultiplier) /
+            (1e18 *
+              Number(
+                collateralPrice * info.row.original.collateralAmount
+              ))*100,
+          2
+        )
+        const borrowCredit =preciseRound(info.row.original.borrowAmount,2)
+        const borrowValue = preciseRound(DecimalToUnit(
+          BigInt(info.row.original.borrowAmount * creditMultiplier),
+          18
+        ),2)
+        const collateralValue = preciseRound(
+          info.row.original.collateralAmount * collateralPrice,
+          2
+        )
         return (
           <TooltipHorizon
             extra="dark:text-white"
@@ -244,7 +298,7 @@ function ActiveLoans({
                    Borrowed CREDIT :{" "}
                   <span className="font-semibold">
                     {" "}
-                    {preciseRound(info.row.original.borrowAmount,2)}{" "}
+                    {borrowCredit}{" "}
                   </span>{" "}
                 </p>
                 <p>
@@ -262,10 +316,7 @@ function ActiveLoans({
                    Borrowed Value :{" "}
                   <span className="font-semibold">
                     {" "}
-                    {preciseRound(DecimalToUnit(
-                      BigInt(info.row.original.borrowAmount * creditMultiplier),
-                      18
-                    ),2)}
+                    {borrowValue}
                     {" "}{collateralName}
                   </span>
                 </p>
@@ -273,10 +324,7 @@ function ActiveLoans({
                    Borrowed Value :{" "}
                   <span className="font-semibold">
                     {" "}
-                    {preciseRound(DecimalToUnit(
-                      BigInt(info.row.original.borrowAmount * creditMultiplier),
-                      18
-                    ),2)}
+                    {borrowValue}
                     $
                   </span>
                 </p>
@@ -286,7 +334,7 @@ function ActiveLoans({
                   Collateral Amount :{" "}
                   <span className="font-semibold">
                     {" "}
-                    {(info.row.original.collateralAmount)}{" "}
+                    {(info.row.original.collateralAmount)}{" "} {collateralName}  
                   </span>
                 </p>
                 <p>
@@ -297,10 +345,7 @@ function ActiveLoans({
                   Collateral Value :{" "}
                   <span className="font-semibold">
                     {" "}
-                    {preciseRound(
-                      info.row.original.collateralAmount * collateralPrice,
-                      2
-                    )}
+                    {collateralValue}
                     ${" "}
                   </span>
                 </p>
@@ -311,14 +356,7 @@ function ActiveLoans({
             trigger={
               <div className="flex ">
                 <p>
-                  {preciseRound(
-                    (info.row.original.borrowAmount * creditMultiplier) /
-                      (1e18 *
-                        Number(
-                          collateralPrice * info.row.original.collateralAmount
-                        ))*100,
-                    2
-                  )}%
+                  {LTV == "0.00"?"-.--":LTV}%
                 </p>
                 <div className="mb-2 ml-1">
                   <AiOutlineQuestionCircle color="gray" />
@@ -337,13 +375,13 @@ function ActiveLoans({
         const currentDateInSeconds = Date.now() / 1000;
         const sumOfTimestamps =
           repays[info.row.original.id] + maxDelayBetweenPartialRepay;
-
         return (
           <>
             <p>
               {maxDelayBetweenPartialRepay === 0
                 ? "n/a"
-                : sumOfTimestamps < currentDateInSeconds
+                :Number.isNaN(sumOfTimestamps)?"--" :
+                sumOfTimestamps < currentDateInSeconds
                 ? "Overdue"
                 : secondsToAppropriateUnit(
                     sumOfTimestamps - currentDateInSeconds
@@ -388,11 +426,7 @@ function ActiveLoans({
 
   return (
     <Card extra={"w-full h-full px-6 pb-6 overflow-auto sm:overflow-x-auto"}>
-      {loading && (
-        <div className="absolute h-screen w-full">
-          <SpinnerLoader />
-        </div>
-      )}
+         {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
       <div className="relative flex items-center justify-between pt-4">
         <div className="text-xl font-bold text-navy-700 dark:text-white">
           Active Loans : {data.length}

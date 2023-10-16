@@ -7,12 +7,19 @@ import {
 } from "@wagmi/core";
 import { toastError, toastRocket } from "toast";
 import { creditAbi, surplusGuildMinterAbi } from "guildAbi";
-import { DecimalToUnit, UnitToDecimal, formatCurrencyValue, preciseRound } from "utils";
+import {
+  DecimalToUnit,
+  UnitToDecimal,
+  formatCurrencyValue,
+  preciseRound,
+} from "utils";
 import DefaultSpinner from "components/spinner";
 import SpinnerLoader from "components/spinner";
 import TooltipHorizon from "components/tooltip";
 import { useAccount } from "wagmi";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
+import { Step } from "components/stepLoader/stepType";
+import StepModal from "components/stepLoader";
 
 function Stake({
   allocatedCredit,
@@ -33,16 +40,30 @@ function Stake({
   gaugeWeight: number;
   totalWeight: number;
   creditTotalSupply: number;
-  ratioGuildCredit:number;
+  ratioGuildCredit: number;
   reload: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const [value, setValue] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
-
   const [stakeRatio, setStakeRatio] = useState<number>(0);
-
-
   const { address, isConnected } = useAccount();
+  const [showModal, setShowModal] = useState(false);
+  const createSteps = (): Step[] => {
+    const baseSteps = [
+      {
+        name: textButton == "stake" ? "Stake" : "Unstake",
+        status: "Not Started",
+      },
+    ];
+
+    if (textButton === "stake") {
+      baseSteps.splice(0, 0, { name: "Approve", status: "Not Started" });
+    }
+
+    return baseSteps;
+  };
+
+  const [steps, setSteps] = useState<Step[]>(createSteps());
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -66,13 +87,11 @@ function Stake({
     currencySelectorArrow: `text-lg`,
     confirmButton: ` w-full bg-purple my-2 rounded-2xl py-4 px-8 text-xl font-semibold flex items-center justify-center cursor-pointer border border-purple hover:border-[#234169]  ${
       (allocatedCredit == 0 && textButton === "Unstake") ||
-      ((value > availableCredit || value <=0) && textButton === "stake")
+      ((value > availableCredit || value <= 0) && textButton === "stake")
         ? "bg-gray-400  text-gray-700 !cursor-default"
         : "bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500  text-white"
     }  `,
   };
-
-
 
   useEffect(() => {
     async function getStakeRatio() {
@@ -89,24 +108,34 @@ function Stake({
   }, [value]);
 
   async function handlestake(): Promise<void> {
-    try {
-      setLoading(true);
-      if (textButton === "stake") {
-        if (isConnected == false) {
-          toastError("Please connect your wallet");
-          setLoading(false);
-          return;
-        }
-        if (value == 0) {
-          toastError("Please enter a value");
-          setLoading(false);
-          return;
-        }
-        if ((value as number) > availableCredit) {
-          toastError("Not enough CREDIT");
-          setLoading(false);
-          return;
-        } else {
+    const updateStepStatus = (stepName: string, status: Step["status"]) => {
+      setSteps((prevSteps) =>
+        prevSteps.map((step) =>
+          step.name === stepName ? { ...step, status } : step
+        )
+      );
+    };
+
+    if (textButton === "stake") {
+      if (isConnected == false) {
+        toastError("Please connect your wallet");
+        setLoading(false);
+        return;
+      }
+      if (value == 0) {
+        toastError("Please enter a value");
+        setLoading(false);
+        return;
+      }
+
+      if ((value as number) > availableCredit) {
+        toastError("Not enough CREDIT");
+        setLoading(false);
+        return;
+      } else {
+        setShowModal(true);
+        updateStepStatus("Approve", "In Progress");
+        try {
           const approve = await writeContract({
             address: import.meta.env.VITE_CREDIT_ADDRESS,
             abi: creditAbi,
@@ -122,10 +151,17 @@ function Stake({
           });
 
           if (checkApprove.status != "success") {
-            toastError("Approve transaction failed");
-            setLoading(false);
+            updateStepStatus("Approve", "Error");
             return;
           }
+        } catch (e) {
+          console.log(e);
+          updateStepStatus("Approve", "Error");
+          return;
+        }
+        updateStepStatus("Approve", "Success");
+        updateStepStatus("Stake", "In Progress");
+        try {
           const { hash } = await writeContract({
             address: import.meta.env.VITE_SURPLUS_GUILD_MINTER_ADDRESS,
             abi: surplusGuildMinterAbi,
@@ -138,21 +174,26 @@ function Stake({
           });
 
           if (checkStake.status != "success") {
-            toastError("Stake transaction failed");
-            setLoading(false);
+            updateStepStatus("Stake", "Error");
             return;
           }
-
-          toastRocket(`Stake transaction successful`);
-          reload(true);
-          setLoading(false);
-        }
-      } else if (textButton === "Unstake") {
-        if ((value as number) > allocatedCredit) {
-          toastError("Not enough CREDIT allocated");
-          setLoading(false);
+        } catch (e) {
+          console.log(e);
+          updateStepStatus("Stake", "Error");
           return;
-        } else {
+        }
+        updateStepStatus("Stake", "Success");
+        reload(true);
+      }
+    } else if (textButton === "Unstake") {
+      if ((value as number) > allocatedCredit) {
+        toastError("Not enough CREDIT allocated");
+        setLoading(false);
+        return;
+      } else {
+        setShowModal(true);
+        updateStepStatus("Unstake", "In Progress");
+        try {
           const { hash } = await writeContract({
             address: import.meta.env.VITE_SURPLUS_GUILD_MINTER_ADDRESS,
             abi: surplusGuildMinterAbi,
@@ -165,40 +206,32 @@ function Stake({
           });
 
           if (checkUnstake.status != "success") {
-            toastError("Unstake transaction failed");
-            setLoading(false);
+            updateStepStatus("Unstake", "Error");
             return;
           }
-
-          toastRocket(`Unstake transaction successful`);
-          reload(true);
-          setLoading(false);
+        } catch (e) {
+          console.log(e);
+          updateStepStatus("Unstake", "Error");
+          return;
         }
+        updateStepStatus("Unstake", "Success");
+        reload(true);
       }
-    } catch (e) {
-      console.log(e);
-      toastError("Transaction failed");
-      setLoading(false);
     }
   }
 
-  function getDebtCeileingIncrease():string {
-    let guildAmount = value * ratioGuildCredit
-    const percentBefore = gaugeWeight/totalWeight;
-    const percentAfter = (gaugeWeight+guildAmount)/(totalWeight);
-    const debCeilingBefore = creditTotalSupply*percentBefore *1.2;
-    const debCeilingAfter = creditTotalSupply*percentAfter *1.2;
+  function getDebtCeileingIncrease(): string {
+    let guildAmount = value * ratioGuildCredit;
+    const percentBefore = gaugeWeight / totalWeight;
+    const percentAfter = (gaugeWeight + guildAmount) / totalWeight;
+    const debCeilingBefore = creditTotalSupply * percentBefore * 1.2;
+    const debCeilingAfter = creditTotalSupply * percentAfter * 1.2;
     const debtCeilingIncrease = debCeilingAfter - debCeilingBefore;
-    return formatCurrencyValue(Number(preciseRound(debtCeilingIncrease,2)));
-  
-   }
+    return formatCurrencyValue(Number(preciseRound(debtCeilingIncrease, 2)));
+  }
   return (
     <>
-      {loading && (
-        <div className="absolute h-screen w-full">
-          <SpinnerLoader />
-        </div>
-      )}
+     {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
       <div className={style.content}>
         <div className={style.formHeader}></div>
         <div className="my-2 -mt-1 grid grid-cols-2 gap-y-1 ">
@@ -207,11 +240,13 @@ function Stake({
               extra=""
               trigger={
                 <div className="flex space-x-1 ">
-                <p >
-                  Your CREDIT staked:{" "}
-                  <span className="font-semibold ">{allocatedCredit?allocatedCredit:"?"}</span>{" "}
-                </p>
-                <AiOutlineQuestionCircle color="gray" />
+                  <p>
+                    Your CREDIT staked:{" "}
+                    <span className="font-semibold ">
+                      {allocatedCredit != undefined ? allocatedCredit : "?"}
+                    </span>{" "}
+                  </p>
+                  <AiOutlineQuestionCircle color="gray" />
                 </div>
               }
               content={
@@ -231,12 +266,13 @@ function Stake({
           <div className="col-span-1">
             <TooltipHorizon
               extra=""
-              trigger={<div className="flex space-x-1">
-                <p className="">
-                  GUILD / CREDIT ratio :{" "}
-                  <span className="font-semibold">{ratioGuildCredit}</span>{" "}
-                </p>
-                <AiOutlineQuestionCircle color="gray" />
+              trigger={
+                <div className="flex space-x-1">
+                  <p className="">
+                    GUILD / CREDIT ratio :{" "}
+                    <span className="font-semibold">{ratioGuildCredit}</span>{" "}
+                  </p>
+                  <AiOutlineQuestionCircle color="gray" />
                 </div>
               }
               content={
@@ -256,9 +292,11 @@ function Stake({
 
           <p className="col-span-2">
             CREDIT in your wallet :{" "}
-            <span className="font-semibold ">{availableCredit?availableCredit:"?"}</span>{" "}
+            <span className="font-semibold ">
+              {availableCredit != undefined ? availableCredit : "?"}
+            </span>{" "}
           </p>
-          
+
           {/* <p className="font-semibold">
             Current interest rate:{" "}
             <span className="text-xl">{interestRate * 100 + "%"}</span>{" "}
@@ -282,8 +320,10 @@ function Stake({
         )}
         {textButton === "stake" ? (
           <>
-            <p>Your CREDIT stake will allow {getDebtCeileingIncrease()} more CREDIT to be borrowed from this term</p>
-           
+            <p>
+              Your CREDIT stake will allow {getDebtCeileingIncrease()} more
+              CREDIT to be borrowed from this term
+            </p>
           </>
         ) : (
           <></>

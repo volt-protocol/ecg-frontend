@@ -15,6 +15,8 @@ import {
 import { toastError, toastRocket } from "toast";
 import SpinnerLoader from "components/spinner";
 import { useAccount } from "wagmi";
+import { Step } from "components/stepLoader/stepType";
+import StepModal from "components/stepLoader";
 
 function AllocateGuild({
   textButton,
@@ -41,9 +43,19 @@ function AllocateGuild({
 }) {
   const [value, setValue] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
-
   const { address, isConnected, isDisconnected } = useAccount();
+  const [showModal, setShowModal] = useState(false);
+  const createSteps = (): Step[] => {
+    const baseSteps = [
+      {
+        name: textButton == "Increment" ? "Stake" : "Unstake",
+        status: "Not Started",
+      },
+    ];
 
+    return baseSteps;
+  };
+  const [steps, setSteps] = useState<Step[]>(createSteps());
   const style = {
     wrapper: `w-screen flex  items-center justify-center mt-14 `,
     content: `bg-transparent w-full   rounded-2xl px-4 text-black dark:text-white`,
@@ -73,7 +85,14 @@ function AllocateGuild({
   };
 
   async function handleVote(): Promise<void> {
-    try {
+    const updateStepStatus = (stepName: string, status: Step["status"]) => {
+      setSteps((prevSteps) =>
+        prevSteps.map((step) =>
+          step.name === stepName ? { ...step, status } : step
+        )
+      );
+    };
+   
       if (value == 0) {
         toastError("Please enter a value");
         return;
@@ -83,13 +102,15 @@ function AllocateGuild({
         setLoading(false);
         return;
       }
-      setLoading(true);
       if (textButton === "Increment") {
         if ((value as number) > guildBalance-guildAvailableToStake) {
           setLoading(false);
           toastError("Not enough guild");
           return;
         } else {
+          try {
+            setShowModal(true);
+          updateStepStatus("Stake", "In Progress");
           const { hash } = await writeContract({
             address: import.meta.env.VITE_GUILD_ADDRESS,
             abi: guildAbi,
@@ -100,20 +121,26 @@ function AllocateGuild({
             hash: hash,
           });
           if (checkAllocate.status != "success") {
-            toastError("Allocate transaction failed");
-            setLoading(false);
+            updateStepStatus("Stake", "Error");
             return;
           }
-          toastRocket(`Your GUILD have been staked`);
-          setLoading(false);
-          reload(true)
         }
+        catch (e) {
+          console.log(e);
+          updateStepStatus("Stake", "Error");
+          return;
+        }
+        updateStepStatus("Stake", "Success");
+          reload(true)
+      }
       } else if (textButton === "Decrement") {
         if ((value as number) > allocatedGuild) {
           toastError("Not enough GUILD allocated");
-          setLoading(false);
           return;
         } else {
+          setShowModal(true);
+          updateStepStatus("Unstake", "In Progress");
+          try{
           const { hash } = await writeContract({
             address: import.meta.env.VITE_GUILD_ADDRESS,
             abi: guildAbi,
@@ -124,21 +151,20 @@ function AllocateGuild({
             hash: hash,
           });
           if (checkUnstack.status != "success") {
-            toastError("Unstake transaction failed");
-            setLoading(false);
+            updateStepStatus("Unstake", "Error");
             return;
           }
-          toastRocket(`Your GUILD have been unstaked`);
-          setLoading(false);
+          updateStepStatus("Unstake", "Success");
           reload(true)
+        } catch (e) {
+          console.log(e);
+          updateStepStatus("Unstake", "Error");
+          return;
         }
       }
-    } catch (e) {
-      toastError("Transaction failed");
-      console.log(e);
-      setLoading(false);
-    }
   }
+}
+
 
   function getDebtCeileing(): string {
     const percentBefore = gaugeWeight / totalWeight;
@@ -151,20 +177,17 @@ function AllocateGuild({
 
   return (
     <div className={style.content}>
-      {loading && (
-        <div className="absolute h-screen w-full">
-          <SpinnerLoader />
-        </div>
-      )}
+      {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
       <div className={style.formHeader}></div>
       <div className="my-2 grid grid-cols-2">
         <p className=" col-span-2">
           Your current GUILD staked :{" "}
-          <span className="font-semibold">{allocatedGuild?allocatedGuild:"?"}</span>{" "}
+          
+          <span className="font-semibold">{allocatedGuild!=undefined?allocatedGuild:"?"}</span>{" "}
         </p>
         <p className=" col-span-2">
         Your GUILD available to stake :{" "}
-        {guildBalance?(
+        {guildBalance!=undefined?(
           <>
           <span className="font-semibold">{preciseRound(guildBalance-guildAvailableToStake,2)}</span>{" "}/
           <span className="font-semibold">{preciseRound(guildBalance,2)}</span>{" "}
@@ -191,7 +214,7 @@ function AllocateGuild({
         <>
           <p>
             Your GUILD stake will allow {getDebtCeileing()} more CREDIT to be
-            borrowed from this term{" "}
+            borrowed from this <br></br> term{" "}
           </p>
         </>
       ) : (

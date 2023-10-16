@@ -2,6 +2,8 @@ import { jsx } from "@emotion/react";
 import { readContract, waitForTransaction, writeContract } from "@wagmi/core";
 import { get } from "api/base";
 import SpinnerLoader from "components/spinner";
+import StepModal from "components/stepLoader";
+import { Step } from "components/stepLoader/stepType";
 import { creditAbi, profitManager, psmUsdc, termAbi, usdcAbi } from "guildAbi";
 import React, { useEffect, useState } from "react";
 import { toastError, toastRocket } from "toast";
@@ -25,6 +27,18 @@ function MintOrRedeem() {
   const [conversionRate, setConversionRate] = useState<number>(0);
   const [status, setStatus] = useState<string>("Mint");
   const [usdcAvailableToRedeem, setUsdcAvailableToRedeem] = useState<number>(0);
+  const [showModal, setShowModal] = useState(false);
+  const [reload, setReload] = useState(false);
+  const createSteps = (): Step[] => {
+    const baseSteps = [
+      { name: "Approve", status: "Not Started" },
+      { name: "Mint", status: "Not Started" },
+    ];
+
+    return baseSteps;
+  };
+
+  const [steps, setSteps] = useState<Step[]>(createSteps());
 
   // borrow function :
   //borrow amount
@@ -74,15 +88,38 @@ function MintOrRedeem() {
 
   useEffect(() => {
     getConversionRate();
+    getUsdcAvailableToRedeem();
+    if (isConnected) {
     getCreditBalance();
     getUsdcBalance();
-    getUsdcAvailableToRedeem();
-  }, [creditBalance,isConnected]);
+    setReload(false);
+    }else{
+    setCreditBalance(undefined);
+    setUsdcBalance(undefined);
+  
+    }
+  }, [creditBalance, isConnected, reload]);
+
+  const updateStepStatus = (stepName: string, status: Step["status"]) => {
+    setSteps((prevSteps) =>
+      prevSteps.map((step) =>
+        step.name === stepName ? { ...step, status } : step
+      )
+    );
+  };
+  function updateStepName(oldName: string, newName: string) {
+    setSteps(prevSteps => 
+      prevSteps.map(step => 
+        step.name === oldName ? { ...step, name: newName } : step
+      )
+    );
+  }
+  
 
   async function mint() {
+    setShowModal(true);
     try {
-      setLoading(true);
-
+      updateStepStatus("Approve", "In Progress");
       // approve collateral first
       const approve = await writeContract({
         address: import.meta.env.VITE_USDC_ADDRESS as Address,
@@ -99,11 +136,17 @@ function MintOrRedeem() {
       });
 
       if (checkApprove.status != "success") {
-        toastError("Approve transaction failed");
-        setLoading(false);
+        updateStepStatus("Approve", "Error");
         return;
       }
-
+      updateStepStatus("Approve", "Success");
+    } catch (e) {
+      console.log(e);
+      updateStepStatus("Approve", "Error");
+      return;
+    }
+    try {
+      updateStepStatus("Mint", "In Progress");
       const mint = await writeContract({
         address: import.meta.env.VITE_PSM_USDC_ADDRESS as Address,
         abi: psmUsdc,
@@ -115,21 +158,19 @@ function MintOrRedeem() {
       });
 
       if (checkmint.status === "success") {
-        toastRocket("Transaction has been successful ");
-        getCreditBalance();
-        setLoading(false);
+        updateStepStatus("Mint", "Success");
+        setReload(true);
         return;
-      } else toastError("Error with the mint transaction");
-      setLoading(false);
+      } else updateStepStatus("Mint", "Error");
     } catch (e) {
-      toastError("Error with the mint transaction");
-      setLoading(false);
+      updateStepStatus("Mint", "Error");
       console.log(e);
     }
   }
   async function redeem() {
     try {
-      setLoading(true);
+      setShowModal(true);
+      updateStepStatus("Approve", "In Progress");
 
       // approve collateral first
       const approve = await writeContract({
@@ -147,11 +188,18 @@ function MintOrRedeem() {
       });
 
       if (checkApprove.status != "success") {
-        toastError("Approve transaction failed");
-        setLoading(false);
+        updateStepStatus("Approve", "Error");
         return;
       }
-
+      updateStepStatus("Approve", "Success");
+    } catch (e) {
+      console.log(e);
+      updateStepStatus("Approve", "Error");
+      return;
+    }
+    try {
+      updateStepName("Mint", "Redeem");
+      updateStepStatus("Redeem", "In Progress");
       const redeem = await writeContract({
         address: import.meta.env.VITE_PSM_USDC_ADDRESS as Address,
         abi: psmUsdc,
@@ -163,15 +211,12 @@ function MintOrRedeem() {
       });
 
       if (checkredeem.status === "success") {
-        toastRocket("Transaction has been successful ");
-        getCreditBalance();
-        setLoading(false);
+        setReload(true);
+       updateStepStatus("Redeem", "Success");
         return;
-      } else toastError("Error with the redeem transaction");
-      setLoading(false);
+      } else updateStepStatus("Redeem", "Error");
     } catch (e) {
-      toastError("Error with the redeem transaction");
-      setLoading(false);
+      updateStepStatus("Redeem", "Error");
       console.log(e);
     }
   }
@@ -219,7 +264,6 @@ function MintOrRedeem() {
         preciseRound(valuetoSend * conversionRate, 2)
       );
       setValueToReceive(valueToReceive);
-
     } else {
       setValueToReceive(0);
     }
@@ -227,18 +271,14 @@ function MintOrRedeem() {
   return (
     <>
       <div className="h-full rounded-xl text-black dark:text-white">
-        {loading && (
-          <div className="absolute h-screen w-full">
-            <SpinnerLoader />
-          </div>
-        )}
+      {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
         <h2 className="ml-6 text-start text-xl font-semibold text-black dark:text-white ">
           Mint / Redeem
         </h2>
         <div className=" space-y-6">
           <button
             onClick={() => setStatus("Mint")}
-            className={`px-6 border-b-4 border-transparent   hover:border-gray-200  ${
+            className={`border-b-4 border-transparent px-6   hover:border-gray-200  ${
               status == "Mint" ? "text-black dark:text-white" : "text-gray-400"
             } `}
           >
@@ -246,7 +286,7 @@ function MintOrRedeem() {
           </button>
           <button
             onClick={() => setStatus("Redeem")}
-            className={`px-6 border-b-4 border-b-transparent hover:border-gray-200  ${
+            className={`border-b-4 border-b-transparent px-6 hover:border-gray-200  ${
               status == "Redeem"
                 ? "text-black dark:text-white"
                 : "text-gray-400"
@@ -258,11 +298,15 @@ function MintOrRedeem() {
         <div className=" ml-6 mt-8 grid grid-cols-2  ">
           <div className="">
             Your USDC balance :{" "}
-            <span className="font-semibold">{usdcBalance?formatCurrencyValue(usdcBalance):"?"}</span>
+            <span className="font-semibold">
+              {usdcBalance ? formatCurrencyValue(usdcBalance) : "?"}
+            </span>
           </div>
           <div className="">
             Your CREDIT balance :{" "}
-            <span className="font-semibold">{creditBalance?formatCurrencyValue(creditBalance):"?"}</span>
+            <span className="font-semibold">
+              {creditBalance ? formatCurrencyValue(creditBalance) : "?"}
+            </span>
           </div>
           <div className=" col-span-2">
             USDC available to redeem :{" "}
@@ -276,7 +320,7 @@ function MintOrRedeem() {
               {" "}
               {preciseRound(conversionRate, 2)}
             </span>
-            {status == "Mint" ?  " USDC / CREDIT" : " CREDIT / USDC"}
+            {status == "Mint" ? " USDC / CREDIT" : " CREDIT / USDC"}
           </div>
         </div>
 
@@ -295,7 +339,18 @@ function MintOrRedeem() {
             />
 
             <div className="w-full">
-              {status == "Mint" ? <div className="flex items-center space-x-2"> <img className="h-8"  src="/usd-coin-usdc-logo.png"/><p>USDC amount</p></div> : <div className="flex items-center space-x-2"><img className="h-8"  src="/vite.svg"/><p>CREDIT amount</p> </div>}
+              {status == "Mint" ? (
+                <div className="flex items-center space-x-2">
+                  {" "}
+                  <img className="h-8" src="/usd-coin-usdc-logo.png" />
+                  <p>USDC amount</p>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <img className="h-8" src="/vite.svg" />
+                  <p>CREDIT amount</p>{" "}
+                </div>
+              )}
             </div>
           </div>
           <div className={style.transferPropContainer}>
@@ -307,7 +362,18 @@ function MintOrRedeem() {
               pattern="^[0-9]*[.,]?[0-9]*$"
             />
             <div className="w-full">
-              {status != "Mint" ?<div className="flex items-center space-x-2"> <img className="h-8"  src="/usd-coin-usdc-logo.png"/><p>USDC amount</p></div> : <div className="flex items-center space-x-2"><img className="h-8"  src="/vite.svg"/><p>CREDIT amount</p> </div>}
+              {status != "Mint" ? (
+                <div className="flex items-center space-x-2">
+                  {" "}
+                  <img className="h-8" src="/usd-coin-usdc-logo.png" />
+                  <p>USDC amount</p>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <img className="h-8" src="/vite.svg" />
+                  <p>CREDIT amount</p>{" "}
+                </div>
+              )}
             </div>
           </div>
           <button

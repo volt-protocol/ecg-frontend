@@ -32,10 +32,18 @@ import axios from "axios";
 import TooltipHorizon from "components/tooltip";
 import { nameCoinGecko } from "coinGecko";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
+import { Step } from "components/stepLoader/stepType";
+import StepModal from "components/stepLoader";
 
 const columnHelper = createColumnHelper<LoansObj>();
 
-function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice,interestRate} : {
+function Myloans({
+  collateralName,
+  tableData,
+  smartContractAddress,
+  collateralPrice,
+  interestRate,
+}: {
   collateralName: string;
   tableData: LoansObj[];
   smartContractAddress: string;
@@ -53,7 +61,22 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
   const [loading, setLoading] = React.useState(false);
   const { address, isConnected, isDisconnected } = useAccount();
   const [creditMultiplier, setCreditMultiplier] = React.useState(0);
-  
+  const [showModal, setShowModal] = useState(false);
+  const createSteps = (): Step[] => {
+    const baseSteps = [
+      { name: "Approve", status: "Not Started" },
+      { name: "Partial Repay", status: "Not Started" },
+    ];
+
+    // if (match) {
+    //   baseSteps.splice(1, 1, { name: "Repay", status: "Not Started" });
+    // }
+
+    return baseSteps;
+  };
+
+  const [steps, setSteps] = useState<Step[]>(createSteps());
+
   function TableCell({ original }: { original: LoansObj }) {
     const [inputValue, setInputValue] = useState("");
     const [match, setMatch] = useState(false);
@@ -63,7 +86,7 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
     }
 
     useEffect(() => {
-      setMatch(Number(inputValue) === original.borrowAmount);
+      setMatch(Number(inputValue) === original.borrowAmount+ original.borrowAmount *interestRate);
     }, [inputValue, original.borrowAmount]);
 
     return (
@@ -73,8 +96,8 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
           ref={inputRefs.current[original.id]}
           value={inputValue}
           onChange={(e) => {
-            if (Number(e.target.value) > original.borrowAmount)
-              setInputValue(String(original.borrowAmount));
+            if (Number(e.target.value) > original.borrowAmount + original.borrowAmount *interestRate)
+              setInputValue(String(original.borrowAmount+ original.borrowAmount *interestRate));
             else setInputValue(e.target.value);
           }}
           className="mr-2 max-w-[9rem]  rounded-2xl number-spinner-off dark:text-black"
@@ -83,7 +106,7 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
         <button
           onClick={() =>
             match
-              ? repay(original.id, original.borrowAmount)
+              ? repay(original.id, original.borrowAmount+ original.borrowAmount *interestRate)
               : partialRepay(original.id)
           }
           className={`min-w-[8rem] rounded-2xl bg-gradient-to-br px-3 py-1 text-white ${
@@ -107,9 +130,8 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
       });
       setCreditMultiplier(Number(creditMultiplier));
     }
-   
-    getcreditMultiplier();
 
+    getcreditMultiplier();
   }, []);
   let defaultData = tableData;
   const columns = [
@@ -126,87 +148,99 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
           <TooltipHorizon
             extra="dark:text-white"
             content={
-              <div className="space-y-4 p-2 mt-4 ">
-              <div className="space-y-2">
-                <p>
-                   Borrowed CREDIT :{" "}
-                  <span className="font-semibold">
-                    {" "}
-                    {preciseRound(info.row.original.borrowAmount,2)}{" "}
-                  </span>{" "}
-                </p>
-                <p>
-                   Borrow Interest :{" "}
-                  <span className="font-semibold">
-                    <strong>
-                    {" "}
-                    {interestRate}
-                    {" "}
-                    CREDIT
-                    </strong>
-                  </span>
-                </p>
-                <p>
-                   Borrowed Value :{" "}
-                  <span className="font-semibold">
-                    {" "}
-                    {preciseRound(DecimalToUnit(
-                      BigInt(info.row.original.borrowAmount * creditMultiplier),
-                      18
-                    ),2)}
-                    {" "}{collateralName}
-                  </span>
-                </p>
-                <p>
-                   Borrowed Value :{" "}
-                  <span className="font-semibold">
-                    {" "}
-                    {preciseRound(DecimalToUnit(
-                      BigInt(info.row.original.borrowAmount * creditMultiplier),
-                      18
-                    ),2)}
-                    $
-                  </span>
-                </p>
+              <div className="mt-4 space-y-4 p-2 ">
+                <div className="space-y-2">
+                  <p>
+                    Borrowed CREDIT :{" "}
+                    <span className="font-semibold">
+                      {" "}
+                      {preciseRound(info.row.original.borrowAmount, 2)}{" "}
+                    </span>{" "}
+                  </p>
+                  <p>
+                    Borrow Interest :{" "}
+                    <span className="font-semibold">
+                      <strong> {interestRate} CREDIT</strong>
+                    </span>
+                  </p>
+                  <p>
+                    Borrowed Value :{" "}
+                    <span className="font-semibold">
+                      {" "}
+                      {preciseRound(
+                        DecimalToUnit(
+                          BigInt(
+                            info.row.original.borrowAmount * creditMultiplier
+                          ),
+                          18
+                        ),
+                        2
+                      )}{" "}
+                      {collateralName}
+                    </span>
+                  </p>
+                  <p>
+                    Borrowed Value :{" "}
+                    <span className="font-semibold">
+                      {" "}
+                      {preciseRound(
+                        DecimalToUnit(
+                          BigInt(
+                            info.row.original.borrowAmount * creditMultiplier
+                          ),
+                          18
+                        ),
+                        2
+                      )}
+                      $
+                    </span>
+                  </p>
                 </div>
                 <div className="space-y-2">
+                  <p>
+                    Collateral Amount :{" "}
+                    <span className="font-semibold">
+                      {" "}
+                      {info.row.original.collateralAmount}{" "} {collateralName}
+                    </span>
+                  </p>
+                  <p>
+                    Collateral Price:{" "}
+                    <span className="font-semibold"> {collateralPrice} $</span>
+                  </p>
+                  <p>
+                    Collateral Value :{" "}
+                    <span className="font-semibold">
+                      {" "}
+                      {preciseRound(
+                        info.row.original.collateralAmount * collateralPrice,
+                        2
+                      )}
+                      ${" "}
+                    </span>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                <p>Value to Repay : <strong>{preciseRound(info.row.original.borrowAmount +info.row.original.borrowAmount *interestRate,2)} CREDIT</strong></p>
                 <p>
-                  Collateral Amount :{" "}
-                  <span className="font-semibold">
-                    {" "}
-                    {(info.row.original.collateralAmount)}{" "}
-                  </span>
-                </p>
-                <p>
-                  Collateral Price:{" "}
-                  <span className="font-semibold"> {collateralPrice} $</span>
-                </p>
-                <p>
-                  Collateral Value :{" "}
-                  <span className="font-semibold">
-                    {" "}
-                    {preciseRound(
-                      info.row.original.collateralAmount * collateralPrice,
-                      2
-                    )}
-                    ${" "}
-                  </span>
+                  Price sources : <strong> Coingecko API</strong>
                 </p>
                 </div>
-                <p>Price sources : <strong> Coingecko API</strong></p>
               </div>
             }
             trigger={
               <div className="absolute left-0 top-0 flex h-full w-full items-center">
                 <p>
                   {preciseRound(
-                    (info.row.original.borrowAmount * creditMultiplier) /
+                    ((info.row.original.borrowAmount * creditMultiplier) /
                       (1e18 *
                         Number(
                           collateralPrice * info.row.original.collateralAmount
-                        ))*100 ,
+                        ))) *
+                      100,
                     2
-                  )}%
+                  )}
+                  %
                 </p>
                 <div className="mb-2 ml-1">
                   <AiOutlineQuestionCircle color="gray" />
@@ -227,10 +261,16 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
     },
   ]; // eslint-disable-next-line
   const [data, setData] = React.useState(() =>
-    defaultData.filter((loan) => loan.status !== "closed" && loan.callTime===0)
+    defaultData.filter(
+      (loan) => loan.status !== "closed" && loan.callTime === 0
+    )
   );
   useEffect(() => {
-    setData(defaultData.filter((loan) => loan.status !== "closed" && loan.callTime===0));
+    setData(
+      defaultData.filter(
+        (loan) => loan.status !== "closed" && loan.callTime === 0
+      )
+    );
   }, [defaultData]);
   const table = useReactTable({
     data,
@@ -244,19 +284,33 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
     debugTable: true,
   });
 
-  async function partialRepay(loanId: string) {
-    setLoading(true);
-    const inputValue = Number(inputRefs.current[loanId].current?.value);
+  function updateStepName(oldName: string, newName: string) {
+    setSteps(prevSteps => 
+      prevSteps.map(step => 
+        step.name === oldName ? { ...step, name: newName } : step
+      )
+    );
+  }
+  
 
-    console.log(inputRefs.current[loanId], "inputRefs.current[loanId]");
-    console.log(loanId, "loan iD");
+  async function partialRepay(loanId: string) {
+    const inputValue = Number(inputRefs.current[loanId].current?.value);
 
     if (inputValue <= 0 || inputValue === null || inputValue === undefined) {
       setLoading(false);
       return toastError("Please enter a value");
     }
+    const updateStepStatus = (stepName: string, status: Step["status"]) => {
+      setSteps((prevSteps) =>
+        prevSteps.map((step) =>
+          step.name === stepName ? { ...step, status } : step
+        )
+      );
+    };
 
     try {
+      setShowModal(true);
+      updateStepStatus("Approve", "In Progress");
       const approve = await writeContract({
         address: import.meta.env.VITE_CREDIT_ADDRESS,
         abi: creditAbi,
@@ -269,10 +323,18 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
       });
 
       if (data.status != "success") {
-        setLoading(false);
-        return toastError("You don't have enough credit");
+        updateStepStatus("Approve", "Error");
+        return;
       }
+      updateStepStatus("Approve", "Success");
+    } catch (e) {
+      console.log(e);
+      updateStepStatus("Approve", "Error");
+      return;
+    }
 
+    try {
+      updateStepStatus("Partial Repay", "In Progress");
       const { hash } = await writeContract({
         address: smartContractAddress,
         abi: termAbi,
@@ -285,15 +347,12 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
       });
 
       if (checkPartialPay.status === "success") {
-        setLoading(false);
-        toastRocket("Transaction success");
+        updateStepStatus("Partial Repay", "Success");
       } else {
-        setLoading(false);
-        toastError("Transaction failed");
+        updateStepStatus("Partial Repay", "Error");
       }
     } catch (e) {
-      setLoading(false);
-      toastError("Transaction failed");
+      updateStepStatus("Partial Repay", "Error");
       console.log(e);
     }
   }
@@ -322,9 +381,17 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
   }
 
   async function repay(loanId: string, borrowCredit: number) {
+    const updateStepStatus = (stepName: string, status: Step["status"]) => {
+      setSteps((prevSteps) =>
+        prevSteps.map((step) =>
+          step.name === stepName ? { ...step, status } : step
+        )
+      );
+    };
+    updateStepName("Partial Repay", "Repay");
     try {
-      setLoading(true);
-
+      setShowModal(true);
+      updateStepStatus("Approve", "In Progress");
       const approve = await writeContract({
         address: import.meta.env.VITE_CREDIT_ADDRESS,
         abi: creditAbi,
@@ -337,10 +404,17 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
       });
 
       if (data.status != "success") {
-        setLoading(false);
-        return toastError("You don't have enough credit");
+        updateStepStatus("Approve", "Error");
+        return;
       }
-
+      updateStepStatus("Approve", "Success");
+    } catch (e) {
+      console.log(e);
+      updateStepStatus("Approve", "Error");
+      return;
+    }
+    try {
+      updateStepStatus("Repay", "In Progress");
       const { hash } = await writeContract({
         address: smartContractAddress,
         abi: termAbi,
@@ -352,25 +426,20 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
         hash: hash,
       });
 
-      if (checkRepay.status === "success") {
-        toastRocket("Transaction success");
-        setLoading(false);
-      } else toastError("Repay transaction failed");
+      if (checkRepay.status != "success") {
+        updateStepStatus("Repay", "Error");
+      } 
+        updateStepStatus("Repay", "Success");
+      
     } catch (e) {
-      toastError("Transaction failed");
       console.log(e);
-      setLoading(false);
+      updateStepStatus("Repay", "Error");
     }
   }
 
   return (
-    
     <Card extra={"w-full h-full px-6 pb-6 sm:overflow-x-auto"}>
-      {loading && (
-        <div className="absolute h-screen w-full">
-          <SpinnerLoader />
-        </div>
-      )}
+         {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
 
       <div className="relative flex items-center justify-between pt-4">
         <div className="text-xl font-bold text-navy-700 dark:text-white">
@@ -430,7 +499,7 @@ function Myloans( {collateralName,tableData,smartContractAddress,collateralPrice
                         return (
                           <td
                             key={cell.id}
-                            className="relative border-white/0 min-w-[75px] lg:min-w-[69px]   py-3 pr-4  xl:min-w-[90px] 3xl:min-w-[150px]"
+                            className="relative min-w-[75px] border-white/0 py-3   pr-4 lg:min-w-[69px]  xl:min-w-[90px] 3xl:min-w-[150px]"
                           >
                             {flexRender(
                               cell.column.columnDef.cell,

@@ -49,12 +49,12 @@ function CreateLoan({
   const [showModal, setShowModal] = useState(false);
   const createSteps = (): Step[] => {
     const baseSteps = [
-      { name: "Approve", status: "notStarted" },
-      { name: "Borrow", status: "notStarted" },
+      { name: "Approve", status: "Not Started" },
+      { name: "Borrow", status: "Not Started" },
     ];
 
     if (openingFee > 0) {
-      baseSteps.splice(2, 0, { name: "approveCredit", status: "notStarted" });
+      baseSteps.splice(2, 0, { name: "approveCredit", status: "Not Started" });
     }
 
     return baseSteps;
@@ -106,7 +106,7 @@ function CreateLoan({
         );
       };
       setShowModal(true);
-      updateStepStatus("Approve", "inProgress");
+      updateStepStatus("Approve", "In Progress");
       // approve collateral first
       try {
       const approve = await writeContract({
@@ -131,16 +131,16 @@ function CreateLoan({
     }
       catch (e) {
         console.log(e);
-        updateStepStatus("Approve", "error");
+        updateStepStatus("Approve", "Error");
         return;
       } 
 
      
-      updateStepStatus("Approve", "success");
+      updateStepStatus("Approve", "Success");
 
       // check si il y a un  open fees ==> approve credit
       if (openingFee > 0) {
-        updateStepStatus("approveCredit", "inProgress");
+        updateStepStatus("approveCredit", "In Progress");
         try{
         const approveCredit = await writeContract({
           address: import.meta.env.VITE_CREDIT_ADDRESS,
@@ -159,12 +159,12 @@ function CreateLoan({
         }
       } catch (e) {
         console.log(e);
-        updateStepStatus("approveCredit", "error");
+        updateStepStatus("Approve Credit", "Error");
         return;
       }
       }
     
-      updateStepStatus("Borrow", "inProgress");
+      updateStepStatus("Borrow", "In Progress");
       try {
       const borrow = await writeContract({
         address: contractAddress,
@@ -180,13 +180,13 @@ function CreateLoan({
       });
     
       if (checkBorrow.status === "success") {
-        updateStepStatus("Borrow", "success");
+        updateStepStatus("Borrow", "Success");
         toastRocket("Transaction has been successful ");
         return;
       } else toastError("Error with the borrow transaction");
     }catch (e) {
       console.log(e);
-      updateStepStatus("Borrow", "error");
+      updateStepStatus("Borrow", "Error");
       return;
     }
    
@@ -240,11 +240,6 @@ function CreateLoan({
       {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
 
       <div className="h-full rounded-xl text-black dark:text-white ">
-        {loading && (
-          <div className="absolute h-screen w-full">
-            <SpinnerLoader />
-          </div>
-        )}
         <h2 className="ml-6 mt-4 text-start text-xl font-semibold text-navy-700 dark:text-white ">
           New Loan
         </h2>

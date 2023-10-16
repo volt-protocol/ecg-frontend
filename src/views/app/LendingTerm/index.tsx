@@ -157,7 +157,8 @@ function LendingTerm() {
         functionName: "balanceOf",
         args: [address],
       });
-      const result = DecimalToUnit(balance as bigint, 18) - guildAllocated;
+      const result = DecimalToUnit(balance as bigint, 18);
+      
       setGuildBalance(result);
     }
     async function getGuildAvailableToStake(): Promise<void> {
@@ -167,7 +168,6 @@ function LendingTerm() {
         functionName: "getUserWeight",
         args: [address],
       });
-      console.log(result,"result")
       setGuildAvailableToStake(DecimalToUnit(result as bigint, 18));
     }
 
@@ -178,6 +178,7 @@ function LendingTerm() {
         functionName: "stakes",
         args: [address, contractAddress],
       });
+      
       setCreditAllocated(DecimalToUnit(result as bigint, 18));
     }
     async function getCreditdAvailable(): Promise<void> {
@@ -214,12 +215,17 @@ function LendingTerm() {
     }
     // setGuildAvailable( parseInt(getGuildAvailable, 10) / 1e18 );
     else {
+      setGuildAllocated(undefined)
+      setGuildBalance(undefined)
+      setCreditAllocated(undefined)
+      setCreditAvailable(undefined) 
+            
       getLoans();
     }
     console.log(reload);
     setReload(false);
-    console.log("test");
   }, [isConnected, reload]);
+
 
   useEffect(() => {
     async function getGaugeWeight(): Promise<void> {

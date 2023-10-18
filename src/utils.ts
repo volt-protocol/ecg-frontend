@@ -1,5 +1,7 @@
 import { signTypedData } from '@wagmi/core';
 import { splitSignature } from '@ethersproject/bytes';
+// const Big = require('big.js');
+
 
 function secondsToAppropriateUnit(seconds: number): string {
   // Convertir en minutes, heures, jours, semaines et mois
@@ -38,6 +40,22 @@ function UnitToDecimal(number: number, decimals: number): number {
   const multiplier = Math.pow(10, decimals);
   return number * multiplier;
 }
+function addOneToLastDecimalPlace(number: number, decimals: number): bigint {
+  const multiplier = BigInt(10 ** decimals);
+  const numberBigInt = BigInt(Math.floor(number * 10 ** decimals));
+  const remainder = numberBigInt % multiplier;
+  const result = numberBigInt - remainder + (remainder + BigInt(1));
+  return result;
+}
+
+// function calculateCollateralAmount(borrowAmount:number, borrowRatio:number):string {
+//   const bigBorrowAmount = new Big(borrowAmount);
+//   const bigBorrowRatio = new Big(borrowRatio);
+//   const collateralAmount = bigBorrowAmount.div(bigBorrowRatio);
+//   return collateralAmount.toString(); // Convertir le résultat en chaîne de caractères si nécessaire
+// }
+
+
 
 async function signTransferPermit(value :number) {
   const SECOND = 1000;
@@ -110,9 +128,41 @@ return {
 function preciseRound(value: number, decimals: number): string {
   const factor = Math.pow(10, decimals);
   //use of math.ceil to round up to the nearest integer to avoid decimal errors with smart contracts
-  return (Math.ceil(value * factor) / factor).toFixed(decimals);
+  return (Math.round(value * factor) / factor).toFixed(decimals);
 }
 
+//utiliser lors d'un appel vers smart contract
+function preciseCeil(value: number, decimals: number): number {
+  const factor = Math.pow(10, decimals);
+  //use of math.ceil to round up to the nearest integer to avoid decimal errors with smart contracts
+  return Number((Math.ceil(value * factor) / factor).toFixed(decimals));
+}
+
+import { type PublicClient, getPublicClient } from '@wagmi/core'
+import { providers } from 'ethers'
+import { type HttpTransport } from 'viem'
+
+export function publicClientToProvider(publicClient: PublicClient) {
+  const { chain, transport } = publicClient
+  const network = {
+    chainId: chain.id,
+    name: chain.name,
+    ensAddress: chain.contracts?.ensRegistry?.address,
+  }
+  if (transport.type === 'fallback')
+    return new providers.FallbackProvider(
+      (transport.transports as ReturnType<HttpTransport>[]).map(
+        ({ value }) => new providers.JsonRpcProvider(value?.url, network),
+      ),
+    )
+  return new providers.JsonRpcProvider(transport.url, network)
+}
+
+/** Action to convert a viem Public Client to an ethers.js Provider. */
+export function getEthersProvider({ chainId }: { chainId?: number } = {}) {
+  const publicClient = getPublicClient({ chainId })
+  return publicClientToProvider(publicClient)
+}
 
 
 export {
@@ -121,6 +171,9 @@ export {
   DecimalToUnit,
   UnitToDecimal,
   signTransferPermit,
-  preciseRound
+  preciseRound,
+  preciseCeil,
+  addOneToLastDecimalPlace,
+  // calculateCollateralAmount
   
 };

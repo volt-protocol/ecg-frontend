@@ -11,6 +11,7 @@ import {
 } from "@tanstack/react-table";
 import Progress from "components/progress";
 import {
+  Address,
   readContract,
   waitForTransaction,
   WaitForTransactionArgs,
@@ -20,7 +21,9 @@ import {
 import { creditAbi, profitManager, termAbi } from "guildAbi";
 import {
   DecimalToUnit,
+  preciseCeil,
   preciseRound,
+  secondsToAppropriateUnit,
   signTransferPermit,
   UnitToDecimal,
 } from "utils";
@@ -34,6 +37,7 @@ import { nameCoinGecko } from "coinGecko";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
 import { Step } from "components/stepLoader/stepType";
 import StepModal from "components/stepLoader";
+import { MdOutlineError } from "react-icons/md";
 
 const columnHelper = createColumnHelper<LoansObj>();
 
@@ -43,12 +47,14 @@ function Myloans({
   smartContractAddress,
   collateralPrice,
   interestRate,
+  maxDelayBetweenPartialRepay,
 }: {
   collateralName: string;
   tableData: LoansObj[];
   smartContractAddress: string;
   collateralPrice: number;
   interestRate: number;
+  maxDelayBetweenPartialRepay: number;
 }) {
   const inputRefs = React.useRef<{
     [key: string]: React.RefObject<HTMLInputElement>;
@@ -62,20 +68,65 @@ function Myloans({
   const { address, isConnected, isDisconnected } = useAccount();
   const [creditMultiplier, setCreditMultiplier] = React.useState(0);
   const [showModal, setShowModal] = useState(false);
+  const [tableDataWithDebts, setTableDataWithDebts] = useState<LoansObj[]>([]);
+  const [reload, setReload] = useState(false);
+  const [repays, setRepays] = React.useState<Record<string, number>>({});
+
   const createSteps = (): Step[] => {
     const baseSteps = [
       { name: "Approve", status: "Not Started" },
       { name: "Partial Repay", status: "Not Started" },
     ];
-
-    // if (match) {
-    //   baseSteps.splice(1, 1, { name: "Repay", status: "Not Started" });
-    // }
-
     return baseSteps;
   };
 
   const [steps, setSteps] = useState<Step[]>(createSteps());
+
+  useEffect(() => {
+    async function fetchLoanDebts() {
+      const debts = await Promise.all(
+        tableData.map((loan) => getLoanDebt(loan.id, loan.borrowAmount))
+      );
+      const newTableData = tableData.map((loan, index) => ({
+        ...loan,
+        loanDebt: debts[index],
+      }));
+      setTableDataWithDebts(newTableData);
+    }
+    const fetchRepays = async () => {
+      const newRepays: Record<string, number> = {};
+      for (let loan of tableData) {
+        newRepays[loan.id] = await lastPartialRepay(loan.id);
+      }
+      setRepays(newRepays);
+    };
+    setReload(false);
+    fetchRepays();
+    fetchLoanDebts();
+  }, [tableData, reload]);
+
+  async function getLoanDebt(
+    loanId: string,
+    loanBorrowAmount: number
+  ): Promise<number> {
+    const result = await readContract({
+      address: smartContractAddress as Address,
+      abi: termAbi,
+      functionName: "getLoanDebt",
+      args: [loanId],
+    });
+    return DecimalToUnit(BigInt(result as number), 18) - loanBorrowAmount;
+  }
+
+  async function lastPartialRepay(id: string): Promise<number> {
+    const response = await readContract({
+      address: smartContractAddress as Address,
+      abi: termAbi,
+      functionName: "lastPartialRepay",
+      args: [id],
+    });
+    return Number(response);
+  }
 
   function TableCell({ original }: { original: LoansObj }) {
     const [inputValue, setInputValue] = useState("");
@@ -86,7 +137,10 @@ function Myloans({
     }
 
     useEffect(() => {
-      setMatch(Number(inputValue) === original.borrowAmount+ original.borrowAmount *interestRate);
+      setMatch(
+        Number(inputValue) ===
+          original.borrowAmount + preciseCeil(original.loanDebt, 3)
+      );
     }, [inputValue, original.borrowAmount]);
 
     return (
@@ -96,8 +150,15 @@ function Myloans({
           ref={inputRefs.current[original.id]}
           value={inputValue}
           onChange={(e) => {
-            if (Number(e.target.value) > original.borrowAmount + original.borrowAmount *interestRate)
-              setInputValue(String(original.borrowAmount+ original.borrowAmount *interestRate));
+            if (
+              Number(e.target.value) >
+              original.borrowAmount + preciseCeil(original.loanDebt, 3)
+            )
+              setInputValue(
+                String(
+                  original.borrowAmount + preciseCeil(original.loanDebt, 3)
+                )
+              );
             else setInputValue(e.target.value);
           }}
           className="mr-2 max-w-[9rem]  rounded-2xl number-spinner-off dark:text-black"
@@ -106,7 +167,10 @@ function Myloans({
         <button
           onClick={() =>
             match
-              ? repay(original.id, original.borrowAmount+ original.borrowAmount *interestRate)
+              ? repay(
+                  original.id,
+                  original.borrowAmount + preciseCeil(original.loanDebt, 3)
+                )
               : partialRepay(original.id)
           }
           className={`min-w-[8rem] rounded-2xl bg-gradient-to-br px-3 py-1 text-white ${
@@ -133,12 +197,49 @@ function Myloans({
 
     getcreditMultiplier();
   }, []);
-  let defaultData = tableData;
+  let defaultData = tableDataWithDebts;
   const columns = [
     columnHelper.accessor("id", {
       id: "loadId",
       header: "Loan ID",
-      cell: (info) => info.getValue().slice(0, 8),
+      cell: (info) => {
+        const currentDateInSeconds = Date.now() / 1000;
+        const sumOfTimestamps =
+          repays[info.row.original.id] + maxDelayBetweenPartialRepay;
+          const nextPaymentDue=maxDelayBetweenPartialRepay === 0
+                        ? "n/a"
+                        : Number.isNaN(sumOfTimestamps)
+                        ? "--"
+                        : sumOfTimestamps < currentDateInSeconds
+                        ? "Overdue"
+                        : secondsToAppropriateUnit(
+                            sumOfTimestamps - currentDateInSeconds
+                          )
+        return (
+          <>
+            <TooltipHorizon
+              extra=""
+              content={
+                <div className=" space-y-4 p-2 ">
+                  <p>
+                    Next Payment Due :{" "}
+                    <strong>
+                      {nextPaymentDue}
+                    </strong>
+                  </p>
+                </div>
+              }
+              trigger={
+                <div className="absolute left-0 top-0 flex h-full w-full items-center space-x-1">
+                  <p>{info.getValue().slice(0, 8)}</p>
+                  <MdOutlineError className={`me-1 ${nextPaymentDue==="Overdue"?"text-red-500 dark:text-red-500": "text-amber-500 dark:text-amber-300"}`} />
+                </div>
+              }
+              placement="right"
+            />
+          </>
+        );
+      },
     }),
     {
       id: "ltv",
@@ -151,7 +252,7 @@ function Myloans({
               <div className="mt-4 space-y-4 p-2 ">
                 <div className="space-y-2">
                   <p>
-                    Borrowed CREDIT :{" "}
+                    Borrow Principal :{" "}
                     <span className="font-semibold">
                       {" "}
                       {preciseRound(info.row.original.borrowAmount, 2)}{" "}
@@ -160,7 +261,10 @@ function Myloans({
                   <p>
                     Borrow Interest :{" "}
                     <span className="font-semibold">
-                      <strong> {interestRate} CREDIT</strong>
+                      <strong>
+                        {" "}
+                        {preciseRound(info.row.original.loanDebt, 2)} CREDIT
+                      </strong>
                     </span>
                   </p>
                   <p>
@@ -201,7 +305,7 @@ function Myloans({
                     Collateral Amount :{" "}
                     <span className="font-semibold">
                       {" "}
-                      {info.row.original.collateralAmount}{" "} {collateralName}
+                      {info.row.original.collateralAmount} {collateralName}
                     </span>
                   </p>
                   <p>
@@ -221,10 +325,20 @@ function Myloans({
                   </p>
                 </div>
                 <div className="space-y-2">
-                <p>Value to Repay : <strong>{preciseRound(info.row.original.borrowAmount +info.row.original.borrowAmount *interestRate,2)} CREDIT</strong></p>
-                <p>
-                  Price sources : <strong> Coingecko API</strong>
-                </p>
+                  <p>
+                    Value to Repay :{" "}
+                    <strong>
+                      {preciseRound(
+                        info.row.original.borrowAmount +
+                          info.row.original.loanDebt,
+                        2
+                      )}{" "}
+                      CREDIT
+                    </strong>
+                  </p>
+                  <p>
+                    Price sources : <strong> Coingecko API</strong>
+                  </p>
                 </div>
               </div>
             }
@@ -262,13 +376,19 @@ function Myloans({
   ]; // eslint-disable-next-line
   const [data, setData] = React.useState(() =>
     defaultData.filter(
-      (loan) => loan.status !== "closed" && loan.callTime === 0
+      (loan) =>
+        loan.status !== "closed" &&
+        loan.callTime === 0 &&
+        loan.borrowAmount + loan.loanDebt !== 0
     )
   );
   useEffect(() => {
     setData(
       defaultData.filter(
-        (loan) => loan.status !== "closed" && loan.callTime === 0
+        (loan) =>
+          loan.status !== "closed" &&
+          loan.callTime === 0 &&
+          loan.borrowAmount + loan.loanDebt !== 0
       )
     );
   }, [defaultData]);
@@ -285,13 +405,12 @@ function Myloans({
   });
 
   function updateStepName(oldName: string, newName: string) {
-    setSteps(prevSteps => 
-      prevSteps.map(step => 
+    setSteps((prevSteps) =>
+      prevSteps.map((step) =>
         step.name === oldName ? { ...step, name: newName } : step
       )
     );
   }
-  
 
   async function partialRepay(loanId: string) {
     const inputValue = Number(inputRefs.current[loanId].current?.value);
@@ -348,6 +467,7 @@ function Myloans({
 
       if (checkPartialPay.status === "success") {
         updateStepStatus("Partial Repay", "Success");
+        setReload(true);
       } else {
         updateStepStatus("Partial Repay", "Error");
       }
@@ -381,6 +501,7 @@ function Myloans({
   }
 
   async function repay(loanId: string, borrowCredit: number) {
+    console.log(borrowCredit, UnitToDecimal(borrowCredit, 18), "borrowCredit");
     const updateStepStatus = (stepName: string, status: Step["status"]) => {
       setSteps((prevSteps) =>
         prevSteps.map((step) =>
@@ -428,9 +549,9 @@ function Myloans({
 
       if (checkRepay.status != "success") {
         updateStepStatus("Repay", "Error");
-      } 
-        updateStepStatus("Repay", "Success");
-      
+      }
+      updateStepStatus("Repay", "Success");
+      setReload(true);
     } catch (e) {
       console.log(e);
       updateStepStatus("Repay", "Error");
@@ -439,7 +560,14 @@ function Myloans({
 
   return (
     <Card extra={"w-full h-full px-6 pb-6 sm:overflow-x-auto"}>
-         {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
+      {showModal && (
+        <StepModal
+          steps={steps}
+          close={setShowModal}
+          initialStep={createSteps}
+          setSteps={setSteps}
+        />
+      )}
 
       <div className="relative flex items-center justify-between pt-4">
         <div className="text-xl font-bold text-navy-700 dark:text-white">

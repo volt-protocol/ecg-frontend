@@ -33,6 +33,7 @@
     "@web3-react/core": "^8.2.2",
     "apexcharts": "^3.35.5",
     "axios": "^1.5.0",
+    "big.js": "^6.2.1",
     "eth-permit": "^0.2.3",
     "flowbite": "^1.8.1",
     "flowbite-react": "^0.6.0",

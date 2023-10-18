@@ -1,14 +1,16 @@
-import { configureChains, mainnet,createConfig, WagmiConfig, sepolia } from 'wagmi'
-import { publicProvider } from 'wagmi/providers/public'
+import { configureChains, mainnet,createConfig, sepolia } from 'wagmi'
 import '@rainbow-me/rainbowkit/styles.css';
 import {
   getDefaultWallets,
   RainbowKitProvider,
 } from '@rainbow-me/rainbowkit'
+import { infuraProvider } from 'wagmi/providers/infura'
+
+
 
 const { chains, publicClient, webSocketPublicClient } = configureChains(
     [sepolia],
-    [publicProvider()],
+    [infuraProvider({ apiKey: 'e289cb05d6b943959a2b6b9429178870' })],
   )
 
   const { connectors } = getDefaultWallets({
@@ -16,12 +18,12 @@ const { chains, publicClient, webSocketPublicClient } = configureChains(
     projectId: '1',
     chains
   });
+
   
-   
   const config = createConfig({
     autoConnect: true,
     publicClient,
     connectors,
     webSocketPublicClient,
   })
-    export{ config, chains};
+    export{ config, chains, publicClient};

@@ -12,11 +12,8 @@ export type LoansObj = {
   collateralAddress: string;
   status: string;
   originationTime: number;
-    
-    
-    
     ltv: number;
-
+loanDebt?: number;
   };
 
   export type lendingTerms = {

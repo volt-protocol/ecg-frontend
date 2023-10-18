@@ -13,7 +13,7 @@ import {
   termAbi,
   usdcAbi,
 } from "guildAbi";
-import { useAccount } from "wagmi";
+import { useAccount, useContractEvent } from "wagmi";
 import { Address, readContract } from "@wagmi/core";
 import { DecimalToUnit, preciseRound, secondsToAppropriateUnit } from "utils";
 import { useLocation, useParams } from "react-router-dom";
@@ -36,6 +36,8 @@ import TooltipHorizon from "components/tooltip";
 import { GiProgression } from "react-icons/gi";
 import { TbArrowsExchange } from "react-icons/tb";
 import { AiFillClockCircle, AiOutlineQuestionCircle } from "react-icons/ai";
+import { publicClient } from "wagmiConfig";
+import ContractEvents from "./components/ContractEvents";
 
 function LendingTerm() {
   const { address, isConnected, isDisconnected } = useAccount();
@@ -92,6 +94,8 @@ function LendingTerm() {
       color: "#6AD2FF",
     },
   ];
+
+
   useEffect(() => {
     const item = lendingTermsState.find(
       (entry: lendingTerms) => entry.address === location.pathname.split("/")[3]
@@ -393,6 +397,7 @@ function LendingTerm() {
               title={"Borrow Ratio"}
               subtitle={preciseRound(lendingTermData.borrowRatio, 2).toString()}
             />
+            
             <TooltipHorizon
               extra="dark:text-white w-[300px] "
               content={
@@ -455,6 +460,9 @@ function LendingTerm() {
                 collateralPrice={collateralPrice}
                 smartContractAddress={contractAddress}
                 interestRate={lendingTermData.interestRate}
+                maxDelayBetweenPartialRepay={
+                  lendingTermData.maxDelayBetweenPartialRepay
+                }
               />
             </Card>
             <Card extra={"order-1 "}>

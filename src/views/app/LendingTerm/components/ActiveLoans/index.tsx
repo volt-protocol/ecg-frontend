@@ -375,6 +375,7 @@ function ActiveLoans({
         const currentDateInSeconds = Date.now() / 1000;
         const sumOfTimestamps =
           repays[info.row.original.id] + maxDelayBetweenPartialRepay;
+          console.log(maxDelayBetweenPartialRepay,"maxDelayBetweenPartialRepay")
         return (
           <>
             <p>

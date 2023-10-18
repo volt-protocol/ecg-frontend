@@ -2,14 +2,16 @@ import { readContract, waitForTransaction, writeContract } from "@wagmi/core";
 import SpinnerLoader from "components/spinner";
 import StepModal from "components/stepLoader";
 import { Step } from "components/stepLoader/stepType";
-import { creditAbi, termAbi, usdcAbi } from "guildAbi";
+import { creditAbi, profitManager, termAbi, usdcAbi } from "guildAbi";
 import React, { useEffect, useState } from "react";
 import { MdOutlineError } from "react-icons/md";
 import { toastError, toastRocket } from "toast";
 import {
   DecimalToUnit,
   UnitToDecimal,
+  addOneToLastDecimalPlace,
   formatCurrencyValue,
+  preciseCeil,
   preciseRound,
   signTransferPermit,
 } from "utils";
@@ -47,6 +49,9 @@ function CreateLoan({
     useState<number>(0);
   const { address, isConnected, isDisconnected } = useAccount();
   const [showModal, setShowModal] = useState(false);
+  const [preciseBorrowRatio, setPreciseBorrowRatio] = useState<bigint>(
+    BigInt(0)
+  );
   const createSteps = (): Step[] => {
     const baseSteps = [
       { name: "Approve", status: "Not Started" },
@@ -54,7 +59,7 @@ function CreateLoan({
     ];
 
     if (openingFee > 0) {
-      baseSteps.splice(2, 0, { name: "approveCredit", status: "Not Started" });
+      baseSteps.splice(1, 0, { name: "Approve Credit", status: "Not Started" });
     }
 
     return baseSteps;
@@ -70,10 +75,6 @@ function CreateLoan({
         functionName: "balanceOf",
         args: [address],
       });
-      console.log(
-        DecimalToUnit(result as bigint, collateralDecimals),
-        "result"
-      );
       setCollateralAmountAvailable(
         DecimalToUnit(result as bigint, collateralDecimals)
       );
@@ -82,66 +83,59 @@ function CreateLoan({
   }, [isConnected]);
 
   async function borrow() {
-
     if (isConnected == false) {
       toastError("Please connect your wallet");
       setLoading(false);
       return;
     }
 
-      //check ratio
-      if (borrowAmount < minBorrow) {
-        toastError(`Borrow amount can't be below than ${minBorrow} `);
-        return;
-      }
-      if (borrowAmount > availableDebt) {
-        toastError(`The max borrow amount is ${availableDebt} `);
-        return;
-      }
-      const updateStepStatus = (stepName: string, status: Step["status"]) => {
-        setSteps((prevSteps) =>
-          prevSteps.map((step) =>
-            step.name === stepName ? { ...step, status } : step
-          )
-        );
-      };
-      setShowModal(true);
-      updateStepStatus("Approve", "In Progress");
-      // approve collateral first
-      try {
+    //check ratio
+    if (borrowAmount < minBorrow) {
+      toastError(`Borrow amount can't be below than ${minBorrow} `);
+      return;
+    }
+    if (borrowAmount > availableDebt) {
+      toastError(`The max borrow amount is ${availableDebt} `);
+      return;
+    }
+    const updateStepStatus = (stepName: string, status: Step["status"]) => {
+      setSteps((prevSteps) =>
+        prevSteps.map((step) =>
+          step.name === stepName ? { ...step, status } : step
+        )
+      );
+    };
+    setShowModal(true);
+    updateStepStatus("Approve", "In Progress");
+    // approve collateral first
+    try {
       const approve = await writeContract({
         address: collateralAddress,
         abi: usdcAbi,
         functionName: "approve",
-        args: [
-          contractAddress,
-          UnitToDecimal(collateralAmount, collateralDecimals),
-        ],
-      });  
+        args: [contractAddress, preciseBorrowRatio],
+      });
       const checkApprove = await waitForTransaction({
         hash: approve.hash,
       });
 
       if (checkApprove.status != "success") {
-        toastError("Approve transaction failed");
-
+        updateStepStatus("Approve", "Error");
         setLoading(false);
         return;
       }
+    } catch (e) {
+      console.log(e);
+      updateStepStatus("Approve", "Error");
+      return;
     }
-      catch (e) {
-        console.log(e);
-        updateStepStatus("Approve", "Error");
-        return;
-      } 
 
-     
-      updateStepStatus("Approve", "Success");
+    updateStepStatus("Approve", "Success");
 
-      // check si il y a un  open fees ==> approve credit
-      if (openingFee > 0) {
-        updateStepStatus("approveCredit", "In Progress");
-        try{
+    // check si il y a un  open fees ==> approve credit
+    if (openingFee > 0) {
+      updateStepStatus("Approve Credit", "In Progress");
+      try {
         const approveCredit = await writeContract({
           address: import.meta.env.VITE_CREDIT_ADDRESS,
           abi: creditAbi,
@@ -153,43 +147,38 @@ function CreateLoan({
         });
 
         if (checkApproveCredit.status != "success") {
-          toastError("You don't have enough CREDIT");
-          setLoading(false);
+          updateStepStatus("Approve Credit", "Error");
           return;
         }
+        updateStepStatus("Approve Credit", "Success");
       } catch (e) {
         console.log(e);
         updateStepStatus("Approve Credit", "Error");
         return;
       }
-      }
-    
-      updateStepStatus("Borrow", "In Progress");
-      try {
+    }
+
+    updateStepStatus("Borrow", "In Progress");
+    try {
       const borrow = await writeContract({
         address: contractAddress,
         abi: termAbi,
         functionName: "borrow",
-        args: [
-          UnitToDecimal(borrowAmount, 18),
-          UnitToDecimal(collateralAmount, collateralDecimals),
-        ],
+        args: [UnitToDecimal(borrowAmount, 18), preciseBorrowRatio],
       });
       const checkBorrow = await waitForTransaction({
         hash: borrow.hash,
       });
-    
+
       if (checkBorrow.status === "success") {
         updateStepStatus("Borrow", "Success");
-        toastRocket("Transaction has been successful ");
         return;
-      } else toastError("Error with the borrow transaction");
-    }catch (e) {
+      } else updateStepStatus("Borrow", "Error");
+    } catch (e) {
       console.log(e);
       updateStepStatus("Borrow", "Error");
       return;
     }
-   
   }
 
   const style = {
@@ -227,6 +216,29 @@ function CreateLoan({
     } else setBorrowAmount(0);
   };
 
+  async function getPrecicseBorrowRatio() {
+    const borrowRatio = await readContract({
+      address: contractAddress as Address,
+      abi: termAbi,
+      functionName: "maxDebtPerCollateralToken",
+    });
+
+    const creditMultiplier = await readContract({
+      address: import.meta.env.VITE_PROFIT_MANAGER_ADDRESS as Address,
+      abi: profitManager,
+      functionName: "creditMultiplier",
+    });
+    const preciseBorrowRatio =
+      BigInt(1) +
+      (BigInt(borrowAmount) * BigInt(1e18) * (creditMultiplier as bigint)) /
+        (borrowRatio as bigint);
+    setPreciseBorrowRatio(preciseBorrowRatio);
+  }
+
+  useEffect(() => {
+    getPrecicseBorrowRatio();
+  }, [borrowAmount]);
+
   // setBigIntCollateralAmount(BigInt(UnitToDecimal(borrowAmount,collateralDecimals).toString())/BigInt(1e18 *borrowRatio))
   useEffect(() => {
     const collateralAmount: number = Number(
@@ -237,7 +249,14 @@ function CreateLoan({
   }, [borrowAmount]);
   return (
     <>
-      {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
+      {showModal && (
+        <StepModal
+          steps={steps}
+          close={setShowModal}
+          initialStep={createSteps}
+          setSteps={setSteps}
+        />
+      )}
 
       <div className="h-full rounded-xl text-black dark:text-white ">
         <h2 className="ml-6 mt-4 text-start text-xl font-semibold text-navy-700 dark:text-white ">
@@ -317,7 +336,7 @@ function CreateLoan({
           </button>
           {openingFee > 0 && (
             <div className="my-2 flex items-center ">
-               <MdOutlineError className="text-amber-500 me-1 dark:text-amber-300" />
+              <MdOutlineError className="me-1 text-amber-500 dark:text-amber-300" />
               <p>
                 You will have to pay{" "}
                 <span className="font-semibold">

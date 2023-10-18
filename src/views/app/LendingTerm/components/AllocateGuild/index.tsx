@@ -214,7 +214,7 @@ function AllocateGuild({
         <>
           <p>
             Your GUILD stake will allow {getDebtCeileing()} more CREDIT to be
-            borrowed from this <br></br> term{" "}
+            borrowed from this  term{" "}
           </p>
         </>
       ) : (

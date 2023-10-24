@@ -21,7 +21,7 @@ import Myloans from "./components/MyLoans";
 import CreateLoan from "./components/CreateLoan";
 import Stake from "./components/StakeCredit";
 import ActiveLoans from "./components/ActiveLoans";
-import { LoansObj, lendingTerms } from "types/lending";
+import { LoansObj, lendingTerms, loanObj } from "types/lending";
 import api from "api";
 import axios, { AxiosResponse } from "axios";
 import { useRecoilState } from "recoil";
@@ -37,7 +37,8 @@ import { GiProgression } from "react-icons/gi";
 import { TbArrowsExchange } from "react-icons/tb";
 import { AiFillClockCircle, AiOutlineQuestionCircle } from "react-icons/ai";
 import { publicClient } from "wagmiConfig";
-import ContractEvents from "./components/ContractEvents";
+import { getLoansCall } from "./components/ContractEvents";
+
 
 function LendingTerm() {
   const { address, isConnected, isDisconnected } = useAccount();
@@ -61,6 +62,7 @@ function LendingTerm() {
   const [creditTotalSupply, setCreditTotalSupply] = useState<number>(0);
   const [ratioGuildCredit, setRatioGuildCredit] = useState<number>(0);
   const [debtCeilling, setDebtCeilling] = useState<number>(0);
+  const [currentDebt, setCurrentDebt] = useState<number>(0);
   const [profitSharing, setProfitSharing] = React.useState({
     creditSplit: "",
     guildSplit: "",
@@ -68,6 +70,7 @@ function LendingTerm() {
   });
   const [reload, setReload] = useState<boolean>(false);
   const [Utilization, setUtilization] = useState<string>("");
+  const [loans, setLoans] = useState<loanObj[]>([]);
 
   const lineChartDataDebtCeiling = [
     {
@@ -95,7 +98,6 @@ function LendingTerm() {
     },
   ];
 
-
   useEffect(() => {
     const item = lendingTermsState.find(
       (entry: lendingTerms) => entry.address === location.pathname.split("/")[3]
@@ -104,6 +106,7 @@ function LendingTerm() {
       setLendingTermData(item);
       setLoading(false);
     }
+
   }, [lendingTermsState]);
 
   useEffect(() => {
@@ -135,7 +138,7 @@ function LendingTerm() {
       getTermsTotalCollateral();
       setUtilization(
         preciseRound(
-          (lendingTermData.currentDebt / creditTotalSupply) *
+          (currentDebt / creditTotalSupply) *
             (gaugeWeight / totalWeight) *
             100,
           2
@@ -162,7 +165,7 @@ function LendingTerm() {
         args: [address],
       });
       const result = DecimalToUnit(balance as bigint, 18);
-      
+
       setGuildBalance(result);
     }
     async function getGuildAvailableToStake(): Promise<void> {
@@ -182,7 +185,7 @@ function LendingTerm() {
         functionName: "stakes",
         args: [address, contractAddress],
       });
-      
+
       setCreditAllocated(DecimalToUnit(result as bigint, 18));
     }
     async function getCreditdAvailable(): Promise<void> {
@@ -208,6 +211,12 @@ function LendingTerm() {
         setUserActiveLoans(activeLoans.data);
       }
     }
+    async function getLoans2(): Promise<Object> {
+      const loansCall = await getLoansCall(location.pathname.split("/")[3] as Address)
+      setLoans(loansCall)
+      return loansCall
+    }
+
     if (isConnected) {
       getGuildAvailable();
       getGuildAllocated();
@@ -219,17 +228,15 @@ function LendingTerm() {
     }
     // setGuildAvailable( parseInt(getGuildAvailable, 10) / 1e18 );
     else {
-      setGuildAllocated(undefined)
-      setGuildBalance(undefined)
-      setCreditAllocated(undefined)
-      setCreditAvailable(undefined) 
-            
+      setGuildAllocated(undefined);
+      setGuildBalance(undefined);
+      setCreditAllocated(undefined);
+      setCreditAvailable(undefined);
       getLoans();
     }
-    console.log(reload);
+    getLoans2()
     setReload(false);
   }, [isConnected, reload]);
-
 
   useEffect(() => {
     async function getGaugeWeight(): Promise<void> {
@@ -293,13 +300,22 @@ function LendingTerm() {
         throw new Error("Invalid profit sharing config");
       }
     }
+    async function getCurrentDebt(): Promise<void> {
+      const result = await readContract({
+        address: contractAddress as Address,
+        abi: termAbi,
+        functionName: "issuance",
+      });
+      setCurrentDebt(Number(DecimalToUnit(result as bigint, 18)));
+    }
     getProfitSharing();
     getGaugeWeight();
     getTotalWeight();
     getCreditTotalSupply();
     getRationGUILDCREDIT();
-    
-  }, []);
+    getCurrentDebt();
+  }, [reload]);
+
   useEffect(() => {
     setDebtCeilling(creditTotalSupply * (gaugeWeight / totalWeight));
   }, [creditTotalSupply, gaugeWeight, totalWeight]);
@@ -319,11 +335,13 @@ function LendingTerm() {
                 <div>
                   <p>
                     Total Collateral :{" "}
-                    <span className="font-semibold">{termTotalCollateral}</span>
+                    <span className="font-semibold">{preciseRound(termTotalCollateral,2)}</span>
                   </p>
                   <p>
                     Collateral Value :{" "}
-                    <span className="font-semibold">{collateralPrice}$ (source: Coingecko API)</span>{" "}
+                    <span className="font-semibold">
+                      {collateralPrice}$ (source: Coingecko API)
+                    </span>{" "}
                   </p>
                   <p>
                     Total Collateral Value :{" "}
@@ -357,13 +375,13 @@ function LendingTerm() {
                   <p>
                     Current Debt :{" "}
                     <span className="font-semibold">
-                      {preciseRound(lendingTermData.currentDebt,2)}
+                      {preciseRound(currentDebt, 2)}
                     </span>
                   </p>
                   <p>
                     Debt Ceilling :{" "}
                     <span className="font-semibold">
-                      {preciseRound(debtCeilling,2)}$
+                      {preciseRound(debtCeilling, 2)}$
                     </span>{" "}
                   </p>
                 </div>
@@ -389,7 +407,8 @@ function LendingTerm() {
               icon={<TbArrowsExchange className="h-6 w-6" />}
               title={"Interest Rate"}
               subtitle={
-                preciseRound(lendingTermData.interestRate*100, 2).toString() + "%"
+                preciseRound(lendingTermData.interestRate * 100, 2).toString() +
+                "%"
               }
             />
             <Widget
@@ -397,7 +416,6 @@ function LendingTerm() {
               title={"Borrow Ratio"}
               subtitle={preciseRound(lendingTermData.borrowRatio, 2).toString()}
             />
-            
             <TooltipHorizon
               extra="dark:text-white w-[300px] "
               content={
@@ -431,10 +449,14 @@ function LendingTerm() {
                     subtitle={
                       lendingTermData.minPartialRepayPercent ? "Yes" : "No"
                     }
-                   
-                    extra={lendingTermData.minPartialRepayPercent?<AiOutlineQuestionCircle color="gray" />:<></>}
+                    extra={
+                      lendingTermData.minPartialRepayPercent ? (
+                        <AiOutlineQuestionCircle color="gray" />
+                      ) : (
+                        <></>
+                      )
+                    }
                   />
-                  
                 </div>
               }
               placement="right"
@@ -455,14 +477,15 @@ function LendingTerm() {
           <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2 ">
             <Card extra="md:col-span-1 order-2">
               <Myloans
-                tableData={userActiveLoans}
+                tableData={loans}
                 collateralName={lendingTermData.collateral}
                 collateralPrice={collateralPrice}
                 smartContractAddress={contractAddress}
-                interestRate={lendingTermData.interestRate}
                 maxDelayBetweenPartialRepay={
-                  lendingTermData.maxDelayBetweenPartialRepay
-                }
+                  lendingTermData.maxDelayBetweenPartialRepay  }
+                  collateralDecimals={lendingTermData.collateralDecimals}
+                  reload={setReload}
+              
               />
             </Card>
             <Card extra={"order-1 "}>
@@ -474,9 +497,10 @@ function LendingTerm() {
                 minBorrow={lendingTermData.minBorrow}
                 borrowRatio={lendingTermData.borrowRatio}
                 callFee={lendingTermData.callFee}
-                currentDebt={lendingTermData.currentDebt}
-                availableDebt={lendingTermData.availableDebt}
+                currentDebt={currentDebt}
+                availableDebt={debtCeilling-currentDebt}
                 collateralDecimals={lendingTermData.collateralDecimals}
+                reload={setReload}
               />
             </Card>
             <Card extra="order-3">
@@ -558,7 +582,7 @@ function LendingTerm() {
                             allocatedGuild={guildAllocated}
                             guildBalance={guildBalance}
                             smartContractAddress={contractAddress}
-                            currentDebt={lendingTermData.currentDebt}
+                            currentDebt={currentDebt}
                             availableDebt={lendingTermData.availableDebt}
                             gaugeWeight={gaugeWeight}
                             totalWeight={totalWeight}
@@ -573,7 +597,7 @@ function LendingTerm() {
                             allocatedGuild={guildAllocated}
                             guildBalance={guildBalance}
                             smartContractAddress={contractAddress}
-                            currentDebt={lendingTermData.currentDebt}
+                            currentDebt={currentDebt}
                             availableDebt={lendingTermData.availableDebt}
                             gaugeWeight={gaugeWeight}
                             totalWeight={totalWeight}
@@ -648,7 +672,6 @@ function LendingTerm() {
                             allocatedCredit={creditAllocated}
                             availableCredit={creditAvailable}
                             termAddress={contractAddress}
-                            interestRate={lendingTermData.interestRate}
                             gaugeWeight={gaugeWeight}
                             totalWeight={totalWeight}
                             creditTotalSupply={creditTotalSupply}
@@ -665,7 +688,6 @@ function LendingTerm() {
                             allocatedCredit={creditAllocated}
                             availableCredit={creditAvailable}
                             termAddress={contractAddress}
-                            interestRate={lendingTermData.interestRate}
                             gaugeWeight={gaugeWeight}
                             totalWeight={totalWeight}
                             creditTotalSupply={creditTotalSupply}
@@ -686,9 +708,11 @@ function LendingTerm() {
                 }
                 collateralName={lendingTermData.collateral}
                 termAddress={contractAddress}
-                activeLoans={activeLoans}
+                activeLoans={loans}
                 collateralAddress={lendingTermData.collateralAddress}
-                interestRate={lendingTermData.interestRate}
+                collateralDecimals={lendingTermData.collateralDecimals}
+                reload={setReload}
+                
               />
             </Card>
           </div>

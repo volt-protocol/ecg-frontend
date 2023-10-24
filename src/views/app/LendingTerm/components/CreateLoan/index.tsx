@@ -28,6 +28,7 @@ function CreateLoan({
   borrowRatio,
   currentDebt,
   availableDebt,
+  reload
 }: {
   name: string;
   contractAddress: string;
@@ -39,6 +40,7 @@ function CreateLoan({
   callFee: number;
   currentDebt: number;
   availableDebt: number;
+  reload: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const [borrowAmount, setBorrowAmount] = useState<number>(0);
   const [collateralAmount, setCollateralAmount] = useState<number>(0);
@@ -171,6 +173,7 @@ function CreateLoan({
       });
 
       if (checkBorrow.status === "success") {
+        reload(true);
         updateStepStatus("Borrow", "Success");
         return;
       } else updateStepStatus("Borrow", "Error");

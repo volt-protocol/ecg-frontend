@@ -28,7 +28,7 @@ import {
   UnitToDecimal,
 } from "utils";
 import { toastError, toastRocket } from "toast";
-import { LoansObj } from "types/lending";
+import { LoansObj, loanObj } from "types/lending";
 import SpinnerLoader from "components/spinner";
 import { useAccount } from "wagmi";
 import axios from "axios";
@@ -39,22 +39,24 @@ import { Step } from "components/stepLoader/stepType";
 import StepModal from "components/stepLoader";
 import { MdOutlineError } from "react-icons/md";
 
-const columnHelper = createColumnHelper<LoansObj>();
+const columnHelper = createColumnHelper<loanObj>();
 
 function Myloans({
   collateralName,
   tableData,
   smartContractAddress,
   collateralPrice,
-  interestRate,
   maxDelayBetweenPartialRepay,
+  collateralDecimals,
+  reload,
 }: {
   collateralName: string;
-  tableData: LoansObj[];
+  tableData: loanObj[];
   smartContractAddress: string;
   collateralPrice: number;
-  interestRate: number;
   maxDelayBetweenPartialRepay: number;
+  collateralDecimals: number;
+  reload: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const inputRefs = React.useRef<{
     [key: string]: React.RefObject<HTMLInputElement>;
@@ -68,8 +70,7 @@ function Myloans({
   const { address, isConnected, isDisconnected } = useAccount();
   const [creditMultiplier, setCreditMultiplier] = React.useState(0);
   const [showModal, setShowModal] = useState(false);
-  const [tableDataWithDebts, setTableDataWithDebts] = useState<LoansObj[]>([]);
-  const [reload, setReload] = useState(false);
+  const [tableDataWithDebts, setTableDataWithDebts] = useState<loanObj[]>([]);
   const [repays, setRepays] = React.useState<Record<string, number>>({});
 
   const createSteps = (): Step[] => {
@@ -100,22 +101,22 @@ function Myloans({
       }
       setRepays(newRepays);
     };
-    setReload(false);
     fetchRepays();
     fetchLoanDebts();
   }, [tableData, reload]);
 
   async function getLoanDebt(
     loanId: string,
-    loanBorrowAmount: number
-  ): Promise<number> {
+    loanBorrowAmount: bigint
+  ): Promise<bigint> {
     const result = await readContract({
       address: smartContractAddress as Address,
       abi: termAbi,
       functionName: "getLoanDebt",
       args: [loanId],
     });
-    return DecimalToUnit(BigInt(result as number), 18) - loanBorrowAmount;
+
+    return (result as bigint) - loanBorrowAmount;
   }
 
   async function lastPartialRepay(id: string): Promise<number> {
@@ -128,7 +129,7 @@ function Myloans({
     return Number(response);
   }
 
-  function TableCell({ original }: { original: LoansObj }) {
+  function TableCell({ original }: { original: loanObj }) {
     const [inputValue, setInputValue] = useState("");
     const [match, setMatch] = useState(false);
 
@@ -138,8 +139,12 @@ function Myloans({
 
     useEffect(() => {
       setMatch(
-        Number(inputValue) ===
-          original.borrowAmount + preciseCeil(original.loanDebt, 3)
+        inputValue >=
+          preciseRound(
+            DecimalToUnit(original.borrowAmount, 18) +
+              DecimalToUnit(original.loanDebt, 18),
+            2
+          )
       );
     }, [inputValue, original.borrowAmount]);
 
@@ -152,11 +157,14 @@ function Myloans({
           onChange={(e) => {
             if (
               Number(e.target.value) >
-              original.borrowAmount + preciseCeil(original.loanDebt, 3)
+              DecimalToUnit(original.borrowAmount, 18) +
+                DecimalToUnit(original.loanDebt, 18)
             )
               setInputValue(
-                String(
-                  original.borrowAmount + preciseCeil(original.loanDebt, 3)
+                preciseRound(
+                  DecimalToUnit(original.borrowAmount, 18) +
+                    DecimalToUnit(original.loanDebt, 18),
+                  2
                 )
               );
             else setInputValue(e.target.value);
@@ -169,7 +177,9 @@ function Myloans({
             match
               ? repay(
                   original.id,
-                  original.borrowAmount + preciseCeil(original.loanDebt, 3)
+                  original.borrowAmount +
+                    original.loanDebt +
+                    (original.borrowAmount * BigInt(5)) / BigInt(100000)
                 )
               : partialRepay(original.id)
           }
@@ -185,19 +195,8 @@ function Myloans({
     );
   }
 
-  useEffect(() => {
-    async function getcreditMultiplier() {
-      const creditMultiplier = await readContract({
-        address: import.meta.env.VITE_PROFIT_MANAGER_ADDRESS,
-        abi: profitManager,
-        functionName: "creditMultiplier",
-      });
-      setCreditMultiplier(Number(creditMultiplier));
-    }
-
-    getcreditMultiplier();
-  }, []);
   let defaultData = tableDataWithDebts;
+
   const columns = [
     columnHelper.accessor("id", {
       id: "loadId",
@@ -206,15 +205,14 @@ function Myloans({
         const currentDateInSeconds = Date.now() / 1000;
         const sumOfTimestamps =
           repays[info.row.original.id] + maxDelayBetweenPartialRepay;
-          const nextPaymentDue=maxDelayBetweenPartialRepay === 0
-                        ? "n/a"
-                        : Number.isNaN(sumOfTimestamps)
-                        ? "--"
-                        : sumOfTimestamps < currentDateInSeconds
-                        ? "Overdue"
-                        : secondsToAppropriateUnit(
-                            sumOfTimestamps - currentDateInSeconds
-                          )
+        const nextPaymentDue =
+          maxDelayBetweenPartialRepay === 0
+            ? "n/a"
+            : Number.isNaN(sumOfTimestamps)
+            ? "--"
+            : sumOfTimestamps < currentDateInSeconds
+            ? "Overdue"
+            : secondsToAppropriateUnit(sumOfTimestamps - currentDateInSeconds);
         return (
           <>
             <TooltipHorizon
@@ -222,17 +220,20 @@ function Myloans({
               content={
                 <div className=" space-y-4 p-2 ">
                   <p>
-                    Next Payment Due :{" "}
-                    <strong>
-                      {nextPaymentDue}
-                    </strong>
+                    Next Payment Due : <strong>{nextPaymentDue}</strong>
                   </p>
                 </div>
               }
               trigger={
                 <div className="absolute left-0 top-0 flex h-full w-full items-center space-x-1">
                   <p>{info.getValue().slice(0, 8)}</p>
-                  <MdOutlineError className={`me-1 ${nextPaymentDue==="Overdue"?"text-red-500 dark:text-red-500": "text-amber-500 dark:text-amber-300"}`} />
+                  <MdOutlineError
+                    className={`absolute right-0.5 me-1 ${
+                      nextPaymentDue === "Overdue"
+                        ? "text-red-500 dark:text-red-500"
+                        : "text-amber-500 dark:text-amber-300"
+                    }`}
+                  />
                 </div>
               }
               placement="right"
@@ -255,7 +256,10 @@ function Myloans({
                     Borrow Principal :{" "}
                     <span className="font-semibold">
                       {" "}
-                      {preciseRound(info.row.original.borrowAmount, 2)}{" "}
+                      {preciseRound(
+                        DecimalToUnit(info.row.original.borrowAmount, 18),
+                        2
+                      )}{" "}
                     </span>{" "}
                   </p>
                   <p>
@@ -263,7 +267,11 @@ function Myloans({
                     <span className="font-semibold">
                       <strong>
                         {" "}
-                        {preciseRound(info.row.original.loanDebt, 2)} CREDIT
+                        {preciseRound(
+                          DecimalToUnit(info.row.original.loanDebt, 18),
+                          2
+                        )}{" "}
+                        CREDIT
                       </strong>
                     </span>
                   </p>
@@ -274,13 +282,14 @@ function Myloans({
                       {preciseRound(
                         DecimalToUnit(
                           BigInt(
-                            info.row.original.borrowAmount * creditMultiplier
-                          ),
+                            info.row.original.borrowAmount *
+                              info.row.original.borrowCreditMultiplier
+                          ) / BigInt(1e18),
                           18
                         ),
                         2
                       )}{" "}
-                      {collateralName}
+                      CREDIT
                     </span>
                   </p>
                   <p>
@@ -290,8 +299,9 @@ function Myloans({
                       {preciseRound(
                         DecimalToUnit(
                           BigInt(
-                            info.row.original.borrowAmount * creditMultiplier
-                          ),
+                            info.row.original.borrowAmount *
+                              info.row.original.borrowCreditMultiplier
+                          ) / BigInt(1e18),
                           18
                         ),
                         2
@@ -305,19 +315,35 @@ function Myloans({
                     Collateral Amount :{" "}
                     <span className="font-semibold">
                       {" "}
-                      {info.row.original.collateralAmount} {collateralName}
+                      {preciseRound(
+                        DecimalToUnit(
+                          info.row.original.collateralAmount,
+                          collateralDecimals
+                        ),
+                        2
+                      )}{" "}
+                      {collateralName}
                     </span>
                   </p>
                   <p>
                     Collateral Price:{" "}
-                    <span className="font-semibold"> {collateralPrice} $</span>
+                    <span className="font-semibold">
+                      {" "}
+                      {preciseRound(collateralPrice, 2)} $
+                    </span>
                   </p>
                   <p>
                     Collateral Value :{" "}
                     <span className="font-semibold">
                       {" "}
                       {preciseRound(
-                        info.row.original.collateralAmount * collateralPrice,
+                        DecimalToUnit(
+                          BigInt(
+                            Number(info.row.original.collateralAmount) *
+                              collateralPrice
+                          ),
+                          collateralDecimals
+                        ),
                         2
                       )}
                       ${" "}
@@ -329,8 +355,11 @@ function Myloans({
                     Value to Repay :{" "}
                     <strong>
                       {preciseRound(
-                        info.row.original.borrowAmount +
-                          info.row.original.loanDebt,
+                        DecimalToUnit(
+                          info.row.original.borrowAmount +
+                            info.row.original.loanDebt,
+                          18
+                        ),
                         2
                       )}{" "}
                       CREDIT
@@ -346,11 +375,15 @@ function Myloans({
               <div className="absolute left-0 top-0 flex h-full w-full items-center">
                 <p>
                   {preciseRound(
-                    ((info.row.original.borrowAmount * creditMultiplier) /
-                      (1e18 *
-                        Number(
-                          collateralPrice * info.row.original.collateralAmount
-                        ))) *
+                    (Number(
+                      info.row.original.borrowAmount *
+                        info.row.original.borrowCreditMultiplier
+                    ) /
+                      1e18 /
+                      1e18 /
+                      ((collateralPrice *
+                        Number(info.row.original.collateralAmount)) /
+                        UnitToDecimal(1, collateralDecimals))) *
                       100,
                     2
                   )}
@@ -377,18 +410,20 @@ function Myloans({
   const [data, setData] = React.useState(() =>
     defaultData.filter(
       (loan) =>
-        loan.status !== "closed" &&
-        loan.callTime === 0 &&
-        loan.borrowAmount + loan.loanDebt !== 0
+        // loan.status !== "closed" &&
+        loan.callTime === BigInt(0) &&
+        loan.borrowAmount + loan.loanDebt !== BigInt(0) &&
+        loan.borrower === address
     )
   );
   useEffect(() => {
     setData(
       defaultData.filter(
         (loan) =>
-          loan.status !== "closed" &&
-          loan.callTime === 0 &&
-          loan.borrowAmount + loan.loanDebt !== 0
+          // loan.status !== "closed" &&
+          loan.callTime === BigInt(0) &&
+          loan.borrowAmount + loan.loanDebt !== BigInt(0) &&
+          loan.borrower === address
       )
     );
   }, [defaultData]);
@@ -419,6 +454,7 @@ function Myloans({
       setLoading(false);
       return toastError("Please enter a value");
     }
+
     const updateStepStatus = (stepName: string, status: Step["status"]) => {
       setSteps((prevSteps) =>
         prevSteps.map((step) =>
@@ -467,7 +503,7 @@ function Myloans({
 
       if (checkPartialPay.status === "success") {
         updateStepStatus("Partial Repay", "Success");
-        setReload(true);
+        reload(true);
       } else {
         updateStepStatus("Partial Repay", "Error");
       }
@@ -500,8 +536,8 @@ function Myloans({
     }
   }
 
-  async function repay(loanId: string, borrowCredit: number) {
-    console.log(borrowCredit, UnitToDecimal(borrowCredit, 18), "borrowCredit");
+  async function repay(loanId: string, borrowCredit: bigint) {
+    console.log(borrowCredit, "borrowCredit");
     const updateStepStatus = (stepName: string, status: Step["status"]) => {
       setSteps((prevSteps) =>
         prevSteps.map((step) =>
@@ -517,7 +553,7 @@ function Myloans({
         address: import.meta.env.VITE_CREDIT_ADDRESS,
         abi: creditAbi,
         functionName: "approve",
-        args: [smartContractAddress, UnitToDecimal(borrowCredit, 18)],
+        args: [smartContractAddress, borrowCredit],
       });
 
       const data = await waitForTransaction({
@@ -551,7 +587,7 @@ function Myloans({
         updateStepStatus("Repay", "Error");
       }
       updateStepStatus("Repay", "Success");
-      setReload(true);
+      reload(true);
     } catch (e) {
       console.log(e);
       updateStepStatus("Repay", "Error");
@@ -584,7 +620,7 @@ function Myloans({
           <p>You do not have active loans on this term yet</p>
         </div>
       ) : (
-        <div className="mt-8 overflow-auto xl:overflow-auto">
+        <div className="mt-8 h-full  overflow-auto xl:overflow-auto">
           <table className="w-full">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (

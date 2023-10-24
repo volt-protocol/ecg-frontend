@@ -36,7 +36,6 @@ function Stake({
   textButton: string;
   availableCredit: number;
   termAddress: string;
-  interestRate: number;
   gaugeWeight: number;
   totalWeight: number;
   creditTotalSupply: number;

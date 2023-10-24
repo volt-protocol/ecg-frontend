@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { config } from "wagmiConfig";
-import { LoansObj } from "types/lending";
+import { LoansObj, loanObj } from "types/lending";
 import {
   CellContext,
   createColumnHelper,
@@ -37,24 +37,24 @@ import { AiOutlineQuestionCircle } from "react-icons/ai";
 import { Step } from "components/stepLoader/stepType";
 import StepModal from "components/stepLoader";
 
-const columnHelper = createColumnHelper<LoansObj>();
+const columnHelper = createColumnHelper<loanObj>();
 
 function ActiveLoans({
   termAddress,
   activeLoans,
   collateralName,
   maxDelayBetweenPartialRepay,
-  interestRate,
+  collateralDecimals,
+  reload,
 }: {
   termAddress: string;
-  activeLoans: LoansObj[];
+  activeLoans: loanObj[];
   collateralAddress: string;
   collateralName: string;
   maxDelayBetweenPartialRepay: number;
-  interestRate: number;
+  collateralDecimals: number;
+  reload:React.Dispatch<React.SetStateAction<boolean>>
 }) {
-  
-  let defaultData = activeLoans;
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [loading, setLoading] = React.useState(false);
   const { address, isConnected } = useAccount();
@@ -65,10 +65,7 @@ function ActiveLoans({
   const [repays, setRepays] = React.useState<Record<string, number>>({});
   const [showModal, setShowModal] = useState(false);
   const createSteps = (): Step[] => {
-    const baseSteps = [
-      { name: "Call", status: "Not Started" },
-     
-    ];
+    const baseSteps = [{ name: "Call", status: "Not Started" }];
 
     // if (match) {
     //   baseSteps.splice(1, 1, { name: "Repay", status: "Not Started" });
@@ -78,6 +75,43 @@ function ActiveLoans({
   };
 
   const [steps, setSteps] = useState<Step[]>(createSteps());
+  const [activeLoansWithDebt, setActiveLoansWithDebt] = useState<loanObj[]>([]);
+  let defaultData = activeLoansWithDebt;
+  useEffect(() => {
+    async function fetchLoanDebts() {
+      const debts = await Promise.all(
+        activeLoans.map((loan) => getLoanDebt(loan.id, loan.borrowAmount))
+      );
+      const newTableData = activeLoans.map((loan, index) => ({
+        ...loan,
+        loanDebt: debts[index],
+      }));
+
+      setActiveLoansWithDebt(newTableData);
+    }
+    const fetchRepays = async () => {
+      const newRepays: Record<string, number> = {};
+      for (let loan of activeLoans) {
+        newRepays[loan.id] = await lastPartialRepay(loan.id);
+      }
+      setRepays(newRepays);
+    };
+    fetchRepays();
+    fetchLoanDebts();
+  }, [activeLoans,reload]);
+
+  async function getLoanDebt(
+    loanId: string,
+    loanBorrowAmount: bigint
+  ): Promise<bigint> {
+    const result = await readContract({
+      address: termAddress as Address,
+      abi: termAbi,
+      functionName: "getLoanDebt",
+      args: [loanId],
+    });
+    return (result as bigint) - loanBorrowAmount;
+  }
 
   function CallableButton({ original }: { original: LoansObj }) {
     const [isCallable, setIsCallable] = React.useState(true);
@@ -107,7 +141,7 @@ function ActiveLoans({
       <div className="flex items-center">
         <button
           onClick={() => call(original.id, original.collateralAmount)}
-          disabled={isCallable?false:true}
+          disabled={isCallable ? false : true}
           className={`min-w-[8rem] rounded-2xl  px-3 py-1 text-white ${
             isCallable
               ? "bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500"
@@ -129,13 +163,13 @@ function ActiveLoans({
     return Number(response);
   }
   function updateStepName(oldName: string, newName: string) {
-    setSteps(prevSteps => 
-      prevSteps.map(step => 
+    setSteps((prevSteps) =>
+      prevSteps.map((step) =>
         step.name === oldName ? { ...step, name: newName } : step
       )
     );
   }
-  
+
   async function call(loandId: string, collateralAmount: number) {
     const updateStepStatus = (stepName: string, status: Step["status"]) => {
       setSteps((prevSteps) =>
@@ -144,14 +178,14 @@ function ActiveLoans({
         )
       );
     };
-      if (isConnected == false) {
-        toastError("Please connect your wallet");
-        setLoading(false);
-        return;
-      }
-      try {
+    if (isConnected == false) {
+      toastError("Please connect your wallet");
+      setLoading(false);
+      return;
+    }
+    try {
       setShowModal(true);
-      updateStepStatus("Call", "In Progress");  
+      updateStepStatus("Call", "In Progress");
       const { hash } = await writeContract({
         address: termAddress,
         abi: termAbi,
@@ -167,8 +201,9 @@ function ActiveLoans({
         return;
       }
       updateStepStatus("Call", "Success");
+      reload(true);
     } catch (e) {
-      console.log(e)
+      console.log(e);
       updateStepStatus("Call", "Error");
     }
   }
@@ -235,18 +270,6 @@ function ActiveLoans({
     getcreditMultiplier();
     getCollateralPrice();
   }, []);
-  useEffect(() => {
-    const fetchRepays = async () => {
-      const newRepays: Record<string, number> = {};
-      for (let loan of activeLoans) {
-        newRepays[loan.id] = await lastPartialRepay(loan.id);
-      }
-      setRepays(newRepays);
-    };
-
-    fetchRepays();
-  }, [activeLoans]);
-
 
   const columns = [
     columnHelper.accessor("id", {
@@ -254,7 +277,7 @@ function ActiveLoans({
       header: "Loan ID",
       cell: (info) => info.getValue().slice(0, 8),
     }),
-    columnHelper.accessor("borrowerAddress", {
+    columnHelper.accessor("borrower", {
       id: "borrower",
       header: "Borrower",
       cell: (info) => (
@@ -272,92 +295,120 @@ function ActiveLoans({
       header: "LTV",
       cell: (info: any) => {
         const LTV = preciseRound(
-          (info.row.original.borrowAmount * creditMultiplier) /
-            (1e18 *
-              Number(
-                collateralPrice * info.row.original.collateralAmount
-              ))*100,
+          (Number(
+            info.row.original.borrowAmount *
+              info.row.original.borrowCreditMultiplier
+          ) /
+            1e18 /
+            1e18 /
+            ((collateralPrice * Number(info.row.original.collateralAmount)) /
+              UnitToDecimal(1, collateralDecimals))) *
+            100,
           2
-        )
-        const borrowCredit =preciseRound(info.row.original.borrowAmount,2)
-        const borrowValue = preciseRound(DecimalToUnit(
-          BigInt(info.row.original.borrowAmount * creditMultiplier),
-          18
-        ),2)
+        );
+        const borrowValue = preciseRound(
+          DecimalToUnit(
+            BigInt(
+              info.row.original.borrowAmount *
+                info.row.original.borrowCreditMultiplier
+            ) / BigInt(1e18),
+            18
+          ),
+          2
+        );
         const collateralValue = preciseRound(
-          info.row.original.collateralAmount * collateralPrice,
+          DecimalToUnit(
+            BigInt(
+              Number(info.row.original.collateralAmount) * collateralPrice
+            ),
+            collateralDecimals
+          ),
           2
-        )
+        );
         return (
           <TooltipHorizon
             extra="dark:text-white"
             content={
-              <div className="space-y-4 p-2 mt-4 ">
-              <div className="space-y-2">
-                <p>
-                   Borrowed CREDIT :{" "}
-                  <span className="font-semibold">
-                    {" "}
-                    {borrowCredit}{" "}
-                  </span>{" "}
-                </p>
-                <p>
-                   Borrow Interest :{" "}
-                  <span className="font-semibold">
-                    <strong>
-                    {" "}
-                    {interestRate}
-                    {" "}
-                    CREDIT
-                    </strong>
-                  </span>
-                </p>
-                <p>
-                   Borrowed Value :{" "}
-                  <span className="font-semibold">
-                    {" "}
-                    {borrowValue}
-                    {" "}{collateralName}
-                  </span>
-                </p>
-                <p>
-                   Borrowed Value :{" "}
-                  <span className="font-semibold">
-                    {" "}
-                    {borrowValue}
-                    $
-                  </span>
-                </p>
+              <div className="mt-4 space-y-4 p-2 ">
+                <div className="space-y-2">
+                  <p>
+                    Borrowed Principal :{" "}
+                    <span className="font-semibold"> {preciseRound(
+                        DecimalToUnit(info.row.original.borrowAmount, 18),
+                        2
+                      )} </span>{" "}
+                  </p>
+                  <p>
+                    Borrow Interest :{" "}
+                    <span className="font-semibold">
+                      <strong>
+                        {" "}
+                        {preciseRound(
+                          DecimalToUnit(info.row.original.loanDebt, 18),
+                          2
+                        )} CREDIT{" "}
+                      </strong>
+                    </span>
+                  </p>
+                  <p>
+                    Borrowed Value :{" "}
+                    <span className="font-semibold">
+                      {" "}
+                      {borrowValue} CREDIT
+                    </span>
+                  </p>
+                  <p>
+                    Borrowed Value :{" "}
+                    <span className="font-semibold"> {borrowValue}$</span>
+                  </p>
                 </div>
                 <div className="space-y-2">
-                <p>
-                  Collateral Amount :{" "}
-                  <span className="font-semibold">
-                    {" "}
-                    {(info.row.original.collateralAmount)}{" "} {collateralName}  
-                  </span>
-                </p>
-                <p>
-                  Collateral Price:{" "}
-                  <span className="font-semibold"> {collateralPrice} $</span>
-                </p>
-                <p>
-                  Collateral Value :{" "}
-                  <span className="font-semibold">
-                    {" "}
-                    {collateralValue}
-                    ${" "}
-                  </span>
-                </p>
+                  <p>
+                    Collateral Amount :{" "}
+                    <span className="font-semibold">
+                      {" "}
+                      {preciseRound(
+                        DecimalToUnit(
+                          info.row.original.collateralAmount,
+                          collateralDecimals
+                        ),
+                        2
+                      )}{" "} {collateralName}
+                    </span>
+                  </p>
+                  <p>
+                    Collateral Price:{" "}
+                    <span className="font-semibold">  {preciseRound(collateralPrice, 2)}  $</span>
+                  </p>
+                  <p>
+                    Collateral Value :{" "}
+                    <span className="font-semibold"> {collateralValue}$ </span>
+                  </p>
                 </div>
-                <p>Price sources : <strong> Coingecko API</strong></p>
+                <div className="space-y-2">
+                  <p>
+                    Value to Repay :{" "}
+                    <strong>
+                    {preciseRound(
+                        DecimalToUnit(
+                          info.row.original.borrowAmount +
+                            info.row.original.loanDebt,
+                          18
+                        ),
+                        2
+                      )}{" "}
+                      CREDIT
+                    </strong>
+                  </p>
+                  <p>
+                    Price sources : <strong> Coingecko API</strong>
+                  </p>
+                </div>
               </div>
             }
             trigger={
               <div className="flex ">
-                <p>
-                  {LTV == "0.00"?"-.--":LTV}%
-                </p>
+                <p>{LTV == "0.00" ? "-.--" : LTV}%</p>
                 <div className="mb-2 ml-1">
                   <AiOutlineQuestionCircle color="gray" />
                 </div>
@@ -375,14 +426,14 @@ function ActiveLoans({
         const currentDateInSeconds = Date.now() / 1000;
         const sumOfTimestamps =
           repays[info.row.original.id] + maxDelayBetweenPartialRepay;
-          console.log(maxDelayBetweenPartialRepay,"maxDelayBetweenPartialRepay")
         return (
           <>
             <p>
               {maxDelayBetweenPartialRepay === 0
                 ? "n/a"
-                :Number.isNaN(sumOfTimestamps)?"--" :
-                sumOfTimestamps < currentDateInSeconds
+                : Number.isNaN(sumOfTimestamps)
+                ? "--"
+                : sumOfTimestamps < currentDateInSeconds
                 ? "Overdue"
                 : secondsToAppropriateUnit(
                     sumOfTimestamps - currentDateInSeconds
@@ -406,11 +457,15 @@ function ActiveLoans({
     },
   ]; // eslint-disable-next-line
 
-  const [data, setData] = React.useState(() =>
-    defaultData.filter((loan) => loan.status !== "closed")
-  );
+  const [data, setData] = useState<loanObj[]>();
   useEffect(() => {
-    setData(defaultData.filter((loan) => loan.status !== "closed" && loan.callTime === 0));
+    setData(
+      defaultData.filter(
+        (loan) => loan.callTime === BigInt(0)&&
+        loan.borrowAmount + loan.loanDebt !== BigInt(0)
+        // &&loan.status !== "closed"
+      )
+    );
   }, [defaultData]);
 
   const table = useReactTable({
@@ -427,12 +482,19 @@ function ActiveLoans({
 
   return (
     <Card extra={"w-full h-full px-6 pb-6 overflow-auto sm:overflow-x-auto"}>
-         {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
+      {showModal && (
+        <StepModal
+          steps={steps}
+          close={setShowModal}
+          initialStep={createSteps}
+          setSteps={setSteps}
+        />
+      )}
       <div className="relative flex items-center justify-between pt-4">
         <div className="text-xl font-bold text-navy-700 dark:text-white">
-          Active Loans : {data.length}
+          Active Loans : {data?data.length:"?"}
         </div>
-        <div>
+        {data?(  <div>
           <button
             disabled={isGauge || data.length === 0}
             onClick={callMany}
@@ -444,10 +506,12 @@ function ActiveLoans({
           >
             Call all
           </button>
-        </div>
+        </div>):""}
+      
       </div>
-
-      {data.length === 0 ? (
+      {data == undefined ? (
+        <p>lala</p>):
+      data.length === 0 ? (
         <div className="flex flex-grow items-center justify-center font-semibold text-gray-500 ">
           {" "}
           <p>There are no active loans on this term yet</p>

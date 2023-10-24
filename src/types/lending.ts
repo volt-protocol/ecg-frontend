@@ -1,3 +1,5 @@
+import { Address } from "viem";
+
 export type LoansObj = {
   id: string;
   bidTime: number,
@@ -7,7 +9,7 @@ export type LoansObj = {
   callTime: number;
   closeTime: number;
   collateralAmount: number;
-  debtWhenSeized: number;
+  debtWhenSeized?: number;
   lendingTermAddress: string;
   collateralAddress: string;
   status: string;
@@ -15,6 +17,25 @@ export type LoansObj = {
     ltv: number;
 loanDebt?: number;
   };
+
+export type loanObjCall ={
+  borrowAmount: bigint;
+  borrowCreditMultiplier: bigint;
+  callDebt: number;
+  callTime: bigint;
+  caller: string;
+  closeTime: number;
+  collateralAmount: bigint;
+  borrower:Address,
+  
+  loanDebt?: bigint;
+}
+export type loanObj = loanObjCall & {
+  id:Address,
+  termAddress:Address,
+
+}
+
 
   export type lendingTerms = {
     address: string;

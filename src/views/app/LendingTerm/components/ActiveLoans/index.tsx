@@ -36,6 +36,7 @@ import axios from "axios";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
 import { Step } from "components/stepLoader/stepType";
 import StepModal from "components/stepLoader";
+import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
 
 const columnHelper = createColumnHelper<loanObj>();
 
@@ -78,6 +79,20 @@ function ActiveLoans({
   const [steps, setSteps] = useState<Step[]>(createSteps());
   const [activeLoansWithDebt, setActiveLoansWithDebt] = useState<loanObj[]>([]);
   let defaultData = activeLoansWithDebt;
+  const pageSize = 5;
+  const [currentPage, setCurrentPage] = React.useState(1);
+
+  const goToNextPage = () => {
+    if (currentPage < Math.ceil(data.length / pageSize)) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  };
   useEffect(() => {
     async function fetchLoanDebts() {
       const debts = await Promise.all(
@@ -450,7 +465,15 @@ function ActiveLoans({
     },
   ]; // eslint-disable-next-line
 
-  const [data, setData] = useState<loanObj[]>();
+  const [data, setData] = React.useState(() =>
+  defaultData.filter(
+    (loan) =>
+      // loan.status !== "closed" &&
+      loan.callTime === BigInt(0) &&
+      loan.borrowAmount + loan.loanDebt !== BigInt(0) &&
+      loan.borrower === address
+  )
+);
   useEffect(() => {
     setData(
       defaultData.filter(
@@ -472,9 +495,10 @@ function ActiveLoans({
     getSortedRowModel: getSortedRowModel(),
     debugTable: true,
   });
-
+  const isPrevPageAvailable = currentPage > 1;
+  const isNextPageAvailable = currentPage < Math.ceil(data.length / pageSize);
   return (
-    <Card extra={"w-full h-full px-6 pb-6 overflow-auto sm:overflow-x-auto"}>
+    <>
       {showModal && (
         <StepModal
           steps={steps}
@@ -510,7 +534,7 @@ function ActiveLoans({
           <p>There are no active loans on this term yet</p>
         </div>
       ) : (
-        <div className="mt-8  h-full xl:overflow-auto">
+        <div className="mt-8  h-full xl:overflow-auto  min-h-[320px] ">
           <table className="w-full">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -551,7 +575,10 @@ function ActiveLoans({
             <tbody>
               {table
                 .getRowModel()
-                .rows.slice(0, 5)
+                .rows.slice(
+                  (currentPage - 1) * pageSize,
+                  currentPage * pageSize
+                )
                 .map((row) => {
                   return (
                     <tr key={row.id}>
@@ -573,9 +600,38 @@ function ActiveLoans({
                 })}
             </tbody>
           </table>
+          {data.length > pageSize && (
+            <div className=" pagination-controls  absolute bottom-2 right-2 flex justify-end">
+              <button
+                onClick={goToPreviousPage}
+                disabled={!isPrevPageAvailable}
+                className={`${
+                  !isPrevPageAvailable
+                    ? "cursor-not-allowed text-gray-400"
+                    : "cursor-pointer text-black"
+                }`}
+              >
+                <FaArrowLeft />
+              </button>
+
+              <span className="mx-2">{currentPage}</span>
+
+              <button
+                onClick={goToNextPage}
+                disabled={!isNextPageAvailable}
+                className={`${
+                  !isNextPageAvailable
+                    ? "cursor-not-allowed text-gray-400"
+                    : "cursor-pointer text-black"
+                }`}
+              >
+                <FaArrowRight />
+              </button>
+            </div>
+          )}
         </div>
       )}
-    </Card>
+</>
   );
 }
 

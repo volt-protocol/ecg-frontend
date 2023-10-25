@@ -212,7 +212,7 @@ function MintOrRedeem() {
 
       if (checkredeem.status === "success") {
         setReload(true);
-       updateStepStatus("Redeem", "Success");
+        updateStepStatus("Redeem", "Success");
         return;
       } else updateStepStatus("Redeem", "Error");
     } catch (e) {
@@ -297,25 +297,28 @@ function MintOrRedeem() {
         </div>
         <div className=" ml-6 mt-8 grid grid-cols-2  ">
           <div className="">
-            Your USDC balance :{" "}
+            Your Balance :{" "}
             <span className="font-semibold">
               {usdcBalance ? formatCurrencyValue(usdcBalance) : "?"}
             </span>
+            {" "} USDC
           </div>
           <div className="">
-            Your CREDIT balance :{" "}
-            <span className="font-semibold">
-              {creditBalance ? formatCurrencyValue(creditBalance) : "?"}
-            </span>
-          </div>
-          <div className=" col-span-2">
-            USDC available to redeem :{" "}
+            Redeemable :{" "}
             <span className="font-semibold">
               {formatCurrencyValue(usdcAvailableToRedeem)}
             </span>
+            {" "} USDC
           </div>
-          <div className="col-span-2">
-            Conversion rate :{" "}
+          <div className="">
+            Your Balance :{" "}
+            <span className="font-semibold">
+              {creditBalance ? formatCurrencyValue(creditBalance) : "?"}
+            </span>
+            {" "} CREDIT
+          </div>
+          <div className="">
+            Rate :{" "}
             <span className="font-semibold">
               {" "}
               {preciseRound(conversionRate, 2)}

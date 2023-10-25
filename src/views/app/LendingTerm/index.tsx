@@ -56,6 +56,7 @@ function LendingTerm() {
   const [loading, setLoading] = React.useState(true);
   const [lendingTermData, setLendingTermData] = React.useState<lendingTerms>();
   const [collateralPrice, setCollateralPrice] = React.useState(0);
+  const [pegPrice, setPegPrice] = React.useState(0);
   const [termTotalCollateral, setTermTotalCollateral] = React.useState(0);
   const [gaugeWeight, setGaugeWeight] = useState<number>(0);
   const [totalWeight, setTotalWeight] = useState<number>(0);
@@ -110,6 +111,15 @@ function LendingTerm() {
   }, [lendingTermsState]);
 
   useEffect(() => {
+    async function getPegPrice() {
+      //requête axios en post vers coinmarketcap avec sort au name et limit à 1.
+      const nameCG = 'usd-coin';
+      const response = await axios.get(
+        `https://api.coingecko.com/api/v3/simple/price?ids=${nameCG}&vs_currencies=usd`,
+        {}
+      );
+      setPegPrice(response.data[nameCG].usd);
+    }
     async function getCollateralPrice() {
       //requête axios en post vers coinmarketcap avec sort au name et limit à 1.
       const nameCG = nameCoinGecko.find(
@@ -134,6 +144,7 @@ function LendingTerm() {
       );
     }
     if (lendingTermData) {
+      getPegPrice();
       getCollateralPrice();
       getTermsTotalCollateral();
       setUtilization(
@@ -334,20 +345,25 @@ function LendingTerm() {
               content={
                 <div>
                   <p>
-                    Total Collateral :{" "}
+                    Total Collateral Amount :{" "}
                     <span className="font-semibold">{preciseRound(termTotalCollateral,2)}</span>
+                    {" "} {lendingTermData.collateral}
                   </p>
                   <p>
-                    Collateral Value :{" "}
+                    Unit Collateral Price :{" "}
                     <span className="font-semibold">
-                      {collateralPrice}$ (source: Coingecko API)
-                    </span>{" "}
+                      {collateralPrice}
+                    </span>{" "}$
                   </p>
                   <p>
                     Total Collateral Value :{" "}
                     <span className="font-semibold">
-                      {preciseRound(termTotalCollateral * collateralPrice, 2)}$
-                    </span>
+                      {preciseRound(termTotalCollateral * collateralPrice, 0)}
+                    </span>{" "}$
+                  </p>
+                  <p>
+                    <br/>
+                    <i>Price source: Coingecko API</i>
                   </p>
                 </div>
               }
@@ -375,14 +391,21 @@ function LendingTerm() {
                   <p>
                     Current Debt :{" "}
                     <span className="font-semibold">
-                      {preciseRound(currentDebt, 2)}
-                    </span>
+                      {preciseRound(currentDebt, 0)}
+                    </span>{" "}CREDIT
                   </p>
                   <p>
                     Debt Ceilling :{" "}
                     <span className="font-semibold">
-                      {preciseRound(debtCeilling, 2)}$
-                    </span>{" "}
+                      {preciseRound(debtCeilling, 0)}
+                    </span>{" "}CREDIT
+                  </p>
+                  <p>
+                    <br/>
+                    <i>
+                      New borrows increase the Current Debt.<br/>
+                      GUILD & CREDIT stake increase the Debt Ceiling.
+                    </i>
                   </p>
                 </div>
               }
@@ -421,23 +444,26 @@ function LendingTerm() {
               content={
                 <>
                   <p>
-                    Minimum periodic repayment :{" "}
+                    Periodic Payment minimum size :{" "}
                     <span className="font-semibold">
-                      {" "}
                       {preciseRound(
                         lendingTermData.minPartialRepayPercent * 100000,
                         2
                       )}{" "}
-                      CREDIT every{" "}
-                      {secondsToAppropriateUnit(
-                        lendingTermData.maxDelayBetweenPartialRepay
-                      )}{" "}
-                      per 100K CREDIT borrowed{" "}
+                      CREDIT per 100k CREDIT borrowed
                     </span>
                   </p>
                   <p>
-                    As a borrower, if you miss periodic repayments, your loan
-                    will be called
+                    Periodic Payment maximum interval :{" "}
+                    <span className="font-semibold">
+                      {secondsToAppropriateUnit(
+                        lendingTermData.maxDelayBetweenPartialRepay
+                      )}
+                    </span>
+                  </p>
+                  <p>
+                    <br/>
+                    <i>As a borrower, if you miss Periodic Payments, your loan will be called.</i>
                   </p>
                 </>
               }
@@ -480,6 +506,7 @@ function LendingTerm() {
                 tableData={loans}
                 collateralName={lendingTermData.collateral}
                 collateralPrice={collateralPrice}
+                pegPrice={pegPrice}
                 smartContractAddress={contractAddress}
                 maxDelayBetweenPartialRepay={
                   lendingTermData.maxDelayBetweenPartialRepay  }
@@ -538,20 +565,17 @@ function LendingTerm() {
                         fees earned by this term. If you represent{" "}
                         <strong>50%</strong> of the GUILD staked for a term, you
                         will earn <strong>50%</strong> of the fees earned by
-                        GUILD holders on this term.
+                        GUILD stakers on this term.
                       </p>
 
                       <p>
-                        The protocol profit sharing can be updated by
-                        governance, and is configured as follow :<br></br>-{" "}
-                        <strong>{profitSharing.creditSplit}</strong>% to CREDIT
-                        savers (through rebase)<br></br>-{" "}
-                        <strong>{profitSharing.surplusBufferSplit}</strong>% to
-                        the Surplus Buffer, a first-loss capital reserve shared
-                        among all terms<br></br>-{" "}
-                        <strong>{profitSharing.guildSplit}</strong> % to GUILD
-                        token holders who stake their tokens to increase the
-                        debt ceiling of terms
+                        The protocol profit sharing can be updated by governance, and is configured as follow :<br/>
+                        &mdash; <strong>{profitSharing.creditSplit}</strong>% to CREDIT savers<br/>
+                        &mdash; <strong>{profitSharing.guildSplit}</strong>% to GUILD stakers<br/>
+                        &mdash; <strong>{profitSharing.surplusBufferSplit}</strong>% to the Surplus Buffer
+                      </p>
+                      <p>
+                        The Surplus Buffer is a first-loss capital reserve shared among all terms.
                       </p>
                     </div>
                   }
@@ -665,7 +689,7 @@ function LendingTerm() {
                           active
                           className=""
                           icon={BsArrowUpRight}
-                          title="Stake Credit"
+                          title="Stake CREDIT"
                         >
                           <Stake
                             textButton="stake"
@@ -681,7 +705,7 @@ function LendingTerm() {
                         </Tabs.Item>
                         <Tabs.Item
                           icon={BsArrowDownLeft}
-                          title="Unstake Credit"
+                          title="Unstake CREDIT"
                         >
                           <Stake
                             textButton="Unstake"

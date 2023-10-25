@@ -240,9 +240,9 @@ function Stake({
               trigger={
                 <div className="flex space-x-1 ">
                   <p>
-                    Your CREDIT staked:{" "}
+                    Your CREDIT staked on this term :{" "}
                     <span className="font-semibold ">
-                      {allocatedCredit != undefined ? allocatedCredit : "?"}
+                      {allocatedCredit != undefined ? preciseRound(allocatedCredit, 2) : "?"}
                     </span>{" "}
                   </p>
                   <AiOutlineQuestionCircle color="gray" />
@@ -253,9 +253,9 @@ function Stake({
                   <p>
                     Equivalent to{" "}
                     <span className="font-semibold ">
-                      {allocatedCredit * stakeRatio}
+                      {preciseRound(allocatedCredit * stakeRatio, 2)}
                     </span>{" "}
-                    GUILD{" "}
+                    GUILD staked.
                   </p>
                 </div>
               }
@@ -269,7 +269,7 @@ function Stake({
                 <div className="flex space-x-1">
                   <p className="">
                     GUILD / CREDIT ratio :{" "}
-                    <span className="font-semibold">{ratioGuildCredit}</span>{" "}
+                    <span className="font-semibold">{preciseRound(ratioGuildCredit, 2)}</span>{" "}
                   </p>
                   <AiOutlineQuestionCircle color="gray" />
                 </div>
@@ -277,11 +277,11 @@ function Stake({
               content={
                 <div className="w-[15rem] p-2">
                   <p>
-                    When you stake <span className="font-semibold">CREDIT</span>{" "}
-                    , you provide first-loss capital on this term, and in
+                    When you stake <span className="font-semibold">CREDIT</span>,
+                    you provide first-loss capital on this term, and in
                     exchange an amount of{" "}
                     <span className="font-semibold">GUILD</span> will be minted
-                    to vote for this term
+                    to vote for this term.
                   </p>
                 </div>
               }
@@ -290,9 +290,9 @@ function Stake({
           </div>
 
           <p className="col-span-2">
-            CREDIT in your wallet :{" "}
+            Your CREDIT balance :{" "}
             <span className="font-semibold ">
-              {availableCredit != undefined ? availableCredit : "?"}
+              {availableCredit != undefined ? preciseRound(availableCredit, 2) : "?"}
             </span>{" "}
           </p>
 

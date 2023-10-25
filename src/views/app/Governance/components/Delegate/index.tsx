@@ -114,16 +114,17 @@ function Delegate({
       <div className={style.content}>
         <div className={style.formHeader}></div>
         <div className="my-2 grid grid-cols-2 -mt-1 gap-y-1">
-          <p className="font-semibold col-span-2">
-            Your GUILD balance:{" "}
-            <span className="font-semibold">{balance!=undefined?preciseRound(balance,2):"?"}</span>{" "}
+          <p>
+            Your GUILD balance :{" "}
+            <span className="font-semibold">{balance!=undefined?preciseRound(balance,2):"?"}</span>
           </p>
-          <p className="font-semibold col-span-2">
+          <p className="col-span-2">
           Your GUILD available to delegate :{" "}
           {used!=undefined?(
           <>
-          <span className="font-semibold">{preciseRound(balance-used,2)}</span>{" "}/
-          <span className="font-semibold">{preciseRound(balance,2)}</span>{" "}
+          <span className="font-semibold">{preciseRound(balance-used,2)}</span>
+          {" "}/{" "}
+          <span className="font-semibold">{preciseRound(balance,2)}</span>
           </> ):<span className="font-semibold">?</span>}
           </p>
         </div>

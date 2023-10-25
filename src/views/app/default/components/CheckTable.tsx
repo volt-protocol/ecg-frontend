@@ -62,6 +62,20 @@ function CheckTable(props: { tableData: lendingTerms[], name: string }) {
           content={
             <>
               <p>
+                Debt Ceiling:{" "}
+                <span className="font-bold">
+                  {formatCurrencyValue(
+                    parseFloat(
+                      preciseRound(
+                        info.row.original.currentDebt +
+                          info.row.original.availableDebt,
+                        2
+                      )
+                    )
+                  )}
+                </span>
+              </p>
+              <p>
                 Current Debt:{" "}
                 <span className="font-bold">
                   {" "}
@@ -76,20 +90,6 @@ function CheckTable(props: { tableData: lendingTerms[], name: string }) {
                   {" "}
                   {formatCurrencyValue(
                     parseFloat(preciseRound(info.row.original.availableDebt, 2))
-                  )}
-                </span>
-              </p>
-              <p>
-                Total Debt:{" "}
-                <span className="font-bold">
-                  {formatCurrencyValue(
-                    parseFloat(
-                      preciseRound(
-                        info.row.original.currentDebt +
-                          info.row.original.availableDebt,
-                        2
-                      )
-                    )
                   )}
                 </span>
               </p>
@@ -179,23 +179,26 @@ function CheckTable(props: { tableData: lendingTerms[], name: string }) {
                 content={
                   <>
                     <p>
-                      Minimum periodic repayment :{" "}
+                      Periodic Payment minimum size :{" "}
                       <span className="font-semibold">
-                        {" "}
                         {preciseRound(
                           info.row.original.minPartialRepayPercent * 100000,
                           2
                         )}{" "}
-                        CREDIT every{" "}
-                        {secondsToAppropriateUnit(
-                          info.row.original.maxDelayBetweenPartialRepay
-                        )}{" "}
-                        per 100K CREDIT borrowed{" "}
+                        CREDIT per 100k CREDIT borrowed
                       </span>
                     </p>
                     <p>
-                      As a borrower, if you miss periodic repayments, your loan
-                      will be called
+                      Periodic Payment maximum interval :{" "}
+                      <span className="font-semibold">
+                        {secondsToAppropriateUnit(
+                          info.row.original.maxDelayBetweenPartialRepay
+                        )}
+                      </span>
+                    </p>
+                    <p>
+                      <br/>
+                      <i>As a borrower, if you miss Periodic Payments, your loan will be called.</i>
                     </p>
                   </>
                 }

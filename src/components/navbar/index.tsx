@@ -66,7 +66,7 @@ const Navbar = (props: {
             className="font-bold capitalize hover:text-navy-700 dark:hover:text-white"
           > */}
           
-            {brandText === "Lending Term Details" ? TermName() : brandText}
+            {brandText === "Lending Term Details" ? ('Lending Term: ' + TermName()) : brandText}
           {/* </Link> */}
         </p>
       </div>

@@ -12,24 +12,101 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import {
+  DecimalToUnit,
   formatCurrencyValue,
   preciseRound,
   secondsToAppropriateUnit,
 } from "../../../../utils";
 import { Link } from "react-router-dom";
-import { lendingTerms } from "types/lending";
+import { lendingTerms, loanObj, LoansObj } from "types/lending";
 import Progress from "components/progress";
 import { color } from "@chakra-ui/system";
 import TooltipHorizon from "components/tooltip";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
 import { useNavigate } from "react-router-dom";
+import { guildAbi, termAbi } from "guildAbi";
+import { Address, readContract } from "@wagmi/core";
 
 function CheckTable(props: { tableData: lendingTerms[], name: string }) {
   const { tableData,name } = props;
   const [sorting, setSorting] = React.useState<SortingState>([]);
+  // const [creditTotalSupply, setCreditTotalSupply] = React.useState<number>(0);
+  // const [gaugeWeight, setGaugeWeight] = React.useState<number>(0);
+  // const [totalWeight, setTotalWeight] = React.useState<number>(0);
+
   let defaultData = tableData;
   const navigation = useNavigate();
 
+  useEffect(() => {
+    async function fetchDataForTerms() {
+        const enrichedTableData = await Promise.all(
+            tableData.map(async (term) => {
+                const [gaugeWeight, totalWeight, creditTotalSupply, currentDebt] = await Promise.all([
+                    getGaugeWeightForTerm(term),
+                    getTotalWeightForTerm(term),
+                    getCreditTotalSupplyForTerm(),
+                    getCurrentDebt(term)
+                ]);
+
+                // Add these values to your term
+                return {
+                    ...term,
+                    gaugeWeight,
+                    totalWeight,
+                    creditTotalSupply,
+                    currentDebt
+                };
+            })
+        );
+
+        setData(enrichedTableData);
+    }
+
+    fetchDataForTerms();
+}, [tableData]);
+
+async function getGaugeWeightForTerm(term: lendingTerms): Promise<number> {
+    const result = await readContract({
+        address: import.meta.env.VITE_GUILD_ADDRESS as Address,
+        abi: guildAbi,
+        functionName: "getGaugeWeight",
+        args: [term.address], // Assuming each term has a unique contractAddress
+    });
+    return Number(DecimalToUnit(result as bigint, 18));
+}
+
+async function getTotalWeightForTerm(term: lendingTerms): Promise<number> {
+    const result = await readContract({
+        address: import.meta.env.VITE_GUILD_ADDRESS as Address,
+        abi: guildAbi,
+        functionName: "totalTypeWeight",
+        args: [1],
+    });
+    return Number(DecimalToUnit(result as bigint, 18));
+}
+
+async function getCreditTotalSupplyForTerm(): Promise<number> {
+    const result = await readContract({
+        address: import.meta.env.VITE_CREDIT_ADDRESS as Address,
+        abi: guildAbi,
+        functionName: "totalSupply",
+        args: [],
+    });
+    return Number(DecimalToUnit(result as bigint, 18));
+}
+async function getCurrentDebt(term:lendingTerms): Promise<number> {
+  const result = await readContract({
+    address: term.address as Address,
+    abi: termAbi,
+    functionName: "issuance",
+  });
+  return(Number(DecimalToUnit(result as bigint, 18)));
+}
+
+
+
+
+  
   const columns = [
     columnHelper.accessor("collateral", {
       id: "name",
@@ -56,7 +133,10 @@ function CheckTable(props: { tableData: lendingTerms[], name: string }) {
       header: () => (
         <p className="text-sm font-bold text-gray-600 dark:text-white">Usage</p>
       ),
-      cell: (info: any) => (
+      cell: (info: any) =>{
+      const debtCeilling = (info.row.original.creditTotalSupply*(info.row.original.gaugeWeight/info.row.original.totalWeight))*1.2
+      return (
+        <>
         <TooltipHorizon
           extra="dark:text-white  "
           content={
@@ -75,18 +155,18 @@ function CheckTable(props: { tableData: lendingTerms[], name: string }) {
                 <span className="font-bold">
                   {" "}
                   {formatCurrencyValue(
-                    parseFloat(preciseRound(info.row.original.availableDebt, 2))
+                    parseFloat(preciseRound(debtCeilling -info.row.original.currentDebt, 2))
                   )}
                 </span>
               </p>
               <p>
-                Total Debt:{" "}
+                Debt Ceilling:{" "}
                 <span className="font-bold">
+                
                   {formatCurrencyValue(
                     parseFloat(
                       preciseRound(
-                        info.row.original.currentDebt +
-                          info.row.original.availableDebt,
+               debtCeilling,
                         2
                       )
                     )
@@ -102,7 +182,7 @@ function CheckTable(props: { tableData: lendingTerms[], name: string }) {
                 value={
                   (info.row.original.currentDebt /
                     (info.row.original.currentDebt +
-                      info.row.original.availableDebt)) *
+                      debtCeilling -info.row.original.currentDebt)) *
                   100
                 }
                 color="purple"
@@ -114,7 +194,9 @@ function CheckTable(props: { tableData: lendingTerms[], name: string }) {
           }
           placement="right"
         />
-      ),
+        </>
+      );
+    },
     },
 
     columnHelper.accessor("interestRate", {

@@ -38,6 +38,7 @@ import { AiOutlineQuestionCircle } from "react-icons/ai";
 import { Step } from "components/stepLoader/stepType";
 import StepModal from "components/stepLoader";
 import { MdOutlineError } from "react-icons/md";
+import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
 
 const columnHelper = createColumnHelper<loanObj>();
 
@@ -84,6 +85,20 @@ function Myloans({
   };
 
   const [steps, setSteps] = useState<Step[]>(createSteps());
+  const pageSize = 3;
+  const [currentPage, setCurrentPage] = React.useState(1);
+
+  const goToNextPage = () => {
+    if (currentPage < Math.ceil(data.length / pageSize)) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  };
 
   useEffect(() => {
     async function fetchLoanDebts() {
@@ -107,9 +122,7 @@ function Myloans({
     fetchLoanDebts();
   }, [tableData, reload]);
 
-  async function getLoanDebt(
-    loanId: string
-  ): Promise<bigint> {
+  async function getLoanDebt(loanId: string): Promise<bigint> {
     const result = await readContract({
       address: smartContractAddress as Address,
       abi: termAbi,
@@ -117,7 +130,7 @@ function Myloans({
       args: [loanId],
     });
 
-    return (result as bigint);
+    return result as bigint;
   }
 
   async function lastPartialRepay(id: string): Promise<number> {
@@ -215,8 +228,8 @@ function Myloans({
             ? "Overdue"
             : secondsToAppropriateUnit(sumOfTimestamps - currentDateInSeconds);
 
-        if (nextPaymentDue == 'n/a') {
-          return (<p>{info.getValue().slice(0, 8)}</p>); 
+        if (nextPaymentDue == "n/a") {
+          return <p>{info.getValue().slice(0, 8)}</p>;
         }
         return (
           <>
@@ -238,7 +251,7 @@ function Myloans({
                         : "text-amber-500 dark:text-amber-300"
                     }`}
                   />
-                  <span className="pl-5">{info.getValue().slice(0, 8)}</span>
+                  <span className="pl-4">{info.getValue().slice(0, 6)}</span>
                 </div>
               }
               placement="left"
@@ -285,50 +298,51 @@ function Myloans({
                         ),
                         2
                       )}
-                    </span>
-                    {" "} {collateralName}
+                    </span>{" "}
+                    {collateralName}
                   </p>
                   <p>
                     Collateral Value :{" "}
-                    <span className="font-semibold">{collateralValue}</span>
-                    {" "}$
+                    <span className="font-semibold">{collateralValue}</span> $
                   </p>
                 </div>
                 <div>
                   <p>
                     Debt Amount :{" "}
                     <strong>
-                    {preciseRound(
-                      DecimalToUnit(info.row.original.loanDebt, 18),
-                      2
-                    )}
-                    </strong>
-                    {" "} CREDIT
+                      {preciseRound(
+                        DecimalToUnit(info.row.original.loanDebt, 18),
+                        2
+                      )}
+                    </strong>{" "}
+                    CREDIT
+                  </p>
+                  <p>
+                    Debt Value : <strong>{preciseRound(borrowValue, 2)}</strong>{" "}
+                    USDC
                   </p>
                   <p>
                     Debt Value :{" "}
-                    <strong>{preciseRound(borrowValue, 2)}</strong>
-                    {" "} USDC
-                  </p>
-                  <p>
-                    Debt Value :{" "}
-                    <strong>{preciseRound(borrowValue * pegPrice, 2)}</strong>
-                    {" "} $
+                    <strong>{preciseRound(borrowValue * pegPrice, 2)}</strong> $
                   </p>
                 </div>
                 <div>
                   <p>
                     Unit Collateral Price:{" "}
-                    <span className="font-semibold">{preciseRound(collateralPrice, 2)}</span>
-                    {" "}$
+                    <span className="font-semibold">
+                      {preciseRound(collateralPrice, 2)}
+                    </span>{" "}
+                    $
                   </p>
                   <p>
                     Unit USDC Price:{" "}
-                    <span className="font-semibold">{preciseRound(pegPrice, 6)}</span>
-                    {" "}$
+                    <span className="font-semibold">
+                      {preciseRound(pegPrice, 6)}
+                    </span>{" "}
+                    $
                   </p>
                   <p>
-                    <br/>
+                    <br />
                     <i>Price source: Coingecko API</i>
                   </p>
                 </div>
@@ -557,8 +571,10 @@ function Myloans({
     }
   }
 
+  const isPrevPageAvailable = currentPage > 1;
+  const isNextPageAvailable = currentPage < Math.ceil(data.length / pageSize);
   return (
-    <Card extra={"w-full h-full px-6 pb-6 sm:overflow-x-auto"}>
+    <>
       {showModal && (
         <StepModal
           steps={steps}
@@ -618,7 +634,10 @@ function Myloans({
             <tbody>
               {table
                 .getRowModel()
-                .rows.slice(0, 5)
+                .rows.slice(
+                  (currentPage - 1) * pageSize,
+                  currentPage * pageSize
+                )
                 .map((row) => {
                   return (
                     <tr key={row.id}>
@@ -626,7 +645,7 @@ function Myloans({
                         return (
                           <td
                             key={cell.id}
-                            className="relative min-w-[75px] border-white/0 py-3   pr-4 lg:min-w-[69px]  xl:min-w-[90px] 3xl:min-w-[150px]"
+                            className="border-whit e/0 relative min-w-[85px] py-3   pr-4 lg:min-w-[90px]  xl:min-w-[95px] 3xl:min-w-[150px]"
                           >
                             {flexRender(
                               cell.column.columnDef.cell,
@@ -640,9 +659,38 @@ function Myloans({
                 })}
             </tbody>
           </table>
+          {data.length > pageSize && (
+            <div className=" pagination-controls  absolute bottom-2 right-2 flex justify-end">
+              <button
+                onClick={goToPreviousPage}
+                disabled={!isPrevPageAvailable}
+                className={`${
+                  !isPrevPageAvailable
+                    ? "cursor-not-allowed text-gray-400"
+                    : "cursor-pointer text-black"
+                }`}
+              >
+                <FaArrowLeft />
+              </button>
+
+              <span className="mx-2">{currentPage}</span>
+
+              <button
+                onClick={goToNextPage}
+                disabled={!isNextPageAvailable}
+                className={`${
+                  !isNextPageAvailable
+                    ? "cursor-not-allowed text-gray-400"
+                    : "cursor-pointer text-black"
+                }`}
+              >
+                <FaArrowRight />
+              </button>
+            </div>
+          )}
         </div>
       )}
-    </Card>
+</>
   );
 }
 

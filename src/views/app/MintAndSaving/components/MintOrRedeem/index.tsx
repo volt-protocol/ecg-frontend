@@ -6,6 +6,7 @@ import StepModal from "components/stepLoader";
 import { Step } from "components/stepLoader/stepType";
 import { creditAbi, profitManager, psmUsdc, termAbi, usdcAbi } from "guildAbi";
 import React, { useEffect, useState } from "react";
+import { BsArrowDown, BsArrowDownLeft, BsArrowUpLeft, BsArrowUpRight } from "react-icons/bs";
 import { toastError, toastRocket } from "toast";
 import {
   DecimalToUnit,
@@ -90,13 +91,12 @@ function MintOrRedeem() {
     getConversionRate();
     getUsdcAvailableToRedeem();
     if (isConnected) {
-    getCreditBalance();
-    getUsdcBalance();
-    setReload(false);
-    }else{
-    setCreditBalance(undefined);
-    setUsdcBalance(undefined);
-  
+      getCreditBalance();
+      getUsdcBalance();
+      setReload(false);
+    } else {
+      setCreditBalance(undefined);
+      setUsdcBalance(undefined);
     }
   }, [creditBalance, isConnected, reload]);
 
@@ -108,13 +108,12 @@ function MintOrRedeem() {
     );
   };
   function updateStepName(oldName: string, newName: string) {
-    setSteps(prevSteps => 
-      prevSteps.map(step => 
+    setSteps((prevSteps) =>
+      prevSteps.map((step) =>
         step.name === oldName ? { ...step, name: newName } : step
       )
     );
   }
-  
 
   async function mint() {
     setShowModal(true);
@@ -270,9 +269,16 @@ function MintOrRedeem() {
   }, [valuetoSend]);
   return (
     <>
-      <div className="h-full rounded-xl text-black dark:text-white">
-      {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
-        <h2 className="ml-6 text-start text-xl font-semibold text-black dark:text-white ">
+      <div className="mt-4 h-full rounded-xl text-black dark:text-white">
+        {showModal && (
+          <StepModal
+            steps={steps}
+            close={setShowModal}
+            initialStep={createSteps}
+            setSteps={setSteps}
+          />
+        )}
+        <h2 className="ml-6 text-start text-xl font-semibold  text-navy-700 dark:text-white ">
           Mint / Redeem
         </h2>
         <div className=" space-y-6">
@@ -282,7 +288,11 @@ function MintOrRedeem() {
               status == "Mint" ? "text-black dark:text-white" : "text-gray-400"
             } `}
           >
-            Mint
+            <div className="flex  items-center space-x-2 w-full">
+              {" "}
+              <BsArrowUpRight />
+             <p> Mint</p>
+            </div>
           </button>
           <button
             onClick={() => setStatus("Redeem")}
@@ -292,7 +302,10 @@ function MintOrRedeem() {
                 : "text-gray-400"
             } `}
           >
-            Redeem
+            <div className="flex  items-center space-x-2 w-full">
+              <BsArrowDownLeft />
+           <p> Redeem</p>
+            </div>
           </button>
         </div>
         <div className=" ml-6 mt-8 grid grid-cols-2  ">
@@ -300,22 +313,22 @@ function MintOrRedeem() {
             Your Balance :{" "}
             <span className="font-semibold">
               {usdcBalance ? formatCurrencyValue(usdcBalance) : "?"}
-            </span>
-            {" "} USDC
+            </span>{" "}
+            USDC
           </div>
           <div className="">
             Redeemable :{" "}
             <span className="font-semibold">
               {formatCurrencyValue(usdcAvailableToRedeem)}
-            </span>
-            {" "} USDC
+            </span>{" "}
+            USDC
           </div>
           <div className="">
             Your Balance :{" "}
             <span className="font-semibold">
               {creditBalance ? formatCurrencyValue(creditBalance) : "?"}
-            </span>
-            {" "} CREDIT
+            </span>{" "}
+            CREDIT
           </div>
           <div className="">
             Rate :{" "}

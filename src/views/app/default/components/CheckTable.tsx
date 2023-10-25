@@ -30,9 +30,6 @@ import { Address, readContract } from "@wagmi/core";
 function CheckTable(props: { tableData: lendingTerms[], name: string }) {
   const { tableData,name } = props;
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  // const [creditTotalSupply, setCreditTotalSupply] = React.useState<number>(0);
-  // const [gaugeWeight, setGaugeWeight] = React.useState<number>(0);
-  // const [totalWeight, setTotalWeight] = React.useState<number>(0);
 
   let defaultData = tableData;
   const navigation = useNavigate();
@@ -147,8 +144,7 @@ async function getCurrentDebt(term:lendingTerms): Promise<number> {
                   {formatCurrencyValue(
                     parseFloat(
                       preciseRound(
-                        info.row.original.currentDebt +
-                          info.row.original.availableDebt,
+                        debtCeilling,
                         2
                       )
                     )

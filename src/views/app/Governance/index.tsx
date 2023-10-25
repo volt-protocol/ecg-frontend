@@ -65,8 +65,8 @@ function Governance() {
       <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-2">
       <Card extra="order-4" >
           <div className=" rounded-xl">
-          <h2 className="ml-4 text-left text-xl font-bold mt-6 text-black dark:text-white">Delegate CREDIT</h2>
-          <div className=" mt-8 space-y-8">
+          <h2 className="mt-4 text-left text-xl font-bold ml-6 text-navy-700 dark:text-white">Delegate CREDIT</h2>
+          <div className=" mt-6 space-y-8">
             <div className="rounded-xl ">
               <Flowbite theme={{ theme: customTheme }}>
                 <Tabs.Group

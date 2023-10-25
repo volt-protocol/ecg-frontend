@@ -145,9 +145,10 @@ function MintAndSaving() {
         />
       </div>
       <div className=" mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
-        <Card extra="space-y-7 p-4 ">
-          <div className="ml-6 mt-4 flex justify-between ">
-            <h2 className="text-xl font-semibold">CREDIT saving</h2>
+        <Card extra="">
+          <div className="space-y-7">
+          <div className="mx-6 mt-4 flex justify-between ">
+            <h2 className="text-xl font-semibold  text-navy-700">CREDIT Saving</h2>
             <div>
               <ToggleSwitch
                 checked={isRebasing}
@@ -191,8 +192,9 @@ function MintAndSaving() {
             </p>
             <p>Your current rebasing status : <span className="font-semibold">{isRebasing ===undefined ?"?":isRebasing? "Yes" : "No"}</span></p>
           </div>
+          </div>
         </Card>
-        <Card extra="space-y-5 p-4">
+        <Card extra="">
           <MintOrRedeem />
         </Card>
       </div>

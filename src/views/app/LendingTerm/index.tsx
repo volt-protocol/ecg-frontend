@@ -501,7 +501,7 @@ function LendingTerm() {
             />
           </div>
           <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2 ">
-            <Card extra="md:col-span-1 order-2">
+            <Card extra="md:col-span-1 order-2 w-full h-full px-6 pb-6 sm:overflow-x-auto relative">
               <Myloans
                 tableData={eventLoans}
                 collateralName={lendingTermData.collateral}
@@ -637,7 +637,7 @@ function LendingTerm() {
               </div>
             </Card>
 
-            <Card extra="order-4">
+            <Card extra="order-4 ">
               <div className="  rounded-xl">
                 <h2 className="ml-6 mt-4 text-start text-xl font-semibold text-navy-700  dark:text-white">
                   Stake CREDIT
@@ -725,7 +725,7 @@ function LendingTerm() {
                 </div>
               </div>
             </Card>
-            <Card extra={"order-5 md:col-span-2"}>
+            <Card extra={"order-5 md:col-span-2 w-full h-full px-6 pb-6 overflow-auto sm:overflow-x-auto"}>
               <ActiveLoans
                 maxDelayBetweenPartialRepay={
                   lendingTermData.maxDelayBetweenPartialRepay

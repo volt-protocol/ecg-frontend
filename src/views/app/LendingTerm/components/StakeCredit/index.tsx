@@ -228,13 +228,23 @@ function Stake({
     const debtCeilingIncrease = debCeilingAfter - debCeilingBefore;
     return formatCurrencyValue(Number(preciseRound(debtCeilingIncrease, 2)));
   }
+
+  function getDebtCeileingDecrease(): string {
+    let guildAmount = allocatedCredit * ratioGuildCredit;
+    const percentBefore = gaugeWeight / totalWeight;
+    const percentAfter = (gaugeWeight + guildAmount) / totalWeight;
+    const debCeilingBefore = creditTotalSupply * percentBefore * 1.2;
+    const debCeilingAfter = creditTotalSupply * percentAfter * 1.2;
+    const debtCeilingIncrease = debCeilingAfter - debCeilingBefore;
+    return formatCurrencyValue(Number(preciseRound(debtCeilingIncrease, 2)));
+  }
   return (
     <>
      {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
       <div className={style.content}>
         <div className={style.formHeader}></div>
-        <div className="my-2 -mt-1 grid grid-cols-2 gap-y-1 ">
-          <div className="col-span-1">
+        <div className="my-2 -mt-1 grid grid-cols-5 gap-y-1  ">
+          <div className="col-span-3">
             <TooltipHorizon
               extra=""
               trigger={
@@ -262,11 +272,11 @@ function Stake({
               placement="right"
             ></TooltipHorizon>
           </div>
-          <div className="col-span-1">
+          <div className="col-span-2">
             <TooltipHorizon
               extra=""
               trigger={
-                <div className="flex space-x-1">
+                <div className="flex space-x-1 ">
                   <p className="">
                     GUILD / CREDIT ratio :{" "}
                     <span className="font-semibold">{preciseRound(ratioGuildCredit, 2)}</span>{" "}
@@ -289,7 +299,7 @@ function Stake({
             ></TooltipHorizon>
           </div>
 
-          <p className="col-span-2">
+          <p className="col-span-5">
             Your CREDIT balance :{" "}
             <span className="font-semibold ">
               {availableCredit != undefined ? preciseRound(availableCredit, 2) : "?"}
@@ -325,7 +335,9 @@ function Stake({
             </p>
           </>
         ) : (
-          <></>
+          <><p>
+         Unstaking your CREDIT will reduce the available borrowing amount by {getDebtCeileingDecrease()}CREDIT for this term.
+        </p></>
         )}
 
         <button

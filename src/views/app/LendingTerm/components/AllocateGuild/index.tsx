@@ -181,15 +181,15 @@ function AllocateGuild({
       <div className={style.formHeader}></div>
       <div className="my-2 grid grid-cols-2">
         <p className=" col-span-2">
-          Your current GUILD staked :{" "}
+          Your GUILD staked on this term :{" "}
           
-          <span className="font-semibold">{allocatedGuild!=undefined?allocatedGuild:"?"}</span>{" "}
+          <span className="font-semibold">{allocatedGuild!=undefined?preciseRound(allocatedGuild, 2):"?"}</span>{" "}
         </p>
         <p className=" col-span-2">
         Your GUILD available to stake :{" "}
         {guildBalance!=undefined?(
           <>
-          <span className="font-semibold">{preciseRound(guildBalance-guildAvailableToStake,2)}</span>{" "}/
+          <span className="font-semibold">{preciseRound(guildBalance-guildAvailableToStake, 2)}</span>{" "}/{" "}
           <span className="font-semibold">{preciseRound(guildBalance,2)}</span>{" "}
           </> ):<span className="font-semibold">?</span>}
           </p>

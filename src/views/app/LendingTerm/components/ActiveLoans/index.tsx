@@ -60,6 +60,7 @@ function ActiveLoans({
   const { address, isConnected } = useAccount();
   const [creditMultiplier, setCreditMultiplier] = React.useState(0);
   const [collateralPrice, setCollateralPrice] = React.useState(0);
+  const [pegPrice, setPegPrice] = React.useState(0);
   const [isGauge, setIsGauge] = React.useState(false);
   // const [isRepayPassed, setIsRepayPassed] = React.useState(false);
   const [repays, setRepays] = React.useState<Record<string, number>>({});
@@ -80,7 +81,7 @@ function ActiveLoans({
   useEffect(() => {
     async function fetchLoanDebts() {
       const debts = await Promise.all(
-        activeLoans.map((loan) => getLoanDebt(loan.id, loan.borrowAmount))
+        activeLoans.map((loan) => getLoanDebt(loan.id))
       );
       const newTableData = activeLoans.map((loan, index) => ({
         ...loan,
@@ -101,8 +102,7 @@ function ActiveLoans({
   }, [activeLoans,reload]);
 
   async function getLoanDebt(
-    loanId: string,
-    loanBorrowAmount: bigint
+    loanId: string
   ): Promise<bigint> {
     const result = await readContract({
       address: termAddress as Address,
@@ -110,7 +110,7 @@ function ActiveLoans({
       functionName: "getLoanDebt",
       args: [loanId],
     });
-    return (result as bigint) - loanBorrowAmount;
+    return (result as bigint);
   }
 
   function CallableButton({ original }: { original: LoansObj }) {
@@ -266,9 +266,20 @@ function ActiveLoans({
       );
       setCollateralPrice(response.data[nameCG].usd);
     }
+  
+    async function getPegPrice() {
+      //requête axios en post vers coinmarketcap avec sort au name et limit à 1.
+      const nameCG = 'usd-coin';
+      const response = await axios.get(
+        `https://api.coingecko.com/api/v3/simple/price?ids=${nameCG}&vs_currencies=usd`,
+        {}
+      );
+      setPegPrice(response.data[nameCG].usd);
+    }
 
     getcreditMultiplier();
     getCollateralPrice();
+    getPegPrice();
   }, []);
 
   const columns = [
@@ -306,15 +317,12 @@ function ActiveLoans({
             100,
           2
         );
-        const borrowValue = preciseRound(
-          DecimalToUnit(
-            BigInt(
-              info.row.original.borrowAmount *
-                info.row.original.borrowCreditMultiplier
-            ) / BigInt(1e18),
-            18
-          ),
-          2
+        const borrowValue = DecimalToUnit(
+          BigInt(
+            info.row.original.loanDebt *
+              info.row.original.borrowCreditMultiplier
+          ) / BigInt(1e18),
+          18
         );
         const collateralValue = preciseRound(
           DecimalToUnit(
@@ -329,40 +337,8 @@ function ActiveLoans({
           <TooltipHorizon
             extra="dark:text-white"
             content={
-              <div className="mt-4 space-y-4 p-2 ">
-                <div className="space-y-2">
-                  <p>
-                    Borrowed Principal :{" "}
-                    <span className="font-semibold"> {preciseRound(
-                        DecimalToUnit(info.row.original.borrowAmount, 18),
-                        2
-                      )} </span>{" "}
-                  </p>
-                  <p>
-                    Borrow Interest :{" "}
-                    <span className="font-semibold">
-                      <strong>
-                        {" "}
-                        {preciseRound(
-                          DecimalToUnit(info.row.original.loanDebt, 18),
-                          2
-                        )} CREDIT{" "}
-                      </strong>
-                    </span>
-                  </p>
-                  <p>
-                    Borrowed Value :{" "}
-                    <span className="font-semibold">
-                      {" "}
-                      {borrowValue} CREDIT
-                    </span>
-                  </p>
-                  <p>
-                    Borrowed Value :{" "}
-                    <span className="font-semibold"> {borrowValue}$</span>
-                  </p>
-                </div>
-                <div className="space-y-2">
+              <div className="space-y-4 p-2">
+                <div>
                   <p>
                     Collateral Amount :{" "}
                     <span className="font-semibold">
@@ -373,35 +349,52 @@ function ActiveLoans({
                           collateralDecimals
                         ),
                         2
-                      )}{" "} {collateralName}
+                      )}
                     </span>
-                  </p>
-                  <p>
-                    Collateral Price:{" "}
-                    <span className="font-semibold">  {preciseRound(collateralPrice, 2)}  $</span>
+                    {" "} {collateralName}
                   </p>
                   <p>
                     Collateral Value :{" "}
-                    <span className="font-semibold"> {collateralValue}$ </span>
+                    <span className="font-semibold">{collateralValue}</span>
+                    {" "}$
                   </p>
                 </div>
-                <div className="space-y-2">
+                <div>
                   <p>
-                    Value to Repay :{" "}
+                    Debt Amount :{" "}
                     <strong>
                     {preciseRound(
-                        DecimalToUnit(
-                          info.row.original.borrowAmount +
-                            info.row.original.loanDebt,
-                          18
-                        ),
-                        2
-                      )}{" "}
-                      CREDIT
+                      DecimalToUnit(info.row.original.loanDebt, 18),
+                      2
+                    )}
                     </strong>
+                    {" "} CREDIT
                   </p>
                   <p>
-                    Price sources : <strong> Coingecko API</strong>
+                    Debt Value :{" "}
+                    <strong>{preciseRound(borrowValue, 2)}</strong>
+                    {" "} USDC
+                  </p>
+                  <p>
+                    Debt Value :{" "}
+                    <strong>{preciseRound(borrowValue * pegPrice, 2)}</strong>
+                    {" "} $
+                  </p>
+                </div>
+                <div>
+                  <p>
+                    Unit Collateral Price:{" "}
+                    <span className="font-semibold">{preciseRound(collateralPrice, 2)}</span>
+                    {" "}$
+                  </p>
+                  <p>
+                    Unit USDC Price:{" "}
+                    <span className="font-semibold">{preciseRound(pegPrice, 6)}</span>
+                    {" "}$
+                  </p>
+                  <p>
+                    <br/>
+                    <i>Price source: Coingecko API</i>
                   </p>
                 </div>
               </div>

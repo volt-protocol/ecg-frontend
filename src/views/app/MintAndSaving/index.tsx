@@ -135,7 +135,7 @@ function MintAndSaving() {
   ];
 
   return (
-    <div className="mt-10 space-y-10 ">
+    <div className="space-y-10">
         {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
       <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-1">
         <TotalSpent
@@ -146,7 +146,7 @@ function MintAndSaving() {
       </div>
       <div className=" mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
         <Card extra="space-y-7 p-4 ">
-          <div className="ml-6 flex justify-between ">
+          <div className="ml-6 mt-4 flex justify-between ">
             <h2 className="text-xl font-semibold">CREDIT saving</h2>
             <div>
               <ToggleSwitch
@@ -189,7 +189,7 @@ function MintAndSaving() {
               Your current CREDIT Balance :
               <span className="font-semibold"> {creditAvailable===undefined?"?":preciseRound(creditAvailable,2)}</span>
             </p>
-            <p>Your current rebasing status : {isRebasing ===undefined ?"?":isRebasing? "Yes" : "No"}</p>
+            <p>Your current rebasing status : <span className="font-semibold">{isRebasing ===undefined ?"?":isRebasing? "Yes" : "No"}</span></p>
           </div>
         </Card>
         <Card extra="space-y-5 p-4">

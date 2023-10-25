@@ -57,12 +57,12 @@ function Governance() {
   ];
 
   return (
-    <div className='mt-10'>
-     <div className="mt-5  grid grid-cols-1 gap-5 md:grid-cols-2">
+    <div className="space-y-5">
+     <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-2">
         <TotalSpent name="utilization/cap vs time" percentage="2.45%" data={lineChartDataDebtCeiling} /> 
         <TotalSpent name="Earning vs time" percentage="2.45%" data={lineChartDataDebtCeiling} />
       </div>
-      <div className="mt-5  grid grid-cols-1 gap-5 md:grid-cols-2">
+      <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-2">
       <Card extra="order-4" >
           <div className=" rounded-xl">
           <h2 className="ml-4 text-left text-xl font-bold mt-6 text-black dark:text-white">Delegate CREDIT</h2>
@@ -86,7 +86,7 @@ function Governance() {
                       used={guildUsed}
                     ></Delegate>
                   </Tabs.Item>
-                  <Tabs.Item icon={BsArrowDownLeft} title="UnDelegate GUILD">
+                  <Tabs.Item icon={BsArrowDownLeft} title="Undelegate GUILD">
                     <Delegate
                       textButton="UnDelegate"
                       balance={guildBalance}

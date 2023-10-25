@@ -261,45 +261,22 @@ function CreateLoan({
         />
       )}
 
-      <div className="h-full rounded-xl text-black dark:text-white ">
-        <h2 className="ml-6 mt-4 text-start text-xl font-semibold text-navy-700 dark:text-white ">
+      <div className="h-full rounded-xl text-black dark:text-white">
+        <h2 className="ml-6 mt-4 text-start text-xl font-semibold text-navy-700 dark:text-white">
           New Loan
         </h2>
-        <div className=" ml-6 mt-8 grid grid-cols-2  ">
+        <div className="ml-6 mt-8 grid grid-cols-2">
+          <div className="">
+            Your Balance :{" "}
+            <span className="font-semibold">
+              {preciseRound(collateralAmountAvailable, 2)}
+            </span>
+            {" "}{name}
+          </div>
           <div className="">
             Available Debt :{" "}
             <span className="font-semibold">
               {formatCurrencyValue(availableDebt)}
-            </span>
-          </div>
-          <div className="">
-            Open Fee :{" "}
-            <span className="font-semibold">
-              {preciseRound(openingFee * 100, 2)}{" "}
-            </span>
-            %
-          </div>
-          <div className="">
-            Current Debt :{" "}
-            <span className="font-semibold">
-              {formatCurrencyValue(currentDebt)}
-            </span>
-          </div>
-          <div className="">
-            Min Borrow : <span className="font-semibold">{minBorrow}</span>
-          </div>
-          <div className="col-span-2">
-            Borrow Ratio :{" "}
-            <span className="font-semibold">
-              {" "}
-              {preciseRound(borrowRatio, 2)} CREDIT / {name}
-            </span>
-          </div>
-          <div className="col-span-2">
-            Your {name} Balance :
-            <span className="font-semibold">
-              {" "}
-              {preciseRound(collateralAmountAvailable, 2)} {name}
             </span>
           </div>
         </div>
@@ -344,7 +321,7 @@ function CreateLoan({
                 You will have to pay{" "}
                 <span className="font-semibold">
                   {" "}
-                  {borrowAmount * openingFee} CREDIT{" "}
+                  {preciseRound(borrowAmount * openingFee, 2)} CREDIT{" "}
                 </span>{" "}
                 to open this loan
               </p>

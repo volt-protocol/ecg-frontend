@@ -71,7 +71,7 @@ function LendingTerm() {
   });
   const [reload, setReload] = useState<boolean>(false);
   const [Utilization, setUtilization] = useState<string>("");
-  const [loans, setLoans] = useState<loanObj[]>([]);
+  const [eventLoans, setEventLoans] = useState<loanObj[]>([]);
 
   const lineChartDataDebtCeiling = [
     {
@@ -222,9 +222,9 @@ function LendingTerm() {
         setUserActiveLoans(activeLoans.data);
       }
     }
-    async function getLoans2(): Promise<Object> {
+    async function getEventLoans(): Promise<Object> {
       const loansCall = await getLoansCall(location.pathname.split("/")[3] as Address)
-      setLoans(loansCall)
+      setEventLoans(loansCall)
       return loansCall
     }
 
@@ -245,7 +245,7 @@ function LendingTerm() {
       setCreditAvailable(undefined);
       getLoans();
     }
-    getLoans2()
+    getEventLoans()
     setReload(false);
   }, [isConnected, reload]);
 
@@ -328,7 +328,7 @@ function LendingTerm() {
   }, [reload]);
 
   useEffect(() => {
-    setDebtCeilling(creditTotalSupply * (gaugeWeight / totalWeight));
+    setDebtCeilling((creditTotalSupply * (gaugeWeight / totalWeight))*1.2);
   }, [creditTotalSupply, gaugeWeight, totalWeight]);
 
   return (
@@ -503,7 +503,7 @@ function LendingTerm() {
           <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2 ">
             <Card extra="md:col-span-1 order-2">
               <Myloans
-                tableData={loans}
+                tableData={eventLoans}
                 collateralName={lendingTermData.collateral}
                 collateralPrice={collateralPrice}
                 pegPrice={pegPrice}
@@ -732,7 +732,7 @@ function LendingTerm() {
                 }
                 collateralName={lendingTermData.collateral}
                 termAddress={contractAddress}
-                activeLoans={loans}
+                activeLoans={eventLoans}
                 collateralAddress={lendingTermData.collateralAddress}
                 collateralDecimals={lendingTermData.collateralDecimals}
                 reload={setReload}

@@ -1,46 +1,111 @@
-import React, { useEffect } from 'react'
-import TotalSpent from '../default/components/TotalSpent'
-import Card from 'components/card'
-import { Flowbite, Tabs } from 'flowbite-react'
-import customTheme from 'customThemeFlowbite'
-import { BsArrowDownLeft, BsArrowUpRight } from 'react-icons/bs'
-import { Address, readContract } from '@wagmi/core'
-import { guildAbi } from 'guildAbi'
-import { useAccount } from 'wagmi'
-import { DecimalToUnit } from 'utils'
-import Delegate from './components/Delegate'
+import React, { useEffect } from "react";
+import TotalSpent from "../default/components/TotalSpent";
+import Card from "components/card";
+import { Flowbite, Tabs } from "flowbite-react";
+import customTheme from "customThemeFlowbite";
+import { BsArrowDownLeft, BsArrowUpRight } from "react-icons/bs";
+import { Address, readContract } from "@wagmi/core";
+import { creditAbi, guildAbi } from "guildAbi";
+import { useAccount } from "wagmi";
+import { DecimalToUnit } from "utils";
+import Delegate from "./components/DelegateGuild";
+import DelegateGuild from "./components/DelegateGuild";
+import DelegateCredit from "./components/DelegateCredit";
+import { get } from "api/base";
 // import Delegate from './components/Delegate'
 
+export type Delegatee = {
+  address: string;
+  votes: number;
+};
+
 function Governance() {
-  const { address, isConnected, isDisconnected } = useAccount()
-  const [guildBalance, setGuildBalance] = React.useState(undefined)
-  const [guildUsed, setGuildUsed] = React.useState(undefined)
+  const { address, isConnected, isDisconnected } = useAccount();
+  const [guildBalance, setGuildBalance] = React.useState(undefined);
+  const [guildNotUsed, setGuildNotUsed] = React.useState(undefined);
+  const [reloadGuild, setReloadGuild] = React.useState<boolean>(false);
+  const [reloadCredit, setReloadCredit] = React.useState<boolean>(false);
+  const [creditBalance, setCreditBalance] = React.useState(undefined);
+  const [creditNotUsed, setCreditNotUsed] = React.useState(undefined);
+  const [guildreceived, setGuildreceived] = React.useState(undefined);
+  const [creditreceived, setCreditreceived] = React.useState(undefined);
 
   async function getGuildBalance(): Promise<void> {
     const result = await readContract({
       address: import.meta.env.VITE_GUILD_ADDRESS as Address,
       abi: guildAbi,
-      functionName: 'balanceOf',
+      functionName: "balanceOf",
       args: [address],
-    })
-    setGuildBalance(DecimalToUnit(result as bigint, 18))
+    });
+    setGuildBalance(DecimalToUnit(result as bigint, 18));
   }
-  async function getGuildUsed(): Promise<void> {
+  async function getGuildNotUsed(): Promise<void> {
     const result = await readContract({
       address: import.meta.env.VITE_GUILD_ADDRESS,
       abi: guildAbi,
-      functionName: "getUserWeight",
+      functionName: "freeVotes",
       args: [address],
     });
-    setGuildUsed(DecimalToUnit(result as bigint, 18));
+    setGuildNotUsed(DecimalToUnit(result as bigint, 18));
+  }
+  async function getGuildreceived(): Promise<void> {
+    const result = await readContract({
+      address: import.meta.env.VITE_GUILD_ADDRESS,
+      abi: guildAbi,
+      functionName: "getVotes",
+      args: [address],
+    });
+    setGuildreceived(DecimalToUnit(result as bigint, 18));
+  }
+  
+
+
+  useEffect(() => {
+    if (isConnected) {
+      getGuildBalance();
+      getGuildNotUsed();
+      getGuildreceived();
+      setReloadGuild(false);
+      console.log('test')
+    }
+  }, [isConnected, reloadGuild]);
+
+  async function getCreditBalance(): Promise<void> {
+    const result = await readContract({
+      address: import.meta.env.VITE_CREDIT_ADDRESS as Address,
+      abi: creditAbi,
+      functionName: "balanceOf",
+      args: [address],
+    });
+    setCreditBalance(DecimalToUnit(result as bigint, 18));
+  }
+  async function getCreditNotUsed(): Promise<void> {
+    const result = await readContract({
+      address: import.meta.env.VITE_CREDIT_ADDRESS,
+      abi: creditAbi,
+      functionName: "freeVotes",
+      args: [address],
+    });
+    setCreditNotUsed(DecimalToUnit(result as bigint, 18));
+  }
+  async function getCreditreceived(): Promise<void> {
+    const result = await readContract({
+      address: import.meta.env.VITE_CREDIT_ADDRESS,
+      abi: creditAbi,
+      functionName: "getVotes",
+      args: [address],
+    });
+    setCreditreceived(DecimalToUnit(result as bigint, 18));
   }
 
   useEffect(() => {
-    if(isConnected){
-      getGuildBalance()
-      getGuildUsed()
+    if (isConnected) {
+      getCreditBalance();
+      getCreditNotUsed();
+      getCreditreceived();
+      setReloadCredit(false);
     }
-  }, [isConnected])
+  } , [isConnected, reloadCredit]);
 
 
   const lineChartDataDebtCeiling = [
@@ -58,51 +123,60 @@ function Governance() {
 
   return (
     <div className="space-y-5">
-     <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-2">
-        <TotalSpent name="utilization/cap vs time" percentage="2.45%" data={lineChartDataDebtCeiling} /> 
-        <TotalSpent name="Earning vs time" percentage="2.45%" data={lineChartDataDebtCeiling} />
+      <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-2">
+        <TotalSpent
+          name="utilization/cap vs time"
+          percentage="2.45%"
+          data={lineChartDataDebtCeiling}
+        />
+        <TotalSpent
+          name="Earning vs time"
+          percentage="2.45%"
+          data={lineChartDataDebtCeiling}
+        />
       </div>
       <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-2">
-      <Card extra="order-4" >
-          <div className=" rounded-xl">
-          <h2 className="mt-4 text-left text-xl font-bold ml-6 text-navy-700 dark:text-white">Delegate CREDIT</h2>
-          <div className=" mt-6 space-y-8">
-            <div className="rounded-xl ">
-              <Flowbite theme={{ theme: customTheme }}>
-                <Tabs.Group
-                  aria-label="Tabs with underline"
-                  style="underline"
-                  className="text-white"
-                >
-                  <Tabs.Item
-                    active
-                    className=""
-                    icon={BsArrowUpRight}
-                    title="Delegate GUILD"
-                  >
-                    <Delegate
-                      textButton="delegate"
-                      balance={guildBalance}
-                      used={guildUsed}
-                    ></Delegate>
-                  </Tabs.Item>
-                  <Tabs.Item icon={BsArrowDownLeft} title="Undelegate GUILD">
-                    <Delegate
-                      textButton="UnDelegate"
-                      balance={guildBalance}
-                      used={guildUsed}
-            
-                    ></Delegate>
-                  </Tabs.Item>
-                </Tabs.Group>
-              </Flowbite>
+        <Card extra="order-4">
+          <div className=" rounded-xl px-6 mt-4 ">
+            <h2 className="text-left text-xl font-bold text-navy-700 dark:text-white">
+              Delegate GUILD
+            </h2>
+            <div className=" mt-6 space-y-8">
+              <div className="rounded-xl ">
+                <DelegateGuild
+                  reloadGuild={setReloadGuild}
+                  balance={guildBalance}
+                  notUsed={guildNotUsed}
+                  guildReceived={guildreceived} 
+                  userAddress={address}
+                  isConnected={isConnected}
+                ></DelegateGuild>
+              </div>
             </div>
           </div>
+        </Card>
+        <Card extra="order-4">
+          <div className=" rounded-xl px-6 mt-4 ">
+            <h2 className="text-left text-xl font-bold text-navy-700 dark:text-white">
+              Delegate CREDIT
+            </h2>
+            <div className=" mt-6 space-y-8">
+              <div className="rounded-xl ">
+                <DelegateCredit
+                 reloadCredit={setReloadCredit}
+                  balance={creditBalance}
+                  notUsed={creditNotUsed}
+                  creditReceived={creditreceived}
+                  userAddress={address}
+                  isConnected={isConnected}
+                ></DelegateCredit>
+              </div>
+            </div>
           </div>
         </Card>
+      </div>
     </div>
-    </div>
-  )
+  );
 }
 
-export default Governance
+export default Governance;

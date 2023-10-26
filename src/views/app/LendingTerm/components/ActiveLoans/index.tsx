@@ -310,7 +310,7 @@ function ActiveLoans({
         <Link
           className="hover:text-blue-700"
           target="__blank"
-          to={`https://sepolia.etherscan.io/address/${address}`}
+          to={`https://sepolia.etherscan.io/address/${info.getValue()}`}
         >
           {info.getValue().slice(0, 4) + "..." + info.getValue().slice(-4)}{" "}
         </Link>

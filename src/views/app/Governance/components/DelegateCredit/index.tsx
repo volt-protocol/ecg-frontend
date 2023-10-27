@@ -366,7 +366,19 @@ function DelegateCredit({
               </tr>
             ))}
           </thead>
-          {delegatees.length != 0 ? (
+          {!isConnected ? (
+            <div className="flex flex-grow items-center justify-center p-10 font-semibold text-gray-500">
+              <p className="absolute text-center left-1/2 -translate-x-1/2 transform">
+                You have to connect your wallet to see your delegatees
+              </p>
+            </div>
+          ) : delegatees.length === 0 ? (
+            <div className="flex flex-grow items-center justify-center p-10 font-semibold text-gray-500">
+              <p className="absolute left-1/2 -translate-x-1/2 transform">
+                You didn't delegate CREDIT
+              </p>
+            </div>
+          ) : (
             <>
               <tbody>
                 {table.getRowModel().rows.map((row) => (
@@ -386,12 +398,6 @@ function DelegateCredit({
                 ))}
               </tbody>
             </>
-          ) : (
-            <div className="flex flex-grow items-center justify-center p-10 font-semibold text-gray-500">
-              <p className="absolute left-1/2 -translate-x-1/2 transform">
-                You didn't delegate GUILD
-              </p>
-            </div>
           )}
         </table>
       </div>

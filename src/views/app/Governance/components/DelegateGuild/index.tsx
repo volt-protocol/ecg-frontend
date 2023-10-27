@@ -323,7 +323,7 @@ function DelegateGuild({
         </button>
       </div>
       <div>
-        <table className="w-full ">
+      <table className="w-full ">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="!border-px !border-gray-400">
@@ -345,7 +345,19 @@ function DelegateGuild({
               </tr>
             ))}
           </thead>
-          {delegatees.length != 0 ? (
+          {!isConnected ? (
+            <div className="flex flex-grow items-center justify-center p-10 font-semibold text-gray-500">
+              <p className="absolute text-center left-1/2 -translate-x-1/2 transform">
+                You have to connect your wallet to see your delegatees
+              </p>
+            </div>
+          ) : delegatees.length === 0 ? (
+            <div className="flex flex-grow items-center justify-center p-10 font-semibold text-gray-500">
+              <p className="absolute left-1/2 -translate-x-1/2 transform">
+                You didn't delegate GUILD
+              </p>
+            </div>
+          ) : (
             <>
               <tbody>
                 {table.getRowModel().rows.map((row) => (
@@ -365,12 +377,6 @@ function DelegateGuild({
                 ))}
               </tbody>
             </>
-          ) : (
-            <div className="flex flex-grow items-center justify-center p-10 font-semibold text-gray-500">
-              <p className="absolute left-1/2 -translate-x-1/2 transform">
-                You didn't delegate CREDIT
-              </p>
-            </div>
           )}
         </table>
       </div>

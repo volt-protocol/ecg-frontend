@@ -38,7 +38,13 @@ import { AiOutlineQuestionCircle } from "react-icons/ai";
 import { Step } from "components/stepLoader/stepType";
 import StepModal from "components/stepLoader";
 import { MdOutlineError } from "react-icons/md";
-import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
+import {
+  FaArrowLeft,
+  FaArrowRight,
+  FaSort,
+  FaSortDown,
+  FaSortUp,
+} from "react-icons/fa";
 
 const columnHelper = createColumnHelper<loanObj>();
 
@@ -75,6 +81,7 @@ function Myloans({
   const [showModal, setShowModal] = useState(false);
   const [tableDataWithDebts, setTableDataWithDebts] = useState<loanObj[]>([]);
   const [repays, setRepays] = React.useState<Record<string, number>>({});
+  const [minRepayPercent, setMinRepayPercent] = useState<bigint>(BigInt(0));
 
   const createSteps = (): Step[] => {
     const baseSteps = [
@@ -153,33 +160,37 @@ function Myloans({
 
     useEffect(() => {
       setMatch(
-        inputValue >=
-          preciseRound(
-            DecimalToUnit(original.borrowAmount, 18) +
-              DecimalToUnit(original.loanDebt, 18),
-            2
-          )
+        inputValue >= preciseRound(DecimalToUnit(original.loanDebt, 18), 2)
       );
     }, [inputValue, original.borrowAmount]);
 
+    async function getMinRepay() {
+      const result = await readContract({
+        address: smartContractAddress as Address,
+        abi: termAbi,
+        functionName: "minPartialRepayPercent",
+      });
+      
+      setMinRepayPercent(result as bigint);
+
+    }
+    useEffect(() => {
+      getMinRepay();
+    }
+    , [original.id])
+
+
+
     return (
-      <div className="flex items-center">
+      <div className="flex flex-col items-center space-y-2 3xl:flex-row 3xl:space-y-0 ">
         <input
           type="number"
           ref={inputRefs.current[original.id]}
           value={inputValue}
           onChange={(e) => {
-            if (
-              Number(e.target.value) >
-              DecimalToUnit(original.borrowAmount, 18) +
-                DecimalToUnit(original.loanDebt, 18)
-            )
+            if (Number(e.target.value) > DecimalToUnit(original.loanDebt, 18))
               setInputValue(
-                preciseRound(
-                  DecimalToUnit(original.borrowAmount, 18) +
-                    DecimalToUnit(original.loanDebt, 18),
-                  2
-                )
+                preciseRound(DecimalToUnit(original.loanDebt, 18), 2)
               );
             else setInputValue(e.target.value);
           }}
@@ -191,19 +202,18 @@ function Myloans({
             match
               ? repay(
                   original.id,
-                  original.borrowAmount +
-                    original.loanDebt +
-                    (original.borrowAmount * BigInt(5)) / BigInt(100000)
+                  original.loanDebt +
+                    (original.loanDebt * BigInt(5)) / BigInt(10000000)
                 )
               : partialRepay(original.id)
           }
-          className={`min-w-[8rem] rounded-2xl bg-gradient-to-br px-3 py-1 text-white ${
+          className={`mr-2 min-w-[9rem] rounded-2xl bg-gradient-to-br px-3 py-2 text-white ${
             match
               ? "bg-green-500"
               : " from-[#868CFF] via-[#432CF3] to-brand-500"
           }`}
         >
-          {match ? "Repay" : "Partial Repay"}
+          {match ? "Repay Amount" : "Partial Repay"}
         </button>
       </div>
     );
@@ -212,57 +222,9 @@ function Myloans({
   let defaultData = tableDataWithDebts;
 
   const columns = [
-    columnHelper.accessor("id", {
-      id: "loadId",
-      header: "Loan ID",
-      cell: (info) => {
-        const currentDateInSeconds = Date.now() / 1000;
-        const sumOfTimestamps =
-          repays[info.row.original.id] + maxDelayBetweenPartialRepay;
-        const nextPaymentDue =
-          maxDelayBetweenPartialRepay === 0
-            ? "n/a"
-            : Number.isNaN(sumOfTimestamps)
-            ? "--"
-            : sumOfTimestamps < currentDateInSeconds
-            ? "Overdue"
-            : secondsToAppropriateUnit(sumOfTimestamps - currentDateInSeconds);
-
-        if (nextPaymentDue == "n/a") {
-          return <p>{info.getValue().slice(0, 8)}</p>;
-        }
-        return (
-          <>
-            <TooltipHorizon
-              extra=""
-              content={
-                <div className=" space-y-4 p-2 ">
-                  <p>
-                    Next Payment Due : <strong>{nextPaymentDue}</strong>
-                  </p>
-                </div>
-              }
-              trigger={
-                <div className="absolute left-0 top-0 flex h-full w-full items-center space-x-1">
-                  <MdOutlineError
-                    className={`absolute left-0.5 ${
-                      nextPaymentDue === "Overdue"
-                        ? "text-red-500 dark:text-red-500"
-                        : "text-amber-500 dark:text-amber-300"
-                    }`}
-                  />
-                  <span className="pl-4">{info.getValue().slice(0, 6)}</span>
-                </div>
-              }
-              placement="left"
-            />
-          </>
-        );
-      },
-    }),
     {
       id: "ltv",
-      header: "LTV",
+      header: "Information",
       cell: (info: any) => {
         const borrowValue = DecimalToUnit(
           BigInt(
@@ -280,99 +242,121 @@ function Myloans({
           ),
           2
         );
-
+        const currentDateInSeconds = Date.now() / 1000;
+        const sumOfTimestamps =
+          repays[info.row.original.id] + maxDelayBetweenPartialRepay;
+        const nextPaymentDue =
+          maxDelayBetweenPartialRepay === 0
+            ? "n/a"
+            : Number.isNaN(sumOfTimestamps)
+            ? "--"
+            : sumOfTimestamps < currentDateInSeconds
+            ? "Overdue"
+            : secondsToAppropriateUnit(sumOfTimestamps - currentDateInSeconds);
         return (
-          <TooltipHorizon
-            extra="dark:text-white"
-            content={
-              <div className="space-y-4 p-2">
+          <>
+            <div className="min-w-[250px] flex-col space-y-4  p-2">
+              <div>
                 <div>
                   <p>
-                    Collateral Amount :{" "}
-                    <span className="font-semibold">
+                    TLV :{" "}
+                    <strong>
                       {" "}
                       {preciseRound(
-                        DecimalToUnit(
-                          info.row.original.collateralAmount,
-                          collateralDecimals
-                        ),
+                        (Number(
+                          info.row.original.borrowAmount *
+                            info.row.original.borrowCreditMultiplier
+                        ) /
+                          1e18 /
+                          1e18 /
+                          ((collateralPrice *
+                            Number(info.row.original.collateralAmount)) /
+                            UnitToDecimal(1, collateralDecimals))) *
+                          100,
                         2
                       )}
-                    </span>{" "}
-                    {collateralName}
-                  </p>
-                  <p>
-                    Collateral Value :{" "}
-                    <span className="font-semibold">{collateralValue}</span> $
+                    </strong>
+                    %
                   </p>
                 </div>
-                <div>
-                  <p>
-                    Debt Amount :{" "}
-                    <strong>
-                      {preciseRound(
-                        DecimalToUnit(info.row.original.loanDebt, 18),
-                        2
-                      )}
-                    </strong>{" "}
-                    CREDIT
-                  </p>
-                  <p>
-                    Debt Value : <strong>{preciseRound(borrowValue, 2)}</strong>{" "}
-                    USDC
-                  </p>
-                  <p>
-                    Debt Value :{" "}
-                    <strong>{preciseRound(borrowValue * pegPrice, 2)}</strong> $
-                  </p>
-                </div>
-                <div>
-                  <p>
-                    Unit Collateral Price:{" "}
-                    <span className="font-semibold">
-                      {preciseRound(collateralPrice, 2)}
-                    </span>{" "}
-                    $
-                  </p>
-                  <p>
-                    Unit USDC Price:{" "}
-                    <span className="font-semibold">
-                      {preciseRound(pegPrice, 6)}
-                    </span>{" "}
-                    $
-                  </p>
-                  <p>
-                    <br />
-                    <i>Price source: Coingecko API</i>
-                  </p>
-                </div>
-              </div>
-            }
-            trigger={
-              <div className="absolute left-0 top-0 flex h-full w-full items-center">
                 <p>
-                  {preciseRound(
-                    (Number(
-                      info.row.original.borrowAmount *
-                        info.row.original.borrowCreditMultiplier
-                    ) /
-                      1e18 /
-                      1e18 /
-                      ((collateralPrice *
-                        Number(info.row.original.collateralAmount)) /
-                        UnitToDecimal(1, collateralDecimals))) *
-                      100,
-                    2
-                  )}
-                  %
+                  Collateral Amount :{" "}
+                  <span className="font-semibold">
+                    {" "}
+                    {preciseRound(
+                      DecimalToUnit(
+                        info.row.original.collateralAmount,
+                        collateralDecimals
+                      ),
+                      2
+                    )}
+                  </span>{" "}
+                  {collateralName}
                 </p>
-                <div className="mb-2 ml-1">
-                  <AiOutlineQuestionCircle color="gray" />
-                </div>
+                <p>
+                  Collateral Value :{" "}
+                  <span className="font-semibold">{collateralValue}</span> $
+                </p>
               </div>
-            }
-            placement="right"
-          />
+              <div>
+                <p>
+                  Debt Amount :{" "}
+                  <strong>
+                    {preciseRound(
+                      DecimalToUnit(info.row.original.loanDebt, 18),
+                      2
+                    )}
+                  </strong>{" "}
+                  CREDIT
+                </p>
+                <p>
+                  Debt Value : <strong>{preciseRound(borrowValue, 2)}</strong>{" "}
+                  USDC
+                </p>
+                <p>
+                  Debt Value :{" "}
+                  <strong>{preciseRound(borrowValue * pegPrice, 2)}</strong> $
+                </p>
+              </div>
+
+              <div>
+                <p>
+                  Unit Collateral Price:{" "}
+                  <span className="font-semibold">
+                    {preciseRound(collateralPrice, 2)}
+                  </span>{" "}
+                  $
+                </p>
+                <p>
+                  Unit USDC Price:{" "}
+                  <span className="font-semibold">
+                    {preciseRound(pegPrice, 6)}
+                  </span>{" "}
+                  $
+                </p>
+                  {nextPaymentDue !== "n/a" && (
+                    <>
+                  <div className=" flex items-center space-x-1">
+                    <p>
+                      Next Payment Due : <strong>{nextPaymentDue}</strong>
+                    </p>
+                    <MdOutlineError
+                      className={` absolute left-1.5 ${
+                        nextPaymentDue === "Overdue"
+                          ? "text-red-500 dark:text-red-500"
+                          : "text-amber-500 dark:text-amber-300"
+                      }`}
+                    />
+                  </div>
+                  <p>Min to repay : <strong>{preciseRound(DecimalToUnit(info.row.original.borrowAmount,18)*DecimalToUnit(minRepayPercent,18),2)}</strong> CREDIT</p>
+                  </>)}
+                <p>
+                  <br />
+                  <i>Price source: Coingecko API</i>
+                </p>
+              </div>
+            </div>
+          </>
         );
       },
     },
@@ -393,6 +377,7 @@ function Myloans({
         loan.borrower === address
     )
   );
+
   useEffect(() => {
     setData(
       defaultData.filter(
@@ -573,6 +558,13 @@ function Myloans({
 
   const isPrevPageAvailable = currentPage > 1;
   const isNextPageAvailable = currentPage < Math.ceil(data.length / pageSize);
+  const [selectedLoan, setSelectedLoan] = useState(data[0]);
+
+  useEffect(() => {
+    if (data && data.length > 0) {
+      setSelectedLoan(data[0]);
+    }
+  }, [data]);
   return (
     <>
       {showModal && (
@@ -588,6 +580,21 @@ function Myloans({
         <div className="text-xl font-bold text-navy-700 dark:text-white">
           My Active Loans
         </div>
+        {data && data.length > 0 && (
+          <select
+            value={selectedLoan?.id}
+            onChange={(e) => {
+              const selected = data.find((loan) => loan.id === e.target.value);
+              setSelectedLoan(selected);
+            }}
+          >
+            {data.map((loan) => (
+              <option key={loan.id} value={loan.id}>
+                {loan.id.slice(0, 6)}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
       {!isConnected ? (
         <div className="flex flex-grow items-center justify-center font-semibold text-gray-500 ">
@@ -599,7 +606,9 @@ function Myloans({
           <p>You do not have active loans on this term yet</p>
         </div>
       ) : (
+     
         <div className="mt-8 h-full  overflow-auto xl:overflow-auto">
+          {selectedLoan ?(<p><strong>Loan ID : </strong>{selectedLoan.id.slice(0,6)+'...'+selectedLoan.id.slice(-6) }</p>) : ""}
           <table className="w-full">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -615,15 +624,17 @@ function Myloans({
                         onClick={header.column.getToggleSortingHandler()}
                         className="cursor-pointer border-b-[1px] border-gray-200 pb-2 pr-4 pt-4 text-start"
                       >
-                        <div className="text-gray-black items-center justify-between text-xs ">
+                        <div
+                          className={`text-gray-black flex items-center  text-xs ${
+                            header.id === "loadId" || header.id === "borrower"
+                              ? "font-mono"
+                              : ""
+                          } `}
+                        >
                           {flexRender(
                             header.column.columnDef.header,
                             header.getContext()
                           )}
-                          {{
-                            asc: "",
-                            desc: "",
-                          }[header.column.getIsSorted() as string] ?? null}
                         </div>
                       </th>
                     );
@@ -634,10 +645,7 @@ function Myloans({
             <tbody>
               {table
                 .getRowModel()
-                .rows.slice(
-                  (currentPage - 1) * pageSize,
-                  currentPage * pageSize
-                )
+                .rows.filter((row) => row.original.id === selectedLoan?.id)
                 .map((row) => {
                   return (
                     <tr key={row.id}>
@@ -645,7 +653,9 @@ function Myloans({
                         return (
                           <td
                             key={cell.id}
-                            className="border-whit e/0 relative min-w-[85px] py-3   pr-4 lg:min-w-[90px]  xl:min-w-[95px] 3xl:min-w-[150px]"
+                            className={`${
+                              cell.id === "ltv" ? "w-[400px]" : ""
+                            }`}
                           >
                             {flexRender(
                               cell.column.columnDef.cell,
@@ -659,38 +669,9 @@ function Myloans({
                 })}
             </tbody>
           </table>
-          {data.length > pageSize && (
-            <div className=" pagination-controls  absolute bottom-2 right-2 flex justify-end">
-              <button
-                onClick={goToPreviousPage}
-                disabled={!isPrevPageAvailable}
-                className={`${
-                  !isPrevPageAvailable
-                    ? "cursor-not-allowed text-gray-400"
-                    : "cursor-pointer text-black"
-                }`}
-              >
-                <FaArrowLeft />
-              </button>
-
-              <span className="mx-2">{currentPage}</span>
-
-              <button
-                onClick={goToNextPage}
-                disabled={!isNextPageAvailable}
-                className={`${
-                  !isNextPageAvailable
-                    ? "cursor-not-allowed text-gray-400"
-                    : "cursor-pointer text-black"
-                }`}
-              >
-                <FaArrowRight />
-              </button>
-            </div>
-          )}
         </div>
       )}
-</>
+    </>
   );
 }
 

@@ -36,7 +36,7 @@ import axios from "axios";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
 import { Step } from "components/stepLoader/stepType";
 import StepModal from "components/stepLoader";
-import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
+import { FaArrowLeft, FaArrowRight, FaSort, FaSortDown, FaSortUp } from "react-icons/fa";
 
 const columnHelper = createColumnHelper<loanObj>();
 
@@ -428,6 +428,16 @@ function ActiveLoans({
       },
     },
     {
+      id:"DebtAmount",
+      header:"Debt Amount",
+      cell :(info:any)=>(
+        <p>{preciseRound(
+          DecimalToUnit(info.row.original.loanDebt, 18),
+          2
+        )} CREDIT</p>
+      )
+    },
+    {
       id: "nextPaymentDue",
       header: "Next Payment Due",
       cell: (info: any) => {
@@ -551,7 +561,7 @@ function ActiveLoans({
                         className="cursor-pointer border-b-[1px] border-gray-200 pb-2 pr-4 pt-4 text-start"
                       >
                         <div
-                          className={`text-gray-black items-center justify-between text-xs ${
+                          className={`flex text-gray-black items-center  text-xs ${
                             header.id === "loadId" || header.id === "borrower"
                               ? "font-mono"
                               : ""
@@ -562,9 +572,19 @@ function ActiveLoans({
                             header.getContext()
                           )}
                           {{
-                            asc: "",
-                            desc: "",
-                          }[header.column.getIsSorted() as string] ?? null}
+                            asc: <FaSortDown />,
+                            desc:   <FaSortUp />,
+                            null: <FaSort />,
+                          }[header.column.getIsSorted() as string] ??  <FaSort />}
+                          {/* Icons for sorting indication */}
+                      {/* {
+                       
+                        header.column.toggleSorting ? (
+                          <FaSortDown />
+                        ) : (
+                          <FaSortUp />
+                        )
+                      } */}
                         </div>
                       </th>
                     );

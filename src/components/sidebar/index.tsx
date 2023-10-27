@@ -16,25 +16,26 @@ const Sidebar = (props: {
       }`}
     >
       <span
-        className="absolute top-4 right-4 block cursor-pointer xl:hidden"
+        className="absolute right-4 top-4 block cursor-pointer xl:hidden"
         onClick={onClose}
       >
         <HiX />
       </span>
 
-      <div className={`mx-[56px] mt-[50px] flex items-center`}>
-        <div className="mt-1 ml-1 h-2.5 font-poppins text-[26px] font-bold uppercase text-navy-700 dark:text-white">
+      <div className={`mx-[30px] mt-[50px] flex flex-col items-center`}>
+        <div className="ml-1 mt-1 h-2.5 font-poppins text-[26px] font-bold uppercase text-navy-700 dark:text-white">
           Credit <span className="font-medium">Guild</span>
         </div>
+        <select className="mt-10 rounded-2xl border-primary border-2">
+          <option value="sepolia_usdc_market">Sepolia USDC Market</option>
+        </select>
       </div>
-      <div className="mt-[58px] mb-7 h-px bg-gray-300 dark:bg-white/30" />
+      <div className="mb-7 mt-[58px] h-px bg-gray-300 dark:bg-white/30" />
       {/* Nav item */}
-
       <ul className="mb-auto pt-1">
         <Links routes={routes} />
       </ul>
 
-   
       {/* Nav item end */}
     </div>
   );

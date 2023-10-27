@@ -35,7 +35,8 @@ const Navbar = (props: {
     const item:lendingTerms = store.lendingTermsState.find(
       (entry: lendingTerms) => entry.address === address
     );
-    return item ? `${item.label}` : null;
+
+    return item ? `${item.collateral+"-"+item.interestRate*100+"%"+"-"+preciseRound(item.borrowRatio,2)}` : null;
   }
   
 
@@ -65,7 +66,7 @@ const Navbar = (props: {
             to="#"
             className="font-bold capitalize hover:text-navy-700 dark:hover:text-white"
           > */}
-          
+              
             {brandText === "Lending Term Details" ? ('Lending Term: ' + TermName()) : brandText}
           {/* </Link> */}
         </p>

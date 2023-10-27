@@ -17,6 +17,8 @@ import SpinnerLoader from "components/spinner";
 import { useAccount } from "wagmi";
 import { Step } from "components/stepLoader/stepType";
 import StepModal from "components/stepLoader";
+import { BaseError, CallExecutionError, ContractFunctionExecutionError, RpcRequestError, decodeErrorResult } from "viem";
+import { getCallError } from "viem/utils";
 
 function AllocateGuild({
   textButton,
@@ -157,9 +159,18 @@ function AllocateGuild({
           updateStepStatus("Unstake", "Success");
           reload(true)
         } catch (e) {
+          if (e instanceof ContractFunctionExecutionError) {
+            console.log(e.shortMessage, "error");
+            console.log(typeof e);
+            updateStepStatus("Unstake", `Error : ${e.shortMessage}`);
+            return;
+        }
+        else{
           console.log(e);
           updateStepStatus("Unstake", "Error");
           return;
+        }
+
         }
       }
   }

@@ -149,6 +149,7 @@ function LendingTerm() {
       getTermsTotalCollateral();
       setUtilization(
         preciseRound(
+          
           (currentDebt / creditTotalSupply) *
             (gaugeWeight / totalWeight) *
             100,
@@ -413,7 +414,7 @@ function LendingTerm() {
                 <Widget
                   icon={<GiProgression className="h-6 w-6" />}
                   title={"Utilization"}
-                  subtitle={Utilization === "NaN" ? "-.--%" : Utilization + "%"}
+                  subtitle={Utilization === "NaN" ? "-.--%" :preciseRound( (currentDebt/debtCeilling)*100,2) + "%"}
                   extra={<AiOutlineQuestionCircle color="gray" />}
                 />
               }
@@ -447,10 +448,10 @@ function LendingTerm() {
                     Periodic Payment minimum size :{" "}
                     <span className="font-semibold">
                       {preciseRound(
-                        lendingTermData.minPartialRepayPercent * 100000,
+                        lendingTermData.minPartialRepayPercent ,
                         2
                       )}{" "}
-                      CREDIT per 100k CREDIT borrowed
+                      %
                     </span>
                   </p>
                   <p>
@@ -527,6 +528,8 @@ function LendingTerm() {
                 currentDebt={currentDebt}
                 availableDebt={debtCeilling-currentDebt}
                 collateralDecimals={lendingTermData.collateralDecimals}
+                maxDelayBetweenPartialRepay={
+                  lendingTermData.maxDelayBetweenPartialRepay  }
                 reload={setReload}
               />
             </Card>

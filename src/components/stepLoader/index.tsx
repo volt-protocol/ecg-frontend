@@ -16,7 +16,9 @@ function StepModal({
   const [showCloseButton, setShowCloseButton] = React.useState(false);
 
   useEffect(() => {
-    const hasError = steps.some((step) => step.status === "Error");
+    const hasError = steps.some((step) =>
+      step.status.toLowerCase().includes("error")
+    );
     const allSuccess = steps.every((step) => step.status === "Success");
     if (hasError || allSuccess) {
       setShowCloseButton(true);
@@ -36,7 +38,7 @@ function StepModal({
         className="fixed inset-0 bg-black opacity-50 backdrop-blur-md"
         onClick={handleClose}
       ></div>
-      <div className="z-10 w-96 rounded-lg bg-white p-6 shadow-lg  dark:bg-navy-800 dark:text-white">
+      <div className="z-10 w-100 h-auto rounded-lg bg-white p-6 shadow-lg  dark:bg-navy-800 dark:text-white">
         <h2 className="mb-4 text-lg font-semibold ">Processing</h2>
         <div className="flex flex-col space-y-4">
           {steps.map((step, index) => (
@@ -52,15 +54,16 @@ function StepModal({
                 className={`flex h-8 w-8 items-center justify-center rounded-full  ${
                   step.status === "In Progress" ? "absolute" : ""
                 }  ${
-                  step.status === "Success"
+                  step.status.toLowerCase().includes("success")
                     ? "border-purple-500 bg-purple-500"
-                    : step.status === "Error"
+                    : step.status.toLowerCase().includes("error")
                     ? "border-red-500 bg-red-500"
                     : ""
                 }`}
               >
                 {index + 1}
               </div>
+
               <div className="ml-4">
                 <h3>{step.name}</h3>
                 <p className="text-sm text-gray-500">{step.status}</p>

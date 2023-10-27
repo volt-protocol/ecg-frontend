@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { Address, readContract, waitForTransaction, writeContract } from "@wagmi/core";
+import {
+  Address,
+  readContract,
+  waitForTransaction,
+  writeContract,
+} from "@wagmi/core";
 import { toastError, toastRocket } from "toast";
 import { creditAbi, guildAbi, surplusGuildMinterAbi } from "guildAbi";
 import { DecimalToUnit, UnitToDecimal, preciseRound } from "utils";
-import DefaultSpinner from "components/spinner";
-import SpinnerLoader from "components/spinner";
+import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 import { Step } from "components/stepLoader/stepType";
 import StepModal from "components/stepLoader";
 import { Delegatee } from "../..";
@@ -46,7 +50,6 @@ function DelegateGuild({
 
   const [steps, setSteps] = useState<Step[]>(createSteps());
 
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
 
@@ -68,7 +71,10 @@ function DelegateGuild({
     currencySelectorTicker: `mx-2`,
     currencySelectorArrow: `text-lg`,
     confirmButton: ` w-full bg-purple my-2 rounded-2xl py-4 px-8 text-xl font-semibold flex items-center justify-center cursor-pointer border border-purple hover:border-[#234169]  ${
-      value>notUsed || value <=0 || value==undefined || isAddress(addressValue)===false
+      value > notUsed ||
+      value <= 0 ||
+      value == undefined ||
+      isAddress(addressValue) === false
         ? "bg-gray-400  text-gray-700 !cursor-default"
         : "bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500  text-white"
     }  `,
@@ -81,33 +87,34 @@ function DelegateGuild({
       functionName: "delegates",
       args: [userAddress],
     });
-    console.log(result, "result")
+    console.log(result, "result");
     return result as string[];
   }
 
-  
- useEffect(() => {
-  const tempDelegatees: Delegatee[] = [];
-  async function getDelegateeAndVotes(delegatee: string): Promise<void> {
-    const result = await readContract({
-      address: import.meta.env.VITE_GUILD_ADDRESS as Address,
-      abi: guildAbi,
-      functionName: "delegatesVotesCount",
-      args: [userAddress, delegatee],
-    });
-    tempDelegatees.push({address: delegatee, votes: DecimalToUnit(result as bigint, 18)});
-    setDelegatees(tempDelegatees)
-  }
-  if (isConnected) {
-    setDelegatees([]);
-    getDelegatee().then((result) => {
-      result.forEach((delegatee) => {
-        getDelegateeAndVotes(delegatee);
+  useEffect(() => {
+    const tempDelegatees: Delegatee[] = [];
+    async function getDelegateeAndVotes(delegatee: string): Promise<void> {
+      const result = await readContract({
+        address: import.meta.env.VITE_GUILD_ADDRESS as Address,
+        abi: guildAbi,
+        functionName: "delegatesVotesCount",
+        args: [userAddress, delegatee],
       });
-    });
-  }
-}, [isConnected, notUsed]);
-   
+      tempDelegatees.push({
+        address: delegatee,
+        votes: DecimalToUnit(result as bigint, 18),
+      });
+      setDelegatees(tempDelegatees);
+    }
+    if (isConnected) {
+      setDelegatees([]);
+      getDelegatee().then((result) => {
+        result.forEach((delegatee) => {
+          getDelegateeAndVotes(delegatee);
+        });
+      });
+    }
+  }, [isConnected, notUsed]);
 
   // faire une fonction qui permet de check si c'est une addresse ethereum valide
   function isAddress(address: string): boolean {
@@ -140,14 +147,13 @@ function DelegateGuild({
       );
     };
     try {
-     
-    setShowModal(true);
-    updateStepStatus("Delegate GUILD", "In Progress");
+      setShowModal(true);
+      updateStepStatus("Delegate GUILD", "In Progress");
       const { hash } = await writeContract({
         address: import.meta.env.VITE_GUILD_ADDRESS,
         abi: guildAbi,
         functionName: "incrementDelegation",
-        args: [addressValue, UnitToDecimal(value,18)],
+        args: [addressValue, UnitToDecimal(value, 18)],
       });
 
       const checkdelegate = await waitForTransaction({
@@ -160,7 +166,7 @@ function DelegateGuild({
         return;
       }
 
-     updateStepStatus("Delegate GUILD", "Success");
+      updateStepStatus("Delegate GUILD", "Success");
       reloadGuild(true);
     } catch (e) {
       console.log(e);
@@ -251,7 +257,7 @@ function DelegateGuild({
   });
   return (
     <>
-    {showModal && (
+      {showModal && (
         <StepModal
           steps={steps}
           close={setShowModal}
@@ -273,7 +279,7 @@ function DelegateGuild({
             {notUsed != undefined ? (
               <>
                 <span className="font-semibold">
-                  {preciseRound( notUsed, 2)}
+                  {preciseRound(notUsed, 2)}
                 </span>{" "}
                 /{" "}
                 <span className="font-semibold">
@@ -287,7 +293,9 @@ function DelegateGuild({
           <p>
             Your GUILD voting weight:{" "}
             <span className="font-semibold">
-              {guildReceived != undefined ? preciseRound(guildReceived+notUsed, 2) : "?"}
+              {guildReceived != undefined
+                ? preciseRound(guildReceived + notUsed, 2)
+                : "?"}
             </span>
           </p>
         </div>
@@ -316,14 +324,21 @@ function DelegateGuild({
         </div>
         <button
           onClick={handledelegate}
-          disabled={value>notUsed || value <=0 || value==undefined  || isAddress(addressValue)===false ? true : false}
+          disabled={
+            value > notUsed ||
+            value <= 0 ||
+            value == undefined ||
+            isAddress(addressValue) === false
+              ? true
+              : false
+          }
           className={`${style.confirmButton} `}
         >
           Delegate GUILD
         </button>
       </div>
       <div>
-      <table className="w-full ">
+        <table className="w-full ">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="!border-px !border-gray-400">
@@ -334,11 +349,31 @@ function DelegateGuild({
                     onClick={header.column.getToggleSortingHandler()}
                     className="cursor-pointer border-b-[1px] border-gray-200 pb-2 pr-4 pt-4 text-start"
                   >
-                    <div className="text-gray-black items-center justify-between text-xs ">
+                    <div
+                      className={`text-gray-black flex items-center  text-xs ${
+                        header.id === "loadId" || header.id === "borrower"
+                          ? "font-mono"
+                          : ""
+                      } `}
+                    >
                       {flexRender(
                         header.column.columnDef.header,
                         header.getContext()
                       )}
+                      {{
+                        asc: <FaSortDown />,
+                        desc: <FaSortUp />,
+                        null: <FaSort />,
+                      }[header.column.getIsSorted() as string] ?? <FaSort />}
+                      {/* Icons for sorting indication */}
+                      {/* {
+                       
+                        header.column.toggleSorting ? (
+                          <FaSortDown />
+                        ) : (
+                          <FaSortUp />
+                        )
+                      } */}
                     </div>
                   </th>
                 ))}
@@ -347,7 +382,7 @@ function DelegateGuild({
           </thead>
           {!isConnected ? (
             <div className="flex flex-grow items-center justify-center p-10 font-semibold text-gray-500">
-              <p className="absolute text-center left-1/2 -translate-x-1/2 transform">
+              <p className="absolute left-1/2 -translate-x-1/2 transform text-center">
                 You have to connect your wallet to see your delegatees
               </p>
             </div>

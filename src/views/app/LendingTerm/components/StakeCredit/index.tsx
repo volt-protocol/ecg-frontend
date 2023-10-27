@@ -20,6 +20,7 @@ import { useAccount } from "wagmi";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
 import { Step } from "components/stepLoader/stepType";
 import StepModal from "components/stepLoader";
+import { ContractFunctionExecutionError } from "viem";
 
 function Stake({
   allocatedCredit,
@@ -209,10 +210,13 @@ function Stake({
             return;
           }
         } catch (e) {
-          console.log(e);
-          updateStepStatus("Unstake", "Error");
-          return;
+          if (e instanceof ContractFunctionExecutionError) {
+            console.log(e.shortMessage, "error");
+            console.log(typeof e);
+            updateStepStatus("Unstake", `Error : ${e.shortMessage}`);
+            return;
         }
+      }
         updateStepStatus("Unstake", "Success");
         reload(true);
       }

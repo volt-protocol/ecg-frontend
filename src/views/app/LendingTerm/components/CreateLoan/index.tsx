@@ -13,11 +13,12 @@ import {
   formatCurrencyValue,
   preciseCeil,
   preciseRound,
+  secondsToAppropriateUnit,
   signTransferPermit,
 } from "utils";
 import { Address } from "viem";
 import { useAccount } from "wagmi";
-
+import moment from 'moment';
 function CreateLoan({
   name,
   contractAddress,
@@ -28,6 +29,7 @@ function CreateLoan({
   borrowRatio,
   currentDebt,
   availableDebt,
+  maxDelayBetweenPartialRepay,
   reload
 }: {
   name: string;
@@ -40,6 +42,7 @@ function CreateLoan({
   callFee: number;
   currentDebt: number;
   availableDebt: number;
+  maxDelayBetweenPartialRepay: number;
   reload: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const [borrowAmount, setBorrowAmount] = useState<number>(0);
@@ -54,14 +57,16 @@ function CreateLoan({
   const [preciseBorrowRatio, setPreciseBorrowRatio] = useState<bigint>(
     BigInt(0)
   );
+  const [minToRepay, setMinToRepay] = useState<string>("");
+  const [paymentDate, setPaymentDate] = useState<moment.Moment | null>(null);
   const createSteps = (): Step[] => {
     const baseSteps = [
-      { name: "Approve", status: "Not Started" },
+      { name: `Approve ${name}`, status: "Not Started" },
       { name: "Borrow", status: "Not Started" },
     ];
 
     if (openingFee > 0) {
-      baseSteps.splice(1, 0, { name: "Approve Credit", status: "Not Started" });
+      baseSteps.splice(1, 0, { name: "Approve CREDIT", status: "Not Started" });
     }
 
     return baseSteps;
@@ -108,35 +113,35 @@ function CreateLoan({
       );
     };
     setShowModal(true);
-    updateStepStatus("Approve", "In Progress");
+    updateStepStatus(`Approve ${name}`, "In Progress");
     // approve collateral first
     try {
       const approve = await writeContract({
         address: collateralAddress,
         abi: usdcAbi,
         functionName: "approve",
-        args: [contractAddress, preciseBorrowRatio],
+        args: [contractAddress, UnitToDecimal(collateralAmount,collateralDecimals)>preciseBorrowRatio?UnitToDecimal(collateralAmount,collateralDecimals):preciseBorrowRatio],
       });
       const checkApprove = await waitForTransaction({
         hash: approve.hash,
       });
 
       if (checkApprove.status != "success") {
-        updateStepStatus("Approve", "Error");
+        updateStepStatus(`Approve ${name}`, "Error");
         setLoading(false);
         return;
       }
     } catch (e) {
       console.log(e);
-      updateStepStatus("Approve", "Error");
+      updateStepStatus(`Approve ${name}`, "Error");
       return;
     }
 
-    updateStepStatus("Approve", "Success");
+    updateStepStatus(`Approve ${name}`, "Success");
 
     // check si il y a un  open fees ==> approve credit
     if (openingFee > 0) {
-      updateStepStatus("Approve Credit", "In Progress");
+      updateStepStatus("Approve CREDIT", "In Progress");
       try {
         const approveCredit = await writeContract({
           address: import.meta.env.VITE_CREDIT_ADDRESS,
@@ -149,13 +154,13 @@ function CreateLoan({
         });
 
         if (checkApproveCredit.status != "success") {
-          updateStepStatus("Approve Credit", "Error");
+          updateStepStatus("Approve CREDIT", "Error");
           return;
         }
-        updateStepStatus("Approve Credit", "Success");
+        updateStepStatus("Approve CREDIT", "Success");
       } catch (e) {
         console.log(e);
-        updateStepStatus("Approve Credit", "Error");
+        updateStepStatus("Approve CREDIT", "Error");
         return;
       }
     }
@@ -206,7 +211,7 @@ function CreateLoan({
     const inputValue = e.target.value;
 
     // Vérifier si la valeur saisie ne contient que des numéros
-    if (/^\d*$/.test(inputValue) && inputValue != "") {
+    if (/^\d*\.?\d*$/.test(inputValue) && inputValue != "") {
       setBorrowAmount(parseFloat(inputValue));
     } else setBorrowAmount(0);
   };
@@ -214,7 +219,7 @@ function CreateLoan({
     const inputValue = e.target.value;
 
     // Vérifier si la valeur saisie ne contient que des numéros
-    if (/^\d*$/.test(inputValue) && inputValue != "") {
+    if (/^\d*\.?\d*$/.test(inputValue) && inputValue != "") {
       setCollateralAmount(parseFloat(inputValue));
     } else setBorrowAmount(0);
   };
@@ -238,8 +243,18 @@ function CreateLoan({
     setPreciseBorrowRatio(preciseBorrowRatio);
   }
 
+    async function getMinToRepay() {
+      const minToRepay = await readContract({
+        address: contractAddress as Address,
+        abi: termAbi,
+        functionName: "minPartialRepayPercent",
+      });
+      setMinToRepay(preciseRound(DecimalToUnit(minToRepay as bigint,18)*borrowAmount,2));
+    }
+
   useEffect(() => {
     getPrecicseBorrowRatio();
+    getMinToRepay();
   }, [borrowAmount]);
 
   // setBigIntCollateralAmount(BigInt(UnitToDecimal(borrowAmount,collateralDecimals).toString())/BigInt(1e18 *borrowRatio))
@@ -250,6 +265,12 @@ function CreateLoan({
     setCollateralAmount(collateralAmount);
     setMinCollateralAmount(collateralAmount);
   }, [borrowAmount]);
+
+  useEffect(() => {
+    const currentDate = moment();
+    const newDate = currentDate.add(maxDelayBetweenPartialRepay, 'seconds');
+    setPaymentDate(newDate);
+}, [maxDelayBetweenPartialRepay]);
   return (
     <>
       {showModal && (
@@ -324,6 +345,14 @@ function CreateLoan({
                   {preciseRound(borrowAmount * openingFee, 2)} CREDIT{" "}
                 </span>{" "}
                 to open this loan
+              </p>
+            </div>
+          )}
+           {maxDelayBetweenPartialRepay > 0 && (
+            <div className="my-2 flex items-start ">
+              <MdOutlineError className="mt-1.5 mr-0.5 text-amber-500 dark:text-amber-300" />
+              <p>
+              You will have to repay <strong>{minToRepay}</strong> CREDIT by <strong>{paymentDate?.format('DD/MM/YYYY HH:mm:ss')}</strong>  or your loan will be <strong> called</strong>
               </p>
             </div>
           )}

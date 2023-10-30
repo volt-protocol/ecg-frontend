@@ -84,8 +84,8 @@ function DelegateCredit({
   };
   async function getDelegatee(): Promise<string[]> {
     const result = await readContract({
-      address: import.meta.env.VITE_GUILD_ADDRESS as Address,
-      abi: guildAbi,
+      address: import.meta.env.VITE_CREDIT_ADDRESS as Address,
+      abi: creditAbi,
       functionName: "delegates",
       args: [userAddress],
     });
@@ -102,6 +102,7 @@ function DelegateCredit({
         functionName: "delegatesVotesCount",
         args: [userAddress, delegatee],
       });
+      console.log(result, "result2")
       if (result != BigInt(0)) {
         tempDelegatees.push({
           address: delegatee,

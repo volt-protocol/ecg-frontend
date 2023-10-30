@@ -38,7 +38,7 @@ function StepModal({
         className="fixed inset-0 bg-black opacity-50 backdrop-blur-md"
         onClick={handleClose}
       ></div>
-      <div className="z-10 w-100 h-auto rounded-lg bg-white p-6 shadow-lg  dark:bg-navy-800 dark:text-white">
+      <div className="z-10 min-w-[400px] h-auto rounded-lg bg-white p-6 shadow-lg  dark:bg-navy-800 dark:text-white">
         <h2 className="mb-4 text-lg font-semibold ">Processing</h2>
         <div className="flex flex-col space-y-4">
           {steps.map((step, index) => (

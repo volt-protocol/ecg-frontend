@@ -42,9 +42,9 @@ function DelegateGuild({
   const [delegatees, setDelegatees] = useState<Delegatee[]>([]);
   const createSteps = (actionType?: "Delegate" | "Undelegate"): Step[] => {
     if (actionType === "Delegate") {
-      return [{ name: "Delegate CREDIT", status: "Not Started" }];
+      return [{ name: "Delegate GUILD", status: "Not Started" }];
     } else {
-      return [{ name: "Undelegate CREDIT", status: "Not Started" }];
+      return [{ name: "Undelegate GUILD", status: "Not Started" }];
     }
   };
 
@@ -148,6 +148,7 @@ function DelegateGuild({
     };
     try {
       setShowModal(true);
+      setSteps(createSteps("Delegate"));
       updateStepStatus("Delegate GUILD", "In Progress");
       const { hash } = await writeContract({
         address: import.meta.env.VITE_GUILD_ADDRESS,

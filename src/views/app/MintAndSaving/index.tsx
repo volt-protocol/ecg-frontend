@@ -15,6 +15,7 @@ import StepModal from "components/stepLoader";
 function MintAndSaving() {
   const [creditAvailable, setCreditAvailable] = React.useState(undefined);
   const { address, isConnected, isDisconnected } = useAccount();
+  const [reload, setReload] = React.useState<boolean>(false);
   const [loading, setLoading] = React.useState(false);
   const [profitSharing, setProfitSharing] = React.useState({
     creditSplit: "",
@@ -25,7 +26,7 @@ function MintAndSaving() {
   const [showModal, setShowModal] = useState(false);
   const createSteps = (): Step[] => {
     const baseSteps = [
-      { name: "Rebaising", status: "Not Started" },
+      { name: "Rebasing", status: "Not Started" },
     ];
     return baseSteps;
   };
@@ -55,8 +56,12 @@ function MintAndSaving() {
     if (isConnected) {
       getCreditAvailable();
       Rebasing();
+      setReload(false);
     }
-  }, [isConnected]);
+    else{
+      setIsRebasing(false);
+    }
+  }, [isConnected, reload]);
 
   useEffect(() => {
     async function getProfitSharing(): Promise<void> {
@@ -102,7 +107,7 @@ function MintAndSaving() {
     };
     try {
       setShowModal(true);
-      updateStepStatus("Rebaising", "In Progress");
+      updateStepStatus("Rebasing", "In Progress");
       const { hash } = await writeContract({
         address: import.meta.env.VITE_CREDIT_ADDRESS as Address,
         abi: creditAbi,
@@ -112,12 +117,13 @@ function MintAndSaving() {
         hash: hash,
       });
       if (checkStartSaving.status != "success") {
-        updateStepStatus("Rebaising", "Error");
+        updateStepStatus("Rebasing", "Error");
         return;
       }
-      updateStepStatus("Rebaising", "Success");
+      updateStepStatus("Rebasing", "Success");
+      setReload(true);
     } catch (error) {
-      updateStepStatus("Rebaising", "Error");
+      updateStepStatus("Rebasing", "Error");
       console.log(error);
     }
   }

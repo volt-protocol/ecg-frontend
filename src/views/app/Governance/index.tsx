@@ -12,6 +12,12 @@ import Delegate from "./components/DelegateGuild";
 import DelegateGuild from "./components/DelegateGuild";
 import DelegateCredit from "./components/DelegateCredit";
 import { get } from "api/base";
+import CreateNewTerm from "./components/CreateNewTerm";
+import OnboardTerm from "./components/OnboardTerm";
+import OffBoardTerm from "./components/OffboardTerm";
+import CurrentOnboardingProposals from "./components/CurrentOnboardingProposal";
+import CurrentOffboardingProposals from "./components/CurrentOffboardingProposals";
+import PendingSuccessfullProposals from "./components/PendingSuccessfulProposals";
 // import Delegate from './components/Delegate'
 
 export type Delegatee = {
@@ -68,6 +74,11 @@ function Governance() {
       setReloadGuild(false);
       console.log('test')
     }
+    else{
+      setGuildBalance(undefined);
+      setGuildNotUsed(undefined);
+      setGuildreceived(undefined);
+    }
   }, [isConnected, reloadGuild]);
 
   async function getCreditBalance(): Promise<void> {
@@ -105,6 +116,11 @@ function Governance() {
       getCreditreceived();
       setReloadCredit(false);
     }
+    else{
+      setCreditBalance(undefined);
+      setCreditNotUsed(undefined);
+      setCreditreceived(undefined);
+    }
   } , [isConnected, reloadCredit]);
 
 
@@ -136,7 +152,7 @@ function Governance() {
         />
       </div>
       <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-2">
-        <Card extra="order-4">
+        <Card >
           <div className=" rounded-xl px-6 mt-4 ">
             <h2 className="text-left text-xl font-bold text-navy-700 dark:text-white">
               Delegate GUILD
@@ -155,7 +171,7 @@ function Governance() {
             </div>
           </div>
         </Card>
-        <Card extra="order-4">
+        <Card >
           <div className=" rounded-xl px-6 mt-4 ">
             <h2 className="text-left text-xl font-bold text-navy-700 dark:text-white">
               Delegate CREDIT
@@ -172,6 +188,62 @@ function Governance() {
                 ></DelegateCredit>
               </div>
             </div>
+          </div>
+        </Card>
+        <Card>
+        <div className=" rounded-xl px-6 mt-4 ">
+            <h2 className="text-left text-xl font-bold text-navy-700 dark:text-white">
+            Create New Term
+            </h2>
+          <CreateNewTerm/>
+          </div>
+        </Card>
+        <Card>
+        <div className=" rounded-xl px-6 mt-4 ">
+            <h2 className="text-left text-xl font-bold text-navy-700 dark:text-white">
+            Onboard a New Term
+            </h2>
+          <OnboardTerm/>
+          </div>
+        </Card>
+        <Card>
+        <div className=" rounded-xl px-6 mt-4 ">
+            <h2 className="text-left text-xl font-bold text-navy-700 dark:text-white">
+            Onboard Term
+            </h2>
+          <OnboardTerm/>
+          </div>
+        </Card>
+        <Card>
+        <div className=" rounded-xl px-6 mt-4 ">
+            <h2 className="text-left text-xl font-bold text-navy-700 dark:text-white">
+            Offboard an Active Term
+            </h2>
+          <OffBoardTerm/>
+          </div>
+        </Card>
+        <Card>
+        <div className=" rounded-xl px-6 mt-4 ">
+            <h2 className="text-left text-xl font-bold text-navy-700 dark:text-white">
+            Current Onboarding Proposals
+            </h2>
+          <CurrentOnboardingProposals/>
+          </div>
+        </Card>
+        <Card>
+        <div className=" rounded-xl px-6 mt-4 ">
+            <h2 className="text-left text-xl font-bold text-navy-700 dark:text-white">
+            Current Offboarding Proposals
+            </h2>
+          <CurrentOffboardingProposals/>
+          </div>
+        </Card>
+        <Card>
+        <div className=" rounded-xl px-6 mt-4 ">
+            <h2 className="text-left text-xl font-bold text-navy-700 dark:text-white">
+            Current PendingS uccessfull Proposals
+            </h2>
+          <PendingSuccessfullProposals/>
           </div>
         </Card>
       </div>

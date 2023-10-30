@@ -41,9 +41,7 @@ function MintOrRedeem() {
 
   const [steps, setSteps] = useState<Step[]>(createSteps());
 
-  // borrow function :
-  //borrow amount
-  // collateral amount
+
   async function getUsdcBalance(): Promise<void> {
     const result = await readContract({
       address: import.meta.env.VITE_USDC_ADDRESS as Address,
@@ -98,7 +96,7 @@ function MintOrRedeem() {
       setCreditBalance(undefined);
       setUsdcBalance(undefined);
     }
-  }, [creditBalance, isConnected, reload]);
+  }, [creditBalance, isConnected, reload, status]);
 
   const updateStepStatus = (stepName: string, status: Step["status"]) => {
     setSteps((prevSteps) =>
@@ -170,7 +168,8 @@ function MintOrRedeem() {
     try {
       setShowModal(true);
       updateStepStatus("Approve", "In Progress");
-
+      updateStepName("Mint", "Redeem");
+      
       // approve collateral first
       const approve = await writeContract({
         address: import.meta.env.VITE_CREDIT_ADDRESS as Address,
@@ -197,7 +196,7 @@ function MintOrRedeem() {
       return;
     }
     try {
-      updateStepName("Mint", "Redeem");
+ 
       updateStepStatus("Redeem", "In Progress");
       const redeem = await writeContract({
         address: import.meta.env.VITE_PSM_USDC_ADDRESS as Address,
@@ -260,13 +259,13 @@ function MintOrRedeem() {
   useEffect(() => {
     if (valuetoSend != 0) {
       const valueToReceive: number = Number(
-        preciseRound(valuetoSend * conversionRate, 2)
+        preciseRound(valuetoSend / conversionRate, 2)
       );
       setValueToReceive(valueToReceive);
     } else {
       setValueToReceive(0);
     }
-  }, [valuetoSend]);
+  }, [valuetoSend, conversionRate]);
   return (
     <>
       <div className="mt-4 h-full rounded-xl text-black dark:text-white">

@@ -127,11 +127,18 @@ function AllocateGuild({
             return;
           }
         }
-        catch (e) {
-          console.log(e);
+        catch (e){
+          if (e instanceof ContractFunctionExecutionError) {
+            console.log(e.shortMessage, "error");
+            console.log(typeof e);
+            updateStepStatus("Stake", `Error : ${e.shortMessage.split(":")[1] + e.shortMessage.split(":")[2]}`);
+            return;
+        }
+        else{
           updateStepStatus("Stake", "Error");
           return;
         }
+      }
         updateStepStatus("Stake", "Success");
           reload(true)
       }
@@ -162,7 +169,7 @@ function AllocateGuild({
           if (e instanceof ContractFunctionExecutionError) {
             console.log(e.shortMessage, "error");
             console.log(typeof e);
-            updateStepStatus("Unstake", `Error : ${e.shortMessage}`);
+            updateStepStatus("Unstake", `Error : ${e.shortMessage.split(":")[1]+e.shortMessage.split(":")[2]}`);
             return;
         }
         else{
@@ -180,8 +187,8 @@ function AllocateGuild({
   function getDebtCeileing(): string {
     const percentBefore = gaugeWeight / totalWeight;
     const percentAfter = (gaugeWeight + Number(value)) / totalWeight;
-    const debCeilingBefore = creditTotalSupply * percentBefore * 1.2;
-    const debCeilingAfter = creditTotalSupply * percentAfter * 1.2;
+    const debCeilingBefore = creditTotalSupply * percentBefore * 2;
+    const debCeilingAfter = creditTotalSupply * percentAfter * 2;
     const debtCeilingIncrease = debCeilingAfter - debCeilingBefore;
     return formatCurrencyValue(Number(preciseRound(debtCeilingIncrease, 2)));
   }

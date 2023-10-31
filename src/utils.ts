@@ -48,12 +48,6 @@ function addOneToLastDecimalPlace(number: number, decimals: number): bigint {
   return result;
 }
 
-// function calculateCollateralAmount(borrowAmount:number, borrowRatio:number):string {
-//   const bigBorrowAmount = new Big(borrowAmount);
-//   const bigBorrowRatio = new Big(borrowRatio);
-//   const collateralAmount = bigBorrowAmount.div(bigBorrowRatio);
-//   return collateralAmount.toString(); // Convertir le résultat en chaîne de caractères si nécessaire
-// }
 
 
 

@@ -216,10 +216,10 @@ function Governance() {
         </Card>
         <Card>
         <div className=" rounded-xl px-6 mt-4 ">
-            <h2 className="text-left text-xl font-bold text-navy-700 dark:text-white">
-            Offboard an Active Term
-            </h2>
-          <OffBoardTerm/>
+           
+          <OffBoardTerm
+          notUsed={guildNotUsed}
+          />
           </div>
         </Card>
         <Card>

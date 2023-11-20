@@ -1,6 +1,6 @@
-import React, { Dispatch, SetStateAction, useEffect } from "react";
-import { Step } from "./stepType";
-import { Spinner } from "flowbite-react";
+import React, { Dispatch, SetStateAction, useEffect } from "react"
+import { Step } from "./stepType"
+import Spinner from 'components/spinner'
 
 function StepModal({
   steps,
@@ -8,47 +8,43 @@ function StepModal({
   initialStep,
   setSteps,
 }: {
-  steps: Step[];
-  close: Dispatch<SetStateAction<boolean>>;
-  initialStep: () => Step[];
-  setSteps: Dispatch<SetStateAction<Step[]>>;
+  steps: Step[]
+  close: Dispatch<SetStateAction<boolean>>
+  initialStep: () => Step[]
+  setSteps: Dispatch<SetStateAction<Step[]>>
 }) {
-  const [showCloseButton, setShowCloseButton] = React.useState(false);
+  const [showCloseButton, setShowCloseButton] = React.useState(false)
 
   useEffect(() => {
     const hasError = steps.some((step) =>
       step.status.toLowerCase().includes("error")
-    );
-    const allSuccess = steps.every((step) => step.status === "Success");
+    )
+    const allSuccess = steps.every((step) => step.status === "Success")
     if (hasError || allSuccess) {
-      setShowCloseButton(true);
+      setShowCloseButton(true)
     }
-  }, [steps]);
+  }, [steps])
 
   const handleClose = () => {
     if (showCloseButton) {
-      setSteps(initialStep());
-      close(false);
+      setSteps(initialStep())
+      close(false)
     }
-  };
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center text-black">
+    <div className="text-black fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-gray-500/50">
       <div
-        className="fixed inset-0 bg-black opacity-50 backdrop-blur-md"
+        className="bg-black fixed inset-0 opacity-50 "
         onClick={handleClose}
       ></div>
-      <div className="z-10 min-w-[400px] h-auto rounded-lg bg-white p-6 shadow-lg  dark:bg-navy-800 dark:text-white">
+      <div className="z-10 h-auto min-w-[400px] rounded-lg bg-white p-6 shadow-lg dark:bg-navy-800 dark:text-white dark:ring-navy-700 dark:ring-1">
         <h2 className="mb-4 text-lg font-semibold ">Processing</h2>
         <div className="flex flex-col space-y-4">
           {steps.map((step, index) => (
             <div key={step.name} className="flex items-center">
               {step.status === "In Progress" && (
-                <Spinner
-                  aria-label="Purple spinner example"
-                  color="purple"
-                  className="relative h-8 w-8"
-                />
+                <Spinner />
               )}
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full  ${
@@ -73,10 +69,10 @@ function StepModal({
         </div>
 
         {showCloseButton && (
-          <div className="flex w-full justify-end">
+          <div className="flex">
             <button
               onClick={handleClose}
-              className="   rounded-md  bg-gradient-to-br from-[#868CFF] via-[#432CF3] to-brand-500 px-4 py-2 text-white"
+              className="w-full mt-4 rounded-md bg-gray-100 px-3 py-1.5 text-sm ring-1 ring-inset ring-gray-200 transition-all duration-150 ease-in-out hover:ring-gray-300 dark:bg-navy-700 dark:ring-navy-600"
             >
               Fermer
             </button>
@@ -84,7 +80,7 @@ function StepModal({
         )}
       </div>
     </div>
-  );
+  )
 }
 
-export default StepModal;
+export default StepModal

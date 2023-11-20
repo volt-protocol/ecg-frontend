@@ -1,8 +1,8 @@
 const DashIcon = () => {
   return (
     <svg
-      width="20"
-      height="17"
+      width="18"
+      height="15"
       viewBox="0 0 20 17"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"

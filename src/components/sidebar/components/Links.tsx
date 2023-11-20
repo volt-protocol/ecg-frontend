@@ -1,61 +1,55 @@
 /* eslint-disable */
-import React from "react";
-import { Link, useLocation } from "react-router-dom";
-import DashIcon from "components/icons/DashIcon";
-// chakra imports
+import React from 'react';
+import { useCallback } from 'react';
+import { usePathname } from 'next/navigation';
+import NavLink from 'components/link/NavLink';
+import DashIcon from 'components/icons/DashIcon';
+import clsx from 'clsx';
 
 export const SidebarLinks = (props: { routes: RoutesType[] }): JSX.Element => {
   // Chakra color mode
-  let location = useLocation();
+  const pathname = usePathname();
 
   const { routes } = props;
 
   // verifies if routeName is the one active (in browser input)
-  const activeRoute = (routeName: string) => {
-    return location.pathname.includes(routeName);
-  };
+  const activeRoute = useCallback(
+    (routeName: string) => {
+      if(pathname == '/' && routeName == '') return true
+      else if(routeName != '') {
+        return pathname == '/'+routeName || pathname.includes('/'+routeName)
+      }
+    },
+    [pathname],
+  );
 
   const createLinks = (routes: RoutesType[]) => {
-    return routes.map((route, index) => {
-      if (
-        (route.layout === "/app" ||
-        route.layout === "/auth" ||
-        route.layout === "/rtl") &&
-        (route.showInSidebar === true)
-      ) {
-        return (
-          <Link key={index} to={route.layout + "/" + route.path}>
-            <div className="relative mb-3 flex hover:cursor-pointer">
-              <li
-                className="my-[3px] flex cursor-pointer items-center px-8"
-                key={index}
+    return routes.filter(item => item.show).map((route, index) => {
+      return (
+        <NavLink key={index} href={'/' + route.path}>
+          <div className={
+            clsx("relative py-2 mx-2 my-1 flex rounded-md hover:cursor-pointer transition-all ease-in duration-150",
+                activeRoute(route.path) === true
+                  ? 'font-semibold text-brand-500 dark:text-white bg-brand-100/50 dark:bg-brand-300/80'
+                  : 'font-medium text-gray-600 hover:text-gray-800 dark:text-gray-300 hover:bg-brand-100/30 dark:hover:bg-brand-500/50'
+          )}>
+            <li
+              className="my-[3px] flex cursor-pointer items-center px-8"
+              key={index}
+            >
+              <span>
+                {route.icon ? route.icon : <DashIcon />}{' '}
+              </span>
+              <p
+                className="leading-1 ml-4 flex"
               >
-                <span
-                  className={`${
-                    activeRoute(route.path) === true
-                      ? "font-bold text-brand-500 dark:text-white"
-                      : "font-medium text-gray-600"
-                  }`}
-                >
-                  {route.icon ? route.icon : <DashIcon />}{" "}
-                </span>
-                <p
-                  className={`leading-1 ml-4 flex ${
-                    activeRoute(route.path) === true
-                      ? "font-bold text-navy-700 dark:text-white"
-                      : "font-medium text-gray-600"
-                  }`}
-                >
-                  {route.name}
-                </p>
-              </li>
-              {activeRoute(route.path) ? (
-                <div className="absolute right-0 top-px h-9 w-1 rounded-lg bg-brand-500 dark:bg-brand-400" />
-              ) : null}
-            </div>
-          </Link>
-        );
-      }
+                {route.name}
+              </p>
+            </li>
+
+          </div>
+        </NavLink>
+      );
     });
   };
   // BRAND

@@ -1,93 +1,108 @@
 import { readContract, waitForTransaction, writeContract } from "@wagmi/core"
 import StepModal from "components/stepLoader"
 import { Step } from "components/stepLoader/stepType"
-import { TermABI, CreditABI, UsdcABI, ProfitManagerABI } from "lib/contracts"
-import React, { useEffect, useState } from "react"
-import { MdOutlineError, MdWarning } from "react-icons/md"
-import { toastError, toastRocket } from "components/toast"
 import {
-  DecimalToUnit,
-  UnitToDecimal,
-  formatCurrencyValue,
-  preciseRound,
-} from "utils/utils-old"
-import { Address } from "viem"
-import { useAccount } from "wagmi"
+  TermABI,
+  CreditABI,
+  UsdcABI,
+  ProfitManagerABI,
+  profitManagerContract,
+  creditContract,
+} from "lib/contracts"
+import React, { useEffect, useState } from "react"
+import { toastError } from "components/toast"
+import { UnitToDecimal } from "utils/utils-old"
+import { Abi, Address, formatUnits, parseEther, parseUnits } from "viem"
+import { erc20ABI, useAccount, useContractReads } from "wagmi"
 import moment from "moment"
-import { formatDecimal } from "utils/numbers"
-import { getInputStyle } from "./helper"
+import { formatCurrencyValue, formatDecimal } from "utils/numbers"
+import { AlertMessage } from "components/message/AlertMessage"
+import ButtonPrimary from "components/button/ButtonPrimary"
+import { LendingTerms } from "types/lending"
+import { getTitleDisabled } from "./helper"
+import DefiInputBox from "components/box/DefiInputBox"
 
 function CreateLoan({
-  name,
-  contractAddress,
-  collateralAddress,
-  collateralDecimals,
-  openingFee,
-  minBorrow,
-  borrowRatio,
-  currentDebt,
+  lendingTerm,
   availableDebt,
-  maxDelayBetweenPartialRepay,
+  creditMultiplier,
   reload,
 }: {
-  name: string
-  contractAddress: string
-  collateralAddress: string
-  collateralDecimals: number
-  openingFee: number
-  minBorrow: number
-  borrowRatio: number
-  callFee: number
-  currentDebt: number
+  lendingTerm: LendingTerms
   availableDebt: number
-  maxDelayBetweenPartialRepay: number
+  creditMultiplier: bigint
   reload: React.Dispatch<React.SetStateAction<boolean>>
 }) {
-  const [borrowAmount, setBorrowAmount] = useState<number>(0)
+  const [borrowAmount, setBorrowAmount] = useState<string>("")
   const [collateralAmount, setCollateralAmount] = useState<number>(0)
   const [minCollateralAmount, setMinCollateralAmount] = useState<number>(0)
-  const [permitMessage, setPermitMessage] = useState("")
   const [loading, setLoading] = useState(false)
-  const [collateralAmountAvailable, setCollateralAmountAvailable] =
-    useState<number>(0)
   const { address, isConnected, isConnecting } = useAccount()
   const [showModal, setShowModal] = useState(false)
-  const [preciseBorrowRatio, setPreciseBorrowRatio] = useState<bigint>(
-    BigInt(0)
-  )
+  const [preciseBorrowRatio, setPreciseBorrowRatio] = useState<bigint>(BigInt(0))
   const [minToRepay, setMinToRepay] = useState<string>("")
   const [paymentDate, setPaymentDate] = useState<moment.Moment | null>(null)
+
   const createSteps = (): Step[] => {
     const baseSteps = [
-      { name: `Approve ${name}`, status: "Not Started" },
+      { name: `Approve ${lendingTerm.collateral.name}`, status: "Not Started" },
       { name: "Borrow", status: "Not Started" },
     ]
 
-    if (openingFee > 0) {
-      baseSteps.splice(1, 0, { name: "Approve CREDIT", status: "Not Started" })
-    }
+    // if (lendingTerm.openingFee > 0) {
+    //   baseSteps.splice(1, 0, { name: "Approve gUSDC", status: "Not Started" })
+    // }
 
     return baseSteps
   }
 
   const [steps, setSteps] = useState<Step[]>(createSteps())
-  const inputStyles = getInputStyle(minBorrow, borrowAmount)
 
-  useEffect(() => {
-    async function getCollateralAmountAvailable(): Promise<void> {
-      const result = await readContract({
-        address: collateralAddress as Address,
-        abi: UsdcABI,
+  /* Smart contract reads */
+  const { data, isError, isLoading, refetch } = useContractReads({
+    contracts: [
+      {
+        address: lendingTerm.collateral.address as Address,
+        abi: erc20ABI as Abi,
         functionName: "balanceOf",
         args: [address],
-      })
-      setCollateralAmountAvailable(
-        DecimalToUnit(result as bigint, collateralDecimals)
-      )
-    }
-    getCollateralAmountAvailable()
-  }, [isConnected])
+      },
+      {
+        ...profitManagerContract,
+        functionName: "minBorrow",
+      },
+    ],
+    select: (data) => {
+      return {
+        collateralBalance: Number(
+          formatUnits(data[0].result as bigint, lendingTerm.collateral.decimals)
+        ),
+        minBorrow: Number(formatUnits(data[1].result as bigint, 18)),
+      }
+    },
+  })
+  /* End Smart contract reads */
 
+  useEffect(() => {
+    const preciseBorrowRatio = getPreciceBorrowRatio(borrowAmount)
+    setPreciseBorrowRatio(preciseBorrowRatio)
+    getMinToRepay()
+  }, [borrowAmount])
+
+  // setBigIntCollateralAmount(BigInt(UnitToDecimal(borrowAmount,collateralDecimals).toString())/BigInt(1e18 *borrowRatio))
+  useEffect(() => {
+    const collateralAmount: number = Number(borrowAmount) / lendingTerm.borrowRatio
+    setCollateralAmount(collateralAmount)
+    setMinCollateralAmount(collateralAmount)
+  }, [borrowAmount])
+
+  useEffect(() => {
+    const currentDate = moment()
+    const newDate = currentDate.add(lendingTerm.maxDelayBetweenPartialRepay, "seconds")
+    setPaymentDate(newDate)
+  }, [lendingTerm])
+
+  /* Smart contract writes */
   async function borrow() {
     if (isConnected == false) {
       toastError("Please connect your wallet")
@@ -96,34 +111,33 @@ function CreateLoan({
     }
 
     //check ratio
-    if (borrowAmount < minBorrow) {
-      toastError(`Borrow amount can't be below than ${minBorrow} `)
+    if (Number(borrowAmount) < data?.minBorrow) {
+      toastError(`Borrow amount can't be below than ${data?.minBorrow} `)
       return
     }
-    if (borrowAmount > availableDebt) {
+    if (Number(borrowAmount) > availableDebt) {
       toastError(`The max borrow amount is ${availableDebt} `)
       return
     }
     const updateStepStatus = (stepName: string, status: Step["status"]) => {
       setSteps((prevSteps) =>
-        prevSteps.map((step) =>
-          step.name === stepName ? { ...step, status } : step
-        )
+        prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step))
       )
     }
     setShowModal(true)
-    updateStepStatus(`Approve ${name}`, "In Progress")
+    updateStepStatus(`Approve ${lendingTerm.collateral.name}`, "In Progress")
     // approve collateral first
+
     try {
       const approve = await writeContract({
-        address: collateralAddress,
+        address: lendingTerm.collateral.address,
         abi: UsdcABI,
         functionName: "approve",
         args: [
-          contractAddress,
-          UnitToDecimal(collateralAmount, collateralDecimals) >
+          lendingTerm.address,
+          UnitToDecimal(collateralAmount, lendingTerm.collateral.decimals) >
           preciseBorrowRatio
-            ? UnitToDecimal(collateralAmount, collateralDecimals)
+            ? UnitToDecimal(collateralAmount, lendingTerm.collateral.decimals)
             : preciseBorrowRatio,
         ],
       })
@@ -132,51 +146,53 @@ function CreateLoan({
       })
 
       if (checkApprove.status != "success") {
-        updateStepStatus(`Approve ${name}`, "Error")
+        updateStepStatus(`Approve ${lendingTerm.collateral.name}`, "Error")
         setLoading(false)
         return
       }
     } catch (e) {
       console.log(e)
-      updateStepStatus(`Approve ${name}`, "Error")
+      updateStepStatus(`Approve ${lendingTerm.collateral.name}`, "Error")
       return
     }
 
-    updateStepStatus(`Approve ${name}`, "Success")
+    updateStepStatus(`Approve ${lendingTerm.collateral.name}`, "Success")
 
     // check si il y a un  open fees ==> approve credit
-    if (openingFee > 0) {
-      updateStepStatus("Approve CREDIT", "In Progress")
-      try {
-        const approveCredit = await writeContract({
-          address: process.env.NEXT_PUBLIC_CREDIT_ADDRESS,
-          abi: CreditABI,
-          functionName: "approve",
-          args: [contractAddress, UnitToDecimal(borrowAmount * openingFee, 18)],
-        })
-        const checkApproveCredit = await waitForTransaction({
-          hash: approveCredit.hash,
-        })
+    // if (lendingTerm.openingFee > 0) {
+    //   updateStepStatus("Approve gUSDC", "In Progress")
+    //   try {
+    //     const approveCredit = await writeContract({
+    //       ...creditContract,
+    //       functionName: "approve",
+    //       args: [
+    //         lendingTerm.address,
+    //         UnitToDecimal(borrowAmount * lendingTerm.openingFee, 18),
+    //       ],
+    //     })
+    //     const checkApproveCredit = await waitForTransaction({
+    //       hash: approveCredit.hash,
+    //     })
 
-        if (checkApproveCredit.status != "success") {
-          updateStepStatus("Approve CREDIT", "Error")
-          return
-        }
-        updateStepStatus("Approve CREDIT", "Success")
-      } catch (e) {
-        console.log(e)
-        updateStepStatus("Approve CREDIT", "Error")
-        return
-      }
-    }
+    //     if (checkApproveCredit.status != "success") {
+    //       updateStepStatus("Approve gUSDC", "Error")
+    //       return
+    //     }
+    //     updateStepStatus("Approve gUSDC", "Success")
+    //   } catch (e) {
+    //     console.log(e)
+    //     updateStepStatus("Approve gUSDC", "Error")
+    //     return
+    //   }
+    // }
 
     updateStepStatus("Borrow", "In Progress")
     try {
       const borrow = await writeContract({
-        address: contractAddress,
+        address: lendingTerm.address,
         abi: TermABI,
         functionName: "borrow",
-        args: [UnitToDecimal(borrowAmount, 18), preciseBorrowRatio],
+        args: [parseEther(borrowAmount.toString()), preciseBorrowRatio],
       })
       const checkBorrow = await waitForTransaction({
         hash: borrow.hash,
@@ -184,6 +200,7 @@ function CreateLoan({
 
       if (checkBorrow.status === "success") {
         reload(true)
+        setBorrowAmount("")
         updateStepStatus("Borrow", "Success")
         return
       } else updateStepStatus("Borrow", "Error")
@@ -193,73 +210,49 @@ function CreateLoan({
       return
     }
   }
+  /* End Smart contract writes */
 
+  /* Handlers and getters */
   const handleBorrowChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value
 
     // Vérifier si la valeur saisie ne contient que des numéros
-    if (/^\d*\.?\d*$/.test(inputValue) && inputValue != "") {
-      setBorrowAmount(parseFloat(inputValue))
-    } else setBorrowAmount(0)
-  }
-  const handleCollatteralChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value
-
-    // Vérifier si la valeur saisie ne contient que des numéros
-    if (/^\d*\.?\d*$/.test(inputValue) && inputValue != "") {
-      setCollateralAmount(parseFloat(inputValue))
-    } else setBorrowAmount(0)
+    if (/^\d*$/.test(inputValue)) {
+      setBorrowAmount(inputValue as string)
+    }
   }
 
-  async function getPrecicseBorrowRatio() {
-    const borrowRatio = await readContract({
-      address: contractAddress as Address,
-      abi: TermABI,
-      functionName: "maxDebtPerCollateralToken",
-    })
+  const setMax = () => {
+    const maxBorrow = data?.collateralBalance * lendingTerm.borrowRatio
+    setBorrowAmount(
+      maxBorrow < availableDebt
+        ? data?.collateralBalance * lendingTerm.borrowRatio
+        : availableDebt
+    )
+  }
 
-    const creditMultiplier = await readContract({
-      address: process.env.NEXT_PUBLIC_PROFIT_MANAGER_ADDRESS as Address,
-      abi: ProfitManagerABI,
-      functionName: "creditMultiplier",
-    })
+  const setAvailable = (): string => {
+    const maxBorrow = data?.collateralBalance * lendingTerm.borrowRatio
+
+    return maxBorrow < availableDebt
+      ? formatDecimal(data?.collateralBalance * lendingTerm.borrowRatio, 2).toString()
+      : formatDecimal(availableDebt, 2).toString()
+  }
+
+  function getPreciceBorrowRatio(borrowAmount): bigint {
     const preciseBorrowRatio =
-      BigInt(1) +
-      (BigInt(borrowAmount) * BigInt(1e18) * (creditMultiplier as bigint)) /
-        (borrowRatio as bigint)
-    setPreciseBorrowRatio(preciseBorrowRatio)
+      // BigInt(1) +
+      (parseEther(borrowAmount.toString()) * creditMultiplier) /
+        parseEther(lendingTerm.maxDebtPerCollateralToken.toString())
+    return preciseBorrowRatio
   }
 
   async function getMinToRepay() {
-    const minToRepay = await readContract({
-      address: contractAddress as Address,
-      abi: TermABI,
-      functionName: "minPartialRepayPercent",
-    })
     setMinToRepay(
-      preciseRound(DecimalToUnit(minToRepay as bigint, 18) * borrowAmount, 2)
+      ((lendingTerm.minPartialRepayPercent * Number(borrowAmount)) / 100).toString()
     )
   }
-
-  useEffect(() => {
-    getPrecicseBorrowRatio()
-    getMinToRepay()
-  }, [borrowAmount])
-
-  // setBigIntCollateralAmount(BigInt(UnitToDecimal(borrowAmount,collateralDecimals).toString())/BigInt(1e18 *borrowRatio))
-  useEffect(() => {
-    const collateralAmount: number = Number(
-      preciseRound(borrowAmount / borrowRatio, collateralDecimals)
-    )
-    setCollateralAmount(collateralAmount)
-    setMinCollateralAmount(collateralAmount)
-  }, [borrowAmount])
-
-  useEffect(() => {
-    const currentDate = moment()
-    const newDate = currentDate.add(maxDelayBetweenPartialRepay, "seconds")
-    setPaymentDate(newDate)
-  }, [maxDelayBetweenPartialRepay])
+  /* End Handlers and getters */
 
   return (
     <>
@@ -273,100 +266,119 @@ function CreateLoan({
       )}
 
       <div className="h-full rounded-md text-gray-700 dark:text-gray-200">
-        <div className="mt-4 flex justify-between">
+        {/* <div className="mt-4 flex justify-between">
           <div className="">
             Your Balance :{" "}
-            <span className="font-bold">
-              {formatDecimal(collateralAmountAvailable, 2)}
-            </span>{" "}
-            {name}
+            <span className="font-bold">{formatDecimal(data?.collateralBalance, 2)}</span>{" "}
+            {lendingTerm.collateral.name}
           </div>
           <div className="">
             Available Debt :{" "}
-            <span className="font-bold">
-              {formatCurrencyValue(availableDebt)}
-            </span>
+            <span className="font-bold">{formatCurrencyValue(availableDebt)}</span>
           </div>
-        </div>
+        </div> */}
 
-        <div className={inputStyles.content}>
-          <div className="mt-4">
-            <label
-              htmlFor="price"
-              className="block text-sm font-medium leading-6 text-gray-500 dark:text-gray-200"
-            >
-              Borrow Amount
-            </label>
-            <div className="relative mt-1 rounded-md">
-              <input
-                className="block w-full rounded-md border-2 border-gray-300 py-3 pl-7 pr-12 text-gray-800 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:border-brand-400/80 focus:!ring-0 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-50 sm:text-lg sm:leading-6"
-                placeholder="0"
-                pattern="^[0-9]*[.,]?[0-9]*$"
-                value={borrowAmount}
-                onChange={handleBorrowChange}
-              />
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                <span className="text-gray-500 dark:text-gray-50 sm:text-lg">
-                  CREDIT
-                </span>
-              </div>
-            </div>
-          </div>
+        <div>
+          <DefiInputBox
+            topLabel={"Amount of gUSDC to borrow"}
+            currencyLogo="/img/crypto-logos/credit.png"
+            currencySymbol='gUSDC'
+            placeholder="0"
+            pattern="^[0-9]*[.,]?[0-9]*$"
+            inputSize="text-2xl sm:text-3xl"
+            value={borrowAmount}
+            onChange={handleBorrowChange}
+            rightLabel={
+              <>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Available: {setAvailable()}
+                </p>
+                <button
+                  className="text-sm font-medium text-brand-500 hover:text-brand-400"
+                  onClick={(e) => setMax()}
+                >
+                  Max
+                </button>
+              </>
+            }
+          />
 
-          <div className="mt-4">
-            <label
-              htmlFor="price"
-              className="block text-sm font-medium leading-6 text-gray-500 dark:text-gray-200"
-            >
-              Collateral amount
-            </label>
-            <div className="relative mt-1 rounded-md">
-              <input
-                type="text"
-                className="block w-full rounded-md border-0 py-3 pl-7 pr-12 text-gray-500 ring-1 ring-inset ring-gray-300 transition-all duration-150 ease-in-out placeholder:text-gray-400  dark:bg-navy-700 dark:text-gray-50 dark:ring-navy-600 sm:text-lg sm:leading-6"
-                onChange={handleCollatteralChange}
-                value={collateralAmount as number}
-                placeholder="0"
-                pattern="^[0-9]*[.,]?[0-9]*$"
-                disabled={true}
-              />
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                <span className="text-gray-500 dark:text-gray-50 sm:text-lg">
-                  {name}
-                </span>
-              </div>
-            </div>
-          </div>
-          <button
+          <DefiInputBox
+            disabled={true}
+            topLabel={
+              "Amount of" + " " + lendingTerm.collateral.name + " " + "to deposit"
+            }
+            currencyLogo={lendingTerm.collateral.logo}
+            currencySymbol={lendingTerm.collateral.name}
+            placeholder="0"
+            pattern="^[0-9]*[.,]?[0-9]*$"
+            inputSize="text-xl xl:text-3xl"
+            value={collateralAmount as number}
+            rightLabel={
+              <>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Balance: {formatDecimal(data?.collateralBalance, 2)}
+                </p>
+              </>
+            }
+          />
+
+          <ButtonPrimary
+            variant="lg"
+            title="Borrow"
+            titleDisabled={getTitleDisabled(
+              Number(borrowAmount),
+              availableDebt,
+              data?.collateralBalance,
+              data?.minBorrow
+            )}
+            extra="w-full mt-4 !rounded-xl"
             onClick={borrow}
-            className={inputStyles.confirmButton}
-            disabled={borrowAmount < minBorrow ? true : false}
-          >
-            Borrow
-          </button>
-          {openingFee > 0 && (
-            <div className="rounded-md my-4 flex text-sm items-center justify-center gap-x-3 bg-amber-100 dark:bg-amber-100/0 px-2.5 py-1.5 text-amber-500/90 dark:text-amber-500">
-              <MdWarning className="w-5 h-5"/>
-              <p>
-                You will have to pay{" "}
-                <span className="font-bold">
-                  {" "}
-                  {preciseRound(borrowAmount * openingFee, 2)} CREDIT{" "}
-                </span>{" "}
-                to open this loan
-              </p>
-            </div>
+            disabled={
+              Number(borrowAmount) < data?.minBorrow ||
+              Number(borrowAmount) > availableDebt
+            }
+          />
+
+          {Number(borrowAmount) < data?.minBorrow && (
+            <AlertMessage
+              type="danger"
+              message={
+                <p className="">
+                  Minimum borrow is{" "}
+                  <strong>{formatCurrencyValue(data?.minBorrow)}</strong> gUSDC
+                </p>
+              }
+            />
           )}
-          {maxDelayBetweenPartialRepay > 0 && (
-            <div className="rounded-md my-4 flex text-sm items-center justify-center gap-2 bg-amber-100 dark:bg-amber-100/0 px-2.5 py-1.5 text-amber-500/90 dark:text-amber-500">
-              <MdWarning className="w-6 h-6"/>
-              <p className="">
-                You will have to repay <strong>{minToRepay}</strong> CREDIT by{" "}
-                <strong>{paymentDate?.format("DD/MM/YYYY HH:mm:ss")}</strong> or
-                your loan will be <strong> called</strong>
-              </p>
-            </div>
+          {lendingTerm.openingFee > 0 && Number(borrowAmount) >= data?.minBorrow && (
+            <AlertMessage
+              type="warning"
+              message={
+                <p>
+                  <span className="font-bold">
+                    {" "}
+                    {formatDecimal(Number(borrowAmount) * lendingTerm.openingFee, 2)}{" "}
+                    gUSDC{" "}
+                  </span>{" "}
+                  of interest will accrue instantly after opening the loan
+                </p>
+              }
+            />
           )}
+          {lendingTerm.maxDelayBetweenPartialRepay > 0 &&
+            Number(borrowAmount) >= data?.minBorrow && (
+              <AlertMessage
+                type="warning"
+                message={
+                  <p className="">
+                    You will have to repay <strong>{minToRepay}</strong> gUSDC by{" "}
+                    <strong>{paymentDate?.format("DD/MM/YYYY HH:mm:ss")}</strong> or your
+                    loan will be <strong> called</strong>
+                  </p>
+                }
+              />
+            )}
         </div>
       </div>
     </>

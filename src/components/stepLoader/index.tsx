@@ -33,7 +33,7 @@ function StepModal({
   }
 
   return (
-    <div className="text-black fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-gray-500/50">
+    <div className="text-black fixed inset-0 z-[100] flex items-center justify-center bg-gray-500 dark:bg-navy-900/90 bg-opacity-75 transition-opacity">
       <div
         className="bg-black fixed inset-0 opacity-50 "
         onClick={handleClose}
@@ -51,7 +51,7 @@ function StepModal({
                   step.status === "In Progress" ? "absolute" : ""
                 }  ${
                   step.status.toLowerCase().includes("success")
-                    ? "border-purple-500 bg-purple-500"
+                    ? "border-brand-500 bg-brand-500"
                     : step.status.toLowerCase().includes("error")
                     ? "border-red-500 bg-red-500"
                     : ""
@@ -62,7 +62,7 @@ function StepModal({
 
               <div className="ml-4">
                 <h3>{step.name}</h3>
-                <p className="text-sm text-gray-500">{step.status}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-300">{step.status}</p>
               </div>
             </div>
           ))}
@@ -74,7 +74,7 @@ function StepModal({
               onClick={handleClose}
               className="w-full mt-4 rounded-md bg-gray-100 px-3 py-1.5 text-sm ring-1 ring-inset ring-gray-200 transition-all duration-150 ease-in-out hover:ring-gray-300 dark:bg-navy-700 dark:ring-navy-600"
             >
-              Fermer
+              Close
             </button>
           </div>
         )}

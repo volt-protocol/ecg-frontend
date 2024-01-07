@@ -2,38 +2,44 @@ import { jsx } from "@emotion/react"
 import { readContract, waitForTransaction, writeContract } from "@wagmi/core"
 import StepModal from "components/stepLoader"
 import { Step } from "components/stepLoader/stepType"
-import { PsmUsdcABI, CreditABI, ProfitManagerABI, UsdcABI } from "lib/contracts"
+import {
+  CreditABI,
+  ProfitManagerABI,
+  UsdcABI,
+  psmUsdcContract,
+  creditContract,
+  profitManagerContract,
+  usdcContract,
+} from "lib/contracts"
 
 import React, { useEffect, useState } from "react"
-import {
-  BsArrowDown,
-  BsArrowDownLeft,
-  BsArrowUpLeft,
-  BsArrowUpRight,
-} from "react-icons/bs"
-import { style } from "./helper"
-import {
-  DecimalToUnit,
-  UnitToDecimal,
-  formatCurrencyValue,
-  preciseRound,
-  signTransferPermit,
-} from "utils/utils-old"
-import { Address } from "viem"
+import { Address, parseUnits } from "viem"
 import { useAccount } from "wagmi"
+import { Tab } from "@headlessui/react"
+import clsx from "clsx"
+import DefiInputBox from "components/box/DefiInputBox"
+import { formatDecimal } from "utils/numbers"
+import ButtonPrimary from "components/button/ButtonPrimary"
+import { getTitleDisabled } from "./helper"
+import { AlertMessage } from "components/message/AlertMessage"
 
-function MintOrRedeem() {
-  const [valuetoSend, setValuetoSend] = useState<number>(0)
-  const [valueToReceive, setValueToReceive] = useState<number>(0)
-  const [loading, setLoading] = useState(false)
-  const [usdcBalance, setUsdcBalance] = useState<number>()
-  const [creditBalance, setCreditBalance] = useState<number>()
-  const { address, isConnected, isDisconnected } = useAccount()
-  const [conversionRate, setConversionRate] = useState<number>(0)
-  const [status, setStatus] = useState<string>("Mint")
-  const [usdcAvailableToRedeem, setUsdcAvailableToRedeem] = useState<number>(0)
+function MintOrRedeem({
+  reloadMintRedeem,
+  usdcBalance,
+  creditBalance,
+  conversionRate,
+  usdcAvailableToRedeem,
+}: {
+  reloadMintRedeem: React.Dispatch<React.SetStateAction<boolean>>
+  usdcBalance: number
+  creditBalance: number
+  conversionRate: number
+  usdcAvailableToRedeem: number
+}) {
+  const { address } = useAccount()
   const [showModal, setShowModal] = useState(false)
-  const [reload, setReload] = useState(false)
+  const [value, setValue] = useState<string>("")
+
   const createSteps = (): Step[] => {
     const baseSteps = [
       { name: "Approve", status: "Not Started" },
@@ -45,90 +51,27 @@ function MintOrRedeem() {
 
   const [steps, setSteps] = useState<Step[]>(createSteps())
 
-  async function getUsdcBalance(): Promise<void> {
-    const result = await readContract({
-      address: process.env.NEXT_PUBLIC_USDC_ADDRESS as Address,
-      abi: UsdcABI,
-      functionName: "balanceOf",
-      args: [address],
-    })
-    console.log(DecimalToUnit(result as bigint, 6), "result")
-    setUsdcBalance(DecimalToUnit(result as bigint, 6))
-  }
-  async function getCreditBalance(): Promise<void> {
-    const result = await readContract({
-      address: process.env.NEXT_PUBLIC_CREDIT_ADDRESS as Address,
-      abi: CreditABI,
-      functionName: "balanceOf",
-      args: [address],
-    })
-    console.log(DecimalToUnit(result as bigint, 18), "result")
-    setCreditBalance(DecimalToUnit(result as bigint, 18))
-  }
-
-  async function getConversionRate(): Promise<void> {
-    const result = await readContract({
-      address: process.env.NEXT_PUBLIC_PROFIT_MANAGER_ADDRESS as Address,
-      abi: ProfitManagerABI,
-      functionName: "creditMultiplier",
-    })
-    if (status == "Mint") {
-      setConversionRate(DecimalToUnit(result as bigint, 18))
-    } else {
-      setConversionRate(1 / DecimalToUnit(result as bigint, 18))
-    }
-  }
-  async function getUsdcAvailableToRedeem(): Promise<void> {
-    const result = await readContract({
-      address: process.env.NEXT_PUBLIC_USDC_ADDRESS as Address,
-      abi: UsdcABI,
-      functionName: "balanceOf",
-      args: [process.env.NEXT_PUBLIC_PSM_USDC_ADDRESS as Address],
-    })
-    setUsdcAvailableToRedeem(DecimalToUnit(result as bigint, 6))
-  }
-
-  useEffect(() => {
-    getConversionRate()
-    getUsdcAvailableToRedeem()
-    if (isConnected) {
-      getCreditBalance()
-      getUsdcBalance()
-      setReload(false)
-    } else {
-      setCreditBalance(undefined)
-      setUsdcBalance(undefined)
-    }
-  }, [creditBalance, isConnected, reload, status])
-
   const updateStepStatus = (stepName: string, status: Step["status"]) => {
     setSteps((prevSteps) =>
-      prevSteps.map((step) =>
-        step.name === stepName ? { ...step, status } : step
-      )
+      prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step))
     )
   }
   function updateStepName(oldName: string, newName: string) {
     setSteps((prevSteps) =>
-      prevSteps.map((step) =>
-        step.name === oldName ? { ...step, name: newName } : step
-      )
+      prevSteps.map((step) => (step.name === oldName ? { ...step, name: newName } : step))
     )
   }
 
+  /* Smart contract writes */
   async function mint() {
     setShowModal(true)
     try {
       updateStepStatus("Approve", "In Progress")
       // approve collateral first
       const approve = await writeContract({
-        address: process.env.NEXT_PUBLIC_USDC_ADDRESS as Address,
-        abi: UsdcABI,
+        ...usdcContract,
         functionName: "approve",
-        args: [
-          process.env.NEXT_PUBLIC_PSM_USDC_ADDRESS as Address,
-          UnitToDecimal(valuetoSend, 6),
-        ],
+        args: [psmUsdcContract.address as Address, parseUnits(value.toString(), 6)],
       })
 
       const checkApprove = await waitForTransaction({
@@ -148,10 +91,9 @@ function MintOrRedeem() {
     try {
       updateStepStatus("Mint", "In Progress")
       const mint = await writeContract({
-        address: process.env.NEXT_PUBLIC_PSM_USDC_ADDRESS as Address,
-        abi: PsmUsdcABI,
+        ...psmUsdcContract,
         functionName: "mint",
-        args: [address, UnitToDecimal(valuetoSend, 6)],
+        args: [address, parseUnits(value.toString(), 6)],
       })
       const checkmint = await waitForTransaction({
         hash: mint.hash,
@@ -159,7 +101,8 @@ function MintOrRedeem() {
 
       if (checkmint.status === "success") {
         updateStepStatus("Mint", "Success")
-        setReload(true)
+        reloadMintRedeem(true)
+        setValue("")
         return
       } else updateStepStatus("Mint", "Error")
     } catch (e) {
@@ -167,6 +110,7 @@ function MintOrRedeem() {
       console.log(e)
     }
   }
+
   async function redeem() {
     try {
       setShowModal(true)
@@ -175,13 +119,9 @@ function MintOrRedeem() {
 
       // approve collateral first
       const approve = await writeContract({
-        address: process.env.NEXT_PUBLIC_CREDIT_ADDRESS as Address,
-        abi: CreditABI,
+        ...creditContract,
         functionName: "approve",
-        args: [
-          process.env.NEXT_PUBLIC_PSM_USDC_ADDRESS as Address,
-          UnitToDecimal(valuetoSend, 18),
-        ],
+        args: [psmUsdcContract.address as Address, parseUnits(value.toString(), 18)],
       })
 
       const checkApprove = await waitForTransaction({
@@ -201,17 +141,17 @@ function MintOrRedeem() {
     try {
       updateStepStatus("Redeem", "In Progress")
       const redeem = await writeContract({
-        address: process.env.NEXT_PUBLIC_PSM_USDC_ADDRESS as Address,
-        abi: PsmUsdcABI,
+        ...psmUsdcContract,
         functionName: "redeem",
-        args: [address, UnitToDecimal(valuetoSend, 18)],
+        args: [address, parseUnits(value.toString(), 18)],
       })
       const checkredeem = await waitForTransaction({
         hash: redeem.hash,
       })
 
       if (checkredeem.status === "success") {
-        setReload(true)
+        reloadMintRedeem(true)
+        setValue("")
         updateStepStatus("Redeem", "Success")
         return
       } else updateStepStatus("Redeem", "Error")
@@ -220,40 +160,20 @@ function MintOrRedeem() {
       console.log(e)
     }
   }
+  /* End Smart contract writes */
 
-  const handleBorrowChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value
 
     // Vérifier si la valeur saisie ne contient que des numéros
-    if (/^\d*$/.test(inputValue) && inputValue != "") {
-      setValuetoSend(parseFloat(inputValue))
-    } else setValuetoSend(0)
-  }
-
-  const handleCollatteralChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value
-
-    // Vérifier si la valeur saisie ne contient que des numéros
-    if (/^\d*$/.test(inputValue) && inputValue != "") {
-      setValueToReceive(parseFloat(inputValue))
-    } else setValuetoSend(0)
-  }
-
-  // setBigIntCollateralAmount(BigInt(UnitToDecimal(valuetoSend,collateralDecimals).toString())/BigInt(1e18 *borrowRatio))
-  useEffect(() => {
-    if (valuetoSend != 0) {
-      const valueToReceive: number = Number(
-        preciseRound(valuetoSend / conversionRate, 2)
-      )
-      setValueToReceive(valueToReceive)
-    } else {
-      setValueToReceive(0)
+    if (/^\d*$/.test(inputValue)) {
+      setValue(inputValue as string)
     }
-  }, [valuetoSend, conversionRate])
-  
+  }
+
   return (
     <>
-      <div className="mt-4 h-full rounded-xl text-gray-700 dark:text-gray-200">
+      <div>
         {showModal && (
           <StepModal
             steps={steps}
@@ -262,133 +182,139 @@ function MintOrRedeem() {
             setSteps={setSteps}
           />
         )}
-        <div>
-          <button
-            onClick={() => setStatus("Mint")}
-            className={`border-transparent border-b-4 px-6   hover:border-gray-200  ${
-              status == "Mint" ? "text-black dark:text-white" : "text-gray-400"
-            } `}
-          >
-            <div className="flex  w-full items-center space-x-2">
-              {" "}
-              <BsArrowUpRight />
-              <p> Mint</p>
-            </div>
-          </button>
-          <button
-            onClick={() => setStatus("Redeem")}
-            className={`border-b-transparent border-b-4 px-6 hover:border-gray-200  ${
-              status == "Redeem"
-                ? "text-black dark:text-white"
-                : "text-gray-400"
-            } `}
-          >
-            <div className="flex  w-full items-center space-x-2">
-              <BsArrowDownLeft />
-              <p> Redeem</p>
-            </div>
-          </button>
-        </div>
-        <div className="mt-4 grid grid-cols-2  ">
-          <div className="">
-            Your Balance :{" "}
-            <span className="font-semibold">
-              {usdcBalance ? formatCurrencyValue(usdcBalance) : 0}
-            </span>{" "}
-            USDC
-          </div>
-          <div className="">
-            Redeemable :{" "}
-            <span className="font-semibold">
-              {formatCurrencyValue(usdcAvailableToRedeem)}
-            </span>{" "}
-            USDC
-          </div>
-          <div className="">
-            Your Balance :{" "}
-            <span className="font-semibold">
-              {creditBalance ? formatCurrencyValue(creditBalance) : 0}
-            </span>{" "}
-            CREDIT
-          </div>
-          <div className="">
-            Rate :{" "}
-            <span className="font-semibold">
-              {" "}
-              {preciseRound(conversionRate, 2)}
-            </span>
-            {status == "Mint" ? " USDC / CREDIT" : " CREDIT / USDC"}
-          </div>
-        </div>
 
-        <div className={style.content}>
-          <div className={style.formHeader}>
-            {/* <div>Swap your credits to native tokens </div> */}
-            <div></div>
-          </div>
-          <div className="relative mt-4 rounded-md">
-            <input
-              className="block w-full rounded-md border-2 border-gray-300 py-3 pl-7 pr-12 text-gray-800 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:border-brand-400/80 focus:!ring-0 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-50 sm:text-lg sm:leading-6"
-              placeholder="0"
-              pattern="^[0-9]*[.,]?[0-9]*$"
-              value={valuetoSend}
-              onChange={handleBorrowChange}
-            />
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-              <span className="text-gray-500 dark:text-gray-50 sm:text-lg">
-                {status == "Mint" ? (
-                  <div className="flex items-center space-x-2">
-                    {" "}
-                    <img className="h-8" src="img/usd-coin-usdc-logo.png" />
-                    <p>USDC amount</p>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <img className="h-8" src="img/vite.svg" />
-                    <p>CREDIT amount</p>{" "}
-                  </div>
+        <Tab.Group
+          onChange={(index) => {
+            setValue("")
+          }}
+        >
+          <Tab.List className="flex space-x-1 rounded-md bg-brand-100/50 p-1 dark:bg-navy-700">
+            <Tab
+              key="mint"
+              className={({ selected }) =>
+                clsx(
+                  "w-full rounded-md px-2 py-1 text-sm leading-5 transition-all duration-150 ease-in-out sm:px-4 sm:py-2 sm:text-base",
+                  selected
+                    ? "bg-white font-semibold text-brand-500 dark:bg-navy-600/70"
+                    : "font-medium text-brand-500/80 hover:bg-white/30 dark:text-gray-200 dark:hover:bg-navy-600/50"
+                )
+              }
+            >
+              Mint
+            </Tab>
+            <Tab
+              key="redeem"
+              className={({ selected }) =>
+                clsx(
+                  "w-full rounded-md px-2 py-1 text-sm leading-5 transition-all duration-150 ease-in-out sm:px-4 sm:py-2 sm:text-base",
+                  selected
+                    ? "bg-white font-semibold text-brand-500 dark:bg-navy-600/70"
+                    : "font-medium text-brand-500/80 hover:bg-white/30 dark:text-gray-200 dark:hover:bg-navy-600/50"
+                )
+              }
+            >
+              Redeem
+            </Tab>
+          </Tab.List>
+          <Tab.Panels className="mt-2">
+            <Tab.Panel key="mint" className={"px-3 py-1"}>
+              <DefiInputBox
+                topLabel="Mint gUSDC with USDC"
+                currencyLogo="/img/crypto-logos/usdc.png"
+                currencySymbol="USDC"
+                placeholder="0"
+                pattern="^[0-9]*[.,]?[0-9]*$"
+                inputSize="text-2xl sm:text-3xl"
+                value={value}
+                onChange={handleInputChange}
+                rightLabel={
+                  <>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Available: {usdcBalance ? formatDecimal(usdcBalance, 2) : 0}
+                    </p>
+                    <button
+                      className="text-sm font-medium text-brand-500 hover:text-brand-400"
+                      onClick={(e) => setValue(usdcBalance.toString())}
+                    >
+                      Max
+                    </button>
+                  </>
+                }
+              />
+              <ButtonPrimary
+                variant="lg"
+                title={"Mint"}
+                titleDisabled={getTitleDisabled("Mint", Number(value), usdcBalance)}
+                extra="w-full mt-2 !rounded-xl"
+                onClick={mint}
+                disabled={Number(value) > usdcBalance || Number(value) <= 0 || !value}
+              />
+              <AlertMessage
+                type="info"
+                message={
+                  <>
+                    <p>
+                      You will receive{" "}
+                      <span className="font-bold">
+                        {formatDecimal(Number(value) * conversionRate, 2)} gUSDC
+                      </span>
+                    </p>
+                  </>
+                }
+              />
+            </Tab.Panel>
+            <Tab.Panel key="redeem" className={"px-3 py-1"}>
+              <DefiInputBox
+                topLabel="Redeem USDC with gUSDC"
+                currencyLogo="/img/crypto-logos/credit.png"
+                currencySymbol="gUSDC"
+                placeholder="0"
+                pattern="^[0-9]*[.,]?[0-9]*$"
+                inputSize="text-2xl sm:text-3xl"
+                value={value}
+                onChange={handleInputChange}
+                rightLabel={
+                  <>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Available: {creditBalance ? formatDecimal(creditBalance, 2) : 0}
+                    </p>
+                    <button
+                      className="text-sm font-medium text-brand-500 hover:text-brand-400"
+                      onClick={(e) => setValue(creditBalance.toString())}
+                    >
+                      Max
+                    </button>
+                  </>
+                }
+              />
+              <ButtonPrimary
+                variant="lg"
+                title={"Redeem"}
+                titleDisabled={getTitleDisabled(
+                  "Redeem",
+                  Number(value),
+                  usdcAvailableToRedeem
                 )}
-              </span>
-            </div>
-            <div className="w-full"></div>
-          </div>
-          <div className="relative mt-4 rounded-md">
-            <input
-              onChange={handleCollatteralChange}
-              value={valueToReceive as number}
-              className="block w-full rounded-md border-0 py-3 pl-7 pr-12 text-gray-500 ring-1 ring-inset ring-gray-300 transition-all duration-150 ease-in-out placeholder:text-gray-400  dark:bg-navy-700 dark:text-gray-50 dark:ring-navy-600 sm:text-lg sm:leading-6"
-              placeholder="0"
-              pattern="^[0-9]*[.,]?[0-9]*$"
-              disabled={true}
-            />
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-              {status != "Mint" ? (
-                <div className="flex items-center space-x-2">
-                  {" "}
-                  <img className="h-8" src="img/usd-coin-usdc-logo.png" />
-                  <p>USDC amount</p>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <img className="h-8" src="img/vite.svg" />
-                  <p>CREDIT amount</p>{" "}
-                </div>
-              )}
-            </div>
-          </div>
-          <button
-            onClick={status == "Mint" ? mint : redeem}
-            className={style.confirmButton + "text-white"}
-            disabled={
-              (status === "Redeem" && valuetoSend > usdcAvailableToRedeem) ||
-              !valuetoSend
-                ? true
-                : false
-            }
-          >
-            {status == "Mint" ? "Mint" : "Redeem"}
-          </button>
-        </div>
+                extra="w-full mt-2 !rounded-xl"
+                onClick={redeem}
+                disabled={Number(value) > usdcAvailableToRedeem || !value ? true : false}
+              />
+              <AlertMessage
+                type="info"
+                message={
+                  <>
+                    <p>
+                      You will receive{" "}
+                      <span className="font-bold">
+                        {formatDecimal((Number(value) * 1) / conversionRate, 2)} USDC
+                      </span>
+                    </p>
+                  </>
+                }
+              />
+            </Tab.Panel>
+          </Tab.Panels>
+        </Tab.Group>
       </div>
     </>
   )

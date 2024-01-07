@@ -23,9 +23,7 @@ function Card(props: {
           <h3 className="font-medium text-xl text-gray-800 dark:text-white ">
             {title}
           </h3>
-          <div className="mt-4">  
-              {rightText}
-          </div>
+          {rightText}
         </div>
       )}
       {children}

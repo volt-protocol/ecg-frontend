@@ -35,22 +35,35 @@ export type loanObj = loanObjCall & {
   termAddress: Address
 }
 
+export type ProposedTerm = {
+  termAddress: Address
+  collateralTokenSymbol: string
+  termName: string
+  openingFee: number
+  interestRate: string
+  borrowRatio: number
+  hardCap: string
+  collateralToken: Address
+  maxDelayBetweenPartialRepay: string
+  minPartialRepayPercent: string
+}
+
 export type LendingTerms = {
-  address: string
-  collateral: string
-  collateralAddress: string
-  collateralDecimals: number
+  address: Address
+  collateral : {
+    address: Address
+    name: string
+    logo: string
+    decimals: number
+  }
   interestRate: number
   borrowRatio: number
-  callFee: number
-  callPeriodSeconds: number
   availableDebt: number
   currentDebt: number
   openingFee: number
+  maxDebtPerCollateralToken: number
   minPartialRepayPercent: number
   maxDelayBetweenPartialRepay: number
-  ltvBuffer: number
-  minBorrow: number
   status: 'deprecated' | 'live'
   label: string
 }

@@ -12,11 +12,11 @@ function secondsToAppropriateUnit(seconds: number): string {
   const months = days / 30;
 
   // Déterminer l'unité appropriée pour représenter la durée
-  if (months >= 1) return `${Math.round(months)}m`;
-  if (weeks >= 1) return `${Math.round(weeks)}w`;
-  if (days >= 1) return `${Math.round(days)}d`;
-  if (hours >= 1) return `${Math.round(hours)}h`;
-  return `${Math.round(minutes)}min`;
+  if (months >= 1) return `${Math.round(months)} month${Math.round(months) > 1 ? "s" : ""}`;
+  if (weeks >= 1) return `${Math.round(weeks)} week${Math.round(weeks) > 1 ? "s" : ""}`;
+  if (days >= 1) return `${Math.round(days)}day${Math.round(days) > 1 ? "s" : ""}`;
+  if (hours >= 1) return `${Math.round(hours)}hour${Math.round(hours) > 1 ? "s" : ""}`;
+  return `${Math.round(minutes)} minute${Math.round(minutes) > 1 ? "s" : ""}`;
 }
 
 function formatCurrencyValue(value: number): string {
@@ -34,7 +34,6 @@ function DecimalToUnit(number:bigint, decimals:number):number {
   const divider = BigInt(Math.pow(10, decimals));
   return Number(number) / Number(divider);
 }
-
 
 function UnitToDecimal(number: number, decimals: number): number {
   const multiplier = Math.pow(10, decimals);
@@ -71,7 +70,7 @@ type ContractAddress = `0x${string}`;
 
 const domain = {
     // fields    :  "0x0f",
-    name   : "Ethereum Credit Guild - CREDIT",
+    name   : "Ethereum Credit Guild - gUSDC",
     // version    :  "1",
     chainId    :  11155111,
     verifyingContract  :  "0x91f0ED4A515b1B90eb13974eA05D26605c046A3A",

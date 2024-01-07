@@ -7,7 +7,13 @@ import {
   writeContract,
 } from "@wagmi/core"
 import { toastError, toastRocket } from "components/toast"
-import { TermABI, guildContract, lendingTermOffboardingContract, termContract } from "lib/contracts"
+import {
+  daoTimelockContract,
+  daoVetoCreditContract,
+  creditContract,
+  onboardGovernorGuildContract,
+  termContract,
+} from "lib/contracts"
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa"
 import { Step } from "components/stepLoader/stepType"
 import StepModal from "components/stepLoader"
@@ -19,145 +25,159 @@ import {
   flexRender,
   getPaginationRowModel,
 } from "@tanstack/react-table"
-import {
-  MdArrowLeft,
-  MdArrowRight,
-  MdChevronLeft,
-  MdChevronRight,
-  MdOpenInNew,
-} from "react-icons/md"
+import { MdChevronLeft, MdChevronRight } from "react-icons/md"
 import Spinner from "components/spinner"
-import DropdownSelect from "components/select/DropdownSelect"
 import { useAppStore } from "store"
-import { LendingTerms } from "types/lending"
-import { generateTermName } from "utils/strings"
 import ButtonPrimary from "components/button/ButtonPrimary"
-import { useAccount, useContractRead, useContractReads } from "wagmi"
-import { decimalToUnit, formatCurrencyValue } from "utils/numbers"
-import { ActiveOffboardingPolls } from "types/governance"
-import Progress from "components/progress"
+import { readContracts, useAccount, useContractReads } from "wagmi"
+import { decimalToUnit, formatCurrencyValue, formatDecimal } from "utils/numbers"
+import { ActiveVetoVotes, VoteOption } from "types/governance"
 import { fromNow } from "utils/date"
 import moment from "moment"
-import { Abi, RpcError } from "viem"
+import { bytesToNumber, formatUnits } from "viem"
 import { QuestionMarkIcon, TooltipHorizon } from "components/tooltip"
-import { BLOCK_LENGTH_MILLISECONDS } from "utils/constants"
-import { isActivePoll } from "../../OffboardTerm/helper"
+import { BLOCK_LENGTH_MILLISECONDS, FROM_BLOCK } from "utils/constants"
+import { checkVetoVoteValidity, getProposalIdFromActionId, getTermsCreated } from "./helper"
+import VoteStatusBar from "components/bar/VoteStatusBar"
+import Progress from "components/progress"
 
-function Veto({
-  notUsed,
-  guildReceived,
-  isConnected,
-}: {
-  notUsed: number
-  guildReceived: number
-  isConnected: boolean
-}) {
+function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
   const { address } = useAccount()
   const { lendingTerms } = useAppStore()
-  const [selectedTerm, setSelectedTerm] = useState<LendingTerms>(lendingTerms[0])
   const [showModal, setShowModal] = useState(false)
-  const [activeOffboardingPolls, setActiveOffboardingPolls] = useState<
-    ActiveOffboardingPolls[]
-  >([])
+  const [activeVetoVotes, setActiveVetoVotes] = useState<ActiveVetoVotes[]>([])
   const [loading, setLoading] = useState<boolean>(false)
+  const [voteOptionsSelected, setVoteOptionsSelected] = useState<
+    { optionSelected: number; proposalId: string }[]
+  >([])
+  const [currentBlock, setCurrentBlock] = useState<BigInt>()
 
   /* Multicall Onchain reads */
-  const createAllTermContractRead = () => {
-    return lendingTerms.map((term) => {
-      return {
-        ...termContract(term.address as Address),
-        functionName: "issuance"
-      }
-    })
-  }
 
-  const { data, isError, isLoading } = useContractReads({
-    contracts: [
-      {
-        ...lendingTermOffboardingContract,
-        functionName: "quorum",
-      },
-      {
-        ...lendingTermOffboardingContract,
-        functionName: "POLL_DURATION_BLOCKS",
-      },
-      {
-        ...guildContract,
-        functionName: "getVotes",
-        args: [address],
-      },
-      ...createAllTermContractRead()
-    ],
-    select: (data) => {
-      return {
-        quorum: Number(data[0].result),
-        pollDurationBlock: Number(data[1].result),
-        votingPower: Number(data[2].result),
-        issuances: data.slice(3).map((issuance) => Number(issuance.result))
-      }
-    },
-  })
   /* End Get Onchain desgin */
 
   useEffect(() => {
-    fetchActiveOffboardingPolls()
+    fetchActiveOnboardingVotes()
   }, [])
 
   /* Getters */
-  const fetchActiveOffboardingPolls = async () => {
+  const fetchActiveOnboardingVotes = async () => {
     setLoading(true)
-    const currentBlock = await getPublicClient().getBlockNumber()
+    const currentBlockNumber = await getPublicClient().getBlockNumber()
+
+    setCurrentBlock(currentBlockNumber)
 
     //logs are returned from oldest to newest
     const logs = await getPublicClient().getLogs({
-      address: process.env.NEXT_PUBLIC_LENDING_TERM_OFFBOARDING_ADDRESS as Address,
+      address: process.env.NEXT_PUBLIC_ONBOARD_TIMELOCK_ADDRESS as Address,
       event: {
         type: "event",
-        name: "OffboardSupport",
+        name: "CallScheduled",
         inputs: [
-          { type: "uint256", indexed: true, name: "timestamp" },
-          { type: "address", indexed: true, name: "term" },
-          { type: "uint256", indexed: true, name: "snapshotBlock" },
-          { type: "address", indexed: false, name: "user" },
-          { type: "uint256", indexed: false, name: "userWeight" },
+          { indexed: true, name: "id", type: "bytes32" },
+          { indexed: true, name: "index", type: "uint256" },
+          { indexed: false, name: "target", type: "address" },
+          { indexed: false, name: "value", type: "uint256" },
+          { indexed: false, name: "data", type: "bytes" },
+          { indexed: false, name: "predecessor", type: "bytes32" },
+          { indexed: false, name: "delay", type: "uint256" },
         ],
       },
-      fromBlock: BigInt(20),
-      toBlock: currentBlock,
+      fromBlock: BigInt(FROM_BLOCK),
+      toBlock: currentBlockNumber,
     })
 
-    const activePolls = logs
-      // .filter((log) => log.args.term === selectedTerm.address)
-      .map((log) => {
-        return {
-          term: log.args.term as Address,
-          timestamp: Number(log.args.timestamp),
-          userWeight: Number(log.args.userWeight),
-          snapshotBlock: Number(log.args.snapshotBlock),
-          user: log.args.user as Address,
-        }
-      })
-      .reduce((acc, item) => {
-        const existing = acc.find(
-          (i) => i.snapshotBlock === item.snapshotBlock && i.term === item.term
-        )
-        if (existing) {
-          existing.userWeight += item.userWeight
-        } else {
-          acc.push({ ...item })
-        }
-        return acc
-      }, [] as ActiveOffboardingPolls[])
+    const activeVetoVotes = await Promise.all(
+      logs
+        .map((log) => {
+          return {
+            id: log.args.id,
+            target: log.args.target,
+            data: log.args.data,
+            delay: Number(log.args.delay),
+            timestamp: Number(log.blockNumber),
+          }
+        })
+        .reduce((acc, item) => {
+          const existing = acc.find((i) => i.id === item.id)
+          if (existing) {
+            existing.targets.push(item.target)
+            existing.datas.push(item.data)
+          } else {
+            acc.push({
+              id: item.id,
+              targets: [item.target],
+              datas: [item.data],
+              timestamp: item.timestamp,
+              onboardIn: item.delay + item.timestamp,
+            })
+          }
+          return acc
+        }, [] as { id: string; targets: Address[]; datas: string[]; timestamp: number; onboardIn: number }[])
+        .filter((item) => checkVetoVoteValidity(item.targets, item.datas))
+        .map((item) => {
+          //TODO : get term name decoding data[0]
+          // TODO : transform action id to proposalID
+          // const proposalId = getProposalIdFromActionId(item.id)
+
+          return {
+            ...item,
+            termAddress: "0x6b498e33A66485cc39Eb259E2500d8ce3aFA23Ec",
+            termName: "Term Name",
+            proposalId: "0x2232323",
+          }
+        })
+        .map(async (item) => {
+          //get proposal votes
+          const vetoGovernorData = await readContracts({
+            contracts: [
+              {
+                ...daoVetoCreditContract,
+                functionName: "proposalVotes",
+                args: [item.proposalId],
+              },
+              {
+                ...daoVetoCreditContract,
+                functionName: "quorum",
+                args: [item.timestamp],
+              },
+              {
+                ...daoVetoCreditContract,
+                functionName: "state",
+                args: [item.proposalId],
+              },
+            ],
+          })
+
+          return {
+            ...item,
+            supportVotes: Number(vetoGovernorData[0].result[0]),
+            quorum: vetoGovernorData[1].result,
+            state:
+              vetoGovernorData[2].status == "success"
+                ? Number(vetoGovernorData[2].result)
+                : 0,
+          }
+        })
+    )
 
     setLoading(false)
-    setActiveOffboardingPolls(activePolls)
+    setActiveVetoVotes(activeVetoVotes)
   }
   /* End Getters*/
 
   /* Smart Contract Writes */
-  const proposeOffboard = async (address: string): Promise<void> => {
+  const castVote = async (proposalId: BigInt, vote: number): Promise<void> => {
     //Init Steps
-    setSteps(createSteps())
+    setSteps([
+      {
+        name:
+          "Support Veto against Term Proposal " +
+          proposalId.toString().slice(0, 6) +
+          "...",
+        status: "Not Started",
+      },
+    ])
 
     const updateStepStatus = (stepName: string, status: Step["status"]) => {
       setSteps((prevSteps) =>
@@ -167,11 +187,14 @@ function Veto({
 
     try {
       setShowModal(true)
-      updateStepStatus("Propose Offboarding", "In Progress")
+      updateStepStatus(
+        "Support Veto against Term Proposal " + proposalId.toString().slice(0, 6) + "...",
+        "In Progress"
+      )
       const { hash } = await writeContract({
-        ...lendingTermOffboardingContract,
-        functionName: "proposeOffboard",
-        args: [selectedTerm.address],
+        ...daoVetoCreditContract,
+        functionName: "castVote",
+        args: [proposalId, vote],
       })
 
       const tx = await waitForTransaction({
@@ -179,22 +202,38 @@ function Veto({
       })
 
       if (tx.status != "success") {
-        updateStepStatus("Propose Offboarding", "Error")
+        updateStepStatus(
+          "Support Veto against Term Proposal " +
+            proposalId.toString().slice(0, 6) +
+            "...",
+          "Error"
+        )
         return
       }
 
-      updateStepStatus("Propose Offboarding", "Success")
-      await fetchActiveOffboardingPolls()
+      updateStepStatus(
+        "Support Veto against Term Proposal " + proposalId.toString().slice(0, 6) + "...",
+        "Success"
+      )
+      await fetchActiveOnboardingVotes()
     } catch (e: any) {
       console.log(e)
-      updateStepStatus("Propose Offboarding", "Error")
+      updateStepStatus(
+        "Support Veto against Term Proposal " + proposalId.toString().slice(0, 6) + "...",
+        "Error"
+      )
       toastError(e.shortMessage)
     }
   }
 
-  const supportOffboard = async (snapshotBlock: number, term: Address): Promise<void> => {
+  const createVeto = async (actionId: number): Promise<void> => {
     //Init Steps
-    setSteps([{ name: "Support Offboarding", status: "Not Started" }])
+    setSteps([
+      {
+        name: "Create Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+        status: "Not Started",
+      },
+    ])
 
     const updateStepStatus = (stepName: string, status: Step["status"]) => {
       setSteps((prevSteps) =>
@@ -204,48 +243,14 @@ function Veto({
 
     try {
       setShowModal(true)
-      updateStepStatus("Support Offboarding", "In Progress")
-      const { hash } = await writeContract({
-        ...lendingTermOffboardingContract,
-        functionName: "supportOffboard",
-        args: [snapshotBlock, term],
-      })
-
-      const tx = await waitForTransaction({
-        hash: hash,
-      })
-
-      if (tx.status != "success") {
-        updateStepStatus("Support Offboarding", "Error")
-        return
-      }
-
-      updateStepStatus("Support Offboarding", "Success")
-      await fetchActiveOffboardingPolls()
-    } catch (e: any) {
-      updateStepStatus("Support Offboarding", "Error")
-      toastError(e.shortMessage)
-    }
-  }
-
-  const offboard = async (termAddress: Address): Promise<void> => {
-    //Init Steps
-    setSteps([{ name: "Offboard Term", status: "Not Started" }])
-
-    const updateStepStatus = (stepName: string, status: Step["status"]) => {
-      setSteps((prevSteps) =>
-        prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step))
+      updateStepStatus(
+        "Create Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+        "In Progress"
       )
-    }
-
-    try {
-      setShowModal(true)
-      updateStepStatus("Offboard Term", "In Progress")
-
       const { hash } = await writeContract({
-        ...lendingTermOffboardingContract,
-        functionName: "offboard",
-        args: [termAddress],
+        ...daoVetoCreditContract,
+        functionName: "createVeto",
+        args: [actionId],
       })
 
       const tx = await waitForTransaction({
@@ -253,22 +258,36 @@ function Veto({
       })
 
       if (tx.status != "success") {
-        updateStepStatus("Offboard Term", "Error")
+        updateStepStatus(
+          "Create Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+          "Error"
+        )
         return
       }
 
-      updateStepStatus("Offboard Term", "Success")
-      await fetchActiveOffboardingPolls()
+      updateStepStatus(
+        "Create Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+        "Success"
+      )
+      await fetchActiveOnboardingVotes()
     } catch (e: any) {
       console.log(e)
-      updateStepStatus("Offboard Term", "Error")
+      updateStepStatus(
+        "Create Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+        "Error"
+      )
       toastError(e.shortMessage)
     }
   }
 
-  const cleanup = async (termAddress: Address): Promise<void> => {
+  const executeVeto = async (actionId: number): Promise<void> => {
     //Init Steps
-    setSteps([{ name: "Cleanup Term", status: "Not Started" }])
+    setSteps([
+      {
+        name: "Execute Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+        status: "Not Started",
+      },
+    ])
 
     const updateStepStatus = (stepName: string, status: Step["status"]) => {
       setSteps((prevSteps) =>
@@ -278,11 +297,14 @@ function Veto({
 
     try {
       setShowModal(true)
-      updateStepStatus("Cleanup Term", "In Progress")
+      updateStepStatus(
+        "Execute Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+        "In Progress"
+      )
       const { hash } = await writeContract({
-        ...lendingTermOffboardingContract,
-        functionName: "cleanup",
-        args: [termAddress],
+        ...daoVetoCreditContract,
+        functionName: "executeVeto",
+        args: [actionId],
       })
 
       const tx = await waitForTransaction({
@@ -290,18 +312,28 @@ function Veto({
       })
 
       if (tx.status != "success") {
-        updateStepStatus("Cleanup Term", "Error")
+        updateStepStatus(
+          "Execute Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+          "Error"
+        )
         return
       }
 
-      updateStepStatus("Cleanup Term", "Success")
-      await fetchActiveOffboardingPolls()
+      updateStepStatus(
+        "Execute Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+        "Success"
+      )
+      await fetchActiveOnboardingVotes()
     } catch (e: any) {
       console.log(e)
-      updateStepStatus("Cleanup Term", "Error")
+      updateStepStatus(
+        "Execute Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+        "Error"
+      )
       toastError(e.shortMessage)
     }
   }
+
   /* End Smart Contract Writes */
 
   /* Create Modal Steps */
@@ -313,45 +345,36 @@ function Veto({
   /* End Create Modal Steps */
 
   /* Create Table */
-  const columnHelper = createColumnHelper<ActiveOffboardingPolls>()
+  const columnHelper = createColumnHelper<ActiveOnboardingVotes>()
 
   const columns = [
-    columnHelper.accessor("term", {
+    columnHelper.accessor("termName", {
       id: "term",
       header: "Term",
       enableSorting: true,
       cell: (info) => {
-        const lendingTerm = lendingTerms.find((term) => term.address === info.getValue())
         return (
-          <a
-            className="flex items-center gap-1 pl-2 text-center text-sm font-bold text-gray-600 hover:text-brand-500 dark:text-white"
-            target="__blank"
-            href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL}/${info.getValue()}`}
-          >
-            {generateTermName(lendingTerm.collateral, lendingTerm.interestRate, lendingTerm.borrowRatio)}
-            <MdOpenInNew />
-          </a>
+          <span className="text-center text-sm font-bold text-gray-600 dark:text-white">
+            {info.getValue()}
+          </span>
         )
       },
     }),
-    columnHelper.accessor("timestamp", {
-      id: "expiry",
+    columnHelper.accessor("onboardIn", {
+      id: "onboardIn",
       header: "Onboard in",
       enableSorting: true,
       cell: (info) => {
         return (
           <p className="text-sm font-bold text-gray-600 dark:text-white">
-            {data &&
-            data.pollDurationBlock &&
-            isActivePoll(info.getValue(), data.pollDurationBlock)
+            {Number(info.getValue()) - Number(currentBlock) > 0
               ? fromNow(
                   Number(
-                    moment
-                      .unix(info.getValue())
-                      .add(
-                        BLOCK_LENGTH_MILLISECONDS * Number(data.pollDurationBlock),
-                        "milliseconds"
-                      )
+                    moment().add(
+                      (Number(info.getValue()) - Number(currentBlock)) *
+                        BLOCK_LENGTH_MILLISECONDS,
+                      "milliseconds"
+                    )
                   )
                 )
               : "Expired"}
@@ -361,7 +384,7 @@ function Veto({
     }),
     {
       id: "support",
-      header: "Veto support",
+      header: "Veto Support",
       cell: (info: any) => {
         return (
           <div>
@@ -369,18 +392,25 @@ function Veto({
               extra=""
               content={
                 <div className="text-gray-700 dark:text-white">
-                  {data &&
-                    data.quorum &&
-                    formatCurrencyValue(decimalToUnit(info.row.original.userWeight, 18)) +
-                      "/" +
-                      formatCurrencyValue(decimalToUnit(data.quorum, 18))}
+                  <ul>
+                    <li className="flex items-center gap-1">
+                      <span className="font-semibold">Support:</span>{" "}
+                      {formatCurrencyValue(info.row.original.supportVotes)}
+                    </li>
+                    <li className="flex items-center gap-1">
+                      <span className="font-semibold">Quorum:</span>{" "}
+                      {formatCurrencyValue(Number(formatUnits(info.row.original.quorum, 18)))}
+                    </li>
+                  </ul>
                 </div>
               }
               trigger={
                 <div className="flex items-center gap-1">
                   <Progress
                     width="w-[100px]"
-                    value={Math.round((info.row.original.userWeight / data.quorum) * 100)}
+                    value={Math.round(
+                      (info.row.original.supportVotes / Number(formatUnits(info.row.original.quorum, 18))) * 100
+                    )}
                     color="teal"
                   />
                   <div className="ml-1">
@@ -397,14 +427,18 @@ function Veto({
     {
       id: "action",
       header: "",
-      cell: (info: any) => (
-        <div className="flex items-center">{getActionButton(info.row.original)}</div>
-      ),
+      cell: (info: any) => {
+        return (
+          <div className="flex items-center gap-1">
+            {getActionButton(info.row.original)}
+          </div>
+        )
+      },
     },
   ]
 
   const table = useReactTable({
-    data: activeOffboardingPolls,
+    data: activeVetoVotes,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -416,7 +450,7 @@ function Veto({
       },
       sorting: [
         {
-          id: "expiry",
+          id: "onboardIn",
           desc: true,
         },
       ],
@@ -424,50 +458,45 @@ function Veto({
   })
   /* End Create Table */
 
-  const getActionButton = (item: ActiveOffboardingPolls) => {
-    if (!data || !data.pollDurationBlock || !data.quorum) return null
-
-    //not expired and above quorum
-    if (
-      isActivePoll(item.timestamp, data.pollDurationBlock) &&
-      item.userWeight >= data.quorum
-    ) {
+  const getActionButton = (item: ActiveVetoVotes) => {
+    if (item.state == 0) {
       return (
         <ButtonPrimary
           variant="xs"
-          title="Execute Offboard"
-          onClick={() => offboard(item.term)}
+          title="Create Veto"
+          onClick={() => createVeto(item.id)}
         />
       )
     }
-    //expired, above quorum and term.issuance() == 0
-    if (
-      !isActivePoll(item.timestamp, data.pollDurationBlock) &&
-      item.userWeight >= data.quorum
-    ) {
-      //get issuance
-      const termIssuance = mapContractToIssuance(item.term, data.issuances, lendingTerms)
-      if (termIssuance == 0) {
-        return (
-          <ButtonPrimary
-            variant="xs"
-            title="Execute Cleanup"
-            onClick={() => cleanup(item.term)}
-          />
-        )
-      } else {
-        return null
-      }
+
+    if (item.state == 1) {
+      return (
+        <ButtonPrimary
+          variant="xs"
+          title="Support Veto"
+          onClick={() => castVote(item.proposalId, 0)}
+        />
+      )
     }
 
-    return (
-      <ButtonPrimary
-        variant="xs"
-        title="Support"
-        onClick={() => supportOffboard(item.snapshotBlock, item.term)}
-      />
-    )
+    if (item.state == 4) {
+      return (
+        <ButtonPrimary
+          variant="xs"
+          title="Execute Veto"
+          onClick={() => executeVeto(item.id)}
+        />
+      )
+    }
+
+    if (item.state == 7) {
+      return <ButtonPrimary variant="xs" title="Veto Successful" disabled={true} />
+    }
+
+    return null
   }
+
+  console.log('proposalID', BigInt(getProposalIdFromActionId("0x626d97158f351d32e7dd3064b8e392538bec6ef4d0da1136a3ac8f7162c77bcc")))
 
   return (
     <>
@@ -480,73 +509,80 @@ function Veto({
         />
       )}
       <div className="text-gray-700 dark:text-gray-100">
-        <div className="flex flex-col 3xl:flex-row 3xl:items-center 3xl:justify-between">
-          <p>Active onboarding polls: </p>
+        <p>
+          Using gUSDC veto power will cancel the onboarding of a lending term that GUILD
+          votes successfully voted to add.
+        </p>
+        <div className="mt-2 flex justify-end">
           <p>
-            Your CREDIT voting weight:{" "}
+            Your gUSDC voting weight:{" "}
             <span className="font-semibold">
-              {data && data.votingPower ? decimalToUnit(data.votingPower, 18) : 0}
+              {creditVotingWeight ?
+                formatDecimal(Number(formatUnits(creditVotingWeight, 18)), 2)
+                : 0}
             </span>
           </p>
         </div>
         <div>
-          {loading || isLoading ? (
+          {loading ? (
             <div className="mt-4 flex flex-grow flex-col items-center justify-center gap-2">
               <Spinner />
             </div>
           ) : (
             <>
-              <table className="mt-4 w-full">
-                <thead>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <tr key={headerGroup.id} className="!border-px !border-gray-400">
-                      {headerGroup.headers.map((header) => (
-                        <th
-                          key={header.id}
-                          colSpan={header.colSpan}
-                          onClick={header.column.getToggleSortingHandler()}
-                          className="cursor-pointer border-b-[1px] border-gray-200 pb-2 pt-4 text-center text-start dark:border-gray-400"
-                        >
-                          <div className="flex items-center">
-                            <p className="text-sm font-medium text-gray-500 dark:text-white">
-                              {flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
+              <div className="overflow-auto">
+                <table className="mt-4 w-full">
+                  <thead>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <tr key={headerGroup.id} className="!border-px !border-gray-400">
+                        {headerGroup.headers.map((header) => (
+                          <th
+                            key={header.id}
+                            colSpan={header.colSpan}
+                            onClick={header.column.getToggleSortingHandler()}
+                            className="cursor-pointer border-b-[1px] border-gray-200 pb-2 pt-4 text-center text-start dark:border-gray-400"
+                          >
+                            <div className="flex items-center">
+                              <p className="text-sm font-medium text-gray-500 dark:text-white">
+                                {flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                              </p>
+                              {header.column.columnDef.enableSorting && (
+                                <span className="text-sm text-gray-400">
+                                  {{
+                                    asc: <FaSortDown />,
+                                    desc: <FaSortUp />,
+                                    null: <FaSort />,
+                                  }[header.column.getIsSorted() as string] ?? <FaSort />}
+                                </span>
                               )}
-                            </p>
-                            {header.column.columnDef.enableSorting && (
-                              <span className="text-sm text-gray-400">
-                                {{
-                                  asc: <FaSortDown />,
-                                  desc: <FaSortUp />,
-                                  null: <FaSort />,
-                                }[header.column.getIsSorted() as string] ?? <FaSort />}
-                              </span>
-                            )}
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  ))}
-                </thead>
-                <tbody>
-                  {table.getRowModel().rows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="border-b border-gray-100 transition-all duration-150 ease-in-out last:border-none hover:cursor-pointer hover:bg-gray-50 dark:border-gray-500 dark:hover:bg-navy-700"
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <td
-                          key={cell.id}
-                          className="relative min-w-[85px] border-white/0 py-2"
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                            </div>
+                          </th>
+                        ))}
+                      </tr>
+                    ))}
+                  </thead>
+                  <tbody>
+                    {table.getRowModel().rows.map((row) => (
+                      <tr
+                        key={row.id}
+                        className="border-b border-gray-100 transition-all duration-150 ease-in-out last:border-none hover:cursor-pointer hover:bg-gray-50 dark:border-gray-500 dark:hover:bg-navy-700"
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <td
+                            key={cell.id}
+                            className="relative min-w-[85px] border-white/0 py-2"
+                          >
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               <nav
                 className="flex w-full items-center justify-between border-t border-gray-200 px-2 py-3 text-gray-400"
                 aria-label="Pagination"

@@ -1,72 +1,53 @@
 "use client"
 
-import { useAccount } from "wagmi"
+import { erc20ABI, useAccount, useContractReads } from "wagmi"
 import Disconnected from "components/error/disconnected"
 import React, { useEffect, useState } from "react"
 import Card from "components/card"
-import { Flowbite, Tabs } from "flowbite-react"
-import { BsArrowDownLeft, BsArrowUpRight, BsBank2 } from "react-icons/bs"
-import customTheme from "./components/customThemeFlowbite"
 import {
-  GuildABI,
   TermABI,
-  SurplusGuildMinterABI,
-  CreditABI,
-  ProfitManagerABI,
-  UsdcABI,
+  profitManagerContract,
+  creditContract,
+  guildContract,
+  surplusGuildMinterContract,
+  usdcContract,
 } from "lib/contracts"
 import { Address, readContract } from "@wagmi/core"
-import {
-  DecimalToUnit,
-  preciseRound,
-  secondsToAppropriateUnit,
-} from "utils/utils-old"
+import { preciseRound } from "utils/utils-old"
 import Myloans from "./components/MyLoans"
 import CreateLoan from "./components/CreateLoan"
-import Stake from "./components/StakeCredit"
+import StakeCredit from "./components/StakeCredit"
 import ActiveLoans from "./components/ActiveLoans"
-import AllocateGuild from "./components/AllocateGuild"
-import {
-  LoansObj,
-  LendingTermsResponse,
-  loanObj,
-  LendingTerms,
-} from "types/lending"
-import axios, { AxiosResponse } from "axios"
-import Widget from "components/widget/Widget"
-import { MdBarChart, MdCurrencyExchange } from "react-icons/md"
-import { nameCoinGecko } from "./components/coinGecko"
+import StakeGuild from "./components/StakeGuild"
+import { loanObj, LendingTerms } from "types/lending"
+import { MdOutlineOpenInNew } from "react-icons/md"
 import { TooltipHorizon, QuestionMarkIcon } from "components/tooltip"
-import { GiProgression } from "react-icons/gi"
-import { TbArrowsExchange } from "react-icons/tb"
-import { AiFillClockCircle } from "react-icons/ai"
-import { getLoansCall } from "./components/ContractEvents"
+import { getActiveLoanDetails } from "lib/logs/loans"
 import { useSearchParams } from "next/navigation"
 import LendingStats from "./components/LendingStats"
 import { useAppStore } from "store"
+import { Tab } from "@headlessui/react"
+import clsx from "clsx"
+import { Abi, formatUnits } from "viem"
+import { generateTermName } from "utils/strings"
+import { formatDecimal } from "utils/numbers"
+import { coinsList } from "store/slices/pair-prices"
 
 const LendingDetails = () => {
-  const { address, isConnected, isDisconnected } = useAccount()
+  const { address, isConnected } = useAccount()
   const { prices } = useAppStore()
   const searchParams = useSearchParams()
   const termAddress = searchParams.get("term")
 
-  // const { data: activeLoans, isLoading: activeLoansDataLoading } =
-  //   useSWR<LendingTermsResponse>(`/loans/term/${termAddress}`, fetcher)
-  // const { data: userActiveLoans, isLoading: myLoansDataLoading } =
-  //   useSWR<LendingTermsResponse>(
-  //     `/loans/term/${termAddress}/${address}`,
-  //     fetcher
-  //   )
-  const [guildAllocated, setGuildAllocated] = React.useState<number>()
-  const [guildBalance, setGuildBalance] = React.useState<number>()
-  const [guildAvailableToStake, setGuildAvailableToStake] = React.useState(0)
-  const [creditAllocated, setCreditAllocated] = React.useState<number>()
-  const [creditAvailable, setCreditAvailable] = React.useState<number>()
-  const [lendingTermData, setLendingTermData] = React.useState<lendingTerms>()
-  const [collateralPrice, setCollateralPrice] = React.useState(0)
-  const [pegPrice, setPegPrice] = React.useState(0)
-  const [termTotalCollateral, setTermTotalCollateral] = React.useState(0)
+  const [guildUserGaugeWeight, setGuildUserGaugeWeight] = useState<bigint>()
+  const [guildBalance, setGuildBalance] = useState<bigint>()
+  const [guildUserWeight, setGuildUserWeight] = useState<bigint>()
+  const [creditAllocated, setCreditAllocated] = useState<bigint>()
+  const [creditBalance, setCreditBalance] = useState<bigint>()
+  const [lendingTermData, setLendingTermData] = useState<LendingTerms>()
+  const [collateralPrice, setCollateralPrice] = useState(0)
+  const [pegPrice, setPegPrice] = useState(0)
+  const [termTotalCollateral, setTermTotalCollateral] = useState(0)
   const [gaugeWeight, setGaugeWeight] = useState<number>(0)
   const [totalWeight, setTotalWeight] = useState<number>(0)
   const [creditTotalSupply, setCreditTotalSupply] = useState<number>(0)
@@ -74,7 +55,7 @@ const LendingDetails = () => {
   const [debtCeilling, setDebtCeilling] = useState<number>(0)
   const [currentDebt, setCurrentDebt] = useState<number>(0)
   const [isLoadingEventLoans, setIsLoadingEventLoans] = useState<boolean>(true)
-  const [profitSharing, setProfitSharing] = React.useState({
+  const [profitSharing, setProfitSharing] = useState({
     creditSplit: "",
     guildSplit: "",
     surplusBufferSplit: "",
@@ -82,50 +63,59 @@ const LendingDetails = () => {
   const [reload, setReload] = useState<boolean>(false)
   const [utilization, setUtilization] = useState<string>("")
   const [eventLoans, setEventLoans] = useState<loanObj[]>([])
-  const { lendingTerms  } = useAppStore()
+  const { lendingTerms } = useAppStore()
 
   useEffect(() => {
     if (lendingTerms && termAddress) {
-      setLendingTermData(
-        lendingTerms.find((item) => item.address == termAddress)
-      )
+      setLendingTermData(lendingTerms.find((item) => item.address == termAddress))
     }
   }, [lendingTerms])
+
+  /* Smart contract reads */
+  const { data, isError, isLoading, refetch } = useContractReads({
+    contracts: [
+      {
+        ...profitManagerContract,
+        functionName: "creditMultiplier",
+      },
+    ],
+    select: (data) => {
+      return {
+        creditMultiplier: data[0].result as bigint,
+      }
+    },
+  })
+  /* End Smart contract reads */
 
   //Coin gecko price fetching
   useEffect(() => {
     function getPegPrice() {
       const nameCG = "usd-coin"
-      const price = prices.find(crypto => crypto[nameCG])[nameCG].usd
-      // const response = await axios.get(
-      //   `https://api.coingecko.com/api/v3/simple/price?ids=${nameCG}&vs_currencies=usd`,
-      //   {}
-      // )
+      const price = prices[nameCG].usd
       setPegPrice(price)
     }
+
     function getCollateralPrice() {
-      const nameCG = nameCoinGecko.find(
-        (name) => name.nameECG === lendingTermData.collateral
+      const nameCG = coinsList.find(
+        (name) => name.nameECG === lendingTermData.collateral.name
       )?.nameCG
-      const price = prices.find(crypto => crypto[nameCG])[nameCG].usd
-      // const response = await axios.get(
-      //   `https://api.coingecko.com/api/v3/simple/price?ids=${nameCG}&vs_currencies=usd`,
-      //   {}
-      // )
+      const price = prices[nameCG].usd
       setCollateralPrice(price)
     }
+
     async function getTermsTotalCollateral() {
       const result = await readContract({
-        address: lendingTermData.collateralAddress as Address,
-        abi: UsdcABI,
+        address: lendingTermData.collateral.address as Address,
+        abi: erc20ABI as Abi,
         functionName: "balanceOf",
         args: [lendingTermData.address],
       })
 
       setTermTotalCollateral(
-        DecimalToUnit(result as bigint, lendingTermData.collateralDecimals)
+        Number(formatUnits(result as bigint, lendingTermData.collateral.decimals))
       )
     }
+
     if (lendingTermData) {
       getPegPrice()
       getCollateralPrice()
@@ -141,80 +131,69 @@ const LendingDetails = () => {
 
   //fetch smart contract data
   useEffect(() => {
-    async function getGuildAllocated(): Promise<void> {
+    async function guildUserGaugeWeight(): Promise<void> {
       const result = await readContract({
-        address: process.env.NEXT_PUBLIC_GUILD_ADDRESS as Address,
-        abi: GuildABI,
+        ...guildContract,
         functionName: "getUserGaugeWeight",
         args: [address, termAddress],
       })
-      setGuildAllocated(DecimalToUnit(result as bigint, 18))
+      setGuildUserGaugeWeight(result as bigint)
     }
-    async function getGuildAvailable(): Promise<void> {
-      const balance = await readContract({
-        address: process.env.NEXT_PUBLIC_GUILD_ADDRESS as Address,
-        abi: GuildABI,
+    async function guildBalance(): Promise<void> {
+      const result = await readContract({
+        ...guildContract,
         functionName: "balanceOf",
         args: [address],
       })
-      const result = DecimalToUnit(balance as bigint, 18)
 
-      setGuildBalance(result)
+      setGuildBalance(result as bigint)
     }
     async function getGuildAvailableToStake(): Promise<void> {
       const result = await readContract({
-        address: process.env.NEXT_PUBLIC_GUILD_ADDRESS as Address,
-        abi: GuildABI,
+        ...guildContract,
         functionName: "getUserWeight",
         args: [address],
       })
-      setGuildAvailableToStake(DecimalToUnit(result as bigint, 18))
+      setGuildUserWeight(result as bigint)
     }
 
     async function getCreditAllocated(): Promise<void> {
       const result = await readContract({
-        address: process.env
-          .NEXT_PUBLIC_SURPLUS_GUILD_MINTER_ADDRESS as Address,
-        abi: SurplusGuildMinterABI,
-        functionName: "stakes",
+        ...surplusGuildMinterContract,
+        functionName: "getUserStake",
         args: [address, termAddress],
       })
-
-      setCreditAllocated(DecimalToUnit(result as bigint, 18))
+      setCreditAllocated(result.credit as bigint)
     }
-    async function getCreditdAvailable(): Promise<void> {
+
+    async function getCreditdBalance(): Promise<void> {
       const result = await readContract({
-        address: process.env.NEXT_PUBLIC_CREDIT_ADDRESS as Address,
-        abi: CreditABI,
+        ...creditContract,
         functionName: "balanceOf",
         args: [address],
       })
-      setCreditAvailable(DecimalToUnit(result as bigint, 18))
+      setCreditBalance(result as bigint)
     }
 
     async function getEventLoans(): Promise<Object> {
-      const loansCall = await getLoansCall(termAddress as Address)
+      const loansCall = await getActiveLoanDetails(termAddress as Address)
       setEventLoans(loansCall)
       setIsLoadingEventLoans(false)
       return loansCall
     }
 
     if (isConnected) {
-      getGuildAvailable()
-      getGuildAllocated()
+      guildBalance()
+      guildUserGaugeWeight()
       getCreditAllocated()
-      getCreditdAvailable()
-      // getLoans()
-      // getMyLoans()
+      getCreditdBalance()
       getGuildAvailableToStake()
     }
-    // setGuildAvailable( parseInt(getGuildAvailable, 10) / 1e18 );
     else {
-      setGuildAllocated(undefined)
+      setGuildUserGaugeWeight(undefined)
       setGuildBalance(undefined)
       setCreditAllocated(undefined)
-      setCreditAvailable(undefined)
-      // getLoans()
+      setCreditBalance(undefined)
     }
     getEventLoans()
     setReload(false)
@@ -222,63 +201,62 @@ const LendingDetails = () => {
 
   //fetch other smart contract data
   useEffect(() => {
+    async function getDebtCeiling(): Promise<void> {
+      const result = await readContract({
+        address: lendingTermData.address as Address,
+        abi: TermABI,
+        functionName: "debtCeiling",
+      })
+      setDebtCeilling(Number(formatUnits(result as bigint, 18)))
+    }
+
     async function getGaugeWeight(): Promise<void> {
       const result = await readContract({
-        address: process.env.NEXT_PUBLIC_GUILD_ADDRESS as Address,
-        abi: GuildABI,
+        ...guildContract,
         functionName: "getGaugeWeight",
-        args: [termAddress],
+        args: [lendingTermData.address],
       })
-      setGaugeWeight(Number(DecimalToUnit(result as bigint, 18)))
+      setGaugeWeight(Number(formatUnits(result as bigint, 18)))
     }
 
     async function getTotalWeight(): Promise<void> {
       const result = await readContract({
-        address: process.env.NEXT_PUBLIC_GUILD_ADDRESS as Address,
-        abi: GuildABI,
+        ...guildContract,
         functionName: "totalTypeWeight",
         args: [1],
       })
-      setTotalWeight(Number(DecimalToUnit(result as bigint, 18)))
+      setTotalWeight(Number(formatUnits(result as bigint, 18)))
     }
     async function getCreditTotalSupply(): Promise<void> {
       const result = await readContract({
-        address: process.env.NEXT_PUBLIC_CREDIT_ADDRESS as Address,
-        abi: CreditABI,
+        ...creditContract,
         functionName: "totalSupply",
         args: [],
       })
-      setCreditTotalSupply(Number(DecimalToUnit(result as bigint, 18)))
+      setCreditTotalSupply(Number(formatUnits(result as bigint, 18)))
     }
     async function getRationGUILDCREDIT() {
       const ratio = await readContract({
-        address: process.env
-          .NEXT_PUBLIC_SURPLUS_GUILD_MINTER_ADDRESS as Address,
-        abi: SurplusGuildMinterABI,
-        functionName: "ratio",
+        ...surplusGuildMinterContract,
+        functionName: "mintRatio",
       })
-      setRatioGuildCredit(DecimalToUnit(ratio as bigint, 18))
+      setRatioGuildCredit(Number(formatUnits(ratio as bigint, 18)))
     }
     async function getProfitSharing(): Promise<void> {
       const result = await readContract({
-        address: process.env.NEXT_PUBLIC_PROFIT_MANAGER_ADDRESS as Address,
-        abi: ProfitManagerABI,
+        ...profitManagerContract,
         functionName: "getProfitSharingConfig",
-        args: [],
       })
 
       if (Array.isArray(result) && result.length >= 3) {
         setProfitSharing({
           creditSplit: preciseRound(
-            DecimalToUnit(result[0] as bigint, 18) * 100,
+            Number(formatUnits(result[1] as bigint, 18)) * 100,
             2
           ),
-          guildSplit: preciseRound(
-            DecimalToUnit(result[1] as bigint, 18) * 100,
-            2
-          ),
+          guildSplit: preciseRound(Number(formatUnits(result[2] as bigint, 18)) * 100, 2),
           surplusBufferSplit: preciseRound(
-            DecimalToUnit(result[2] as bigint, 18) * 100,
+            Number(formatUnits(result[0] as bigint, 18)) * 100,
             2
           ),
         })
@@ -288,39 +266,23 @@ const LendingDetails = () => {
     }
     async function getCurrentDebt(): Promise<void> {
       const result = await readContract({
-        address: termAddress as Address,
+        address: lendingTermData.address as Address,
         abi: TermABI,
         functionName: "issuance",
       })
-      setCurrentDebt(Number(DecimalToUnit(result as bigint, 18)))
+      setCurrentDebt(Number(formatUnits(result as bigint, 18)))
     }
-    const resp = getProfitSharing()
-    console.log("erwererw", resp)
-    getGaugeWeight()
-    getTotalWeight()
-    getCreditTotalSupply()
-    getRationGUILDCREDIT()
-    getCurrentDebt()
-  }, [reload])
 
-  useEffect(() => {
-    setDebtCeilling(creditTotalSupply * (gaugeWeight / totalWeight) * 1.2)
-  }, [creditTotalSupply, gaugeWeight, totalWeight])
-
-  const formatLendingTermName = () => {
-    const item: LendingTerms = lendingTermData
-
-    return item
-      ? `${
-          item.collateral +
-          "-" +
-          item.interestRate * 100 +
-          "%" +
-          "-" +
-          preciseRound(item.borrowRatio, 2)
-        }`
-      : null
-  }
+    if (lendingTermData) {
+      getDebtCeiling()
+      getGaugeWeight()
+      getTotalWeight()
+      getCreditTotalSupply()
+      getRationGUILDCREDIT()
+      getCurrentDebt()
+      getProfitSharing()
+    }
+  }, [lendingTermData, reload])
 
   if (!isConnected) {
     return <Disconnected />
@@ -329,9 +291,24 @@ const LendingDetails = () => {
   if (lendingTermData) {
     return (
       <div>
-        <h3 className="text-2xl font-semibold text-gray-700 dark:text-white">
-          {formatLendingTermName()}
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-2xl font-semibold text-gray-700 dark:text-white">
+            {generateTermName(
+              lendingTermData.collateral.name,
+              lendingTermData.interestRate,
+              lendingTermData.borrowRatio
+            )}
+          </h3>
+          <a
+            target="_blank"
+            href={process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS + "/" + termAddress}
+            type="button"
+            className="flex items-center gap-1 rounded-md bg-stone-100 px-2 py-1.5 text-xs transition-all duration-150 ease-in-out  dark:bg-navy-700 dark:text-stone-300 dark:ring-navy-600 dark:hover:text-stone-100 "
+          >
+            View in explorer
+            <MdOutlineOpenInNew />
+          </a>
+        </div>
         <LendingStats
           lendingTermData={lendingTermData}
           currentDebt={currentDebt}
@@ -344,42 +321,24 @@ const LendingDetails = () => {
           Loan
         </h3>
         <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-3 ">
-          <Card
-            extra="order-1 w-full h-full sm:overflow-auto px-6 py-4"
-            title="New Loan"
-          >
+          <Card extra="order-1 w-full h-full sm:overflow-auto px-6 py-4" title="New Loan">
             <CreateLoan
-              name={lendingTermData.collateral}
-              contractAddress={termAddress}
-              collateralAddress={lendingTermData.collateralAddress}
-              openingFee={lendingTermData.openingFee}
-              minBorrow={lendingTermData.minBorrow}
-              borrowRatio={lendingTermData.borrowRatio}
-              callFee={lendingTermData.callFee}
-              currentDebt={currentDebt}
+              lendingTerm={lendingTermData}
               availableDebt={debtCeilling - currentDebt}
-              collateralDecimals={lendingTermData.collateralDecimals}
-              maxDelayBetweenPartialRepay={
-                lendingTermData.maxDelayBetweenPartialRepay
-              }
+              creditMultiplier={data?.creditMultiplier}
               reload={setReload}
             />
           </Card>
           <Card
             extra="md:col-span-2 order-2 w-full h-full px-6 py-4 sm:overflow-x-auto relative"
-            title="My Active Loans"
+            title="Your Active Loans"
           >
             <Myloans
+              lendingTerm={lendingTermData}
               isLoadingEventLoans={isLoadingEventLoans}
               tableData={eventLoans}
-              collateralName={lendingTermData.collateral}
               collateralPrice={collateralPrice}
               pegPrice={pegPrice}
-              smartContractAddress={termAddress}
-              maxDelayBetweenPartialRepay={
-                lendingTermData.maxDelayBetweenPartialRepay
-              }
-              collateralDecimals={lendingTermData.collateralDecimals}
               reload={setReload}
             />
           </Card>
@@ -388,202 +347,304 @@ const LendingDetails = () => {
           Stake
         </h3>
         <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
-          <Card
-            extra="order-1 w-full h-full sm:overflow-auto px-6 py-4"
-            title="Stake GUILD"
-          >
+          <Card extra="order-1 w-full h-full sm:overflow-auto px-6">
             <div className="h-full rounded-md">
-              <TooltipHorizon
-                extra="z-10 !w-[450px] dark:text-white"
-                content={
-                  <div className="space-y-2 p-2">
-                    <p>
-                      Staked GUILD increase the debt ceiling of lending terms
-                      (available CREDIT to borrow).
-                    </p>
-
-                    <p>
-                      If the term creates bad debt, the GUILD tokens staked for
-                      this term are slashed.
-                    </p>
-
-                    <p>
-                      When you stake your GUILD tokens on a term, this portion
-                      of your balance becomes non-transferable, and if you
-                      attempt to transfer your tokens, your GUILD will be
-                      unstaked, which will decrease the debt ceiling. If the
-                      debt ceiling cannot be decreased (due to active borrowing
-                      demand), the loans have to be repaid or called first.
-                      Loans can only be called if they missed a period payment
-                      or if the term has been offboarded.
-                    </p>
-
-                    <p>
-                      GUILD staked on a term earns a proportional share of the
-                      fees earned by this term. If you represent{" "}
-                      <strong>50%</strong> of the GUILD staked for a term, you
-                      will earn <strong>50%</strong> of the fees earned by GUILD
-                      stakers on this term.
-                    </p>
-
-                    <p>
-                      The protocol profit sharing can be updated by governance,
-                      and is configured as follow :<br />
-                      &mdash; <strong>{profitSharing.creditSplit}</strong>% to
-                      CREDIT savers
-                      <br />
-                      &mdash; <strong>{profitSharing.guildSplit}</strong>% to
-                      GUILD stakers
-                      <br />
-                      &mdash;{" "}
-                      <strong>{profitSharing.surplusBufferSplit}</strong>% to
-                      the Surplus Buffer
-                    </p>
-                    <p>
-                      The Surplus Buffer is a first-loss capital reserve shared
-                      among all terms.
-                    </p>
-                  </div>
-                }
-                trigger={
-                  <div className="mt-4 flex items-center space-x-2 text-gray-700 dark:text-white">
-                    <span>Risk your GUILD tokens & earn CREDIT rewards</span>
-                    <QuestionMarkIcon />
-                  </div>
-                }
-                placement="bottom"
-              />
               <div className="mt-4 space-y-8">
                 <div className="rounded-md">
-                  <Flowbite>
-                    <Tabs.Group
-                      aria-label="Tabs with underline"
-                      style="underline"
-                      className="z-0"
+                  <dl className="my-5 flex rounded-md bg-gray-50 ring-1 ring-gray-100 dark:bg-navy-600 dark:ring-navy-800">
+                    <div
+                      key="guildStaking"
+                      className="border-r border-gray-100 px-4 py-3 dark:border-navy-800"
                     >
-                      <Tabs.Item
-                        active
-                        className=""
-                        icon={BsArrowUpRight}
-                        title="Stake GUILD"
+                      <dt className="text-base font-medium text-gray-900 dark:text-gray-100">
+                        Your GUILD staked
+                      </dt>
+                      <dd className="mt-1 flex items-baseline justify-between gap-6 md:block lg:flex">
+                        <div className="flex items-baseline text-2xl font-semibold text-brand-500">
+                          {guildUserGaugeWeight != undefined &&
+                            formatDecimal(
+                              Number(formatUnits(guildUserGaugeWeight, 18)),
+                              2
+                            )}
+                        </div>
+                        <div className="inline-flex items-baseline rounded-full bg-green-100 px-2.5 py-0.5 text-sm font-medium text-green-800 md:mt-2 lg:mt-0">
+                          {guildUserGaugeWeight != undefined &&
+                            guildBalance != undefined &&
+                            formatDecimal(
+                              (Number(formatUnits(guildUserGaugeWeight, 18)) /
+                                Number(formatUnits(guildBalance, 18))) *
+                                100,
+                              2
+                            )}
+                          %
+                        </div>
+                      </dd>
+                      <span className="ml-2 text-sm font-medium text-gray-500 dark:text-gray-300">
+                        /{" "}
+                        {guildBalance != undefined &&
+                          formatDecimal(Number(formatUnits(guildBalance, 18)), 2)}
+                      </span>
+                    </div>
+                    <div className="mx-auto flex flex-col items-center justify-center px-4 text-center">
+                      <TooltipHorizon
+                        extra="z-10 !w-[450px] dark:text-gray-100"
+                        content={
+                          <div className="space-y-2 p-2">
+                            <p>
+                              Staked GUILD increase the debt ceiling of lending terms
+                              (available gUSDC to borrow).
+                            </p>
+
+                            <p>
+                              If the term creates bad debt, the GUILD tokens staked for
+                              this term are slashed.
+                            </p>
+
+                            <p>
+                              When you stake your GUILD tokens on a term, this portion of
+                              your balance becomes non-transferable, and if you attempt to
+                              transfer your tokens, your GUILD will be unstaked, which
+                              will decrease the debt ceiling. If the debt ceiling cannot
+                              be decreased (due to active borrowing demand), the loans
+                              have to be repaid or called first. Loans can only be called
+                              if they missed a period payment or if the term has been
+                              offboarded.
+                            </p>
+
+                            <p>
+                              GUILD staked on a term earns a proportional share of the
+                              fees earned by this term. If you represent{" "}
+                              <strong>50%</strong> of the GUILD staked for a term, you
+                              will earn <strong>50%</strong> of the fees earned by GUILD
+                              stakers on this term.
+                            </p>
+
+                            <p>
+                              The protocol profit sharing can be updated by governance,
+                              and is configured as follow :<br />
+                              &mdash; <strong>{profitSharing.guildSplit}</strong>% to
+                              GUILD stakers
+                              <br />
+                              &mdash; <strong>{profitSharing.creditSplit}</strong>% to
+                              gUSDC savers
+                              <br />
+                              &mdash; <strong>{profitSharing.surplusBufferSplit}</strong>%
+                              to the Surplus Buffer
+                            </p>
+                            <p>
+                              The Surplus Buffer is a first-loss capital reserve shared
+                              among all terms.
+                            </p>
+                          </div>
+                        }
+                        trigger={
+                          <div className="flex items-center space-x-2 text-gray-700 dark:text-gray-200">
+                            <span>Risk your GUILD tokens & earn gUSDC rewards</span>
+                            <QuestionMarkIcon />
+                          </div>
+                        }
+                        placement="bottom"
+                      />
+                    </div>
+                  </dl>
+
+                  <Tab.Group>
+                    <Tab.List className="flex space-x-1 rounded-md bg-brand-100/50 p-1 dark:bg-navy-700">
+                      <Tab
+                        key="stake-guild"
+                        className={({ selected }) =>
+                          clsx(
+                            "w-full rounded-md px-2 py-1 text-sm leading-5 transition-all duration-150 ease-in-out sm:px-4 sm:py-2 sm:text-base",
+                            selected
+                              ? "bg-white font-semibold text-brand-500 dark:bg-navy-600/70"
+                              : "font-medium text-brand-500/80 hover:bg-white/30 dark:text-gray-200 dark:hover:bg-navy-600/50"
+                          )
+                        }
                       >
-                        <AllocateGuild
-                          textButton="Increment"
-                          allocatedGuild={guildAllocated}
+                        Stake
+                      </Tab>
+                      <Tab
+                        key="unstake-guild"
+                        className={({ selected }) =>
+                          clsx(
+                            "w-full rounded-md px-2 py-1 text-sm leading-5 transition-all duration-150 ease-in-out sm:px-4 sm:py-2 sm:text-base",
+                            selected
+                              ? "bg-white font-semibold text-brand-500 dark:bg-navy-600/70"
+                              : "font-medium text-brand-500/80 hover:bg-white/30 dark:text-gray-200 dark:hover:bg-navy-600/50"
+                          )
+                        }
+                      >
+                        Unstake
+                      </Tab>
+                    </Tab.List>
+                    <Tab.Panels className="mt-2">
+                      <Tab.Panel key="stake-guild" className={"px-3 py-1"}>
+                        <StakeGuild
+                          debtCeiling={debtCeilling}
+                          lendingTerm={lendingTermData}
+                          textButton="Stake"
+                          guildUserGaugeWeight={guildUserGaugeWeight}
                           guildBalance={guildBalance}
                           smartContractAddress={termAddress}
-                          currentDebt={currentDebt}
-                          availableDebt={lendingTermData.availableDebt}
-                          gaugeWeight={gaugeWeight}
-                          totalWeight={totalWeight}
-                          creditTotalSupply={creditTotalSupply}
-                          guildAvailableToStake={guildAvailableToStake}
+                          guildUserWeight={guildUserWeight}
                           reload={setReload}
-                        ></AllocateGuild>
-                      </Tabs.Item>
-                      <Tabs.Item icon={BsArrowDownLeft} title="Unstake GUILD">
-                        <AllocateGuild
-                          textButton="Decrement"
-                          allocatedGuild={guildAllocated}
+                        />
+                      </Tab.Panel>
+                      <Tab.Panel key="unstake-guild" className={"px-3 py-1"}>
+                        <StakeGuild
+                          debtCeiling={debtCeilling}
+                          lendingTerm={lendingTermData}
+                          textButton="Unstake"
+                          guildUserGaugeWeight={guildUserGaugeWeight}
                           guildBalance={guildBalance}
                           smartContractAddress={termAddress}
-                          currentDebt={currentDebt}
-                          availableDebt={lendingTermData.availableDebt}
-                          gaugeWeight={gaugeWeight}
-                          totalWeight={totalWeight}
-                          creditTotalSupply={creditTotalSupply}
-                          guildAvailableToStake={guildAvailableToStake}
+                          guildUserWeight={guildUserWeight}
                           reload={setReload}
-                        ></AllocateGuild>
-                      </Tabs.Item>
-                    </Tabs.Group>
-                  </Flowbite>
+                        />
+                      </Tab.Panel>
+                    </Tab.Panels>
+                  </Tab.Group>
                 </div>
               </div>
             </div>
           </Card>
 
-          <Card
-            extra="order-2 w-full h-full sm:overflow-auto px-6 py-4"
-            title="Stake CREDIT"
-          >
+          <Card extra="order-1 w-full h-full sm:overflow-auto px-6">
             <div className="rounded-md">
-              <TooltipHorizon
-                extra="z-10 !w-[450px] dark:text-white"
-                content={
-                  <div className="space-y-2 p-2">
-                    <p>
-                      The CREDIT staked will act as first-loss capital if this
-                      term creates bad debt. You will not recover any CREDIT if
-                      this term creates bad debt while you staked.
-                    </p>
-
-                    <p>
-                      For each CREDIT staked,{" "}
-                      <strong>{preciseRound(ratioGuildCredit, 2)}</strong> GUILD
-                      will be minted & staked for this term (see Stake GUILD
-                      tooltip), which will increase the debt ceiling (available
-                      CREDIT to borrow) in this term.
-                    </p>
-
-                    <p>
-                      You will earn CREDIT from the regular GUILD stake rewards,
-                      plus an additional <strong>X.XX</strong> GUILD per CREDIT
-                      earned.
-                    </p>
-                  </div>
-                }
-                trigger={
-                  <div className="mt-4 flex items-center space-x-2 text-gray-700 dark:text-white">
-                    <h4>
-                      Provide first lost capital & earn CREDIT + GUILD rewards
-                    </h4>
-                    <QuestionMarkIcon />
-                  </div>
-                }
-                placement="bottom"
-              />
               <div className="mt-4 space-y-8">
                 <div className="rounded-md ">
-                  <Flowbite>
-                    <Tabs.Group
-                      aria-label="Tabs with underline"
-                      style="underline"
-                      className="z-0"
+                  <dl className="my-5 flex rounded-md bg-gray-50 ring-1 ring-gray-100 dark:bg-navy-600 dark:ring-navy-800">
+                    <div
+                      key="guildStaking"
+                      className="border-r border-gray-100 px-4 py-3 dark:border-navy-800"
                     >
-                      <Tabs.Item
-                        active
-                        className=""
-                        icon={BsArrowUpRight}
-                        title="Stake CREDIT"
+                      <dt className="text-base font-medium text-gray-900 dark:text-gray-100">
+                        Your gUSDC staked
+                      </dt>
+                      <dd className="mt-1 flex items-baseline justify-between gap-6 md:block lg:flex">
+                        <div className="flex items-baseline text-2xl font-semibold text-brand-500">
+                          {creditAllocated != undefined &&
+                            formatDecimal(Number(formatUnits(creditAllocated, 18)), 2)}
+                        </div>
+                        <div className="inline-flex items-baseline rounded-full bg-green-100 px-2.5 py-0.5 text-sm font-medium text-green-800 md:mt-2 lg:mt-0">
+                          {creditAllocated != undefined &&
+                            creditBalance != undefined &&
+                            formatDecimal(
+                              (Number(formatUnits(creditAllocated, 18)) /
+                                (Number(formatUnits(creditBalance, 18)) +
+                                  Number(formatUnits(creditAllocated, 18)))) *
+                                100,
+                              2
+                            )}
+                          %
+                        </div>
+                      </dd>
+                      <span className="ml-2 text-sm font-medium text-gray-500 dark:text-gray-300">
+                        /{" "}
+                        {creditBalance != undefined &&
+                          creditAllocated != undefined &&
+                          formatDecimal(
+                            Number(formatUnits(creditBalance, 18)) +
+                              Number(formatUnits(creditAllocated, 18)),
+                            2
+                          )}
+                      </span>
+                    </div>
+                    <div className="mx-auto flex flex-col items-center justify-center px-4 text-center">
+                      <TooltipHorizon
+                        extra="z-10 !w-[450px] dark:text-white"
+                        content={
+                          <div className="space-y-2 p-2">
+                            <p>
+                              The gUSDC staked will act as first-loss capital if this term
+                              creates bad debt. You will not recover any gUSDC if this
+                              term creates bad debt while you staked.
+                            </p>
+
+                            <p>
+                              For each gUSDC staked,{" "}
+                              <strong>{preciseRound(ratioGuildCredit, 2)}</strong> GUILD
+                              will be minted & staked for this term (see Stake GUILD
+                              tooltip), which will increase the debt ceiling (available
+                              gUSDC to borrow) in this term.
+                            </p>
+
+                            <p>
+                              You will earn gUSDC from the regular GUILD stake rewards,
+                              plus an additional <strong>X.XX</strong> GUILD per gUSDC
+                              earned.
+                            </p>
+                          </div>
+                        }
+                        trigger={
+                          <div className="flex items-center space-x-2 text-gray-700 dark:text-white">
+                            <h4>
+                              Provide first lost capital & earn gUSDC + GUILD rewards
+                            </h4>
+                            <QuestionMarkIcon />
+                          </div>
+                        }
+                        placement="bottom"
+                      />
+                    </div>
+                  </dl>
+
+                  <Tab.Group>
+                    <Tab.List className="flex space-x-1 rounded-md bg-brand-100/50 p-1 dark:bg-navy-700">
+                      <Tab
+                        key="stake-credit"
+                        className={({ selected }) =>
+                          clsx(
+                            "w-full rounded-md px-2 py-1 text-sm leading-5 transition-all duration-150 ease-in-out sm:px-4 sm:py-2 sm:text-base",
+                            selected
+                              ? "bg-white font-semibold text-brand-500 dark:bg-navy-600/70"
+                              : "font-medium text-brand-500/80 hover:bg-white/30 dark:text-gray-200 dark:hover:bg-navy-600/50"
+                          )
+                        }
                       >
-                        <Stake
-                          textButton="stake"
-                          allocatedCredit={creditAllocated}
-                          availableCredit={creditAvailable}
+                        Stake
+                      </Tab>
+                      <Tab
+                        key="unstake-credit"
+                        className={({ selected }) =>
+                          clsx(
+                            "w-full rounded-md px-2 py-1 text-sm leading-5 transition-all duration-150 ease-in-out sm:px-4 sm:py-2 sm:text-base",
+                            selected
+                              ? "bg-white font-semibold text-brand-500 dark:bg-navy-600/70"
+                              : "font-medium text-brand-500/80 hover:bg-white/30 dark:text-gray-200 dark:hover:bg-navy-600/50"
+                          )
+                        }
+                      >
+                        Unstake
+                      </Tab>
+                    </Tab.List>
+                    <Tab.Panels className="mt-2">
+                      <Tab.Panel key="stake-credit" className={"px-3 py-1"}>
+                        <StakeCredit
+                          debtCeiling={debtCeilling}
+                          lendingTerm={lendingTermData}
+                          textButton="Stake"
+                          creditAllocated={creditAllocated}
+                          creditBalance={creditBalance}
                           termAddress={termAddress}
-                          gaugeWeight={gaugeWeight}
-                          totalWeight={totalWeight}
-                          creditTotalSupply={creditTotalSupply}
                           ratioGuildCredit={ratioGuildCredit}
                           reload={setReload}
-                        ></Stake>
-                      </Tabs.Item>
-                      <Tabs.Item icon={BsArrowDownLeft} title="Unstake CREDIT">
-                        <Stake
+                        />
+                      </Tab.Panel>
+                      <Tab.Panel key="unstake-credit" className={"px-3 py-1"}>
+                        <StakeCredit
+                          debtCeiling={debtCeilling}
+                          lendingTerm={lendingTermData}
                           textButton="Unstake"
-                          allocatedCredit={creditAllocated}
-                          availableCredit={creditAvailable}
+                          creditAllocated={creditAllocated}
+                          creditBalance={creditBalance}
                           termAddress={termAddress}
-                          gaugeWeight={gaugeWeight}
-                          totalWeight={totalWeight}
-                          creditTotalSupply={creditTotalSupply}
                           ratioGuildCredit={ratioGuildCredit}
                           reload={setReload}
-                        ></Stake>
-                      </Tabs.Item>
-                    </Tabs.Group>
-                  </Flowbite>
+                        />
+                      </Tab.Panel>
+                    </Tab.Panels>
+                  </Tab.Group>
                 </div>
               </div>
             </div>
@@ -598,14 +659,12 @@ const LendingDetails = () => {
             title="Active Loans"
           >
             <ActiveLoans
-              maxDelayBetweenPartialRepay={
-                lendingTermData.maxDelayBetweenPartialRepay
-              }
-              collateralName={lendingTermData.collateral}
+              maxDelayBetweenPartialRepay={lendingTermData.maxDelayBetweenPartialRepay}
+              collateralName={lendingTermData.collateral.name}
               termAddress={termAddress}
               activeLoans={eventLoans}
-              collateralAddress={lendingTermData.collateralAddress}
-              collateralDecimals={lendingTermData.collateralDecimals}
+              collateralDecimals={lendingTermData.collateral.decimals}
+              isLoadingEventLoans={isLoadingEventLoans}
               reload={setReload}
             />
           </Card>

@@ -9,6 +9,7 @@ import "styles/Contact.css"
 import "styles/MiniCalendar.css"
 import "styles/index.css"
 import StoreProvider from "contexts/StoreProvider"
+import KBarWrapper from "layouts/KBarWrapper"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -22,7 +23,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <NoSSRWrapper>
           <Web3Provider>
             <StoreProvider>
-            { children}
+              <KBarWrapper>{children}</KBarWrapper>
             </StoreProvider>
           </Web3Provider>
         </NoSSRWrapper>

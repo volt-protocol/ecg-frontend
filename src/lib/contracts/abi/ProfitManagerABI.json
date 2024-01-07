@@ -1,38 +1,16 @@
 [
   {
-    "inputs": [
-      { "internalType": "address", "name": "_core", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "_core", "type": "address" }],
     "stateMutability": "nonpayable",
     "type": "constructor"
   },
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "when",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "gauge",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
+      { "indexed": true, "internalType": "uint256", "name": "when", "type": "uint256" },
+      { "indexed": true, "internalType": "address", "name": "user", "type": "address" },
+      { "indexed": true, "internalType": "address", "name": "gauge", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" }
     ],
     "name": "ClaimRewards",
     "type": "event"
@@ -46,12 +24,7 @@
         "name": "oldCore",
         "type": "address"
       },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "newCore",
-        "type": "address"
-      }
+      { "indexed": true, "internalType": "address", "name": "newCore", "type": "address" }
     ],
     "name": "CoreUpdate",
     "type": "event"
@@ -59,12 +32,7 @@
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "when",
-        "type": "uint256"
-      },
+      { "indexed": true, "internalType": "uint256", "name": "when", "type": "uint256" },
       {
         "indexed": false,
         "internalType": "uint256",
@@ -78,26 +46,39 @@
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "gauge",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "when",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "int256",
-        "name": "pnl",
-        "type": "int256"
-      }
+      { "indexed": true, "internalType": "address", "name": "gauge", "type": "address" },
+      { "indexed": true, "internalType": "uint256", "name": "when", "type": "uint256" },
+      { "indexed": false, "internalType": "int256", "name": "pnl", "type": "int256" }
     ],
     "name": "GaugePnL",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "uint256", "name": "when", "type": "uint256" },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newValue",
+        "type": "uint256"
+      }
+    ],
+    "name": "GaugeWeightToleranceUpdate",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "uint256", "name": "when", "type": "uint256" },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newValue",
+        "type": "uint256"
+      }
+    ],
+    "name": "MinBorrowUpdate",
     "type": "event"
   },
   {
@@ -116,12 +97,7 @@
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "when",
-        "type": "uint256"
-      },
+      { "indexed": true, "internalType": "uint256", "name": "when", "type": "uint256" },
       {
         "indexed": false,
         "internalType": "uint256",
@@ -159,12 +135,7 @@
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "when",
-        "type": "uint256"
-      },
+      { "indexed": true, "internalType": "uint256", "name": "when", "type": "uint256" },
       {
         "indexed": false,
         "internalType": "uint256",
@@ -173,6 +144,21 @@
       }
     ],
     "name": "SurplusBufferUpdate",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "uint256", "name": "when", "type": "uint256" },
+      { "indexed": true, "internalType": "address", "name": "term", "type": "address" },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newValue",
+        "type": "uint256"
+      }
+    ],
+    "name": "TermSurplusBufferUpdate",
     "type": "event"
   },
   {
@@ -194,29 +180,21 @@
       { "internalType": "address", "name": "gauge", "type": "address" }
     ],
     "name": "claimGaugeRewards",
-    "outputs": [
-      { "internalType": "uint256", "name": "creditEarned", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "creditEarned", "type": "uint256" }],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "user", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "user", "type": "address" }],
     "name": "claimRewards",
-    "outputs": [
-      { "internalType": "uint256", "name": "creditEarned", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "creditEarned", "type": "uint256" }],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "core",
-    "outputs": [
-      { "internalType": "contract Core", "name": "", "type": "address" }
-    ],
+    "outputs": [{ "internalType": "contract Core", "name": "", "type": "address" }],
     "stateMutability": "view",
     "type": "function"
   },
@@ -235,10 +213,18 @@
     "type": "function"
   },
   {
+    "inputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
+    "name": "donateToSurplusBuffer",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [
+      { "internalType": "address", "name": "term", "type": "address" },
       { "internalType": "uint256", "name": "amount", "type": "uint256" }
     ],
-    "name": "donateToSurplusBuffer",
+    "name": "donateToTermSurplusBuffer",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -257,9 +243,7 @@
       }
     ],
     "name": "emergencyAction",
-    "outputs": [
-      { "internalType": "bytes[]", "name": "returnData", "type": "bytes[]" }
-    ],
+    "outputs": [{ "internalType": "bytes[]", "name": "returnData", "type": "bytes[]" }],
     "stateMutability": "payable",
     "type": "function"
   },
@@ -271,22 +255,19 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "user", "type": "address" }
-    ],
+    "inputs": [],
+    "name": "gaugeWeightTolerance",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "address", "name": "user", "type": "address" }],
     "name": "getPendingRewards",
     "outputs": [
       { "internalType": "address[]", "name": "gauges", "type": "address[]" },
-      {
-        "internalType": "uint256[]",
-        "name": "creditEarned",
-        "type": "uint256[]"
-      },
-      {
-        "internalType": "uint256",
-        "name": "totalCreditEarned",
-        "type": "uint256"
-      }
+      { "internalType": "uint256[]", "name": "creditEarned", "type": "uint256[]" },
+      { "internalType": "uint256", "name": "totalCreditEarned", "type": "uint256" }
     ],
     "stateMutability": "view",
     "type": "function"
@@ -295,11 +276,7 @@
     "inputs": [],
     "name": "getProfitSharingConfig",
     "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "surplusBufferSplit",
-        "type": "uint256"
-      },
+      { "internalType": "uint256", "name": "surplusBufferSplit", "type": "uint256" },
       { "internalType": "uint256", "name": "creditSplit", "type": "uint256" },
       { "internalType": "uint256", "name": "guildSplit", "type": "uint256" },
       { "internalType": "uint256", "name": "otherSplit", "type": "uint256" },
@@ -318,11 +295,19 @@
   {
     "inputs": [
       { "internalType": "address", "name": "_credit", "type": "address" },
-      { "internalType": "address", "name": "_guild", "type": "address" }
+      { "internalType": "address", "name": "_guild", "type": "address" },
+      { "internalType": "address", "name": "_psm", "type": "address" }
     ],
     "name": "initializeReferences",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "minBorrow",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -350,21 +335,36 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "newCore", "type": "address" }
-    ],
+    "inputs": [],
+    "name": "psm",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "address", "name": "newCore", "type": "address" }],
     "name": "setCore",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
+    "inputs": [{ "internalType": "uint256", "name": "newValue", "type": "uint256" }],
+    "name": "setGaugeWeightTolerance",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "uint256", "name": "newValue", "type": "uint256" }],
+    "name": "setMinBorrow",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "surplusBufferSplit",
-        "type": "uint256"
-      },
+      { "internalType": "uint256", "name": "surplusBufferSplit", "type": "uint256" },
       { "internalType": "uint256", "name": "creditSplit", "type": "uint256" },
       { "internalType": "uint256", "name": "guildSplit", "type": "uint256" },
       { "internalType": "uint256", "name": "otherSplit", "type": "uint256" },
@@ -378,6 +378,20 @@
   {
     "inputs": [],
     "name": "surplusBuffer",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "name": "termSurplusBuffer",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalBorrowedCredit",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
@@ -401,9 +415,21 @@
   },
   {
     "inputs": [
+      { "internalType": "address", "name": "to", "type": "address" },
       { "internalType": "uint256", "name": "amount", "type": "uint256" }
     ],
     "name": "withdrawFromSurplusBuffer",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "term", "type": "address" },
+      { "internalType": "address", "name": "to", "type": "address" },
+      { "internalType": "uint256", "name": "amount", "type": "uint256" }
+    ],
+    "name": "withdrawFromTermSurplusBuffer",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

@@ -1,23 +1,14 @@
-import React from "react"
-import Dropdown from "components/dropdown"
+"use client"
+import { ConnectButton } from "@rainbow-me/rainbowkit"
+import React, { useEffect } from "react"
 import { FiAlignJustify } from "react-icons/fi"
 import NavLink from "components/link/NavLink"
-import navbarimage from "/public/img/layout/Navbar.png"
-import { BsArrowBarUp } from "react-icons/bs"
-import { FiSearch } from "react-icons/fi"
 import { RiMoonFill, RiSunFill } from "react-icons/ri"
-// import { RiMoonFill, RiSunFill } from 'react-icons/ri';
-// import Configurator from './Configurator';
-import {
-  IoMdNotificationsOutline,
-  IoMdInformationCircleOutline,
-} from "react-icons/io"
-import avatar from "/public/img/avatars/avatar4.png"
-import Image from "next/image"
-import { DynamicWidget } from "@dynamic-labs/sdk-react-core"
-import { MdArrowBack } from "react-icons/md"
-import { useRouter } from "next/navigation"
+import { MdArrowBack, MdVisibility } from "react-icons/md"
 import Link from "next/link"
+import { useAccount, useConnect } from "wagmi"
+import SearchBar from "./SearchBar"
+import { useRouter } from "next/navigation"
 
 const Navbar = (props: {
   onOpenSidenav: () => void
@@ -26,73 +17,96 @@ const Navbar = (props: {
   pathname: string
   [x: string]: any
 }) => {
+  const { connector: activeConnector, isConnected } = useAccount()
+  const { connect, connectors, error, isLoading, pendingConnector } = useConnect()
   const router = useRouter()
   const { onOpenSidenav, brandText, pathname, mini, hovered } = props
-  const [darkmode, setDarkmode] = React.useState(
-    document.body.classList.contains("dark")
-  )
+  const [darkmode, setDarkmode] = React.useState(document.body.classList.contains("dark"))
+
   return (
-    <nav className="sticky top-0 z-40 flex flex-row flex-wrap items-center justify-between bg-white/10 p-2 backdrop-blur-xl dark:bg-[#0b14374d]">
-      <div className="ml-[6px]">
-        <p className=" text-gray-700 dark:text-white">
+    <nav className="sticky top-0 z-40 bg-white/10 p-2 backdrop-blur-xl dark:bg-[#0b14374d]">
+      <div className="ml-[6px] mt-2 flex flex-row items-center justify-between gap-2 text-stone-700 dark:text-white">
+        <div className="flex items-center gap-2">
           {pathname.match(/\//g).length > 1 && (
-            <Link href="/lending">
+            <a onClick={() => router.back()}>
               <button
                 type="button"
-                className="mr-2 inline-flex items-center gap-x-1.5 rounded-md text-sm dark:bg-navy-700 dark:hover:bg-navy-600 bg-white text-gray-600 hover:text-gray-800 dark:text-gray-300 hover:bg-brand-100/30 px-3 py-2 shadow-sm transition-all duration-150 ease-in-out"
+                className="inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm text-stone-600 shadow-sm transition-all duration-150 ease-in-out hover:bg-brand-100/30 hover:text-stone-800 dark:bg-navy-700 dark:text-stone-300 dark:hover:text-stone-100"
               >
                 <MdArrowBack className="-ml-0.5 h-5 w-5" aria-hidden="true" />
                 <span className="hidden sm:block">Go Back</span>
               </button>
-            </Link>
+            </a>
           )}
           <NavLink
             href="#"
-            className="font-medium text-2xl hover:text-gray-700 dark:hover:text-white"
+            className="text-2xl font-medium hover:text-stone-700 dark:hover:text-white"
           >
             {brandText}
           </NavLink>
-        </p>
-      </div>
-
-      <div className="relative mt-[3px] flex h-[61px] w-fit flex-grow items-center justify-around gap-2 px-2 py-2  dark:shadow-none md:w-fit md:flex-grow-0 md:gap-1 xl:w-fit xl:gap-2">
-        {/* <div className="flex h-full items-center rounded-full bg-lightPrimary text-gray-700 dark:bg-navy-900 dark:text-white xl:w-[225px]">
-          <p className="pl-3 pr-2 text-xl">
-            <FiSearch className="h-4 w-4 text-gray-400 dark:text-white" />
-          </p>
-          <input
-            type="text"
-            placeholder="Search..."
-            className="block h-full w-full rounded-full bg-lightPrimary text-sm font-medium text-gray-700 outline-none placeholder:!text-gray-400 dark:bg-navy-900 dark:text-white dark:placeholder:!text-white sm:w-fit"
-          />
-        </div> */}
-        <span
-          className="flex cursor-pointer text-xl text-gray-600 dark:text-white xl:hidden"
-          onClick={onOpenSidenav}
-        >
-          <FiAlignJustify className="h-5 w-5" />
-        </span>
-
-        <div
-          className="cursor-pointer text-gray-600"
-          onClick={() => {
-            if (darkmode) {
-              document.body.classList.remove("dark")
-              setDarkmode(false)
-            } else {
-              document.body.classList.add("dark")
-              setDarkmode(true)
-            }
-          }}
-        >
-          {darkmode ? (
-            <RiSunFill className="h-4 w-4 text-gray-600 dark:text-white" />
-          ) : (
-            <RiMoonFill className="h-4 w-4 text-gray-600 dark:text-white" />
+          {pathname == "/" && isConnected && (
+            <Link href={"/profile"}>
+              <button
+                type="button"
+                className="mr-2 inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm text-stone-600 shadow-sm transition-all duration-150 ease-in-out hover:bg-brand-100/30 hover:text-stone-800 dark:bg-navy-700 dark:text-stone-200 dark:hover:bg-navy-600"
+              >
+                <MdVisibility className="-ml-0.5 h-5 w-5" aria-hidden="true" />
+                <span className="hidden lg:block">{"View my statistics"}</span>
+              </button>
+            </Link>
+          )}
+          {pathname == "/profile" && isConnected && (
+            <Link href={"/"}>
+              <button
+                type="button"
+                className="mr-2 inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm text-stone-600 shadow-sm transition-all duration-150 ease-in-out hover:bg-brand-100/30 hover:text-stone-800 dark:bg-navy-700 dark:text-stone-200 dark:hover:bg-navy-600"
+              >
+                <MdVisibility className="-ml-0.5 h-5 w-5" aria-hidden="true" />
+                <span className="hidden lg:block">{"View global statistics"}</span>
+              </button>
+            </Link>
           )}
         </div>
 
-        <DynamicWidget />
+        <div className="flex w-full items-center justify-end gap-2 dark:shadow-none md:w-fit md:flex-grow-0 md:gap-2 xl:w-fit">
+          {/* Search User Wallet */}
+          <div className="hidden md:block">
+            <SearchBar />
+          </div>
+
+          {/* Web3 Connect Button */}
+          <ConnectButton
+            accountStatus="address"
+            showBalance={{ smallScreen: false, largeScreen: true }}
+          />
+
+          {/* Dark Mode */}
+          <div
+            className="hidden cursor-pointer text-stone-600 md:block"
+            onClick={() => {
+              if (darkmode) {
+                document.body.classList.remove("dark")
+                setDarkmode(false)
+              } else {
+                document.body.classList.add("dark")
+                setDarkmode(true)
+              }
+            }}
+          >
+            {darkmode ? (
+              <RiSunFill className="h-4 w-4 text-stone-600 dark:text-white" />
+            ) : (
+              <RiMoonFill className="h-4 w-4 text-stone-600 dark:text-white" />
+            )}
+          </div>
+          {/* Mobile Hamburger */}
+          <span
+            className="flex cursor-pointer text-xl text-stone-600 dark:text-white xl:hidden"
+            onClick={onOpenSidenav}
+          >
+            <FiAlignJustify className="h-5 w-5" />
+          </span>
+        </div>
       </div>
     </nav>
   )

@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from "react"
+import { getPublicClient, Address, waitForTransaction, writeContract } from "@wagmi/core"
+import { toastError } from "components/toast"
 import {
-  getPublicClient,
-  Address,
-  readContract,
-  waitForTransaction,
-  writeContract,
-} from "@wagmi/core"
-import { toastError, toastRocket } from "components/toast"
-import { TermABI, guildContract, lendingTermOffboardingContract, termContract } from "lib/contracts"
+  TermABI,
+  guildContract,
+  lendingTermOffboardingContract,
+  termContract,
+} from "lib/contracts"
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa"
 import { Step } from "components/stepLoader/stepType"
 import StepModal from "components/stepLoader"
@@ -33,25 +32,17 @@ import { LendingTerms } from "types/lending"
 import { generateTermName } from "utils/strings"
 import ButtonPrimary from "components/button/ButtonPrimary"
 import { useAccount, useContractRead, useContractReads } from "wagmi"
-import { decimalToUnit, formatCurrencyValue } from "utils/numbers"
+import { decimalToUnit, formatCurrencyValue, formatDecimal } from "utils/numbers"
 import { ActiveOffboardingPolls } from "types/governance"
 import Progress from "components/progress"
 import { fromNow } from "utils/date"
 import moment from "moment"
-import { Abi, RpcError } from "viem"
+import { Abi, RpcError, formatUnits } from "viem"
 import { QuestionMarkIcon, TooltipHorizon } from "components/tooltip"
 import { isActivePoll, mapContractToIssuance } from "./helper"
 import { BLOCK_LENGTH_MILLISECONDS } from "utils/constants"
 
-function OffboardTerm({
-  notUsed,
-  guildReceived,
-  isConnected,
-}: {
-  notUsed: number
-  guildReceived: number
-  isConnected: boolean
-}) {
+function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   const { address } = useAccount()
   const { lendingTerms } = useAppStore()
   const [selectedTerm, setSelectedTerm] = useState<LendingTerms>(lendingTerms[0])
@@ -66,7 +57,7 @@ function OffboardTerm({
     return lendingTerms.map((term) => {
       return {
         ...termContract(term.address as Address),
-        functionName: "issuance"
+        functionName: "issuance",
       }
     })
   }
@@ -81,19 +72,13 @@ function OffboardTerm({
         ...lendingTermOffboardingContract,
         functionName: "POLL_DURATION_BLOCKS",
       },
-      {
-        ...guildContract,
-        functionName: "getVotes",
-        args: [address],
-      },
-      ...createAllTermContractRead()
+      ...createAllTermContractRead(),
     ],
     select: (data) => {
       return {
         quorum: Number(data[0].result),
         pollDurationBlock: Number(data[1].result),
-        votingPower: Number(data[2].result),
-        issuances: data.slice(3).map((issuance) => Number(issuance.result))
+        issuances: data.slice(2).map((issuance) => Number(issuance.result)),
       }
     },
   })
@@ -110,7 +95,7 @@ function OffboardTerm({
 
     //logs are returned from oldest to newest
     const logs = await getPublicClient().getLogs({
-      address: process.env.NEXT_PUBLIC_LENDING_TERM_OFFBOARDING_ADDRESS as Address,
+      address: process.env.NEXT_PUBLIC_OFFBOARD_GOVERNOR_GUILD_ADDRESS as Address,
       event: {
         type: "event",
         name: "OffboardSupport",
@@ -122,7 +107,7 @@ function OffboardTerm({
           { type: "uint256", indexed: false, name: "userWeight" },
         ],
       },
-      fromBlock: BigInt(20),
+      fromBlock: currentBlock - BigInt(46523),
       toBlock: currentBlock,
     })
 
@@ -326,9 +311,15 @@ function OffboardTerm({
           <a
             className="flex items-center gap-1 pl-2 text-center text-sm font-bold text-gray-600 hover:text-brand-500 dark:text-white"
             target="__blank"
-            href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL}/${info.getValue()}`}
+            href={`${
+              process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS
+            }/${info.getValue()}`}
           >
-            {generateTermName(lendingTerm.collateral, lendingTerm.interestRate, lendingTerm.borrowRatio)}
+            {generateTermName(
+              lendingTerm.collateral.name,
+              lendingTerm.interestRate,
+              lendingTerm.borrowRatio
+            )}
             <MdOpenInNew />
           </a>
         )
@@ -369,6 +360,7 @@ function OffboardTerm({
               extra=""
               content={
                 <div className="text-gray-700 dark:text-white">
+                  <span className="font-semibold">Quorum:</span>{" "}
                   {data &&
                     data.quorum &&
                     formatCurrencyValue(decimalToUnit(info.row.original.userWeight, 18)) +
@@ -380,7 +372,11 @@ function OffboardTerm({
                 <div className="flex items-center gap-1">
                   <Progress
                     width="w-[100px]"
-                    value={Math.round((info.row.original.userWeight / data.quorum) * 100)}
+                    value={
+                      Math.round((info.row.original.userWeight / data.quorum) * 100) > 100
+                        ? 100
+                        : Math.round((info.row.original.userWeight / data.quorum) * 100)
+                    }
                     color="teal"
                   />
                   <div className="ml-1">
@@ -446,7 +442,7 @@ function OffboardTerm({
       item.userWeight >= data.quorum
     ) {
       //get issuance
-      const termIssuance = mapContractToIssuance(item.term, data.issuances, lendingTerms)
+      const termIssuance = mapContractToIssuance(item.term, data?.issuances, lendingTerms)
       if (termIssuance == 0) {
         return (
           <ButtonPrimary
@@ -486,7 +482,11 @@ function OffboardTerm({
             options={lendingTerms}
             selectedOption={selectedTerm}
             getLabel={(item) => {
-              return generateTermName(item.collateral, item.interestRate, item.borrowRatio)
+              return generateTermName(
+                item.collateral.name,
+                item.interestRate,
+                item.borrowRatio
+              )
             }}
           />
           <ButtonPrimary
@@ -499,7 +499,8 @@ function OffboardTerm({
           <p>
             Your GUILD voting weight:{" "}
             <span className="font-semibold">
-              {data && data.votingPower ? decimalToUnit(data.votingPower, 18) : "?"}
+              {guildVotingWeight &&
+                formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2)}
             </span>
           </p>
         </div>
@@ -510,57 +511,59 @@ function OffboardTerm({
             </div>
           ) : (
             <>
-              <table className="mt-4 w-full">
-                <thead>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <tr key={headerGroup.id} className="!border-px !border-gray-400">
-                      {headerGroup.headers.map((header) => (
-                        <th
-                          key={header.id}
-                          colSpan={header.colSpan}
-                          onClick={header.column.getToggleSortingHandler()}
-                          className="cursor-pointer border-b-[1px] border-gray-200 pb-2 pt-4 text-center text-start dark:border-gray-400"
-                        >
-                          <div className="flex items-center">
-                            <p className="text-sm font-medium text-gray-500 dark:text-white">
-                              {flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
+              <div className="overflow-auto">
+                <table className="mt-4 w-full">
+                  <thead>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <tr key={headerGroup.id} className="!border-px !border-gray-400">
+                        {headerGroup.headers.map((header) => (
+                          <th
+                            key={header.id}
+                            colSpan={header.colSpan}
+                            onClick={header.column.getToggleSortingHandler()}
+                            className="cursor-pointer border-b-[1px] border-gray-200 pb-2 pt-4 text-center text-start dark:border-gray-400"
+                          >
+                            <div className="flex items-center">
+                              <p className="text-sm font-medium text-gray-500 dark:text-white">
+                                {flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                              </p>
+                              {header.column.columnDef.enableSorting && (
+                                <span className="text-sm text-gray-400">
+                                  {{
+                                    asc: <FaSortDown />,
+                                    desc: <FaSortUp />,
+                                    null: <FaSort />,
+                                  }[header.column.getIsSorted() as string] ?? <FaSort />}
+                                </span>
                               )}
-                            </p>
-                            {header.column.columnDef.enableSorting && (
-                              <span className="text-sm text-gray-400">
-                                {{
-                                  asc: <FaSortDown />,
-                                  desc: <FaSortUp />,
-                                  null: <FaSort />,
-                                }[header.column.getIsSorted() as string] ?? <FaSort />}
-                              </span>
-                            )}
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  ))}
-                </thead>
-                <tbody>
-                  {table.getRowModel().rows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="border-b border-gray-100 transition-all duration-150 ease-in-out last:border-none hover:cursor-pointer hover:bg-gray-50 dark:border-gray-500 dark:hover:bg-navy-700"
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <td
-                          key={cell.id}
-                          className="relative min-w-[85px] border-white/0 py-2"
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                            </div>
+                          </th>
+                        ))}
+                      </tr>
+                    ))}
+                  </thead>
+                  <tbody>
+                    {table.getRowModel().rows.map((row) => (
+                      <tr
+                        key={row.id}
+                        className="border-b border-gray-100 transition-all duration-150 ease-in-out last:border-none hover:cursor-pointer hover:bg-gray-50 dark:border-gray-500 dark:hover:bg-navy-700"
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <td
+                            key={cell.id}
+                            className="relative min-w-[85px] border-white/0 py-2"
+                          >
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               <nav
                 className="flex w-full items-center justify-between border-t border-gray-200 px-2 py-3 text-gray-400"
                 aria-label="Pagination"

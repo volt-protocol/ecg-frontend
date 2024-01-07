@@ -8,26 +8,28 @@ export default function DropdownSelect<T>({
   selectedOption,
   onChange,
   getLabel,
-  extra
+  extra,
 }: {
   options: T[]
   selectedOption: T
   onChange: React.Dispatch<React.SetStateAction<T>>
   getLabel: (option: T) => string
-  extra?:string
+  extra?: string
 }) {
   return (
-    <Listbox value={selectedOption} onChange={onChange} >
+    <Listbox value={selectedOption} onChange={onChange}>
       {({ open }) => (
         <>
           <div className="relative">
-            <Listbox.Button className={clsx(extra ? extra : 'w-[250px]', "sm:text-md relative cursor-default rounded-md bg-white py-1.5 pl-3 pr-10 text-left text-gray-700 shadow-sm ring-1 ring-inset ring-gray-200 hover:cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-400/80 sm:leading-6")} >
+            <Listbox.Button
+              className={clsx(
+                extra ? extra : "w-[250px]",
+                "sm:text-md relative cursor-default rounded-md bg-white py-1.5 pl-3 pr-10 text-left text-gray-600 shadow-sm ring-1 ring-inset ring-gray-200 hover:cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-400/80 dark:bg-navy-700 dark:text-gray-200 dark:ring-navy-600 sm:leading-6"
+              )}
+            >
               <span className="block truncate">{getLabel(selectedOption)}</span>
               <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                <MdUnfoldMore
-                  className="h-5 w-5 text-gray-400"
-                  aria-hidden="true"
-                />
+                <MdUnfoldMore className="h-5 w-5 text-gray-400" aria-hidden="true" />
               </span>
             </Listbox.Button>
 
@@ -38,15 +40,15 @@ export default function DropdownSelect<T>({
               leaveFrom="opacity-100"
               leaveTo="opacity-0"
             >
-              <Listbox.Options className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-md bg-white p-1 text-base shadow-lg focus:outline-none sm:text-sm">
+              <Listbox.Options className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-md bg-white p-1  text-base shadow-lg focus:outline-none dark:bg-navy-600 sm:text-sm">
                 {options.map((item, key) => (
                   <Listbox.Option
                     key={key}
                     className={({ active }) =>
                       clsx(
                         active
-                          ? "rounded-md bg-brand-400/80  text-white transition-all duration-150 ease-in-out hover:cursor-pointer"
-                          : "text-gray-900",
+                          ? "rounded-md bg-brand-400/80  text-white transition-all duration-150 ease-in-out hover:cursor-pointer dark:text-gray-200"
+                          : "text-gray-900 dark:text-gray-200",
                         "relative cursor-default select-none py-2 pl-3 pr-9"
                       )
                     }

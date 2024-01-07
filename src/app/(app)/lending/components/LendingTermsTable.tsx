@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect } from "react"
-
+import Image from "next/image"
 import {
   createColumnHelper,
   flexRender,
@@ -10,31 +10,20 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table"
-import {
-  DecimalToUnit,
-  formatCurrencyValue,
-  secondsToAppropriateUnit,
-} from "utils/utils-old"
+import { formatCurrencyValue, secondsToAppropriateUnit } from "utils/utils-old"
 import { LendingTerms } from "types/lending"
 import Progress from "components/progress"
 import { TooltipHorizon, QuestionMarkIcon } from "components/tooltip"
-import { AiOutlineQuestionCircle } from "react-icons/ai"
-import {
-  MdKeyboardArrowDown,
-  MdKeyboardArrowUp,
-  MdExpandMore,
-} from "react-icons/md"
-
-import { CreditABI, GuildABI, TermABI } from "lib/contracts"
+import { creditContract, guildContract, TermABI } from "lib/contracts"
 import { Address, readContract } from "@wagmi/core"
 import { formatDecimal, formatNumberDecimal } from "utils/numbers"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { FaSort, FaSortDown, FaSortUp } from "react-icons/fa"
+import { Abi, formatUnits } from "viem"
+import { readContracts, useContractReads } from "wagmi"
 
-export default function LendingTermsTable(props: {
-  tableData: LendingTerms[]
-}) {
+export default function LendingTermsTable(props: { tableData: LendingTerms[] }) {
   const { tableData } = props
   const [sorting, setSorting] = React.useState<SortingState>([])
   const columnHelper = createColumnHelper<LendingTerms>()
@@ -47,94 +36,142 @@ export default function LendingTermsTable(props: {
     setData([...tableData])
   }, [tableData])
 
+  /* Smart contract reads */
+  const {
+    data: contractData,
+    isError,
+    isLoading,
+    refetch,
+  } = useContractReads({
+    contracts: [
+      {
+        ...creditContract,
+        functionName: "totalSupply",
+        args: [],
+      },
+    ],
+    select: (contractData) => {
+      return {
+        creditTotalSupply: Number(formatUnits(contractData[0].result as bigint, 18)),
+      }
+    },
+  })
+  /* End Smart contract reads */
+
   useEffect(() => {
     async function fetchDataForTerms() {
-      console.log("refetching contract data")
-
       const enrichedTableData = await Promise.all(
         tableData.map(async (term) => {
-          const [gaugeWeight, totalWeight, creditTotalSupply, currentDebt] =
-            await Promise.all([
-              getGaugeWeightForTerm(term),
-              getTotalWeightForTerm(term),
-              getCreditTotalSupplyForTerm(),
-              getCurrentDebt(term),
-            ])
-
+          const extraData = await getExtraTermData(term)
           // Add these values to your term
           return {
             ...term,
-            gaugeWeight,
-            totalWeight,
-            creditTotalSupply,
-            currentDebt,
+            gaugeWeight: Number(formatUnits(extraData[0].result, 18)),
+            totalWeight: Number(formatUnits(extraData[1].result, 18)),
+            creditTotalSupply: contractData.creditTotalSupply,
+            currentDebt: Number(formatUnits(extraData[2].result, 18)),
+            debtCeiling: Number(formatUnits(extraData[3].result, 18)),
           }
         })
       )
-
       setData(enrichedTableData)
     }
-    fetchDataForTerms()
-  }, [tableData])
+    tableData && contractData && fetchDataForTerms()
+  }, [tableData, contractData])
 
-  async function getGaugeWeightForTerm(term: LendingTerms): Promise<number> {
-    const result = await readContract({
-      address: process.env.NEXT_PUBLIC_GUILD_ADDRESS as Address,
-      abi: GuildABI,
-      functionName: "getGaugeWeight",
-      args: [term.address], // Assuming each term has a unique contractAddress
+  async function getExtraTermData(term: LendingTerms): Promise<any> {
+    const result = await readContracts({
+      contracts: [
+        {
+          ...guildContract,
+          functionName: "getGaugeWeight",
+          args: [term.address], // Assuming each term has a unique contractAddress
+        },
+        {
+          ...guildContract,
+          functionName: "totalTypeWeight",
+          args: [1],
+        },
+        {
+          address: term.address as Address,
+          abi: TermABI as Abi,
+          functionName: "issuance",
+        },
+        {
+          address: term.address as Address,
+          abi: TermABI as Abi,
+          functionName: "debtCeiling",
+        },
+      ],
     })
-    return Number(DecimalToUnit(result as bigint, 18))
-  }
 
-  async function getTotalWeightForTerm(term: LendingTerms): Promise<number> {
-    const result = await readContract({
-      address: process.env.NEXT_PUBLIC_GUILD_ADDRESS as Address,
-      abi: GuildABI,
-      functionName: "totalTypeWeight",
-      args: [1],
-    })
-    return Number(DecimalToUnit(result as bigint, 18))
-  }
-
-  async function getCreditTotalSupplyForTerm(): Promise<number> {
-    const result = await readContract({
-      address: process.env.NEXT_PUBLIC_CREDIT_ADDRESS as Address,
-      abi: CreditABI,
-      functionName: "totalSupply",
-      args: [],
-    })
-    return Number(DecimalToUnit(result as bigint, 18))
-  }
-  async function getCurrentDebt(term: LendingTerms): Promise<number> {
-    const result = await readContract({
-      address: term.address as Address,
-      abi: TermABI,
-      functionName: "issuance",
-    })
-    return Number(DecimalToUnit(result as bigint, 18))
+    return result
   }
 
   /* eslint-disable */
   const columns = [
-    columnHelper.accessor("collateral", {
-      id: "name",
+    columnHelper.accessor("collateral.name", {
+      id: "collateral",
       enableSorting: true,
       header: () => (
         <div>
           <a href="#" className="group inline-flex">
-            <p className="ml-3 text-center text-sm font-medium text-gray-500 dark:text-white">
-              Name
+            <p className="text-center text-sm font-medium text-gray-500 dark:text-white">
+              Collateral Token
             </p>
           </a>
         </div>
       ),
       cell: (info: any) => (
-        <div className="ml-3 flex items-center">
+        <div className="ml-3 flex items-center gap-2 text-center">
+          <Image
+            src={info.row.original.collateral.logo}
+            width={32}
+            height={32}
+            alt={"logo"}
+          />
           <p className="text-sm font-bold text-gray-700 dark:text-white">
-            {info.row.original.collateral}-
-            {info.row.original.interestRate * 100}%-
-            {formatNumberDecimal(info.row.original.borrowRatio)}
+            {info.getValue()}
+          </p>
+        </div>
+      ),
+    }),
+    columnHelper.accessor("interestRate", {
+      id: "interestRate",
+      enableSorting: true,
+      header: () => (
+        <div>
+          <a href="#" className="group inline-flex">
+            <p className="ml-3 text-center text-sm font-medium text-gray-500 dark:text-white">
+              Interest Rate
+            </p>
+          </a>
+        </div>
+      ),
+      cell: (info: any) => (
+        <div className="ml-3 text-center">
+          <p className="text-sm font-bold text-gray-700 dark:text-white">
+            {(info.getValue() * 100).toFixed(2)}%
+          </p>
+        </div>
+      ),
+    }),
+    columnHelper.accessor("borrowRatio", {
+      id: "borrowRatio",
+      enableSorting: true,
+      header: () => (
+        <div>
+          <a href="#" className="group inline-flex">
+            <p className="ml-3 text-center text-sm font-medium text-gray-500 dark:text-white">
+              Borrow Ratio
+            </p>
+          </a>
+        </div>
+      ),
+      cell: (info: any) => (
+        <div className="ml-3 text-center">
+          <p className="text-sm font-bold text-gray-700 dark:text-white">
+            {formatNumberDecimal(info.getValue())}
           </p>
         </div>
       ),
@@ -147,10 +184,12 @@ export default function LendingTermsTable(props: {
         </p>
       ),
       cell: (info: any) => {
-        const debtCeilling =
-          info.row.original.creditTotalSupply *
-          (info.row.original.gaugeWeight / info.row.original.totalWeight) *
-          1.2
+        // const debtCeilling =
+        //   info.row.original.creditTotalSupply *
+        //   (info.row.original.gaugeWeight / info.row.original.totalWeight) *
+        //   1.2
+        const debtCeilling = info.row.original.debtCeiling
+
         return (
           <div>
             <TooltipHorizon
@@ -160,33 +199,21 @@ export default function LendingTermsTable(props: {
                   <p>
                     Debt Ceiling:{" "}
                     <span className="font-semibold">
-                      {formatCurrencyValue(
-                        parseFloat(formatNumberDecimal(debtCeilling))
-                      )}
+                      {formatCurrencyValue(debtCeilling)}
                     </span>
                   </p>
                   <p>
                     Current Debt:{" "}
                     <span className="font-semibold">
                       {" "}
-                      {formatCurrencyValue(
-                        parseFloat(
-                          formatNumberDecimal(info.row.original.currentDebt)
-                        )
-                      )}
+                      {formatCurrencyValue(info.row.original.currentDebt)}
                     </span>
                   </p>
                   <p>
                     Available Debt:{" "}
                     <span className="font-semibold">
                       {" "}
-                      {formatCurrencyValue(
-                        parseFloat(
-                          formatNumberDecimal(
-                            debtCeilling - info.row.original.currentDebt
-                          )
-                        )
-                      )}
+                      {formatCurrencyValue(debtCeilling - info.row.original.currentDebt)}
                     </span>
                   </p>
                 </div>
@@ -196,9 +223,13 @@ export default function LendingTermsTable(props: {
                   <Progress
                     width="w-[110px]"
                     value={
-                      info.row.original.currentDebt / debtCeilling * 100
+                      debtCeilling
+                        ? info.row.original.currentDebt > debtCeilling
+                          ? 100
+                          : (info.row.original.currentDebt / debtCeilling) * 100
+                        : 0
                     }
-                    color="teal"
+                    color={info.row.original.currentDebt > debtCeilling ? "red" : "green"}
                   />
                   <div className="ml-1">
                     <QuestionMarkIcon />
@@ -225,46 +256,14 @@ export default function LendingTermsTable(props: {
         </div>
       ),
       cell: (info) => (
-        <p className="text-center text-sm font-bold text-gray-600 dark:text-white">
-          {formatNumberDecimal(info.getValue())}
-        </p>
-      ),
-    }),
-
-    columnHelper.accessor("interestRate", {
-      id: "interestRate",
-      enableSorting: true,
-      header: () => (
-        <div className="text-center">
-          <a href="#" className="group inline-flex">
-            <p className="ml-8 text-center text-sm font-medium text-gray-500 dark:text-white">
-              Interest Rate
-            </p>
-          </a>
+        <div className="flex items-center justify-center gap-1">
+          <p className="ml-3 text-center text-sm font-bold text-gray-600 dark:text-white">
+            {formatNumberDecimal(info.getValue())}
+          </p>
+          <span className="text-sm font-medium text-gray-600 dark:text-white">
+            gUSDC
+          </span>
         </div>
-      ),
-      cell: (info) => (
-        <p className="text-center text-sm font-bold text-gray-600 dark:text-white">
-          {formatNumberDecimal(info.getValue() * 100)}%
-        </p>
-      ),
-    }),
-    columnHelper.accessor("borrowRatio", {
-      id: "BorrowRatio",
-      enableSorting: true,
-      header: () => (
-        <div className="text-center">
-          <a href="#" className="group inline-flex">
-            <p className="ml-8 text-center text-sm font-medium text-gray-500 dark:text-white">
-              Borrow Ratio
-            </p>
-          </a>
-        </div>
-      ),
-      cell: (info) => (
-        <p className="text-center text-sm font-bold text-gray-600 dark:text-white">
-          {formatNumberDecimal(info.getValue())}
-        </p>
       ),
     }),
 
@@ -281,7 +280,7 @@ export default function LendingTermsTable(props: {
         </div>
       ),
       cell: (info) => (
-        <p className="text-center text-sm font-bold text-gray-600 dark:text-white">
+        <p className="ml-3 text-center text-sm font-bold text-gray-600 dark:text-white">
           {formatNumberDecimal(info.getValue() * 100)}%
         </p>
       ),
@@ -300,7 +299,7 @@ export default function LendingTermsTable(props: {
         </div>
       ),
       cell: (info) => (
-        <p className="text-center text-sm font-bold text-gray-600 dark:text-white">
+        <p className="ml-3 text-center text-sm font-bold text-gray-600 dark:text-white">
           {/* {secondsToAppropriateUnit(info.getValue())} */}
           {info.getValue() != 0 ? (
             <div className="flex items-center justify-center gap-1">
@@ -312,11 +311,7 @@ export default function LendingTermsTable(props: {
                     <p>
                       Periodic Payment minimum size :{" "}
                       <span className="font-semibold">
-                        {formatDecimal(
-                          info.row.original.minPartialRepayPercent,
-                          9
-                        )}
-                        %
+                        {formatDecimal(info.row.original.minPartialRepayPercent, 4)}%
                       </span>
                     </p>
                     <p>
@@ -330,8 +325,8 @@ export default function LendingTermsTable(props: {
                     <p>
                       <br />
                       <i>
-                        As a borrower, if you miss Periodic Payments, your loan
-                        will be called.
+                        As a borrower, if you miss Periodic Payments, your loan will be
+                        called.
                       </i>
                     </p>
                   </div>
@@ -383,7 +378,7 @@ export default function LendingTermsTable(props: {
   })
 
   return (
-    <div className="mt-4 overflow-auto xl:overflow-auto">
+    <div className="mt-4 overflow-auto">
       <table className="w-full">
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -397,19 +392,14 @@ export default function LendingTermsTable(props: {
                     className="cursor-pointer border-b-[1px] border-gray-200 pb-2 pt-4 text-start dark:border-gray-400"
                   >
                     <div className="flex items-center justify-center gap-1">
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
+                      {flexRender(header.column.columnDef.header, header.getContext())}
                       {header.column.columnDef.enableSorting && (
                         <span className="text-sm text-gray-400">
                           {{
                             asc: <FaSortDown />,
                             desc: <FaSortUp />,
                             null: <FaSort />,
-                          }[header.column.getIsSorted() as string] ?? (
-                            <FaSort />
-                          )}
+                          }[header.column.getIsSorted() as string] ?? <FaSort />}
                         </span>
                       )}
                     </div>
@@ -430,7 +420,7 @@ export default function LendingTermsTable(props: {
                     router.push(`/lending/details?term=${row.original.address}`)
                   }
                   key={row.id}
-                  className="border-b border-gray-100 transition-all duration-150 ease-in-out last:border-none hover:cursor-pointer hover:bg-gray-50 dark:border-gray-500 dark:hover:bg-navy-700"
+                  className="border-b border-gray-100 transition-all duration-200 ease-in-out last:border-none hover:cursor-pointer hover:bg-stone-100/80 dark:border-gray-500 dark:hover:bg-navy-700"
                 >
                   {row.getVisibleCells().map((cell) => {
                     return (
@@ -440,17 +430,9 @@ export default function LendingTermsTable(props: {
                       >
                         {cell.column.id != "usage" &&
                         cell.column.id != "maxDelayBetweenPartialRepay" ? (
-                          <>
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </>
+                          <>{flexRender(cell.column.columnDef.cell, cell.getContext())}</>
                         ) : (
-                          flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )
+                          flexRender(cell.column.columnDef.cell, cell.getContext())
                         )}
                       </td>
                     )

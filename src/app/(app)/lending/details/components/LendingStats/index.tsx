@@ -5,6 +5,7 @@ import { BsBank2 } from "react-icons/bs"
 import { GiProgression } from "react-icons/gi"
 import { MdBarChart, MdCurrencyExchange } from "react-icons/md"
 import { TbArrowsExchange } from "react-icons/tb"
+import { LendingTerms } from "types/lending"
 import { formatDecimal, formatNumberDecimal } from "utils/numbers"
 import {
   formatCurrencyValue,
@@ -20,12 +21,12 @@ export default function LendingStats({
   termTotalCollateral,
   collateralPrice,
 }: {
-  lendingTermData: any
-  currentDebt: any
-  debtCeilling: any
-  utilization: any
-  termTotalCollateral: any
-  collateralPrice: any
+  lendingTermData: LendingTerms
+  currentDebt: number
+  debtCeilling: number
+  utilization: string
+  termTotalCollateral: number
+  collateralPrice: number
 }) {
   return (
     <div className="mt-3 grid grid-cols-1 gap-5 xs:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 3xl:grid-cols-6">
@@ -36,9 +37,9 @@ export default function LendingStats({
             <p>
               Total Collateral Amount :{" "}
               <span className="font-semibold">
-                {preciseRound(termTotalCollateral, 2)}
+                {formatDecimal(termTotalCollateral, 2)}
               </span>{" "}
-              {lendingTermData.collateral}
+              {lendingTermData.collateral.name}
             </p>
             <p>
               Unit Collateral Price :{" "}
@@ -47,7 +48,7 @@ export default function LendingStats({
             <p>
               Total Collateral Value :{" "}
               <span className="font-semibold">
-                {preciseRound(termTotalCollateral * collateralPrice, 0)}
+                {formatDecimal(termTotalCollateral * collateralPrice, 2)}
               </span>{" "}
               $
             </p>
@@ -82,21 +83,21 @@ export default function LendingStats({
             <p>
               Current Debt :{" "}
               <span className="font-semibold">
-                {preciseRound(currentDebt, 0)}
+                {formatDecimal(currentDebt, 2)}
               </span>{" "}
-              CREDIT
+              gUSDC
             </p>
             <p>
               Debt Ceilling :{" "}
               <span className="font-semibold">
-                {preciseRound(debtCeilling, 0)}
+                {formatDecimal(debtCeilling, 2)}
               </span>{" "}
-              CREDIT
+              gUSDC
             </p>
             <p>
               <br />
                 New borrows increase the Current Debt.{" "}
-                GUILD & CREDIT stake increase the Debt Ceiling.
+                GUILD & gUSDC stake increase the Debt Ceiling.
             </p>
           </div>
         }
@@ -131,7 +132,7 @@ export default function LendingStats({
               icon={<MdBarChart className="h-7 w-7" />}
               title={"Opening Fee"}
               subtitle={
-                preciseRound(lendingTermData.openingFee, 2).toString() + "%"
+                preciseRound(lendingTermData.openingFee * 100, 2).toString() + "%"
               }
               extra={<QuestionMarkIcon />}
             />
@@ -172,7 +173,7 @@ export default function LendingStats({
               <span className="font-semibold">
                 {preciseRound(lendingTermData.borrowRatio, 2)}
               </span>{" "}
-              CREDIT per unit of DAI collateral.
+              gUSDC per unit of DAI collateral.
             </p>
           </div>
         }
@@ -195,7 +196,7 @@ export default function LendingStats({
             <p>
               Periodic Payment minimum size :{" "}
               <span className="font-semibold">
-                {formatDecimal(lendingTermData.minPartialRepayPercent, 9)}%
+                {lendingTermData.minPartialRepayPercent}%
               </span>
             </p>
             <p>
@@ -218,7 +219,7 @@ export default function LendingStats({
             <Widget
               icon={<AiFillClockCircle className="h-6 w-6" />}
               title={"Periodic Payments"}
-              subtitle={lendingTermData.minPartialRepayPercent ? "Yes" : "No"}
+              subtitle={lendingTermData.maxDelayBetweenPartialRepay != 0 ? "Yes" : "No"}
               extra={<QuestionMarkIcon />}
             />
           </div>

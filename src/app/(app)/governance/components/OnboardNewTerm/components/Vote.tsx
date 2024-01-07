@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react"
+import { ethers } from "ethers"
 import {
   getPublicClient,
   Address,
@@ -7,13 +8,7 @@ import {
   writeContract,
 } from "@wagmi/core"
 import { toastError, toastRocket } from "components/toast"
-import {
-  TermABI,
-  guildContract,
-  lendingTermOffboardingContract,
-  lendingTermOnboardingContract,
-  termContract,
-} from "lib/contracts"
+import { guildContract, onboardGovernorGuildContract, termContract } from "lib/contracts"
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa"
 import { Step } from "components/stepLoader/stepType"
 import StepModal from "components/stepLoader"
@@ -25,46 +20,26 @@ import {
   flexRender,
   getPaginationRowModel,
 } from "@tanstack/react-table"
-import {
-  MdArrowLeft,
-  MdArrowRight,
-  MdChevronLeft,
-  MdChevronRight,
-  MdOpenInNew,
-} from "react-icons/md"
+import { MdChevronLeft, MdChevronRight } from "react-icons/md"
 import Spinner from "components/spinner"
 import DropdownSelect from "components/select/DropdownSelect"
 import { useAppStore } from "store"
-import { LendingTerms } from "types/lending"
-import { generateTermName } from "utils/strings"
 import ButtonPrimary from "components/button/ButtonPrimary"
-import { readContracts, useAccount, useContractRead, useContractReads } from "wagmi"
-import { decimalToUnit, formatCurrencyValue } from "utils/numbers"
-import {
-  ActiveOnboardingVotes,
-  VoteOption,
-} from "types/governance"
-import Progress from "components/progress"
+import { readContracts, useAccount, useContractReads } from "wagmi"
+import { decimalToUnit, formatCurrencyValue, formatDecimal } from "utils/numbers"
+import { ActiveOnboardingVotes, VoteOption, ProposalState } from "types/governance"
 import { fromNow } from "utils/date"
 import moment from "moment"
-import { Abi, RpcError, parseUnits } from "viem"
+import { formatUnits, keccak256, parseUnits, stringToBytes } from "viem"
 import { QuestionMarkIcon, TooltipHorizon } from "components/tooltip"
-import { BLOCK_LENGTH_MILLISECONDS } from "utils/constants"
-import { isActivePoll } from "../../OffboardTerm/helper"
-import { m } from "framer-motion"
+import { BLOCK_LENGTH_MILLISECONDS, FROM_BLOCK } from "utils/constants"
+import { getVotableTerms } from "./helper"
+import VoteStatusBar from "components/bar/VoteStatusBar"
+import { extractTermAddress } from "utils/strings"
 
-function Vote({
-  notUsed,
-  guildReceived,
-  isConnected,
-}: {
-  notUsed: number
-  guildReceived: number
-  isConnected: boolean
-}) {
+function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   const { address } = useAccount()
   const { lendingTerms } = useAppStore()
-  const [selectedTerm, setSelectedTerm] = useState<LendingTerms>(lendingTerms[0])
   const [showModal, setShowModal] = useState(false)
   const [activeOnboardingVotes, setActiveOnboardingVotes] = useState<
     ActiveOnboardingVotes[]
@@ -73,38 +48,10 @@ function Vote({
   const [voteOptionsSelected, setVoteOptionsSelected] = useState<
     { optionSelected: number; proposalId: string }[]
   >([])
+  const [currentBlock, setCurrentBlock] = useState<BigInt>()
 
   /* Multicall Onchain reads */
-  const createAllTermContractRead = () => {
-    return lendingTerms.map((term) => {
-      return {
-        ...termContract(term.address as Address),
-        functionName: "issuance",
-      }
-    })
-  }
 
-  const { data, isError, isLoading } = useContractReads({
-    contracts: [
-      {
-        ...lendingTermOnboardingContract,
-        functionName: "quorum",
-        args: [4684984],
-      },
-      {
-        ...guildContract,
-        functionName: "getVotes",
-        args: [address],
-      },
-      ...createAllTermContractRead(),
-    ],
-    select: (data) => {
-      return {
-        quorum: Number(data[0].result),
-        votingPower: Number(data[1].result),
-      }
-    },
-  })
   /* End Get Onchain desgin */
 
   useEffect(() => {
@@ -114,11 +61,15 @@ function Vote({
   /* Getters */
   const fetchActiveOnboardingVotes = async () => {
     setLoading(true)
-    const currentBlock = await getPublicClient().getBlockNumber()
+    const currentBlockData = await getPublicClient().getBlockNumber()
+    setCurrentBlock(currentBlockData)
+
+    // get TermCreated logs
+    const termsCreated = await getVotableTerms()
 
     //logs are returned from oldest to newest
     const logs = await getPublicClient().getLogs({
-      address: process.env.NEXT_PUBLIC_LENDING_TERM_ONBOARDING_ADDRESS as Address,
+      address: process.env.NEXT_PUBLIC_ONBOARD_GOVERNOR_GUILD_ADDRESS as Address,
       event: {
         type: "event",
         name: "ProposalCreated",
@@ -170,51 +121,71 @@ function Vote({
           },
         ],
       },
-      fromBlock: BigInt(20),
-      toBlock: currentBlock,
+      fromBlock: BigInt(FROM_BLOCK),
+      toBlock: currentBlockData,
     })
 
     const activeVotes = await Promise.all(
       logs.map(async (log) => {
-        //Get quorum for given timestamp ?
-        const quorum = await readContract({
-          ...lendingTermOnboardingContract,
-          functionName: "quorum",
-          args: [log.args.voteStart.toString()],
-        })
+        //Get term name
+        const term = termsCreated.find(
+          (term) =>
+            term.termAddress.toLowerCase() ===
+            extractTermAddress(log.args.description).toLowerCase()
+        )
+
         //Get votes for a given proposal id
         const proposalVoteInfo = await readContracts({
           contracts: [
             {
-              ...lendingTermOnboardingContract,
+              ...onboardGovernorGuildContract,
               functionName: "proposalVotes",
-              args: [log.args.proposalId.toString()],
+              args: [log.args.proposalId],
             },
             {
-              ...lendingTermOnboardingContract,
+              ...onboardGovernorGuildContract,
               functionName: "hasVoted",
               args: [log.args.proposalId, address],
+            },
+            {
+              ...onboardGovernorGuildContract,
+              functionName: "quorum",
+              args: [Number(log.args.voteStart)],
+            },
+            {
+              ...onboardGovernorGuildContract,
+              functionName: "state",
+              args: [log.args.proposalId],
             },
           ],
         })
 
-        console.log("proposalVoteInfo", proposalVoteInfo)
-
         return {
-          // termName:
-          quorum: parseUnits(quorum.toString(), 18),
+          termName: term.termName,
+          collateralTokenSymbol: term.collateralTokenSymbol,
+          interestRate: term.interestRate,
+          borrowRatio: term.borrowRatio,
+          quorum:
+            proposalVoteInfo[1].status == "success" &&
+            formatUnits(proposalVoteInfo[2].result, 18),
           proposalId: BigInt(log.args.proposalId),
           proposer: log.args.proposer as Address,
           votes: proposalVoteInfo[0].status == "success" && proposalVoteInfo[0].result,
           hasVoted: proposalVoteInfo[1].status == "success" && proposalVoteInfo[1].result,
           voteStart: Number(log.args.voteStart),
           voteEnd: Number(log.args.voteEnd),
-          isActive: currentBlock < Number(log.args.voteEnd),
+          isActive: Number(currentBlockData) < Number(log.args.voteEnd),
+          proposalState:
+            proposalVoteInfo[3].status == "success" && proposalVoteInfo[3].result,
+          proposeArgs: [
+            log.args.targets,
+            log.args.values,
+            log.args.calldatas,
+            log.args.description,
+          ],
         }
       })
     )
-
-    console.log("activeVotes", activeVotes)
 
     setLoading(false)
     setActiveOnboardingVotes(activeVotes)
@@ -228,7 +199,7 @@ function Vote({
   /* End Getters*/
 
   /* Smart Contract Writes */
-  const castVote = async (proposalId: number, vote: number): Promise<void> => {
+  const castVote = async (proposalId: BigInt, vote: number): Promise<void> => {
     //Init Steps
     setSteps([
       {
@@ -250,7 +221,7 @@ function Vote({
         "In Progress"
       )
       const { hash } = await writeContract({
-        ...lendingTermOnboardingContract,
+        ...onboardGovernorGuildContract,
         functionName: "castVote",
         args: [proposalId, vote],
       })
@@ -282,6 +253,65 @@ function Vote({
     }
   }
 
+  const queue = async (proposal: ActiveOnboardingVotes): Promise<void> => {
+    //Init Steps
+    setSteps([
+      {
+        name: "Queue Proposal " + proposal.proposalId.toString().slice(0, 6) + "...",
+        status: "Not Started",
+      },
+    ])
+
+    const updateStepStatus = (stepName: string, status: Step["status"]) => {
+      setSteps((prevSteps) =>
+        prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step))
+      )
+    }
+
+    try {
+      setShowModal(true)
+      updateStepStatus(
+        "Queue Proposal " + proposal.proposalId.toString().slice(0, 6) + "...",
+        "In Progress"
+      )
+      const { hash } = await writeContract({
+        ...onboardGovernorGuildContract,
+        functionName: "queue",
+        args: [
+          proposal.proposeArgs[0],
+          proposal.proposeArgs[1],
+          proposal.proposeArgs[2],
+          keccak256(stringToBytes(proposal.proposeArgs[3])),
+        ],
+      })
+
+      const tx = await waitForTransaction({
+        hash: hash,
+      })
+
+      if (tx.status != "success") {
+        updateStepStatus(
+          "Queue Proposal " + proposal.proposalId.toString().slice(0, 6) + "...",
+          "Error"
+        )
+        return
+      }
+
+      updateStepStatus(
+        "Queue Proposal " + proposal.proposalId.toString().slice(0, 6) + "...",
+        "Success"
+      )
+      await fetchActiveOnboardingVotes()
+    } catch (e: any) {
+      console.log(e)
+      updateStepStatus(
+        "Queue Proposal " + proposal.proposalId.toString().slice(0, 6) + "...",
+        "Error"
+      )
+      toastError(e.shortMessage)
+    }
+  }
+
   /* End Smart Contract Writes */
 
   /* Create Modal Steps */
@@ -293,43 +323,63 @@ function Vote({
   /* End Create Modal Steps */
 
   /* Create Table */
-  const columnHelper = createColumnHelper<ActiveOnboardingPolls>()
+  const columnHelper = createColumnHelper<ActiveOnboardingVotes>()
 
   const columns = [
-    columnHelper.accessor("proposalId", {
-      id: "term",
-      header: "Term",
+    columnHelper.accessor("collateralTokenSymbol", {
+      id: "tokenSymbol",
+      header: "Collateral",
       enableSorting: true,
-      // cell: (info) => {
-      //   const lendingTerm = lendingTerms.find((term) => term.address === info.getValue())
-      //   return (
-      //     <a
-      //       className="flex items-center gap-1 pl-2 text-center text-sm font-bold text-gray-600 hover:text-brand-500 dark:text-white"
-      //       target="__blank"
-      //       href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL}/${info.getValue()}`}
-      //     >
-      //       {generateTermName(
-      //         lendingTerm.collateral,
-      //         lendingTerm.interestRate,
-      //         lendingTerm.borrowRatio
-      //       )}
-      //       <MdOpenInNew />
-      //     </a>
-      //   )
-      // },
-      cell: (info) => "#" + info.getValue().toString().slice(0, 6) + "...",
+      cell: (info) => {
+        return (
+          <span className="text-center text-sm font-bold text-gray-600 dark:text-white">
+            {info.getValue()}
+          </span>
+        )
+      },
+    }),
+    columnHelper.accessor("interestRate", {
+      id: "interestRate",
+      header: "Interest",
+      enableSorting: true,
+      cell: (info) => {
+        return (
+          <span className="text-center text-sm font-bold text-gray-600 dark:text-white">
+            {info.getValue()}%
+          </span>
+        )
+      },
+    }),
+    columnHelper.accessor("borrowRatio", {
+      id: "borrowRatio",
+      header: "Ratio",
+      enableSorting: true,
+      cell: (info) => {
+        return (
+          <span className="text-center text-sm font-bold text-gray-600 dark:text-white">
+            {info.getValue()}
+          </span>
+        )
+      },
     }),
     columnHelper.accessor("voteEnd", {
       id: "expiry",
       header: "Expiry",
       enableSorting: true,
       cell: (info) => {
-        // console.log('voteEnd', moment(BLOCK_LENGTH_MILLISECONDS * Number(info.getValue()) / 1000))
-        // console.log('now', moment())
-
         return (
           <p className="text-sm font-bold text-gray-600 dark:text-white">
-            {info.row.original.isActive ? "Ongoing" : "Expired"}
+            {info.row.original.isActive
+              ? fromNow(
+                  Number(
+                    moment().add(
+                      (Number(info.getValue()) - Number(currentBlock)) *
+                        BLOCK_LENGTH_MILLISECONDS,
+                      "milliseconds"
+                    )
+                  )
+                )
+              : "Expired"}
           </p>
         )
       },
@@ -344,19 +394,65 @@ function Vote({
               extra=""
               content={
                 <div className="text-gray-700 dark:text-white">
-                  {formatCurrencyValue(Number(parseUnits(info.row.original.votes[1].toString(), 18))) +
-                    "/" +
-                    formatCurrencyValue(Number(info.row.original.quorum))}
+                  <ul>
+                    <li className="flex items-center gap-1">
+                      <svg
+                        className="h-2 w-2 fill-red-400"
+                        viewBox="0 0 8 8"
+                        aria-hidden="true"
+                      >
+                        <circle cx={4} cy={4} r={4} />
+                      </svg>
+                      <span className="font-semibold">Against:</span>{" "}
+                      {formatCurrencyValue(
+                        Number(formatUnits(info.row.original.votes[0].toString(), 18))
+                      )}
+                    </li>
+                    <li className="flex items-center gap-1">
+                      <svg
+                        className="h-2 w-2 fill-green-400"
+                        viewBox="0 0 8 8"
+                        aria-hidden="true"
+                      >
+                        <circle cx={4} cy={4} r={4} />
+                      </svg>
+                      <span className="font-semibold">For:</span>{" "}
+                      {formatCurrencyValue(
+                        Number(formatUnits(info.row.original.votes[1].toString(), 18))
+                      )}
+                    </li>
+                    <li className="flex items-center gap-1">
+                      <svg
+                        className="h-2 w-2 fill-gray-400"
+                        viewBox="0 0 8 8"
+                        aria-hidden="true"
+                      >
+                        <circle cx={4} cy={4} r={4} />
+                      </svg>
+                      <span className="font-semibold">Abstain:</span>{" "}
+                      {formatCurrencyValue(
+                        Number(formatUnits(info.row.original.votes[2].toString(), 18))
+                      )}
+                    </li>
+                    <li>
+                      <span className="font-semibold">Quorum:</span>{" "}
+                      {formatCurrencyValue(
+                        Number(formatUnits(info.row.original.votes[0].toString(), 18)) +
+                          Number(formatUnits(info.row.original.votes[1].toString(), 18)) +
+                          Number(formatUnits(info.row.original.votes[2].toString(), 18))
+                      ) +
+                        "/" +
+                        formatCurrencyValue(Number(info.row.original.quorum))}
+                    </li>
+                  </ul>
                 </div>
               }
               trigger={
                 <div className="flex items-center gap-1">
-                  <Progress
-                    width="w-[100px]"
-                    value={Math.round(
-                      (Number(parseUnits(info.row.original.votes[1].toString(), 18)) / Number(info.row.original.quorum)) * 100
-                    ) > 100 ? 100 : Math.round( (Number(parseUnits(info.row.original.votes[1].toString(), 18)) / Number(info.row.original.quorum)) * 100)}
-                    color="teal"
+                  <VoteStatusBar
+                    width={100}
+                    height={10}
+                    votes={info.row.original.votes}
                   />
                   <div className="ml-1">
                     <QuestionMarkIcon />
@@ -422,61 +518,76 @@ function Vote({
   /* End Handlers */
 
   const getActionButton = (proposal: ActiveOnboardingVotes) => {
-    if (!proposal.isActive) return null
+    if (proposal.hasVoted && proposal.isActive)
+      return (
+        <span className="items-center rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-600">
+          Already voted
+        </span>
+      )
 
-    if (proposal.hasVoted)
-      return <span className="text-medium text-sm text-brand-500">Already voted!</span>
-
-    return (
-      <>
-        <DropdownSelect
-          options={[0, 1, 2]}
-          selectedOption={
-            voteOptionsSelected.find(
-              (vote) => vote.proposalId === proposal.proposalId.toString()
-            )?.optionSelected
-          }
-          onChange={(option) =>
-            handleVoteOptionChange(option, proposal.proposalId.toString())
-          }
-          getLabel={(item) => {
-            switch (item) {
-              case 0:
-                return "Against"
-              case 1:
-                return "For"
-              case 2:
-                return "Abstain"
-            }
-          }}
-          extra={"w-full mt-1"}
-        />
+    // Add proposal to queue
+    if (proposal.proposalState === ProposalState.Succeeded) {
+      return (
         <ButtonPrimary
           variant="xs"
-          title="Vote"
-          onClick={() =>
-            castVote(
-              proposal.proposalId,
+          title="Queue"
+          onClick={() => queue(proposal)}
+          extra="mt-1"
+        />
+      )
+    }
+
+    if (proposal.proposalState === ProposalState.Queued) {
+      return (
+        <span className="items-center rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-600">
+          Queued
+        </span>
+      )
+    }
+
+    if (proposal.isActive) {
+      return (
+        <>
+          <DropdownSelect
+            options={[0, 1, 2]}
+            selectedOption={
               voteOptionsSelected.find(
                 (vote) => vote.proposalId === proposal.proposalId.toString()
               )?.optionSelected
-            )
-          }
-          extra="mt-1"
-        />
-        {/* 
-        <ButtonPrimary
-          variant="xs"
-          title="For"
-          onClick={() => voteProposal(proposal.proposalId, VoteOption.For)}
-        />
-        <ButtonPrimary
-          variant="xs"
-          title="Against"
-          onClick={() => voteProposal(proposal.proposalId, VoteOption.Against)}
-        /> */}
-      </>
-    )
+            }
+            onChange={(option) =>
+              handleVoteOptionChange(option, proposal.proposalId.toString())
+            }
+            getLabel={(item) => {
+              switch (item) {
+                case 0:
+                  return "Against"
+                case 1:
+                  return "For"
+                case 2:
+                  return "Abstain"
+              }
+            }}
+            extra={"w-full mt-1"}
+          />
+          <ButtonPrimary
+            variant="xs"
+            title="Vote"
+            onClick={() =>
+              castVote(
+                proposal.proposalId,
+                voteOptionsSelected.find(
+                  (vote) => vote.proposalId === proposal.proposalId.toString()
+                )?.optionSelected
+              )
+            }
+            extra="mt-1"
+          />
+        </>
+      )
+    }
+
+    return null
   }
 
   return (
@@ -495,70 +606,71 @@ function Vote({
           <p>
             Your GUILD voting weight:{" "}
             <span className="font-semibold">
-              {data && data.votingPower
-                ? formatCurrencyValue(decimalToUnit(data.votingPower, 18))
-                : 0}
+              {guildVotingWeight &&
+                formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2)}
             </span>
           </p>
         </div>
         <div>
-          {loading || isLoading ? (
+          {loading ? (
             <div className="mt-4 flex flex-grow flex-col items-center justify-center gap-2">
               <Spinner />
             </div>
           ) : (
             <>
-              <table className="mt-4 w-full">
-                <thead>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <tr key={headerGroup.id} className="!border-px !border-gray-400">
-                      {headerGroup.headers.map((header) => (
-                        <th
-                          key={header.id}
-                          colSpan={header.colSpan}
-                          onClick={header.column.getToggleSortingHandler()}
-                          className="cursor-pointer border-b-[1px] border-gray-200 pb-2 pt-4 text-center text-start dark:border-gray-400"
-                        >
-                          <div className="flex items-center">
-                            <p className="text-sm font-medium text-gray-500 dark:text-white">
-                              {flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
+              <div className="overflow-auto">
+                <table className="mt-4 w-full">
+                  <thead>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <tr key={headerGroup.id} className="!border-px !border-gray-400">
+                        {headerGroup.headers.map((header) => (
+                          <th
+                            key={header.id}
+                            colSpan={header.colSpan}
+                            onClick={header.column.getToggleSortingHandler()}
+                            className="cursor-pointer border-b-[1px] border-gray-200 pb-2 pt-4 text-center text-start dark:border-gray-400"
+                          >
+                            <div className="flex items-center">
+                              <p className="text-sm font-medium text-gray-500 dark:text-white">
+                                {flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                              </p>
+                              {header.column.columnDef.enableSorting && (
+                                <span className="text-sm text-gray-400">
+                                  {{
+                                    asc: <FaSortDown />,
+                                    desc: <FaSortUp />,
+                                    null: <FaSort />,
+                                  }[header.column.getIsSorted() as string] ?? <FaSort />}
+                                </span>
                               )}
-                            </p>
-                            {header.column.columnDef.enableSorting && (
-                              <span className="text-sm text-gray-400">
-                                {{
-                                  asc: <FaSortDown />,
-                                  desc: <FaSortUp />,
-                                  null: <FaSort />,
-                                }[header.column.getIsSorted() as string] ?? <FaSort />}
-                              </span>
-                            )}
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  ))}
-                </thead>
-                <tbody>
-                  {table.getRowModel().rows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="border-b border-gray-100 transition-all duration-150 ease-in-out last:border-none hover:cursor-pointer hover:bg-gray-50 dark:border-gray-500 dark:hover:bg-navy-700"
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <td
-                          key={cell.id}
-                          className="relative min-w-[85px] border-white/0 py-2"
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                            </div>
+                          </th>
+                        ))}
+                      </tr>
+                    ))}
+                  </thead>
+                  <tbody>
+                    {table.getRowModel().rows.map((row) => (
+                      <tr
+                        key={row.id}
+                        className="border-b border-gray-100 transition-all duration-150 ease-in-out last:border-none hover:cursor-pointer hover:bg-gray-50 dark:border-gray-500 dark:hover:bg-navy-700"
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <td
+                            key={cell.id}
+                            className="relative min-w-[85px] border-white/0 py-2"
+                          >
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               <nav
                 className="flex w-full items-center justify-between border-t border-gray-200 px-2 py-3 text-gray-400"
                 aria-label="Pagination"

@@ -16,6 +16,7 @@ export const SidebarLinks = (props: { routes: RoutesType[] }): JSX.Element => {
   const activeRoute = useCallback(
     (routeName: string) => {
       if(pathname == '/' && routeName == '') return true
+      else if(pathname == '/profile' && routeName == '') return true
       else if(routeName != '') {
         return pathname == '/'+routeName || pathname.includes('/'+routeName)
       }
@@ -28,10 +29,10 @@ export const SidebarLinks = (props: { routes: RoutesType[] }): JSX.Element => {
       return (
         <NavLink key={index} href={'/' + route.path}>
           <div className={
-            clsx("relative py-2 mx-2 my-1 flex rounded-md hover:cursor-pointer transition-all ease-in duration-150",
+            clsx("relative py-2 mx-2 my-1 flex rounded-md hover:cursor-pointer transition-all ease-in duration-200",
                 activeRoute(route.path) === true
-                  ? 'font-semibold text-brand-500 dark:text-white bg-brand-100/50 dark:bg-brand-300/80'
-                  : 'font-medium text-gray-600 hover:text-gray-800 dark:text-gray-300 hover:bg-brand-100/30 dark:hover:bg-brand-500/50'
+                  ? 'font-semibold text-brand-500 dark:text-white bg-brand-100/80 dark:bg-brand-300/80'
+                  : 'font-medium text-stone-600 hover:text-gray-800 dark:text-gray-300 hover:bg-stone-100/40 dark:hover:bg-navy-100/10'
           )}>
             <li
               className="my-[3px] flex cursor-pointer items-center px-8"

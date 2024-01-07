@@ -4,7 +4,7 @@ import Card from "components/card";
 const Widget = (props: {
   icon: JSX.Element;
   title: string;
-  subtitle: string;
+  subtitle: string | number;
   extra?: ReactJSXElement;
 }) => {
   const { icon, title, subtitle,extra } = props;
@@ -21,7 +21,7 @@ const Widget = (props: {
       <div className="h-50 ml-4 flex w-auto flex-col justify-center">
         <p className="font-dm text-sm font-semilight text-gray-600 dark:text-gray-200">{title}</p>
         <div className="flex flex-row items-center space-x-1">
-          <h4 className="text-lg font-bold text-gray-700 dark:text-white">
+          <h4 className="text-xl font-bold text-gray-700 dark:text-white">
             {subtitle}
           </h4>
           {extra}

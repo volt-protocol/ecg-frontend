@@ -1,17 +1,11 @@
 import React, { useEffect, useState } from "react"
-import {
-  Address,
-  readContract,
-  waitForTransaction,
-  writeContract,
-} from "@wagmi/core"
+import { Address, readContract, waitForTransaction, writeContract } from "@wagmi/core"
 import { toastError, toastRocket } from "components/toast"
-import { CreditABI } from "lib/contracts"
+import { CreditABI, creditContract } from "lib/contracts"
 import { DecimalToUnit, UnitToDecimal, preciseRound } from "utils/utils-old"
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa"
 import { Step } from "components/stepLoader/stepType"
 import StepModal from "components/stepLoader"
-import { Delegatee } from "../.."
 import {
   createColumnHelper,
   useReactTable,
@@ -19,42 +13,49 @@ import {
   getSortedRowModel,
   flexRender,
 } from "@tanstack/react-table"
-import { style } from "./helper"
+import { getTitleDisabled, style } from "./helper"
 import { MdOpenInNew } from "react-icons/md"
 import Spinner from "components/spinner"
 import { useAccount } from "wagmi"
 import ButtonDanger from "components/button/ButtonDanger"
-import { formatCurrencyValue } from "utils/numbers"
+import { formatCurrencyValue, formatDecimal } from "utils/numbers"
+import { formatUnits, isAddress, parseEther } from "viem"
+import ButtonPrimary from "components/button/ButtonPrimary"
+import DefiInputBox from "components/box/DefiInputBox"
+
+interface Delegatee {
+  address: string
+  votes: bigint
+}
 
 function DelegateCredit({
-  notUsed,
+  creditNotUsed,
   reloadCredit,
-  balance,
-  creditReceived,
+  creditBalance,
+  creditVotingWeight,
   userAddress,
   isConnected,
 }: {
-  notUsed: number
+  creditNotUsed: bigint
   reloadCredit: React.Dispatch<React.SetStateAction<boolean>>
-  balance: number
-  creditReceived: number
+  creditBalance: bigint
+  creditVotingWeight: bigint
   userAddress: string
   isConnected: boolean
 }) {
   const { address } = useAccount()
-  const [value, setValue] = useState<number>()
+  const [value, setValue] = useState<string>("")
   const [showModal, setShowModal] = useState(false)
-  const [addressValue, setAddressValue] = useState<string>("")
+  const [addressValue, setAddressValue] = useState<Address>()
   const [delegatees, setDelegatees] = useState<Delegatee[]>([])
   const [steps, setSteps] = useState<Step[]>()
-  const [isLoadingDelegations, setIsLoadingDelegations] =
-    useState<boolean>(true)
+  const [isLoadingDelegations, setIsLoadingDelegations] = useState<boolean>(true)
 
   const createSteps = (actionType?: "Delegate" | "Undelegate"): Step[] => {
     if (actionType === "Delegate") {
-      return [{ name: "Delegate CREDIT", status: "Not Started" }]
+      return [{ name: "Delegate gUSDC", status: "Not Started" }]
     } else {
-      return [{ name: "Undelegate CREDIT", status: "Not Started" }]
+      return [{ name: "Undelegate gUSDC", status: "Not Started" }]
     }
   }
 
@@ -63,14 +64,13 @@ function DelegateCredit({
 
     // Vérifier si la valeur saisie ne contient que des numéros
     if (/^\d*$/.test(inputValue)) {
-      setValue(inputValue as unknown as number)
+      setValue(inputValue as string)
     }
   }
 
   async function getDelegatee(): Promise<string[]> {
     const result = await readContract({
-      address: process.env.NEXT_PUBLIC_CREDIT_ADDRESS as Address,
-      abi: CreditABI,
+      ...creditContract,
       functionName: "delegates",
       args: [userAddress],
     })
@@ -81,8 +81,7 @@ function DelegateCredit({
     const tempDelegatees: Delegatee[] = []
     async function getDelegateeAndVotes(delegatee: string): Promise<void> {
       const result = await readContract({
-        address: process.env.NEXT_PUBLIC_CREDIT_ADDRESS as Address,
-        abi: CreditABI,
+        ...creditContract,
         functionName: "delegatesVotesCount",
         args: [userAddress, delegatee],
       })
@@ -90,7 +89,7 @@ function DelegateCredit({
       if (result != BigInt(0)) {
         tempDelegatees.push({
           address: delegatee,
-          votes: DecimalToUnit(result as bigint, 18),
+          votes: result as bigint,
         })
       }
       setDelegatees(tempDelegatees)
@@ -104,24 +103,16 @@ function DelegateCredit({
         setIsLoadingDelegations(false)
       })
     }
-  }, [isConnected, notUsed])
+  }, [isConnected, creditNotUsed])
 
-  // faire une fonction qui permet de check si c'est une addresse ethereum valide
-  function isAddress(address: string): boolean {
-    return /^(0x)?[0-9a-f]{40}$/i.test(address)
-  }
-
-  async function handledelegate(): Promise<void> {
-    if (value > notUsed) {
+  /* Smart contract write */
+  async function handleDelegate(): Promise<void> {
+    if (Number(value) > creditNotUsed) {
       toastError("You can't delegate more than your available GUILD")
       return
     }
-    if (value <= 0) {
+    if (Number(value) <= 0) {
       toastError("You can't delegate 0 GUILD")
-      return
-    }
-    if (addressValue === "") {
-      toastError("You must enter an address")
       return
     }
     if (!isAddress(addressValue)) {
@@ -131,19 +122,16 @@ function DelegateCredit({
     setSteps(createSteps("Delegate"))
     const updateStepStatus = (stepName: string, status: Step["status"]) => {
       setSteps((prevSteps) =>
-        prevSteps.map((step) =>
-          step.name === stepName ? { ...step, status } : step
-        )
+        prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step))
       )
     }
     try {
       setShowModal(true)
-      updateStepStatus("Delegate CREDIT", "In Progress")
+      updateStepStatus("Delegate gUSDC", "In Progress")
       const { hash } = await writeContract({
-        address: process.env.NEXT_PUBLIC_CREDIT_ADDRESS,
-        abi: CreditABI,
+        ...creditContract,
         functionName: "incrementDelegation",
-        args: [addressValue, UnitToDecimal(value, 18)],
+        args: [addressValue, parseEther(value.toString())],
       })
 
       const checkdelegate = await waitForTransaction({
@@ -151,38 +139,37 @@ function DelegateCredit({
       })
 
       if (checkdelegate.status != "success") {
-        updateStepStatus("Delegate CREDIT", "Error")
+        updateStepStatus("Delegate gUSDC", "Error")
 
         return
       }
 
-      updateStepStatus("Delegate CREDIT", "Success")
+      updateStepStatus("Delegate gUSDC", "Success")
+      setValue("")
+      setAddressValue("")
       reloadCredit(true)
     } catch (e) {
       console.log(e)
-      updateStepStatus("Delegate CREDIT", "Error")
+      updateStepStatus("Delegate gUSDC", "Error")
       toastError("Transaction failed")
     }
   }
 
-  async function Undelegate(address: string, amount: number): Promise<void> {
+  async function handleUndelegate(address: string, amount: bigint): Promise<void> {
     setSteps(createSteps("Undelegate"))
 
     const updateStepStatus = (stepName: string, status: Step["status"]) => {
       setSteps((prevSteps) =>
-        prevSteps.map((step) =>
-          step.name === stepName ? { ...step, status } : step
-        )
+        prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step))
       )
     }
     try {
       setShowModal(true)
-      updateStepStatus("Undelegate CREDIT", "In Progress")
+      updateStepStatus("Undelegate gUSDC", "In Progress")
       const { hash } = await writeContract({
-        address: process.env.NEXT_PUBLIC_CREDIT_ADDRESS,
-        abi: CreditABI,
+        ...creditContract,
         functionName: "undelegate",
-        args: [address, UnitToDecimal(amount, 18)],
+        args: [address, amount],
       })
 
       const checkdelegate = await waitForTransaction({
@@ -190,21 +177,26 @@ function DelegateCredit({
       })
 
       if (checkdelegate.status != "success") {
-        updateStepStatus("Undelegate CREDIT", "Error")
+        updateStepStatus("Undelegate gUSDC", "Error")
 
         return
       }
 
-      updateStepStatus("Undelegate CREDIT", "Success")
+      updateStepStatus("Undelegate gUSDC", "Success")
+      setValue("")
+      setAddressValue("")
       reloadCredit(true)
     } catch (e) {
       console.log(e)
-      updateStepStatus("Undelegate CREDIT", "Error")
+      updateStepStatus("Undelegate gUSDC", "Error")
       toastError("Transaction failed")
     }
   }
+  /* End Smart contract write */
 
+  /* Table */
   const columnHelper = createColumnHelper<Delegatee>()
+
   const columns = [
     columnHelper.accessor("address", {
       id: "delegatee",
@@ -215,25 +207,23 @@ function DelegateCredit({
           className="flex items-center gap-1 pl-3 text-center text-sm font-bold text-gray-600 hover:text-brand-500 dark:text-gray-200"
           target="__blank"
           href={`${
-            process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL
+            process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS
           }/${info.getValue()}`}
         >
           {info.getValue() == address
             ? "Yourself"
-            : info.getValue().slice(0, 4) +
-              "..." +
-              info.getValue().slice(-4)}{" "}
+            : info.getValue().slice(0, 4) + "..." + info.getValue().slice(-4)}{" "}
           <MdOpenInNew />
         </a>
       ),
     }),
     columnHelper.accessor("votes", {
       id: "votes",
-      header: "CREDIT Delegated",
+      header: "gUSDC Delegated",
       enableSorting: true,
       cell: (info) => (
         <p className="text-sm font-bold text-gray-600 dark:text-gray-200">
-          {info.getValue()}
+          {formatDecimal(Number(formatUnits(info.getValue(), 18)), 2)}
         </p>
       ),
     }),
@@ -245,7 +235,9 @@ function DelegateCredit({
           <ButtonDanger
             variant="xs"
             title="Undelegate"
-            onClick={() => Undelegate(info.row.original.address, info.row.original.votes)}
+            onClick={() =>
+              handleUndelegate(info.row.original.address, info.row.original.votes)
+            }
           />
         </div>
       ),
@@ -259,6 +251,7 @@ function DelegateCredit({
     getSortedRowModel: getSortedRowModel(),
     debugTable: true,
   })
+  /* End Table */
 
   return (
     <>
@@ -273,86 +266,128 @@ function DelegateCredit({
       <div className="mt-4 h-full rounded-xl text-gray-700 dark:text-gray-200">
         <div className="my-2 -mt-1 grid grid-cols-2 gap-y-1">
           <p className="col-span-2">
-            Your CREDIT balance :{" "}
+            Your gUSDC balance :{" "}
             <span className="font-semibold">
-              {balance != undefined ? preciseRound(balance, 2) : "?"}
+              {creditBalance
+                ? formatDecimal(Number(formatUnits(creditBalance, 18)), 2)
+                : 0}
             </span>
           </p>
           <p className="col-span-2">
-            Your CREDIT available to delegate :{" "}
-            {notUsed != undefined ? (
-              <>
-                <span className="font-semibold">
-                  {preciseRound(notUsed, 2)}
-                </span>{" "}
-                /{" "}
-                <span className="font-semibold">
-                  {formatCurrencyValue(Number(preciseRound(balance, 2)))}
-                </span>
-              </>
-            ) : (
-              <span className="font-semibold">?</span>
-            )}
-          </p>
-          <p className="col-span-2">
-            Your CREDIT voting weight:{" "}
+            Your gUSDC voting weight:{" "}
             <span className="font-semibold">
-              {creditReceived != undefined
-                ? preciseRound(creditReceived + notUsed, 2)
-                : "?"}
+              {creditVotingWeight
+                ? formatDecimal(Number(formatUnits(creditVotingWeight, 18)), 2)
+                : 0}
             </span>
           </p>
         </div>
-        <div className="relative mt-4 rounded-md">
-          <input
-            onChange={(e) => setAddressValue(e.target.value as string)}
-            value={addressValue as string}
-            className="block w-full rounded-md border-2 border-gray-300 py-3 pl-7 pr-12 text-gray-800 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:border-brand-400/80 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-50 sm:text-lg sm:leading-6"
-            placeholder="0x3...297"
-            pattern="^[0-9]*[.,]?[0-9]*$"
-          />
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-            <span className="text-gray-500 dark:text-gray-50 sm:text-lg">
-              Address to Delegate CREDIT
-            </span>
+
+        <DefiInputBox
+          topLabel="Delegate gUSDC to"
+          placeholder="0x..."
+          inputSize="text-xl"
+          pattern="^[0-9a-fA-F]$"
+          value={addressValue as Address}
+          onChange={(e) => setAddressValue(e.target.value as Address)}
+          rightLabel={
+            <button
+              className="text-sm font-medium text-brand-500 hover:text-brand-400"
+              onClick={(e) => setAddressValue(address as Address)}
+            >
+              Delegate to myself
+            </button>
+          }
+        />
+
+        {/* <div className="relative mt-4 rounded-xl bg-brand-100/50">
+          <div className="mb-1 px-5 pt-4 text-sm font-medium text-gray-700">
+            Delegate gUSDC to
           </div>
-        </div>
-        <div className="m-1 flex justify-start">
-          <button
-            className="text-sm font-medium text-brand-500 hover:text-brand-400 dark:text-gray-300 dark:hover:text-gray-200"
-            onClick={(e) => setAddressValue(address as string)}
-          >
-            Delegate to myself
-          </button>
-        </div>
-        <div className="relative mt-4 rounded-md">
+          <input
+            onChange={(e) => setAddressValue(e.target.value as Address)}
+            value={addressValue as Address}
+            className="block w-full border-gray-300 bg-brand-100/0 px-5 text-xl text-gray-800 transition-all duration-150 ease-in-out placeholder:text-gray-400 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-50 sm:text-xl sm:leading-6"
+            placeholder="0x..."
+            pattern="^[0-9a-fA-F]$"
+          />
+          <div className="mt-1 flex justify-end px-5 pb-4">
+            <button
+              className="text-sm font-medium text-brand-500 hover:text-brand-400 dark:text-gray-300 dark:hover:text-gray-200"
+              onClick={(e) => setAddressValue(address as Address)}
+            >
+              Delegate to myself
+            </button>
+          </div>
+        </div> */}
+
+        <DefiInputBox
+          topLabel="Delegate gUSDC"
+          currencyLogo="/img/crypto-logos/credit.png"
+          currencySymbol="gUSDC"
+          placeholder="0"
+          inputSize="text-2xl sm:text-3xl"
+          pattern="^[0-9]*[.,]?[0-9]*$"
+          value={value}
+          onChange={handleInputChange}
+          rightLabel={
+            <>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Available:{" "}
+                {creditNotUsed
+                  ? formatDecimal(Number(formatUnits(creditNotUsed, 18)), 2)
+                  : 0}
+              </p>
+              <button
+                className="text-sm font-medium text-brand-500 hover:text-brand-400"
+                onClick={(e) => setValue(formatUnits(creditNotUsed, 18))}
+              >
+                Max
+              </button>
+            </>
+          }
+        />
+
+        {/* <div className="relative mt-2 rounded-xl bg-brand-100/50">
+          <div className="mb-1 px-5 pt-4 text-sm font-medium text-gray-700">
+            Amount of gUSDC you delegate
+          </div>
           <input
             onChange={handleInputChange}
-            value={value as number}
-            className="block w-full rounded-md border-2 border-gray-300 py-3 pl-7 pr-12 text-gray-800 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:border-brand-400/80 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-50 sm:text-lg sm:leading-6"
+            value={value}
+            className="block w-full border-gray-300 bg-brand-100/0 px-5 text-2xl text-gray-800 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:border-brand-400/80 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-50 sm:text-3xl sm:leading-6"
             placeholder="0"
             pattern="^[0-9]*[.,]?[0-9]*$"
           />
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-            <span className="text-gray-500 dark:text-gray-50 sm:text-lg">
-              CREDIT to delegate
-            </span>
+          <div className="mt-1 flex justify-end gap-1 px-5 pb-4">
+            <p className="text-sm font-medium text-gray-700">
+              Available:{" "}
+              {creditNotUsed ? formatDecimal(Number(formatUnits(creditNotUsed, 18)), 2) : 0}
+            </p>
+            <button
+              className="text-sm font-medium text-brand-500 hover:text-brand-400 dark:text-gray-300 dark:hover:text-gray-200"
+              onClick={(e) => setValue(formatUnits(creditNotUsed, 18))}
+            >
+              Max
+            </button>
           </div>
-        </div>
-        <button
-          onClick={handledelegate}
+        </div> */}
+
+        <ButtonPrimary
+          variant="lg"
+          title="Delegate gUSDC"
+          titleDisabled={getTitleDisabled(Number(value), addressValue, creditNotUsed)}
+          extra="w-full mt-2 !rounded-xl"
+          onClick={handleDelegate}
           disabled={
-            value > notUsed ||
-            value <= 0 ||
-            value == undefined ||
-            isAddress(addressValue) === false
-              ? true
-              : false
+            !creditNotUsed ||
+            Number(value) > Number(formatUnits(creditNotUsed, 18)) ||
+            Number(value) <= 0 ||
+            !value ||
+            !isAddress(addressValue)
           }
-          className={`${style.confirmButton} `}
-        >
-          Delegate CREDIT
-        </button>
+        />
+
         <div>
           {isLoadingDelegations ? (
             <div className="mt-4 flex flex-grow flex-col items-center justify-center gap-2">
@@ -366,16 +401,13 @@ function DelegateCredit({
             </div>
           ) : delegatees.length === 0 ? (
             <div className="my-4 flex items-center justify-center text-gray-500 dark:text-gray-100">
-              <p>You haven't delegated any CREDIT yet</p>
+              <p>You haven't delegated any gUSDC yet</p>
             </div>
           ) : (
             <table className="mt-4 w-full">
               <thead>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <tr
-                    key={headerGroup.id}
-                    className="!border-px !border-gray-400"
-                  >
+                  <tr key={headerGroup.id} className="!border-px !border-gray-400">
                     {headerGroup.headers.map((header) => (
                       <th
                         key={header.id}
@@ -396,9 +428,7 @@ function DelegateCredit({
                                 asc: <FaSortDown />,
                                 desc: <FaSortUp />,
                                 null: <FaSort />,
-                              }[header.column.getIsSorted() as string] ?? (
-                                <FaSort />
-                              )}
+                              }[header.column.getIsSorted() as string] ?? <FaSort />}
                             </span>
                           )}
                         </div>
@@ -418,10 +448,7 @@ function DelegateCredit({
                         key={cell.id}
                         className="relative min-w-[85px] border-white/0 py-2"
                       >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
                     ))}
                   </tr>

@@ -1,60 +1,61 @@
 import React, { useEffect, useState } from "react"
-import {
-  Address,
-  readContract,
-  waitForTransaction,
-  writeContract,
-} from "@wagmi/core"
+import { Address, readContract, waitForTransaction, writeContract } from "@wagmi/core"
 import { toastError } from "components/toast"
-import { CreditABI, SurplusGuildMinterABI } from "lib/contracts"
 import {
-  DecimalToUnit,
-  UnitToDecimal,
-  formatCurrencyValue,
-  preciseRound,
-} from "utils/utils-old"
+  CreditABI,
+  SurplusGuildMinterABI,
+  TermABI,
+  creditContract,
+  surplusGuildMinterContract,
+} from "lib/contracts"
+import { DecimalToUnit, UnitToDecimal, formatCurrencyValue } from "utils/utils-old"
 import { TooltipHorizon } from "components/tooltip"
 import { useAccount } from "wagmi"
 import { Step } from "components/stepLoader/stepType"
 import StepModal from "components/stepLoader"
-import { ContractFunctionExecutionError } from "viem"
+import { Abi, ContractFunctionExecutionError, formatUnits, parseEther } from "viem"
 import { QuestionMarkIcon } from "components/tooltip"
+import ButtonPrimary from "components/button/ButtonPrimary"
+import { formatDecimal } from "utils/numbers"
+import { AlertMessage } from "components/message/AlertMessage"
+import DefiInputBox from "components/box/DefiInputBox"
+import { getTitleDisabledStake, getTitleDisabledUnstake } from "./helper"
+import { LendingTerms } from "types/lending"
 
-function Stake({
-  allocatedCredit,
+function StakeCredit({
+  debtCeiling,
+  lendingTerm,
+  creditAllocated,
   textButton,
-  availableCredit,
+  creditBalance,
   termAddress,
-  gaugeWeight,
-  totalWeight,
-  creditTotalSupply,
   ratioGuildCredit,
   reload,
 }: {
-  allocatedCredit: number
-  textButton: string
-  availableCredit: number
+  debtCeiling: number
+  lendingTerm: LendingTerms
+  creditAllocated: bigint
+  textButton: "Stake" | "Unstake"
+  creditBalance: bigint
   termAddress: string
-  gaugeWeight: number
-  totalWeight: number
-  creditTotalSupply: number
   ratioGuildCredit: number
   reload: React.Dispatch<React.SetStateAction<boolean>>
 }) {
-  const [value, setValue] = useState<number | undefined>()
+  const [value, setValue] = useState<string>("")
   const [loading, setLoading] = useState<boolean>(false)
-  const [stakeRatio, setStakeRatio] = useState<number>(0)
   const { address, isConnected } = useAccount()
-  const [showModal, setShowModal] = useState(false)
+  const [showModal, setShowModal] = useState<boolean>(false)
+  const [debtDelta, setDebtDelta] = useState(0)
+
   const createSteps = (): Step[] => {
     const baseSteps = [
       {
-        name: textButton == "stake" ? "Stake" : "Unstake",
+        name: textButton,
         status: "Not Started",
       },
     ]
 
-    if (textButton === "stake") {
+    if (textButton === "Stake") {
       baseSteps.splice(0, 0, { name: "Approve", status: "Not Started" })
     }
 
@@ -63,67 +64,51 @@ function Stake({
 
   const [steps, setSteps] = useState<Step[]>(createSteps())
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value
 
     // Vérifier si la valeur saisie ne contient que des numéros
     if (/^\d*$/.test(inputValue)) {
-      setValue(inputValue as unknown as number)
+      setValue(inputValue as string)
+
+      await getDebtCeilingDelta(inputValue)
     }
   }
 
-  const style = {
-    wrapper: `w-screen flex  items-center justify-center mt-14 `,
-    content: `bg-transparent w-full px-4 text-gray-700 dark:text-gray-200`,
-    formHeader: `px-2 flex items-center justify-between font-semibold text-xl`,
-    transferPropContainer: `bg-transparent my-3 rounded-2xl p-4 text-xl border dark:border-white border-[#41444F] hover:border-[#41444F]  flex justify-between items-center`,
-    transferPropInput: `bg-transparent placeholder:text-[#B2B9D2] outline-none w-full text-2xl   `,
-    currencySelector: `flex w-2/4 justify-end `,
-    currencySelectorContent: `w-full h-min flex justify-between items-center bg-[#2D2F36] hover:bg-[#41444F] rounded-2xl text-xl font-medium cursor-pointer p-2 mt-[-0.2rem]`,
-    currencySelectorIcon: `flex items-center`,
-    currencySelectorTicker: `mx-2`,
-    currencySelectorArrow: `text-lg`,
-    confirmButton: `mt-4 mb-2 rounded-md py-4 px-8 text-lg font-semibold flex items-center justify-center cursor-pointer w-full disabled:bg-gray-300 disabled:text-gray-700 disabled:cursor-not-allowed text-white bg-brand-500 hover:bg-brand-400 dark:disabled:bg-navy-900 dark:disabled:text-navy-400 transition-all ease-in-out duration-150`,
-  }
+  // useEffect(() => {
+  //   async function getStakeRatio() {
+  //     const ratio = await readContract({
+  //       ...surplusGuildMinterContract,
+  //       functionName: "stakeRatio",
+  //       args: [address, termAddress],
+  //     })
+  //     setStakeRatio(DecimalToUnit(ratio as bigint, 18))
+  //   }
 
-  useEffect(() => {
-    async function getStakeRatio() {
-      const ratio = await readContract({
-        address: process.env
-          .NEXT_PUBLIC_SURPLUS_GUILD_MINTER_ADDRESS as Address,
-        abi: SurplusGuildMinterABI,
-        functionName: "stakeRatio",
-        args: [address, termAddress],
-      })
-      setStakeRatio(DecimalToUnit(ratio as bigint, 18))
-    }
-
-    getStakeRatio()
-  }, [value])
+  //   getStakeRatio()
+  // }, [value])
 
   async function handlestake(): Promise<void> {
     const updateStepStatus = (stepName: string, status: Step["status"]) => {
       setSteps((prevSteps) =>
-        prevSteps.map((step) =>
-          step.name === stepName ? { ...step, status } : step
-        )
+        prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step))
       )
     }
 
-    if (textButton === "stake") {
+    if (textButton === "Stake") {
       if (isConnected == false) {
         toastError("Please connect your wallet")
         setLoading(false)
         return
       }
-      if (value == 0) {
+      if (Number(value) == 0) {
         toastError("Please enter a value")
         setLoading(false)
         return
       }
 
-      if ((value as number) > availableCredit) {
-        toastError("Not enough CREDIT")
+      if (Number(value) > creditBalance) {
+        toastError("Not enough gUSDC")
         setLoading(false)
         return
       } else {
@@ -131,13 +116,9 @@ function Stake({
         updateStepStatus("Approve", "In Progress")
         try {
           const approve = await writeContract({
-            address: process.env.NEXT_PUBLIC_CREDIT_ADDRESS,
-            abi: CreditABI,
+            ...creditContract,
             functionName: "approve",
-            args: [
-              process.env.NEXT_PUBLIC_SURPLUS_GUILD_MINTER_ADDRESS,
-              UnitToDecimal(value, 18),
-            ],
+            args: [surplusGuildMinterContract.address, parseEther(value.toString())],
           })
 
           const checkApprove = await waitForTransaction({
@@ -164,12 +145,12 @@ function Stake({
         }
         updateStepStatus("Approve", "Success")
         updateStepStatus("Stake", "In Progress")
+
         try {
           const { hash } = await writeContract({
-            address: process.env.NEXT_PUBLIC_SURPLUS_GUILD_MINTER_ADDRESS,
-            abi: SurplusGuildMinterABI,
+            ...surplusGuildMinterContract,
             functionName: "stake",
-            args: [termAddress, UnitToDecimal(value, 18)],
+            args: [termAddress, parseEther(value.toString())],
           })
 
           const checkStake = await waitForTransaction({
@@ -186,9 +167,7 @@ function Stake({
             console.log(typeof e)
             updateStepStatus(
               "Stake",
-              `Error : ${
-                e.shortMessage.split(":")[1] + e.shortMessage.split(":")[2]
-              }`
+              `Error : ${e.shortMessage.split(":")[1] + e.shortMessage.split(":")[2]}`
             )
             return
           } else {
@@ -197,11 +176,12 @@ function Stake({
           }
         }
         updateStepStatus("Stake", "Success")
+        setValue("")
         reload(true)
       }
     } else if (textButton === "Unstake") {
-      if ((value as number) > allocatedCredit) {
-        toastError("Not enough CREDIT allocated")
+      if (Number(value) > creditAllocated) {
+        toastError("Not enough gUSDC allocated")
         setLoading(false)
         return
       } else {
@@ -209,10 +189,9 @@ function Stake({
         updateStepStatus("Unstake", "In Progress")
         try {
           const { hash } = await writeContract({
-            address: process.env.NEXT_PUBLIC_SURPLUS_GUILD_MINTER_ADDRESS,
-            abi: SurplusGuildMinterABI,
+            ...surplusGuildMinterContract,
             functionName: "unstake",
-            args: [termAddress],
+            args: [termAddress, parseEther(value.toString())],
           })
 
           const checkUnstake = await waitForTransaction({
@@ -229,39 +208,65 @@ function Stake({
             console.log(typeof e)
             updateStepStatus(
               "Unstake",
-              `Error : ${
-                e.shortMessage.split(":")[1] + e.shortMessage.split(":")[2]
-              }`
+              `Error : ${e.shortMessage.split(":")[1] + e.shortMessage.split(":")[2]}`
             )
             return
           }
         }
         updateStepStatus("Unstake", "Success")
+        setValue("")
         reload(true)
       }
     }
   }
 
-  function getDebtCeileingIncrease(): string {
-    if (!value) return "0"
-    let guildAmount = value * ratioGuildCredit
-    const percentBefore = gaugeWeight / totalWeight
-    const percentAfter = (gaugeWeight + guildAmount) / totalWeight
-    const debCeilingBefore = creditTotalSupply * percentBefore * 2
-    const debCeilingAfter = creditTotalSupply * percentAfter * 2
-    const debtCeilingIncrease = debCeilingAfter - debCeilingBefore
-    return formatCurrencyValue(Number(preciseRound(debtCeilingIncrease, 2)))
+  async function getDebtCeilingDelta(value) {
+    if (
+      (Number(value) > Number(formatUnits(creditBalance, 18)) &&
+        textButton === "Stake") ||
+      (Number(value) > Number(formatUnits(creditAllocated, 18)) &&
+        textButton === "Unstake")
+    ) {
+      setDebtDelta(0)
+      return
+    }
+
+    let amount: bigint
+
+    if (textButton == "Stake") {
+      amount = parseEther((Number(value) * ratioGuildCredit).toString())
+    } else {
+      amount = -parseEther((Number(value) * ratioGuildCredit).toString())
+    }
+
+    const data = await readContract({
+      address: lendingTerm.address as Address,
+      abi: TermABI as Abi,
+      functionName: "debtCeiling",
+      args: [amount],
+    })
+
+    setDebtDelta(Math.abs(Number(formatUnits(data as bigint, 18)) - debtCeiling))
   }
 
-  function getDebtCeileingDecrease(): string {
-    let guildAmount = allocatedCredit * ratioGuildCredit
-    const percentBefore = gaugeWeight / totalWeight
-    const percentAfter = (gaugeWeight + guildAmount) / totalWeight
-    const debCeilingBefore = creditTotalSupply * percentBefore * 2
-    const debCeilingAfter = creditTotalSupply * percentAfter * 2
-    const debtCeilingIncrease = debCeilingAfter - debCeilingBefore
-    return formatCurrencyValue(Number(preciseRound(debtCeilingIncrease, 2)))
+  const setMax = async () => {
+    if (textButton == "Stake") {
+      setValue(formatUnits(creditBalance, 18))
+      await getDebtCeilingDelta(formatUnits(creditBalance, 18))
+    } else {
+      setValue(formatUnits(creditAllocated, 18))
+      await getDebtCeilingDelta(formatUnits(creditAllocated, 18))
+    }
   }
+
+  const setAvailable = (): string => {
+    return textButton == "Stake"
+      ? formatDecimal(Number(formatUnits(creditBalance, 18)), 2)
+      : formatDecimal(Number(formatUnits(creditAllocated, 18)), 2)
+  }
+
+  if (creditAllocated == undefined || creditBalance == undefined) return null
+
   return (
     <>
       {showModal && (
@@ -272,83 +277,16 @@ function Stake({
           setSteps={setSteps}
         />
       )}
-      <div className={style.content}>
-        <div className={style.formHeader}></div>
-        <div className="grid grid-cols-5 gap-y-1 gap-x-1">
-          <div className="col-span-3">
-            <TooltipHorizon
-              extra=""
-              trigger={
-                <div className="flex items-center space-x-1">
-                  <p>
-                    Your CREDIT staked on this term :{" "}
-                    <span className="font-semibold ">
-                      {allocatedCredit != undefined
-                        ? preciseRound(allocatedCredit, 2)
-                        : "?"}
-                    </span>{" "}
-                  </p>
-                  <QuestionMarkIcon />
-                </div>
-              }
-              content={
-                <div className="">
-                  <p>
-                    Equivalent to{" "}
-                    <span className="font-semibold ">
-                      {preciseRound(allocatedCredit * stakeRatio, 2)}
-                    </span>{" "}
-                    GUILD staked.
-                  </p>
-                </div>
-              }
-              placement="top"
-            ></TooltipHorizon>
-          </div>
-          <div className="col-span-2">
-            <TooltipHorizon
-              extra=""
-              trigger={
-                <div className="flex items-center space-x-1">
-                  <p className="">
-                    GUILD / CREDIT ratio :{" "}
-                    <span className="font-semibold">
-                      {preciseRound(ratioGuildCredit, 2)}
-                    </span>{" "}
-                  </p>
-                  <QuestionMarkIcon />
-                </div>
-              }
-              content={
-                <div className="w-[15rem] p-2">
-                  <p>
-                    When you stake <span className="font-semibold">CREDIT</span>
-                    , you provide first-loss capital on this term, and in
-                    exchange an amount of{" "}
-                    <span className="font-semibold">GUILD</span> will be minted
-                    to vote for this term.
-                  </p>
-                </div>
-              }
-              placement="top"
-            ></TooltipHorizon>
-          </div>
-
-          <p className="col-span-5">
-            Your CREDIT balance :{" "}
-            <span className="font-semibold ">
-              {availableCredit != undefined
-                ? preciseRound(availableCredit, 2)
-                : "?"}
-            </span>{" "}
-          </p>
+      <div>
+        <div className="grid grid-cols-5 gap-x-1 gap-y-1">
+          <div className="col-span-2"></div>
 
           {/* <p className="font-semibold">
             Current interest rate:{" "}
             <span className="text-xl">{interestRate * 100 + "%"}</span>{" "}
           </p> */}
         </div>
-        {textButton === "stake" ? (
+        {/* {textButton === "Stake" ? (
           <div className="relative mt-4 rounded-md">
             <input
               onChange={handleInputChange}
@@ -359,51 +297,111 @@ function Stake({
             />
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
               <span className="text-gray-500 dark:text-gray-50 sm:text-lg">
-                {textButton === "stake" ? "CREDIT to stake" : ""}
+                {textButton === "Stake" ? "gUSDC to stake" : ""}
               </span>
             </div>
           </div>
         ) : (
           <></>
-        )}
-        <div className="mt-4">
-          {textButton === "stake" ? (
+        )} */}
+        <DefiInputBox
+          topLabel={"Amount of gUSDC to " + textButton.toLowerCase()}
+          currencyLogo="/img/crypto-logos/credit.png"
+          currencySymbol="gUSDC"
+          placeholder="0"
+          pattern="^[0-9]*[.,]?[0-9]*$"
+          inputSize="text-xl xl:text-3xl"
+          value={value}
+          onChange={handleInputChange}
+          rightLabel={
             <>
-              <p>
-                Your CREDIT stake will allow{" "}
-                <span className="font-bold">
-                  {getDebtCeileingIncrease()} more CREDIT
-                </span>{" "}
-                to be borrowed from this term
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Available: {setAvailable()}
               </p>
+              <button
+                className="text-sm font-medium text-brand-500 hover:text-brand-400"
+                onClick={(e) => setMax()}
+              >
+                Max
+              </button>
             </>
-          ) : (
-            <>
-              <p>
-                Unstaking your CREDIT will reduce the available borrowing amount
-                by{" "}
-                <span className="font-bold">{getDebtCeileingDecrease()}</span>{" "}
-                CREDIT for this term.
-              </p>
-            </>
-          )}
-        </div>
-        <button
+          }
+        />
+
+        <ButtonPrimary
+          variant="lg"
+          title={textButton}
+          titleDisabled={
+            textButton == "Stake"
+              ? getTitleDisabledStake(value, creditBalance)
+              : getTitleDisabledUnstake(value, creditAllocated)
+          }
+          extra="w-full mt-2 !rounded-xl"
           onClick={handlestake}
           disabled={
-            (allocatedCredit == 0 && textButton === "Unstake") ||
-            (value > availableCredit && textButton === "stake") ||
+            (Number(value) > Number(formatUnits(creditBalance, 18)) &&
+              textButton === "Stake") ||
+            (Number(value) > Number(formatUnits(creditAllocated, 18)) &&
+              textButton === "Unstake") ||
+            Number(value) <= 0 ||
             !value
-              ? true
-              : false
           }
-          className={`${style.confirmButton} `}
-        >
-          {textButton === "stake" ? "Stake" : "Unstake"}
-        </button>
+        />
+        <AlertMessage
+          type="info"
+          message={
+            textButton === "Stake" ? (
+              <>
+                <div>
+                  The GUILD / gUSDC ratio is{" "}
+                  <div className="inline-flex items-center">
+                    <span className="mr-1 font-bold">
+                      {formatDecimal(ratioGuildCredit, 2)}
+                    </span>
+                    <TooltipHorizon
+                      extra=""
+                      trigger={
+                        <div className="inline-block">
+                          <QuestionMarkIcon />
+                        </div>
+                      }
+                      content={
+                        <div className="w-[15rem] p-2">
+                          <p>
+                            When you stake <span className="font-semibold">gUSDC</span>,
+                            you provide first-loss capital on this term, and in exchange
+                            an amount of <span className="font-semibold">GUILD</span> will
+                            be minted to vote for this term.
+                          </p>
+                        </div>
+                      }
+                      placement="top"
+                    ></TooltipHorizon>
+                  </div>
+                  {". "}
+                  Your stake will allow{" "}
+                  <span className="font-bold">
+                    {formatCurrencyValue(Number(formatDecimal(debtDelta, 2)))} more gUSDC
+                  </span>{" "}
+                  to be borrowed.
+                </div>
+              </>
+            ) : (
+              <>
+                <p>
+                  Your unstake will decrease the borrow capacity on this term by{" "}
+                  <span className="font-bold">
+                    {formatCurrencyValue(Number(formatDecimal(debtDelta, 2)))}{" "}
+                  </span>{" "}
+                  gUSDC
+                </p>
+              </>
+            )
+          }
+        />
       </div>
     </>
   )
 }
 
-export default Stake
+export default StakeCredit

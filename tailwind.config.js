@@ -156,6 +156,8 @@ module.exports = {
       blueSecondary: '#4318FF',
       brandLinear: '#868CFF',
       gray: colors.gray,
+      stone: colors.stone,
+      zinc: colors.zinc,
       navy: {
         50: '#d0dcfb',
         100: '#aac0fe',

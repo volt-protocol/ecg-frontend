@@ -1,0 +1,314 @@
+import React, { Dispatch, SetStateAction, useEffect, useState } from "react"
+import { Address, readContract, waitForTransaction, writeContract } from "@wagmi/core"
+import { GuildABI, TermABI, guildContract } from "lib/contracts"
+import { DecimalToUnit, UnitToDecimal, formatCurrencyValue } from "utils/utils-old"
+import { toastError, toastRocket } from "components/toast"
+import { useAccount } from "wagmi"
+import { Step } from "components/stepLoader/stepType"
+import StepModal from "components/stepLoader"
+import { Abi, ContractFunctionExecutionError, formatUnits, parseEther } from "viem"
+import ButtonPrimary from "components/button/ButtonPrimary"
+import DefiInputBox from "components/box/DefiInputBox"
+import { formatDecimal } from "utils/numbers"
+import { getTitleDisabledStake, getTitleDisabledUnstake } from "./helper"
+import { AlertMessage } from "components/message/AlertMessage"
+import { LendingTerms } from "types/lending"
+import Spinner from "components/spinner"
+
+function StakeGuild({
+  debtCeiling,
+  lendingTerm,
+  textButton,
+  guildUserGaugeWeight,
+  guildBalance,
+  smartContractAddress,
+  guildUserWeight,
+  reload,
+}: {
+  debtCeiling: number
+  lendingTerm: LendingTerms
+  textButton: "Stake" | "Unstake"
+  guildUserGaugeWeight: bigint
+  guildBalance: bigint
+  smartContractAddress: string
+  guildUserWeight: bigint
+  reload: Dispatch<SetStateAction<boolean>>
+}) {
+  const [value, setValue] = useState<string>("")
+  const [loading, setLoading] = useState<boolean>(false)
+  const { isConnected } = useAccount()
+  const [showModal, setShowModal] = useState(false)
+  const [debtDelta, setDebtDelta] = useState(0)
+
+  const createSteps = (): Step[] => {
+    const baseSteps = [
+      {
+        name: textButton,
+        status: "Not Started",
+      },
+    ]
+
+    return baseSteps
+  }
+  const [steps, setSteps] = useState<Step[]>(createSteps())
+
+  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value
+
+    // Vérifier si la valeur saisie ne contient que des numéros
+    if (/^\d*$/.test(inputValue)) {
+      setValue(inputValue as string)
+
+      await getDebtCeilingDelta(inputValue)
+    }
+  }
+
+  async function handleVote(): Promise<void> {
+    const updateStepStatus = (stepName: string, status: Step["status"]) => {
+      setSteps((prevSteps) =>
+        prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step))
+      )
+    }
+
+    if (Number(value) == 0) {
+      toastError("Please enter a value")
+      return
+    }
+    if (isConnected == false) {
+      toastError("Please connect your wallet")
+      setLoading(false)
+      return
+    }
+    if (textButton === "Stake") {
+      if (
+        Number(value) >
+        Number(formatUnits(guildBalance, 18)) - Number(formatUnits(guildUserWeight, 18))
+      ) {
+        setLoading(false)
+        toastError("Not enough guild")
+        return
+      } else {
+        try {
+          setShowModal(true)
+          updateStepStatus("Stake", "In Progress")
+          const { hash } = await writeContract({
+            ...guildContract,
+            functionName: "incrementGauge",
+            args: [smartContractAddress, parseEther(value.toString())],
+          })
+          const checkAllocate = await waitForTransaction({
+            hash: hash,
+          })
+          if (checkAllocate.status != "success") {
+            updateStepStatus("Stake", "Error")
+            return
+          }
+        } catch (e) {
+          if (e instanceof ContractFunctionExecutionError) {
+            console.log(e.shortMessage, "error")
+            console.log(typeof e)
+            updateStepStatus(
+              "Stake",
+              `Error : ${e.shortMessage.split(":")[1] + e.shortMessage.split(":")[2]}`
+            )
+            return
+          } else {
+            updateStepStatus("Stake", "Error")
+            return
+          }
+        }
+        updateStepStatus("Stake", "Success")
+        setValue("")
+        reload(true)
+      }
+    } else if (textButton === "Unstake") {
+      if (Number(value) > Number(formatUnits(guildUserGaugeWeight, 18))) {
+        toastError("Not enough GUILD allocated")
+        return
+      } else {
+        setShowModal(true)
+        updateStepStatus("Unstake", "In Progress")
+        try {
+          const { hash } = await writeContract({
+            ...guildContract,
+            functionName: "decrementGauge",
+            args: [smartContractAddress, parseEther(value.toString())],
+          })
+          const checkUnstack = await waitForTransaction({
+            hash: hash,
+          })
+          if (checkUnstack.status != "success") {
+            updateStepStatus("Unstake", "Error")
+            return
+          }
+          updateStepStatus("Unstake", "Success")
+          setValue("")
+          reload(true)
+        } catch (e) {
+          if (e instanceof ContractFunctionExecutionError) {
+            console.log(e.shortMessage, "error")
+            console.log(typeof e)
+            updateStepStatus(
+              "Unstake",
+              `Error : ${e.shortMessage.split(":")[1] + e.shortMessage.split(":")[2]}`
+            )
+            return
+          } else {
+            console.log(e)
+            updateStepStatus("Unstake", "Error")
+            return
+          }
+        }
+      }
+    }
+  }
+  /** Setters and Getters **/
+  async function getDebtCeilingDelta(value) {
+    if (
+      (Number(value) >
+        Number(formatUnits(guildBalance, 18)) -
+          Number(formatUnits(guildUserWeight, 18)) &&
+        textButton == "Stake") ||
+      (Number(value) > Number(formatUnits(guildUserGaugeWeight, 18)) &&
+        textButton == "Unstake")
+    ) {
+      setDebtDelta(0)
+      return
+    }
+
+    let amount: bigint
+
+    if (textButton == "Stake") {
+      amount = parseEther(value)
+    } else {
+      amount = -parseEther(value)
+    }
+
+    const data = await readContract({
+      address: lendingTerm.address as Address,
+      abi: TermABI as Abi,
+      functionName: "debtCeiling",
+      args: [amount],
+    })
+
+    setDebtDelta(Math.abs(Number(formatUnits(data as bigint, 18)) - debtCeiling))
+  }
+
+  const setMax = () => {
+    if (textButton == "Stake") {
+      setValue(
+        (
+          Number(formatUnits(guildBalance, 18)) - Number(formatUnits(guildUserWeight, 18))
+        ).toString()
+      )
+    } else {
+      setValue(formatUnits(guildUserGaugeWeight, 18))
+    }
+  }
+
+  const setAvailable = (): string => {
+    return textButton == "Stake"
+      ? formatDecimal(
+          Number(formatUnits(guildBalance, 18)) -
+            Number(formatUnits(guildUserWeight, 18)),
+          2
+        )
+      : formatDecimal(Number(formatUnits(guildUserGaugeWeight, 18)), 2)
+  }
+
+  /** End Setters and Getters **/
+
+  if (
+    guildBalance == undefined ||
+    guildUserGaugeWeight == undefined ||
+    guildUserWeight == undefined
+  ) {
+    return null
+  }
+
+  return (
+    <div>
+      {showModal && (
+        <StepModal
+          steps={steps}
+          close={setShowModal}
+          initialStep={createSteps}
+          setSteps={setSteps}
+        />
+      )}
+      <DefiInputBox
+        topLabel={"Amount of GUILD to " + textButton.toLowerCase()}
+        currencyLogo="/img/crypto-logos/guild.png"
+        currencySymbol="GUILD"
+        placeholder="0"
+        pattern="^[0-9]*[.,]?[0-9]*$"
+        inputSize="text-xl xl:text-3xl"
+        value={value}
+        onChange={handleInputChange}
+        rightLabel={
+          <>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Available: {setAvailable()}
+            </p>
+            <button
+              className="text-sm font-medium text-brand-500 hover:text-brand-400"
+              onClick={(e) => setMax()}
+            >
+              Max
+            </button>
+          </>
+        }
+      />
+      <ButtonPrimary
+        variant="lg"
+        title={textButton}
+        titleDisabled={
+          textButton == "Stake"
+            ? getTitleDisabledStake(value, guildBalance, guildUserWeight)
+            : getTitleDisabledUnstake(value, guildUserGaugeWeight)
+        }
+        extra="w-full mt-2 !rounded-xl"
+        onClick={handleVote}
+        disabled={
+          (Number(value) >
+            Number(formatUnits(guildBalance, 18)) -
+              Number(formatUnits(guildUserWeight, 18)) &&
+            textButton == "Stake") ||
+          (Number(value) > Number(formatUnits(guildUserGaugeWeight, 18)) &&
+            textButton == "Unstake") ||
+          Number(value) <= 0 ||
+          !value
+        }
+      />
+
+      <AlertMessage
+        type="info"
+        message={
+          textButton === "Stake" ? (
+            <>
+              <p>
+                Your stake will allow{" "}
+                <span className="font-bold">
+                  {formatCurrencyValue(Number(formatDecimal(debtDelta, 2)))} more gUSDC
+                </span>{" "}
+                to be borrowed
+              </p>
+            </>
+          ) : (
+            <>
+              <p>
+                Your unstake will decrease the borrow capacity on this term by{" "}
+                <span className="font-bold">
+                  {" "}
+                  {formatCurrencyValue(Number(formatDecimal(debtDelta, 2)))} gUSDC
+                </span>
+              </p>
+            </>
+          )
+        }
+      />
+    </div>
+  )
+}
+
+export default StakeGuild

@@ -14,7 +14,7 @@ const Lending = () => {
 
   const { lendingTerms, lastUpdatedTerms, fetchLendingTerms } = useAppStore()
 
-  if(!lendingTerms) return <LendingSkeleton />
+  if (!lendingTerms) return <LendingSkeleton />
 
   return (
     <div>
@@ -29,9 +29,7 @@ const Lending = () => {
             className="cursor-pointer text-gray-400 dark:text-gray-100"
             onClick={() => fetchLendingTerms()}
           >
-            <MdCached
-              className={clsx("h-3 w-3", false && "animate-spin")}
-            />
+            <MdCached className={clsx("h-3 w-3", false && "animate-spin")} />
           </a>
         </div>
       </div>
@@ -46,18 +44,18 @@ const Lending = () => {
           />
         </Card>
       </div>
-      <div className="mt-6">
-        <Card
-          title="Deprecated Lending Terms"
-          extra="w-full h-full sm:overflow-auto px-6 py-4"
-        >
-          <LendingTermsTable
-            tableData={lendingTerms.filter(
-              (loan) => loan.status == "deprecated"
-            )}
-          />
-        </Card>
-      </div>
+      {lendingTerms.filter((loan) => loan.status == "deprecated").length != 0 && (
+        <div className="mt-6">
+          <Card
+            title="Deprecated Lending Terms"
+            extra="w-full h-full sm:overflow-auto px-6 py-4"
+          >
+            <LendingTermsTable
+              tableData={lendingTerms.filter((loan) => loan.status == "deprecated")}
+            />
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

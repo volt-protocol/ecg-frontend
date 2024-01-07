@@ -8,7 +8,7 @@ import * as yup from "yup"
 import { ErrorMessage } from "components/message/ErrorMessage"
 import clsx from "clsx"
 import { waitForTransaction, writeContract, readContract } from "@wagmi/core"
-import { lendingTermOnboardingContract } from "lib/contracts"
+import { lendingTermV1Implementation, onboardGovernorGuildContract } from "lib/contracts"
 import { toastError } from "components/toast"
 import { Step } from "components/stepLoader/stepType"
 import { Address, parseEther } from "viem"
@@ -18,14 +18,10 @@ import { MdCabin, MdCheck, MdCheckCircle, MdClose } from "react-icons/md"
 import { formatNumberDecimal } from "utils/numbers"
 import { getToken } from "./helper"
 
+//Define form schema
 const schema = yup
   .object({
-    collateralToken: yup
-      .string()
-      .length(42)
-      .matches(/^0x[A-Fa-f0-9]+$/i)
-      .required(),
-    openingFee: yup.number().positive().integer().max(10).required(),
+    openingFee: yup.number().integer().max(10).required(),
     interestRate: yup.number().positive().max(100).required(),
     borrowRatio: yup.number().positive().required(),
     hardCap: yup.number().positive().required(),
@@ -48,11 +44,18 @@ export default function Create() {
     resolver: yupResolver(schema),
     mode: "onChange",
   })
-  const watchCollateralToken = watch("collateralToken")
+  // const watchCollateralToken = watch("collateralToken")
   const watchBorrowRatio = watch("borrowRatio")
   const watchInterestRate = watch("interestRate")
-  const [collateralTokenDecimal, setCollateralTokenDecimal] = useState<number>()
-  const [collateralTokenSymbol, setCollateralTokenSymbol] = useState<string>()
+  const [collateralToken, setCollateralToken] = useState<{
+    symbol: string
+    address: Address
+    decimals: number
+  }>({
+    symbol: "USDC",
+    address: "0xe9248437489bc542c68ac90e178f6ca3699c3f6b",
+    decimals: 6,
+  })
 
   const createSteps = (): Step[] => {
     return [{ name: "Propose Offboarding", status: "Not Started" }]
@@ -60,15 +63,15 @@ export default function Create() {
 
   const [steps, setSteps] = useState<Step[]>(createSteps())
 
-  useEffect(() => {
-    if (
-      watchCollateralToken &&
-      watchCollateralToken.length == 42 &&
-      watchCollateralToken.match(/^0x[A-Fa-f0-9]+$/i)
-    ) {
-      getTokenDetails(watchCollateralToken as Address)
-    }
-  }, [watchCollateralToken])
+  // useEffect(() => {
+  //   if (
+  //     watchCollateralToken &&
+  //     watchCollateralToken.length == 42 &&
+  //     watchCollateralToken.match(/^0x[A-Fa-f0-9]+$/i)
+  //   ) {
+  //     getTokenDetails(watchCollateralToken as Address)
+  //   }
+  // }, [watchCollateralToken])
 
   /* Form Validation */
   const onSubmit: SubmitHandler<any> = async (data) => {
@@ -100,10 +103,10 @@ export default function Create() {
     }
 
     const args = {
-      collateralToken: data.collateralToken,
+      collateralToken: collateralToken.address,
       maxDebtPerCollateralToken:
         BigInt(parseEther(data.borrowRatio.toString())) *
-        BigInt(10 ** (18 - collateralTokenDecimal)),
+        BigInt(10 ** (18 - collateralToken.decimals)),
       interestRate: interestRate,
       maxDelayBetweenPartialRepay: maxDelayBetweenPartialRepay,
       minPartialRepayPercent: minPartialRepayPercent,
@@ -111,27 +114,25 @@ export default function Create() {
       hardCap: parseEther(data.hardCap.toString()),
     }
 
-    console.log("form args", args)
-
     await createTerm(args)
   }
 
   /* Smart contract Write & Read */
-  const getTokenDetails = async (tokenAddress: Address): Promise<void> => {
-    try {
-      const result = await getToken(tokenAddress)
-      if (result[0].status == "failure" || result[1].status == "failure") {
-        toastError("Collateral address is not a valid ERC20 token")
-      }
+  // const getTokenDetails = async (tokenAddress: Address): Promise<void> => {
+  //   try {
+  //     const result = await getToken(tokenAddress)
+  //     if (result[0].status == "failure" || result[1].status == "failure") {
+  //       toastError("Collateral address is not a valid ERC20 token")
+  //     }
 
-      setCollateralTokenDecimal(result[0].result)
-      setCollateralTokenSymbol(result[1].result)
-    } catch (e: any) {
-      setCollateralTokenDecimal(undefined)
-      setCollateralTokenSymbol(undefined)
-      toastError("Collateral address is not a valid ERC20 token")
-    }
-  }
+  //     setCollateralTokenDecimal(result[0].result)
+  //     setCollateralTokenSymbol(result[1].result)
+  //   } catch (e: any) {
+  //     setCollateralTokenDecimal(undefined)
+  //     setCollateralTokenSymbol(undefined)
+  //     toastError("Collateral address is not a valid ERC20 token")
+  //   }
+  // }
 
   const createTerm = async (args: any): Promise<void> => {
     //Init Steps
@@ -148,9 +149,9 @@ export default function Create() {
       updateStepStatus("Create New Term", "In Progress")
 
       const { hash } = await writeContract({
-        ...lendingTermOnboardingContract,
+        ...onboardGovernorGuildContract,
         functionName: "createTerm",
-        args: [args],
+        args: [lendingTermV1Implementation.address, args],
       })
 
       const tx = await waitForTransaction({
@@ -190,14 +191,14 @@ export default function Create() {
               className="text-md block font-medium leading-6 sm:pt-1.5"
             >
               Collateral Token
-              {collateralTokenDecimal && collateralTokenSymbol ? (
+              {/* {collateralTokenDecimal && collateralTokenSymbol ? (
                 <MdCheckCircle className="ml-1 inline text-green-500" />
               ) : (
                 <MdClose className="ml-1 inline text-red-500" />
-              )}
+              )} */}
             </label>
             <div className="mt-2 sm:col-span-2 sm:mt-0">
-              <input
+              {/* <input
                 {...register("collateralToken", {
                   required: true,
                   pattern: /^0x[A-Fa-f0-9]+$/i,
@@ -212,6 +213,32 @@ export default function Create() {
                     : "focus:ring-brand-400/80",
                   "sm:text-md block w-full rounded-md border-0 px-2 py-1.5 ring-1 ring-inset ring-gray-300 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:ring-2 focus:ring-inset  sm:leading-6"
                 )}
+              /> */}
+              <DropdownSelect
+                {...register("collateralToken")}
+                options={[
+                  {
+                    symbol: "USDC",
+                    address: "0xe9248437489bc542c68ac90e178f6ca3699c3f6b",
+                    decimals: 6,
+                  },
+                  {
+                    symbol: "sDAI",
+                    address: "0xeef0ab67262046d5bed00ce9c447e08d92b8da61",
+                    decimals: 18,
+                  },
+                  {
+                    symbol: "WBTC",
+                    address: "0xcffba3a25c3cc99a05443163c63209972bffd1c1",
+                    decimals: 8,
+                  },
+                ]}
+                selectedOption={collateralToken}
+                onChange={setCollateralToken}
+                getLabel={(item) => {
+                  return `${item.symbol} - ${item.address}`
+                }}
+                extra={"w-full"}
               />
             </div>
           </div>
@@ -220,7 +247,10 @@ export default function Create() {
             variant="error"
           />
           <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">
-            <label htmlFor="openingFee" className="text-md block font-medium leading-6 sm:pt-1.5">
+            <label
+              htmlFor="openingFee"
+              className="text-md block font-medium leading-6 sm:pt-1.5"
+            >
               Opening Fee
             </label>
             <div className="relative mt-2 rounded-md sm:col-span-2 sm:mt-0">
@@ -234,7 +264,7 @@ export default function Create() {
                   formState.errors.openingFee
                     ? "ring-red-500"
                     : "focus:ring-brand-400/80",
-                  "sm:text-md block w-full rounded-md border-0 py-1.5 pl-2 pr-10 ring-1 ring-inset ring-gray-300 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:leading-6"
+                  "sm:text-md block w-full rounded-md border-0 py-1.5 pl-2 pr-10 ring-1 ring-inset ring-gray-300 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:ring-2 focus:ring-inset dark:bg-navy-700 dark:text-gray-200 dark:ring-navy-600 dark:placeholder:text-gray-300 sm:leading-6"
                 )}
               />
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
@@ -246,7 +276,10 @@ export default function Create() {
           </div>
           <ErrorMessage title={formState.errors.openingFee?.message} variant="error" />
           <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">
-            <label htmlFor="interestRate" className="text-md block font-medium leading-6 sm:pt-1.5">
+            <label
+              htmlFor="interestRate"
+              className="text-md block font-medium leading-6 sm:pt-1.5"
+            >
               Interest Rate
             </label>
             <div className="relative mt-2 rounded-md sm:col-span-2 sm:mt-0">
@@ -261,7 +294,7 @@ export default function Create() {
                   formState.errors.interestRate
                     ? "ring-red-500"
                     : "focus:ring-brand-400/80",
-                  "sm:text-md block w-full rounded-md border-0 py-1.5 pl-2 pr-10 ring-1 ring-inset ring-gray-300 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:leading-6"
+                  "sm:text-md block w-full rounded-md border-0 py-1.5 pl-2 pr-10 ring-1 ring-inset ring-gray-300 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:ring-2 focus:ring-inset dark:bg-navy-700 dark:text-gray-200 dark:ring-navy-600 dark:placeholder:text-gray-300 sm:leading-6"
                 )}
               />
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
@@ -273,7 +306,10 @@ export default function Create() {
           </div>
           <ErrorMessage title={formState.errors.interestRate?.message} variant="error" />
           <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">
-            <label htmlFor="borrowRatio" className="text-md block font-medium leading-6 sm:pt-1.5">
+            <label
+              htmlFor="borrowRatio"
+              className="text-md block font-medium leading-6 sm:pt-1.5"
+            >
               Borrow Ratio
             </label>
             <div className="mt-2 sm:col-span-2 sm:mt-0">
@@ -288,7 +324,7 @@ export default function Create() {
                   formState.errors.borrowRatio
                     ? "ring-red-500"
                     : "focus:ring-brand-400/80",
-                  "sm:text-md block w-full rounded-md border-0 py-1.5 pl-2 pr-10 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:leading-6"
+                  "sm:text-md block w-full rounded-md border-0 py-1.5 pl-2 pr-10 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset dark:bg-navy-700 dark:text-gray-200 dark:ring-navy-600 dark:placeholder:text-gray-300 sm:leading-6"
                 )}
               />
             </div>
@@ -313,7 +349,10 @@ export default function Create() {
             </div>
           </div>
           <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">
-            <label htmlFor="hardCap" className="text-md block font-medium leading-6 sm:pt-1.5">
+            <label
+              htmlFor="hardCap"
+              className="text-md block font-medium leading-6 sm:pt-1.5"
+            >
               Hard Cap
             </label>
             <div className="mt-2 sm:col-span-2 sm:mt-0">
@@ -325,7 +364,7 @@ export default function Create() {
                 placeholder="1000000"
                 className={clsx(
                   formState.errors.hardCap ? "ring-red-500" : "focus:ring-brand-400/80",
-                  "sm:text-md block w-full rounded-md border-0 py-1.5 pl-2 pr-10 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:leading-6"
+                  "sm:text-md block w-full rounded-md border-0 py-1.5 pl-2 pr-10 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset dark:bg-navy-700 dark:text-gray-200 dark:ring-navy-600 dark:placeholder:text-gray-300 sm:leading-6"
                 )}
               />
             </div>
@@ -334,11 +373,11 @@ export default function Create() {
           <div className="mt-6 block w-full">
             <ButtonPrimary
               type="submit"
-              title={`Create New Term ${collateralTokenSymbol}-${
+              title={`Create New Term ${collateralToken.symbol}-${
                 watchInterestRate ? formatNumberDecimal(watchInterestRate) + "%" : "0.00"
               }-${formatNumberDecimal(watchBorrowRatio)}`}
               extra="w-full"
-              disabled={!collateralTokenDecimal || !formState.isValid}
+              disabled={!collateralToken.decimals || !formState.isValid}
             />
           </div>
         </form>

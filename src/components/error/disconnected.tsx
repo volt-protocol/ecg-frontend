@@ -1,6 +1,6 @@
-import { DynamicWidget } from '@dynamic-labs/sdk-react-core';
 import Image from 'next/image';
 import notConnectedImage from '/public/img/not-connected.png';
+import { ConnectButton } from "@rainbow-me/rainbowkit"
 
 export default function Disconnected() {
   return (
@@ -16,7 +16,7 @@ export default function Disconnected() {
           <p className="mt-6 text-base leading-7 text-gray-600 dark:text-gray-200">Connect your wallet to see your lending terms, borrowings, and open positions.</p>
           <div className="mt-10 flex flex-col gap-5 items-center justify-center gap-x-6">
             <div>
-                <DynamicWidget />
+                <ConnectButton />
             </div>
             <a href="#" className="text-sm font-semibold text-gray-900">
               Contact support <span aria-hidden="true">&rarr;</span>

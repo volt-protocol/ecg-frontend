@@ -6,7 +6,7 @@ export const generateTermName = (collateral: string, interestRate: number, borro
 }
 
 export const shortenUint = (string: string) => {
-    return `${string.slice(0, 6)}...${string.slice(-4)}`
+    return `${string.slice(0, 10)}...`
 }
 
 export const shortenAddress = (address: Address) => {
@@ -31,4 +31,8 @@ export const camelCasetoString = (str: string) => {
 export const addSlash = (str: string) => {
   //add slash between each word
   return str.replace(/\s/g, " / ")
+}
+
+export const ucFirst = (string: string): string => {
+  return string.charAt(0).toUpperCase() + string.slice(1);
 }

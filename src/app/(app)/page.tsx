@@ -4,11 +4,10 @@ import { IoMdHome } from "react-icons/io"
 import { IoDocuments } from "react-icons/io5"
 import { MdBarChart, MdDashboard } from "react-icons/md"
 import { readContract } from "@wagmi/core"
-
 import Widget from "components/widget/Widget"
-import { erc20ABI, useAccount, useContractReads } from "wagmi"
+import { useAccount, useReadContracts } from "wagmi"
 import { useAppStore } from "store"
-import { Abi, Address, formatUnits } from "viem"
+import { Abi, Address, formatUnits, erc20Abi } from "viem"
 import { coinsList } from "store/slices/pair-prices"
 import {
   profitManagerContract,
@@ -35,6 +34,8 @@ import { useBlockNumber } from "wagmi"
 import { getAllMintRedeemLogs } from "lib/logs/mint-redeem"
 import { getAllVotes } from "lib/logs/votes"
 import { BLOCK_PER_WEEK } from "utils/constants"
+import { wagmiConfig } from "contexts/Web3Provider"
+import { generateTermName } from "utils/strings"
 
 const GlobalDashboard = () => {
   const { lendingTerms, prices, userData } = useAppStore()
@@ -47,7 +48,7 @@ const GlobalDashboard = () => {
   const { data: currentBlock } = useBlockNumber()
 
   /* Read contracts */
-  const { data, isError, isLoading } = useContractReads({
+  const { data, isError, isLoading } = useReadContracts({
     contracts: [
       {
         ...guildContract,
@@ -63,12 +64,14 @@ const GlobalDashboard = () => {
         functionName: "totalSupply",
       },
     ],
-    select: (data) => {
-      return {
-        totalWeight: Number(formatUnits(data[0].result as bigint, 18)),
-        creditMultiplier: Number(formatUnits(data[1].result as bigint, 18)),
-        creditTotalSupply: Number(formatUnits(data[2].result as bigint, 18)),
-      }
+    query: {
+      select: (data) => {
+        return {
+          totalWeight: Number(formatUnits(data[0].result as bigint, 18)),
+          creditMultiplier: Number(formatUnits(data[1].result as bigint, 18)),
+          creditTotalSupply: Number(formatUnits(data[2].result as bigint, 18)),
+        }
+      },
     },
   })
   /* End Read Contract data  */
@@ -86,6 +89,7 @@ const GlobalDashboard = () => {
       const ceilingData = await getDebtCeilingData()
       setDebtCeilingData(ceilingData)
       const collateralData = await getCollateralData()
+      console.log("collateralData", collateralData)
       setCollateralData(collateralData)
       const firstLossData = await getFirstLossCapital()
       setFirstLossData(firstLossData)
@@ -93,7 +97,7 @@ const GlobalDashboard = () => {
       setLastActivites(lastActivities)
     }
 
-    data && asyncFunc()
+    data?.creditMultiplier && asyncFunc()
   }, [data])
 
   /* Get Dashboard data */
@@ -109,25 +113,31 @@ const GlobalDashboard = () => {
 
   const getCollateralData = async () => {
     return await Promise.all(
-      lendingTerms.map(async (term) => {
-        const result = await readContract({
-          address: term.collateral.address as Address,
-          abi: erc20ABI as Abi,
-          functionName: "balanceOf",
-          args: [term.address],
+      lendingTerms
+        .filter((term) => term.status == "live")
+        .map(async (term) => {
+          const result = await readContract(wagmiConfig, {
+            address: term.collateral.address as Address,
+            abi: erc20Abi as Abi,
+            functionName: "balanceOf",
+            args: [term.address],
+          })
+
+          //get coin gecko name
+          const nameCG = coinsList.find((x) => x.nameECG === term.collateral.name).nameCG
+          const exchangeRate = prices[nameCG].usd
+
+          return {
+            collateral: generateTermName(
+              term.collateral.name,
+              term.interestRate,
+              term.borrowRatio / data?.creditMultiplier
+            ),
+            collateralValueDollar:
+              Number(formatUnits(result as bigint, term.collateral.decimals)) *
+              exchangeRate,
+          }
         })
-
-        //get coin gecko name
-        const nameCG = coinsList.find((x) => x.nameECG === term.collateral.name).nameCG
-        const exchangeRate = prices[nameCG].usd
-
-        return {
-          collateral: term.collateral.name,
-          collateralValueDollar:
-            Number(formatUnits(result as bigint, term.collateral.decimals)) *
-            exchangeRate,
-        }
-      })
     )
   }
 
@@ -136,14 +146,18 @@ const GlobalDashboard = () => {
       lendingTerms
         .filter((term) => term.status == "live")
         .map(async (term) => {
-          const debtCeiling = await readContract({
+          const debtCeiling = await readContract(wagmiConfig, {
             address: term.address as Address,
             abi: TermABI as Abi,
             functionName: "debtCeiling",
           })
 
           return {
-            collateral: term.collateral.name,
+            collateral: generateTermName(
+              term.collateral.name,
+              term.interestRate,
+              term.borrowRatio / data?.creditMultiplier
+            ),
             currentDebt: term.currentDebt,
             debitCeiling: Number(formatUnits(debtCeiling as bigint, 18)),
           }
@@ -152,7 +166,7 @@ const GlobalDashboard = () => {
   }
 
   const getFirstLossCapital = async () => {
-    const globalSurplusBuffer = await readContract({
+    const globalSurplusBuffer = await readContract(wagmiConfig, {
       ...profitManagerContract,
       functionName: "surplusBuffer",
     })
@@ -161,7 +175,7 @@ const GlobalDashboard = () => {
       lendingTerms
         .filter((term) => term.status == "live")
         .map(async (term) => {
-          const termSurplusBuffer = await readContract({
+          const termSurplusBuffer = await readContract(wagmiConfig, {
             ...profitManagerContract,
             functionName: "termSurplusBuffer",
             args: [term.address],
@@ -186,7 +200,6 @@ const GlobalDashboard = () => {
   const getLastActivities = async () => {
     //last loan opening
     let allOpenLoans = []
-    let allClosedLoans = []
     for (const term of lendingTerms) {
       const openLoans = await getOpenLoanLogs(term.address as Address)
       const closeLoans = await getCloseLoanLogs(term.address as Address)
@@ -203,6 +216,7 @@ const GlobalDashboard = () => {
   /* End get dashboard data */
 
   if (isLoading) return <Spinner />
+
   return (
     <div>
       {/* Card widget */}

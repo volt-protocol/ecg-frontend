@@ -1,33 +1,21 @@
 const Progress = (props: {
   value: number;
-  color?:
-    | "red"
-    | "blue"
-    | "green"
-    | "yellow"
-    | "orange"
-    | "teal"
-    | "navy"
-    | "lime"
-    | "cyan"
-    | "pink"
-    | "purple"
-    | "amber"
-    | "indigo"
-    | "gray";
   width?: string;
+  useColors: boolean;
 }) => {
-  const { value, color, width } = props;
+  const { value, width, useColors } = props;
 
   const getColor = (value) => {
-    if (value >= 95) return "bg-red-500 dark:bg-red-400";
-    if (value >= 70) return "bg-orange-500 dark:bg-orange-400";
-    return "bg-green-500 dark:bg-green-400";
+    if(!useColors) return "bg-green-400 dark:bg-green-400"
+
+    if (value >= 95) return "bg-red-400 dark:bg-red-400";
+    if (value >= 70) return "bg-orange-400 dark:bg-orange-400";
+    return "bg-green-400 dark:bg-green-400";
   }
 
   return (
     <div
-      className={`h-2 ${
+      className={`h-[10px] ${
         width ? width : "w-full"
       } rounded-full bg-gray-200 dark:bg-navy-700`}
     >

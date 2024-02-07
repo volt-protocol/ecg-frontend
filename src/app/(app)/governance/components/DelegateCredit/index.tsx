@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from "react"
-import { Address, readContract, waitForTransaction, writeContract } from "@wagmi/core"
+import {
+  Address,
+  readContract,
+  waitForTransactionReceipt,
+  writeContract,
+} from "@wagmi/core"
 import { toastError, toastRocket } from "components/toast"
 import { CreditABI, creditContract } from "lib/contracts"
 import { DecimalToUnit, UnitToDecimal, preciseRound } from "utils/utils-old"
@@ -22,6 +27,7 @@ import { formatCurrencyValue, formatDecimal } from "utils/numbers"
 import { formatUnits, isAddress, parseEther } from "viem"
 import ButtonPrimary from "components/button/ButtonPrimary"
 import DefiInputBox from "components/box/DefiInputBox"
+import { wagmiConfig } from "contexts/Web3Provider"
 
 interface Delegatee {
   address: string
@@ -69,7 +75,7 @@ function DelegateCredit({
   }
 
   async function getDelegatee(): Promise<string[]> {
-    const result = await readContract({
+    const result = await readContract(wagmiConfig, {
       ...creditContract,
       functionName: "delegates",
       args: [userAddress],
@@ -80,7 +86,7 @@ function DelegateCredit({
   useEffect(() => {
     const tempDelegatees: Delegatee[] = []
     async function getDelegateeAndVotes(delegatee: string): Promise<void> {
-      const result = await readContract({
+      const result = await readContract(wagmiConfig, {
         ...creditContract,
         functionName: "delegatesVotesCount",
         args: [userAddress, delegatee],
@@ -128,13 +134,13 @@ function DelegateCredit({
     try {
       setShowModal(true)
       updateStepStatus("Delegate gUSDC", "In Progress")
-      const { hash } = await writeContract({
+      const hash = await writeContract(wagmiConfig, {
         ...creditContract,
         functionName: "incrementDelegation",
         args: [addressValue, parseEther(value.toString())],
       })
 
-      const checkdelegate = await waitForTransaction({
+      const checkdelegate = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
       })
 
@@ -166,13 +172,13 @@ function DelegateCredit({
     try {
       setShowModal(true)
       updateStepStatus("Undelegate gUSDC", "In Progress")
-      const { hash } = await writeContract({
+      const hash = await writeContract(wagmiConfig, {
         ...creditContract,
         functionName: "undelegate",
         args: [address, amount],
       })
 
-      const checkdelegate = await waitForTransaction({
+      const checkdelegate = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
       })
 
@@ -282,112 +288,66 @@ function DelegateCredit({
             </span>
           </p>
         </div>
-
-        <DefiInputBox
-          topLabel="Delegate gUSDC to"
-          placeholder="0x..."
-          inputSize="text-xl"
-          pattern="^[0-9a-fA-F]$"
-          value={addressValue as Address}
-          onChange={(e) => setAddressValue(e.target.value as Address)}
-          rightLabel={
-            <button
-              className="text-sm font-medium text-brand-500 hover:text-brand-400"
-              onClick={(e) => setAddressValue(address as Address)}
-            >
-              Delegate to myself
-            </button>
-          }
-        />
-
-        {/* <div className="relative mt-4 rounded-xl bg-brand-100/50">
-          <div className="mb-1 px-5 pt-4 text-sm font-medium text-gray-700">
-            Delegate gUSDC to
-          </div>
-          <input
-            onChange={(e) => setAddressValue(e.target.value as Address)}
-            value={addressValue as Address}
-            className="block w-full border-gray-300 bg-brand-100/0 px-5 text-xl text-gray-800 transition-all duration-150 ease-in-out placeholder:text-gray-400 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-50 sm:text-xl sm:leading-6"
+        <div className="flex flex-col gap-2">
+          <DefiInputBox
+            topLabel="Delegate gUSDC to"
             placeholder="0x..."
+            inputSize="text-xl"
             pattern="^[0-9a-fA-F]$"
-          />
-          <div className="mt-1 flex justify-end px-5 pb-4">
-            <button
-              className="text-sm font-medium text-brand-500 hover:text-brand-400 dark:text-gray-300 dark:hover:text-gray-200"
-              onClick={(e) => setAddressValue(address as Address)}
-            >
-              Delegate to myself
-            </button>
-          </div>
-        </div> */}
-
-        <DefiInputBox
-          topLabel="Delegate gUSDC"
-          currencyLogo="/img/crypto-logos/credit.png"
-          currencySymbol="gUSDC"
-          placeholder="0"
-          inputSize="text-2xl sm:text-3xl"
-          pattern="^[0-9]*[.,]?[0-9]*$"
-          value={value}
-          onChange={handleInputChange}
-          rightLabel={
-            <>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Available:{" "}
-                {creditNotUsed
-                  ? formatDecimal(Number(formatUnits(creditNotUsed, 18)), 2)
-                  : 0}
-              </p>
+            value={addressValue as Address}
+            onChange={(e) => setAddressValue(e.target.value as Address)}
+            rightLabel={
               <button
                 className="text-sm font-medium text-brand-500 hover:text-brand-400"
-                onClick={(e) => setValue(formatUnits(creditNotUsed, 18))}
+                onClick={(e) => setAddressValue(address as Address)}
               >
-                Max
+                Delegate to myself
               </button>
-            </>
-          }
-        />
-
-        {/* <div className="relative mt-2 rounded-xl bg-brand-100/50">
-          <div className="mb-1 px-5 pt-4 text-sm font-medium text-gray-700">
-            Amount of gUSDC you delegate
-          </div>
-          <input
-            onChange={handleInputChange}
-            value={value}
-            className="block w-full border-gray-300 bg-brand-100/0 px-5 text-2xl text-gray-800 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:border-brand-400/80 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-50 sm:text-3xl sm:leading-6"
-            placeholder="0"
-            pattern="^[0-9]*[.,]?[0-9]*$"
+            }
           />
-          <div className="mt-1 flex justify-end gap-1 px-5 pb-4">
-            <p className="text-sm font-medium text-gray-700">
-              Available:{" "}
-              {creditNotUsed ? formatDecimal(Number(formatUnits(creditNotUsed, 18)), 2) : 0}
-            </p>
-            <button
-              className="text-sm font-medium text-brand-500 hover:text-brand-400 dark:text-gray-300 dark:hover:text-gray-200"
-              onClick={(e) => setValue(formatUnits(creditNotUsed, 18))}
-            >
-              Max
-            </button>
-          </div>
-        </div> */}
 
-        <ButtonPrimary
-          variant="lg"
-          title="Delegate gUSDC"
-          titleDisabled={getTitleDisabled(Number(value), addressValue, creditNotUsed)}
-          extra="w-full mt-2 !rounded-xl"
-          onClick={handleDelegate}
-          disabled={
-            !creditNotUsed ||
-            Number(value) > Number(formatUnits(creditNotUsed, 18)) ||
-            Number(value) <= 0 ||
-            !value ||
-            !isAddress(addressValue)
-          }
-        />
+          <DefiInputBox
+            topLabel="Delegate gUSDC"
+            currencyLogo="/img/crypto-logos/credit.png"
+            currencySymbol="gUSDC"
+            placeholder="0"
+            inputSize="text-2xl sm:text-3xl"
+            pattern="^[0-9]*[.,]?[0-9]*$"
+            value={value}
+            onChange={handleInputChange}
+            rightLabel={
+              <>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Available:{" "}
+                  {creditNotUsed
+                    ? formatDecimal(Number(formatUnits(creditNotUsed, 18)), 2)
+                    : 0}
+                </p>
+                <button
+                  className="text-sm font-medium text-brand-500 hover:text-brand-400"
+                  onClick={(e) => setValue(formatUnits(creditNotUsed, 18))}
+                >
+                  Max
+                </button>
+              </>
+            }
+          />
 
+          <ButtonPrimary
+            variant="lg"
+            title="Delegate gUSDC"
+            titleDisabled={getTitleDisabled(Number(value), addressValue, creditNotUsed)}
+            extra="w-full mt-1 !rounded-xl"
+            onClick={handleDelegate}
+            disabled={
+              !creditNotUsed ||
+              Number(value) > Number(formatUnits(creditNotUsed, 18)) ||
+              Number(value) <= 0 ||
+              !value ||
+              !isAddress(addressValue)
+            }
+          />
+        </div>
         <div>
           {isLoadingDelegations ? (
             <div className="mt-4 flex flex-grow flex-col items-center justify-center gap-2">

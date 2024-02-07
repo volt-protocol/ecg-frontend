@@ -133,7 +133,13 @@
   {
     "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
     "name": "canOffboard",
-    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "outputs": [
+      {
+        "internalType": "enum LendingTermOffboarding.OffboardStatus",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
@@ -240,6 +246,13 @@
     "name": "quorum",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "address", "name": "term", "type": "address" }],
+    "name": "resetOffboarding",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {

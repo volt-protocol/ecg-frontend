@@ -64,9 +64,10 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
 
       <div className="mb-auto pt-1">
         <Links routes={routes} />
-        <div className="mt-5 flex justify-center">
+        {/* <div className="mt-5 flex justify-center">
           <Link href="/bridge">
             <ButtonPrimary
+              disabled={true}
               extra="w-full"
               title={
                 <>
@@ -76,7 +77,7 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
               }
             ></ButtonPrimary>
           </Link>
-        </div>
+        </div> */}
       </div>
 
       {/* Free Horizon Card */}

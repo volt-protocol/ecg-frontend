@@ -4,12 +4,16 @@ import React from "react"
 
 // Icon Imports
 import {
+  MdOutlineAccountBalance,
   MdOutlineAnalytics,
   MdOutlineBalance,
   MdOutlineHandshake,
+  MdOutlineMonitor,
   MdOutlineSavings,
+  MdOutlineShowChart,
   MdPerson,
   MdPersonOutline,
+  MdShowChart,
 } from "react-icons/md"
 
 const routes = [
@@ -37,6 +41,13 @@ const routes = [
     show: false,
   },
   {
+    name: "Leverage",
+    layout: "/",
+    path: "leverage",
+    icon: <MdOutlineShowChart className="h-6 w-6" />,
+    show: true,
+  },
+  {
     name: "Mint & Saving",
     layout: "/",
     icon: <MdOutlineSavings className="h-6 w-6" />,
@@ -47,15 +58,15 @@ const routes = [
     name: "Governance",
     layout: "/",
     path: "governance",
-    icon: <MdOutlineBalance className="h-6 w-6" />,
+    icon: <MdOutlineAccountBalance className="h-6 w-6" />,
     show: true,
   },
   {
-    name: "Home",
+    name: "Auctions",
     layout: "/",
-    path: "profile",
+    path: "auctions",
     icon: <MdOutlineBalance className="h-6 w-6" />,
-    show: false,
+    show: true,
   },
   {
     name: "Cross chain Bridge",

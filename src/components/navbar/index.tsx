@@ -1,5 +1,4 @@
 "use client"
-import { ConnectButton } from "@rainbow-me/rainbowkit"
 import React, { useEffect } from "react"
 import { FiAlignJustify } from "react-icons/fi"
 import NavLink from "components/link/NavLink"
@@ -9,6 +8,7 @@ import Link from "next/link"
 import { useAccount, useConnect } from "wagmi"
 import SearchBar from "./SearchBar"
 import { useRouter } from "next/navigation"
+import { ConnectWeb3Button } from "components/button/ConnectWeb3Button"
 
 const Navbar = (props: {
   onOpenSidenav: () => void
@@ -18,7 +18,7 @@ const Navbar = (props: {
   [x: string]: any
 }) => {
   const { connector: activeConnector, isConnected } = useAccount()
-  const { connect, connectors, error, isLoading, pendingConnector } = useConnect()
+  const { connect, connectors, error } = useConnect()
   const router = useRouter()
   const { onOpenSidenav, brandText, pathname, mini, hovered } = props
   const [darkmode, setDarkmode] = React.useState(document.body.classList.contains("dark"))
@@ -75,10 +75,7 @@ const Navbar = (props: {
           </div>
 
           {/* Web3 Connect Button */}
-          <ConnectButton
-            accountStatus="address"
-            showBalance={{ smallScreen: false, largeScreen: true }}
-          />
+          <ConnectWeb3Button />
 
           {/* Dark Mode */}
           <div

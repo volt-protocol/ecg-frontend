@@ -1,22 +1,22 @@
 import { getPublicClient, readContract } from "@wagmi/core"
-import { Address } from "@wagmi/core"
-import { TermABI, guildContract } from "lib/contracts"
+import { wagmiConfig } from "contexts/Web3Provider"
+import { TermABI, guildContract, lendingTermFactoryContract } from "lib/contracts"
 import { FROM_BLOCK } from "utils/constants"
 import { extractTermAddress } from "utils/strings"
-import { Abi } from "viem"
+import { Abi, Address } from "viem"
 
 //get all created terms
 export const getTermsCreatedLogs = async () => {
-  const currentBlock = await getPublicClient().getBlockNumber()
+  const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber()
 
-  const logs = await getPublicClient().getLogs({
-    address: process.env.NEXT_PUBLIC_ONBOARD_GOVERNOR_GUILD_ADDRESS as Address,
+  const logs = await getPublicClient(wagmiConfig).getLogs({
+    address: lendingTermFactoryContract.address as Address,
     event: {
       type: "event",
       name: "TermCreated",
       inputs: [
         { type: "uint256", indexed: true, name: "when" },
-        { type: "address", indexed: true, name: "implementation" },
+        { type: "uint256", indexed: true, name: "gaugeType" },
         { type: "address", indexed: true, name: "term" },
         {
           type: "tuple",
@@ -55,9 +55,9 @@ export const getTermsCreatedLogs = async () => {
 
 //get proposed terms
 export const getTermsProposedLogs = async () => {
-  const currentBlock = await getPublicClient().getBlockNumber()
+  const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber()
 
-  const logs = await getPublicClient().getLogs({
+  const logs = await getPublicClient(wagmiConfig).getLogs({
     address: process.env.NEXT_PUBLIC_ONBOARD_GOVERNOR_GUILD_ADDRESS as Address,
     event: {
       type: "event",
@@ -119,7 +119,7 @@ export const getTermsProposedLogs = async () => {
 
 //get a list of active terms addresses
 export const getLiveTermsAddresses = async (): Promise<Address[]> => {
-  const result = await readContract({
+  const result = await readContract(wagmiConfig, {
     ...guildContract,
     functionName: "liveGauges",
   })
@@ -128,7 +128,7 @@ export const getLiveTermsAddresses = async (): Promise<Address[]> => {
 
 //get a list of deprecated terms addresses
 export const getDeprecatedTermAddresses = async (): Promise<Address[]> => {
-  const result = await readContract({
+  const result = await readContract(wagmiConfig, {
     ...guildContract,
     functionName: "deprecatedGauges",
   })
@@ -177,7 +177,7 @@ export const getTermsLogs = async () => {
   const allTermsAddresses = [...liveTermsAddresses, ...deprecatedTerms]
 
   for (const address of allTermsAddresses) {
-    const termDetails = await readContract({
+    const termDetails = await readContract(wagmiConfig, {
       address: address as Address,
       abi: TermABI as Abi,
       functionName: "getParameters",
@@ -198,9 +198,3 @@ export const getTermsLogs = async () => {
 
   return terms
 }
-
-//get all proposed terms
-
-//get terms that can be voted for onboarding
-
-//get terms by active or not

@@ -78,6 +78,20 @@
         "type": "uint256"
       }
     ],
+    "name": "MaxTotalIssuanceUpdate",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "uint256", "name": "when", "type": "uint256" },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newValue",
+        "type": "uint256"
+      }
+    ],
     "name": "MinBorrowUpdate",
     "type": "event"
   },
@@ -173,6 +187,13 @@
     ],
     "name": "Unpaused",
     "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "_maxTotalIssuance",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
   },
   {
     "inputs": [
@@ -295,12 +316,18 @@
   {
     "inputs": [
       { "internalType": "address", "name": "_credit", "type": "address" },
-      { "internalType": "address", "name": "_guild", "type": "address" },
-      { "internalType": "address", "name": "_psm", "type": "address" }
+      { "internalType": "address", "name": "_guild", "type": "address" }
     ],
     "name": "initializeReferences",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "maxTotalIssuance",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -313,7 +340,8 @@
   {
     "inputs": [
       { "internalType": "address", "name": "gauge", "type": "address" },
-      { "internalType": "int256", "name": "amount", "type": "int256" }
+      { "internalType": "int256", "name": "amount", "type": "int256" },
+      { "internalType": "int256", "name": "issuanceDelta", "type": "int256" }
     ],
     "name": "notifyPnL",
     "outputs": [],
@@ -335,13 +363,6 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "psm",
-    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [{ "internalType": "address", "name": "newCore", "type": "address" }],
     "name": "setCore",
     "outputs": [],
@@ -351,6 +372,13 @@
   {
     "inputs": [{ "internalType": "uint256", "name": "newValue", "type": "uint256" }],
     "name": "setGaugeWeightTolerance",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "uint256", "name": "newValue", "type": "uint256" }],
+    "name": "setMaxTotalIssuance",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -391,7 +419,7 @@
   },
   {
     "inputs": [],
-    "name": "totalBorrowedCredit",
+    "name": "totalIssuance",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"

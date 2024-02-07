@@ -12,6 +12,7 @@ import {
   preciseRound,
   secondsToAppropriateUnit,
 } from "utils/utils-old"
+import { formatUnits } from "viem"
 
 export default function LendingStats({
   lendingTermData,
@@ -20,6 +21,7 @@ export default function LendingStats({
   utilization,
   termTotalCollateral,
   collateralPrice,
+  creditMultiplier,
 }: {
   lendingTermData: LendingTerms
   currentDebt: number
@@ -27,6 +29,7 @@ export default function LendingStats({
   utilization: string
   termTotalCollateral: number
   collateralPrice: number
+  creditMultiplier: bigint
 }) {
   return (
     <div className="mt-3 grid grid-cols-1 gap-5 xs:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 3xl:grid-cols-6">
@@ -171,9 +174,9 @@ export default function LendingStats({
             <p>
               This term allows to borrow{" "}
               <span className="font-semibold">
-                {preciseRound(lendingTermData.borrowRatio, 2)}
+                {preciseRound(lendingTermData.borrowRatio / Number(formatUnits(creditMultiplier, 18)), 2)}
               </span>{" "}
-              gUSDC per unit of DAI collateral.
+              gUSDC per unit of {lendingTermData.collateral.name} collateral.
             </p>
           </div>
         }
@@ -182,7 +185,7 @@ export default function LendingStats({
             <Widget
               icon={<MdCurrencyExchange className="h-7 w-7" />}
               title={"Borrow Ratio"}
-              subtitle={preciseRound(lendingTermData.borrowRatio, 2).toString()}
+              subtitle={preciseRound(lendingTermData.borrowRatio / Number(formatUnits(creditMultiplier, 18)), 2).toString()}
               extra={<QuestionMarkIcon />}
             />
           </div>

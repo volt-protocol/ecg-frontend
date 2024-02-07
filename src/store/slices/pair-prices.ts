@@ -9,6 +9,11 @@ export type CoinGeckoName = {
 
 export const coinsList: CoinGeckoName[] = [
   {
+    nameECG: "gUSDC",
+    nameCG: "geist-usdc",
+    logo: "/img/crypto-logos/usdc.png",
+  },
+  {
     nameECG: "USDC",
     nameCG: "usd-coin",
     logo: "/img/crypto-logos/usdc.png",

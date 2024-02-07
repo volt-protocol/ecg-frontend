@@ -8,26 +8,18 @@ import {
 } from "@tanstack/react-table"
 import CustomTable from "components/table/CustomTable"
 import moment from "moment"
-import { formatCurrencyValue, formatDecimal, ucFirst } from "utils/numbers"
+import { formatDecimal} from "utils/numbers"
 import {
   MdArrowDownward,
   MdArrowUpward,
-  MdNorth,
-  MdNote,
-  MdOpenInNew,
-  MdOutlineDrafts,
-  MdOutlineNote,
-  MdOutlineThumbDown,
-  MdOutlineThumbUp,
-  MdRemove,
-  MdSouth,
 } from "react-icons/md"
 import clsx from "clsx"
-import Link from "next/link"
-import { Address, useAccount } from "wagmi"
+import { useAccount } from "wagmi"
 import { fromNow } from "utils/date"
 import { BLOCK_LENGTH_MILLISECONDS } from "utils/constants"
 import { MintRedeemLogs } from "lib/logs/mint-redeem"
+import { Address } from "viem"
+import { TransactionBadge } from "components/badge/TransactionBadge"
 
 export default function LastMintEvents({
   userAddress,
@@ -122,18 +114,7 @@ export default function LastMintEvents({
       id: "txHash",
       header: "Transaction",
       enableSorting: true,
-      cell: (info) => {
-        return (
-          <a
-            className="text-sm text-brand-500 hover:text-brand-400"
-            target="_blank"
-            href={process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_TX + "/" + info.getValue()}
-          >
-            {info.getValue().slice(0, 6) + "..." + info.getValue().slice(-4)}
-            <MdOpenInNew className="ml-1.5 inline-block h-4 w-4" />
-          </a>
-        )
-      },
+      cell: (info) => <TransactionBadge txHash={info.getValue()} />,
     }),
   ]
 

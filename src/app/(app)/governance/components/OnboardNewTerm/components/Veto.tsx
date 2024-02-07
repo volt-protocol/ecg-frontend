@@ -1,18 +1,17 @@
 import React, { useEffect, useState } from "react"
+import { RadioGroup } from "@headlessui/react"
 import {
   getPublicClient,
-  Address,
-  readContract,
-  waitForTransaction,
+  readContracts,
+  waitForTransactionReceipt,
   writeContract,
 } from "@wagmi/core"
-import { toastError, toastRocket } from "components/toast"
+import { toastError } from "components/toast"
 import {
-  daoTimelockContract,
-  daoVetoCreditContract,
-  creditContract,
-  onboardGovernorGuildContract,
-  termContract,
+  onboardVetoCreditContract,
+  onboardVetoGuildContract,
+  guildContract,
+  onboardTimelockContract,
 } from "lib/contracts"
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa"
 import { Step } from "components/stepLoader/stepType"
@@ -25,50 +24,53 @@ import {
   flexRender,
   getPaginationRowModel,
 } from "@tanstack/react-table"
-import { MdChevronLeft, MdChevronRight } from "react-icons/md"
+import { MdCheckCircle, MdChevronLeft, MdChevronRight, MdOpenInNew } from "react-icons/md"
 import Spinner from "components/spinner"
-import { useAppStore } from "store"
 import ButtonPrimary from "components/button/ButtonPrimary"
-import { readContracts, useAccount, useContractReads } from "wagmi"
-import { decimalToUnit, formatCurrencyValue, formatDecimal } from "utils/numbers"
-import { ActiveVetoVotes, VoteOption } from "types/governance"
+import { useAccount } from "wagmi"
+import { formatCurrencyValue, formatDecimal } from "utils/numbers"
+import { ActivOnboardingVetoVotes } from "types/governance"
 import { fromNow } from "utils/date"
 import moment from "moment"
-import { bytesToNumber, formatUnits } from "viem"
+import { Address, decodeFunctionData, formatUnits } from "viem"
 import { QuestionMarkIcon, TooltipHorizon } from "components/tooltip"
 import { BLOCK_LENGTH_MILLISECONDS, FROM_BLOCK } from "utils/constants"
-import { checkVetoVoteValidity, getProposalIdFromActionId, getTermsCreated } from "./helper"
-import VoteStatusBar from "components/bar/VoteStatusBar"
+import {
+  checkVetoVoteValidity,
+  getProposalIdFromActionId,
+  getVotableTerms,
+} from "./helper"
 import Progress from "components/progress"
+import clsx from "clsx"
+import { wagmiConfig } from "contexts/Web3Provider"
 
-function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
+function Veto({
+  creditVotingWeight,
+  guildVotingWeight,
+}: {
+  creditVotingWeight: bigint
+  guildVotingWeight: bigint
+}) {
   const { address } = useAccount()
-  const { lendingTerms } = useAppStore()
   const [showModal, setShowModal] = useState(false)
-  const [activeVetoVotes, setActiveVetoVotes] = useState<ActiveVetoVotes[]>([])
+  const [activeVetoVotes, setActiveVetoVotes] = useState<ActivOnboardingVetoVotes[]>([])
   const [loading, setLoading] = useState<boolean>(false)
-  const [voteOptionsSelected, setVoteOptionsSelected] = useState<
-    { optionSelected: number; proposalId: string }[]
-  >([])
   const [currentBlock, setCurrentBlock] = useState<BigInt>()
-
-  /* Multicall Onchain reads */
-
-  /* End Get Onchain desgin */
+  const [selectHolderType, setSelectHolderType] = useState<"guild" | "credit">("credit")
 
   useEffect(() => {
-    fetchActiveOnboardingVotes()
-  }, [])
+    address && fetchActiveOnboardingVetoVotes()
+  }, [address])
 
   /* Getters */
-  const fetchActiveOnboardingVotes = async () => {
+  const fetchActiveOnboardingVetoVotes = async () => {
     setLoading(true)
-    const currentBlockNumber = await getPublicClient().getBlockNumber()
+    const currentBlockNumber = await getPublicClient(wagmiConfig).getBlockNumber()
 
     setCurrentBlock(currentBlockNumber)
 
     //logs are returned from oldest to newest
-    const logs = await getPublicClient().getLogs({
+    const logs = await getPublicClient(wagmiConfig).getLogs({
       address: process.env.NEXT_PUBLIC_ONBOARD_TIMELOCK_ADDRESS as Address,
       event: {
         type: "event",
@@ -87,6 +89,8 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
       toBlock: currentBlockNumber,
     })
 
+    const termsCreated = await getVotableTerms()
+
     const activeVetoVotes = await Promise.all(
       logs
         .map((log) => {
@@ -99,13 +103,13 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
           }
         })
         .reduce((acc, item) => {
-          const existing = acc.find((i) => i.id === item.id)
+          const existing = acc.find((i) => i.timelockId === item.id)
           if (existing) {
             existing.targets.push(item.target)
             existing.datas.push(item.data)
           } else {
             acc.push({
-              id: item.id,
+              timelockId: item.id,
               targets: [item.target],
               datas: [item.data],
               timestamp: item.timestamp,
@@ -113,56 +117,118 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
             })
           }
           return acc
-        }, [] as { id: string; targets: Address[]; datas: string[]; timestamp: number; onboardIn: number }[])
+        }, [] as { timelockId: string; targets: Address[]; datas: string[]; timestamp: number; onboardIn: number }[])
         .filter((item) => checkVetoVoteValidity(item.targets, item.datas))
         .map((item) => {
           //TODO : get term name decoding data[0]
+          const { functionName, args } = decodeFunctionData({
+            abi: guildContract.abi,
+            data: item.datas[0] as `0x${string}`,
+          })
+
+          // get TermCreated logs
+          const term = termsCreated.find(
+            (term) => term.termAddress.toLowerCase() === args[1].toLowerCase()
+          )
+
           // TODO : transform action id to proposalID
-          // const proposalId = getProposalIdFromActionId(item.id)
+          const proposalId = getProposalIdFromActionId(item.timelockId)
 
           return {
             ...item,
-            termAddress: "0x6b498e33A66485cc39Eb259E2500d8ce3aFA23Ec",
-            termName: "Term Name",
-            proposalId: "0x2232323",
+            termAddress: term.termAddress,
+            termName: term.termName,
+            proposalId: proposalId,
           }
         })
         .map(async (item) => {
           //get proposal votes
-          const vetoGovernorData = await readContracts({
+          const data = await readContracts(wagmiConfig, {
             contracts: [
               {
-                ...daoVetoCreditContract,
+                ...onboardVetoCreditContract,
                 functionName: "proposalVotes",
                 args: [item.proposalId],
               },
               {
-                ...daoVetoCreditContract,
+                ...onboardVetoCreditContract,
                 functionName: "quorum",
                 args: [item.timestamp],
               },
               {
-                ...daoVetoCreditContract,
+                ...onboardVetoCreditContract,
                 functionName: "state",
                 args: [item.proposalId],
+              },
+              {
+                ...onboardVetoGuildContract,
+                functionName: "proposalVotes",
+                args: [item.proposalId],
+              },
+              {
+                ...onboardVetoGuildContract,
+                functionName: "quorum",
+                args: [item.timestamp],
+              },
+              {
+                ...onboardVetoGuildContract,
+                functionName: "state",
+                args: [item.proposalId],
+              },
+              {
+                ...onboardTimelockContract,
+                functionName: "isOperationPending",
+                args: [item.timelockId],
+              },
+              {
+                ...onboardTimelockContract,
+                functionName: "isOperationReady",
+                args: [item.timelockId],
+              },
+              {
+                ...onboardTimelockContract,
+                functionName: "isOperationDone",
+                args: [item.timelockId],
+              },
+              {
+                ...onboardVetoCreditContract,
+                functionName: "hasVoted",
+                args: [item.proposalId, address],
+              },
+              {
+                ...onboardVetoGuildContract,
+                functionName: "hasVoted",
+                args: [item.proposalId, address],
               },
             ],
           })
 
           return {
             ...item,
-            supportVotes: Number(vetoGovernorData[0].result[0]),
-            quorum: vetoGovernorData[1].result,
-            state:
-              vetoGovernorData[2].status == "success"
-                ? Number(vetoGovernorData[2].result)
-                : 0,
+            creditVeto: {
+              supportVotes: data[0].result[0],
+              quorum: data[1].result,
+              state: data[2].status == "success" ? Number(data[2].result) : "Reverts",
+              hasVoted: data[9].result,
+            },
+            guildVeto: {
+              supportVotes: data[3].result[0],
+              quorum: data[4].result,
+              state: data[5].status == "success" ? Number(data[5].result) : "Reverts",
+              hasVoted: data[10].result,
+            },
+            timelock: {
+              isOperationPending: data[6].status == "success" ? data[6].result : false,
+              isOperationReady: data[7].status == "success" ? data[7].result : false,
+              isOperationDone: data[8].status == "success" ? data[8].result : false,
+            },
           }
         })
     )
 
     setLoading(false)
     setActiveVetoVotes(activeVetoVotes)
+    console.log("activeVetoVotes", activeVetoVotes)
   }
   /* End Getters*/
 
@@ -191,13 +257,19 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
         "Support Veto against Term Proposal " + proposalId.toString().slice(0, 6) + "...",
         "In Progress"
       )
-      const { hash } = await writeContract({
-        ...daoVetoCreditContract,
+
+      const targetContract =
+        selectHolderType == "credit"
+          ? onboardVetoCreditContract
+          : onboardVetoGuildContract
+
+      const hash = await writeContract(wagmiConfig, {
+        ...targetContract,
         functionName: "castVote",
         args: [proposalId, vote],
       })
 
-      const tx = await waitForTransaction({
+      const tx = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
       })
 
@@ -215,7 +287,7 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
         "Support Veto against Term Proposal " + proposalId.toString().slice(0, 6) + "...",
         "Success"
       )
-      await fetchActiveOnboardingVotes()
+      await fetchActiveOnboardingVetoVotes()
     } catch (e: any) {
       console.log(e)
       updateStepStatus(
@@ -226,11 +298,12 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
     }
   }
 
-  const createVeto = async (actionId: number): Promise<void> => {
+  const createVeto = async (timelockId: bigint): Promise<void> => {
     //Init Steps
     setSteps([
       {
-        name: "Create Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+        name:
+          "Create Veto for Term Proposal " + timelockId.toString().slice(0, 6) + "...",
         status: "Not Started",
       },
     ])
@@ -244,47 +317,53 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
     try {
       setShowModal(true)
       updateStepStatus(
-        "Create Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+        "Create Veto for Term Proposal " + timelockId.toString().slice(0, 6) + "...",
         "In Progress"
       )
-      const { hash } = await writeContract({
-        ...daoVetoCreditContract,
+      const targetContract =
+        selectHolderType == "credit"
+          ? onboardVetoCreditContract
+          : onboardVetoGuildContract
+
+      const hash = await writeContract(wagmiConfig, {
+        ...targetContract,
         functionName: "createVeto",
-        args: [actionId],
+        args: [timelockId],
       })
 
-      const tx = await waitForTransaction({
+      const tx = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
       })
 
       if (tx.status != "success") {
         updateStepStatus(
-          "Create Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+          "Create Veto for Term Proposal " + timelockId.toString().slice(0, 6) + "...",
           "Error"
         )
         return
       }
 
       updateStepStatus(
-        "Create Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+        "Create Veto for Term Proposal " + timelockId.toString().slice(0, 6) + "...",
         "Success"
       )
-      await fetchActiveOnboardingVotes()
+      await fetchActiveOnboardingVetoVotes()
     } catch (e: any) {
       console.log(e)
       updateStepStatus(
-        "Create Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+        "Create Veto for Term Proposal " + timelockId.toString().slice(0, 6) + "...",
         "Error"
       )
       toastError(e.shortMessage)
     }
   }
 
-  const executeVeto = async (actionId: number): Promise<void> => {
+  const executeVeto = async (timelockId: number): Promise<void> => {
     //Init Steps
     setSteps([
       {
-        name: "Execute Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+        name:
+          "Execute Veto for Term Proposal " + timelockId.toString().slice(0, 6) + "...",
         status: "Not Started",
       },
     ])
@@ -298,36 +377,41 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
     try {
       setShowModal(true)
       updateStepStatus(
-        "Execute Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+        "Execute Veto for Term Proposal " + timelockId.toString().slice(0, 6) + "...",
         "In Progress"
       )
-      const { hash } = await writeContract({
-        ...daoVetoCreditContract,
+      const targetContract =
+        selectHolderType == "credit"
+          ? onboardVetoCreditContract
+          : onboardVetoGuildContract
+
+      const hash = await writeContract(wagmiConfig, {
+        ...targetContract,
         functionName: "executeVeto",
-        args: [actionId],
+        args: [timelockId],
       })
 
-      const tx = await waitForTransaction({
+      const tx = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
       })
 
       if (tx.status != "success") {
         updateStepStatus(
-          "Execute Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+          "Execute Veto for Term Proposal " + timelockId.toString().slice(0, 6) + "...",
           "Error"
         )
         return
       }
 
       updateStepStatus(
-        "Execute Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+        "Execute Veto for Term Proposal " + timelockId.toString().slice(0, 6) + "...",
         "Success"
       )
-      await fetchActiveOnboardingVotes()
+      await fetchActiveOnboardingVetoVotes()
     } catch (e: any) {
       console.log(e)
       updateStepStatus(
-        "Execute Veto for Term Proposal " + actionId.toString().slice(0, 6) + "...",
+        "Execute Veto for Term Proposal " + timelockId.toString().slice(0, 6) + "...",
         "Error"
       )
       toastError(e.shortMessage)
@@ -345,7 +429,7 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
   /* End Create Modal Steps */
 
   /* Create Table */
-  const columnHelper = createColumnHelper<ActiveOnboardingVotes>()
+  const columnHelper = createColumnHelper<ActiveVetoVotes>()
 
   const columns = [
     columnHelper.accessor("termName", {
@@ -354,9 +438,14 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
       enableSorting: true,
       cell: (info) => {
         return (
-          <span className="text-center text-sm font-bold text-gray-600 dark:text-white">
+          <a
+            className="flex items-center gap-1 pl-2 text-center text-sm font-bold text-gray-600 hover:text-brand-500 dark:text-white"
+            target="__blank"
+            href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS}/${info.row.original.termAddress}`}
+          >
             {info.getValue()}
-          </span>
+            <MdOpenInNew />
+          </a>
         )
       },
     }),
@@ -367,7 +456,8 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
       cell: (info) => {
         return (
           <p className="text-sm font-bold text-gray-600 dark:text-white">
-            {Number(info.getValue()) - Number(currentBlock) > 0
+            {Number(info.getValue()) - Number(currentBlock) > 0 &&
+            !info.row.original.timelock.isOperationDone
               ? fromNow(
                   Number(
                     moment().add(
@@ -377,7 +467,7 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
                     )
                   )
                 )
-              : "Expired"}
+              : "Onboarded"}
           </p>
         )
       },
@@ -386,6 +476,17 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
       id: "support",
       header: "Veto Support",
       cell: (info: any) => {
+        const supportVotes = Number(
+          selectHolderType == "credit"
+            ? formatUnits(info.row.original.creditVeto.supportVotes, 18)
+            : formatUnits(info.row.original.guildVeto.supportVotes, 18)
+        )
+
+        const quorum =
+          selectHolderType == "credit"
+            ? info.row.original.creditVeto.quorum
+            : info.row.original.guildVeto.quorum
+
         return (
           <div>
             <TooltipHorizon
@@ -395,11 +496,11 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
                   <ul>
                     <li className="flex items-center gap-1">
                       <span className="font-semibold">Support:</span>{" "}
-                      {formatCurrencyValue(info.row.original.supportVotes)}
+                      {formatCurrencyValue(supportVotes)}
                     </li>
                     <li className="flex items-center gap-1">
                       <span className="font-semibold">Quorum:</span>{" "}
-                      {formatCurrencyValue(Number(formatUnits(info.row.original.quorum, 18)))}
+                      {formatCurrencyValue(Number(formatUnits(quorum, 18)))}
                     </li>
                   </ul>
                 </div>
@@ -407,11 +508,11 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
               trigger={
                 <div className="flex items-center gap-1">
                   <Progress
+                    useColors={false}
                     width="w-[100px]"
                     value={Math.round(
-                      (info.row.original.supportVotes / Number(formatUnits(info.row.original.quorum, 18))) * 100
+                      (supportVotes / Number(formatUnits(quorum, 18))) * 100
                     )}
-                    color="teal"
                   />
                   <div className="ml-1">
                     <QuestionMarkIcon />
@@ -458,18 +559,45 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
   })
   /* End Create Table */
 
-  const getActionButton = (item: ActiveVetoVotes) => {
-    if (item.state == 0) {
+  const getActionButton = (item: ActivOnboardingVetoVotes) => {
+    const state =
+      selectHolderType == "credit" ? item.creditVeto.state : item.guildVeto.state
+
+    const hasVoted =
+      selectHolderType == "credit" ? item.creditVeto.hasVoted : item.guildVeto.hasVoted
+
+    if (
+      Number(item.onboardIn) - Number(currentBlock) < 0 ||
+      item.timelock.isOperationDone
+    ) {
+      return (
+        <span className="items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-500">
+          Veto failed
+        </span>
+      )
+    }
+
+    if (state == "Reverts") {
       return (
         <ButtonPrimary
           variant="xs"
           title="Create Veto"
-          onClick={() => createVeto(item.id)}
+          onClick={() => createVeto(item.timelockId)}
         />
       )
     }
 
-    if (item.state == 1) {
+    if (state == 0) {
+      return (
+        <ButtonPrimary
+          variant="xs"
+          title="Create Veto"
+          onClick={() => createVeto(item.timelockId)}
+        />
+      )
+    }
+
+    if (state == 1 && !hasVoted) {
       return (
         <ButtonPrimary
           variant="xs"
@@ -479,24 +607,42 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
       )
     }
 
-    if (item.state == 4) {
+    if (state == 1 && hasVoted) {
+      return (
+        <span className="items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
+          Already voted
+        </span>
+      )
+    }
+
+    if (state == 3) {
+      return (
+        <span className="items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-500">
+          Veto failed
+        </span>
+      )
+    }
+
+    if (state == 4) {
       return (
         <ButtonPrimary
           variant="xs"
           title="Execute Veto"
-          onClick={() => executeVeto(item.id)}
+          onClick={() => executeVeto(item.timelockId)}
         />
       )
     }
 
-    if (item.state == 7) {
-      return <ButtonPrimary variant="xs" title="Veto Successful" disabled={true} />
+    if (state == 7) {
+      return (
+        <span className="items-center rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-600">
+          Veto Successfull
+        </span>
+      )
     }
 
     return null
   }
-
-  console.log('proposalID', BigInt(getProposalIdFromActionId("0x626d97158f351d32e7dd3064b8e392538bec6ef4d0da1136a3ac8f7162c77bcc")))
 
   return (
     <>
@@ -509,20 +655,109 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
         />
       )}
       <div className="text-gray-700 dark:text-gray-100">
-        <p>
-          Using gUSDC veto power will cancel the onboarding of a lending term that GUILD
-          votes successfully voted to add.
+        <RadioGroup value={selectHolderType} onChange={setSelectHolderType}>
+          <div className="grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-4">
+            <RadioGroup.Option
+              key={"credit"}
+              value={"credit"}
+              className={({ active }) =>
+                clsx(
+                  active ? "border-brand-300" : "border-gray-100",
+                  "relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm focus:outline-none"
+                )
+              }
+            >
+              {({ checked, active }) => (
+                <>
+                  <span className="flex flex-1">
+                    <span className="flex flex-col">
+                      <RadioGroup.Label
+                        as="span"
+                        className="font-semilight block text-gray-700"
+                      >
+                        Use my gUSDC voting power
+                      </RadioGroup.Label>
+                      <RadioGroup.Description
+                        as="span"
+                        className="mt-2 text-xl font-medium text-gray-700"
+                      >
+                        {formatDecimal(Number(formatUnits(creditVotingWeight, 18)), 2)}{" "}
+                        gUSDC
+                      </RadioGroup.Description>
+                    </span>
+                  </span>
+                  <MdCheckCircle
+                    className={clsx(
+                      !checked ? "invisible" : "",
+                      "h-5 w-5 text-brand-300"
+                    )}
+                    aria-hidden="true"
+                  />
+                  <span
+                    className={clsx(
+                      "border-2",
+                      checked ? "border-brand-300" : "border-transparent",
+                      "pointer-events-none absolute -inset-px rounded-lg"
+                    )}
+                    aria-hidden="true"
+                  />
+                </>
+              )}
+            </RadioGroup.Option>
+            <RadioGroup.Option
+              key={"guild"}
+              value={"guild"}
+              className={({ active }) =>
+                clsx(
+                  active ? "border-brand-300" : "border-gray-300",
+                  "relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm focus:outline-none"
+                )
+              }
+            >
+              {({ checked, active }) => (
+                <>
+                  <span className="flex flex-1">
+                    <span className="flex flex-col">
+                      <RadioGroup.Label
+                        as="span"
+                        className="font-semilight block text-gray-700"
+                      >
+                        Use my GUILD voting power
+                      </RadioGroup.Label>
+                      <RadioGroup.Description
+                        as="span"
+                        className="mt-2 text-xl font-medium text-gray-700"
+                      >
+                        {formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2)}{" "}
+                        GUILD
+                      </RadioGroup.Description>
+                    </span>
+                  </span>
+                  <MdCheckCircle
+                    className={clsx(
+                      !checked ? "invisible" : "",
+                      "h-5 w-5 text-brand-300"
+                    )}
+                    aria-hidden="true"
+                  />
+                  <span
+                    className={clsx(
+                      "border-2",
+                      checked ? "border-brand-300" : "border-transparent",
+                      "pointer-events-none absolute -inset-px rounded-lg"
+                    )}
+                    aria-hidden="true"
+                  />
+                </>
+              )}
+            </RadioGroup.Option>
+          </div>
+        </RadioGroup>
+
+        <p className="mt-4">
+          Using {selectHolderType == "credit" ? "gUSDC" : "GUILD"} veto power will cancel
+          the onboarding of a lending term that GUILD votes successfully voted to add.
         </p>
-        <div className="mt-2 flex justify-end">
-          <p>
-            Your gUSDC voting weight:{" "}
-            <span className="font-semibold">
-              {creditVotingWeight ?
-                formatDecimal(Number(formatUnits(creditVotingWeight, 18)), 2)
-                : 0}
-            </span>
-          </p>
-        </div>
         <div>
           {loading ? (
             <div className="mt-4 flex flex-grow flex-col items-center justify-center gap-2">
@@ -531,7 +766,7 @@ function Veto({ creditVotingWeight }: { creditVotingWeight: bigint }) {
           ) : (
             <>
               <div className="overflow-auto">
-                <table className="mt-4 w-full">
+                <table className="mt-2 w-full">
                   <thead>
                     {table.getHeaderGroups().map((headerGroup) => (
                       <tr key={headerGroup.id} className="!border-px !border-gray-400">

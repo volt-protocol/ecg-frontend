@@ -1,8 +1,8 @@
 import { getPublicClient } from "@wagmi/core"
-import { Address } from "@wagmi/core"
+import { wagmiConfig } from "contexts/Web3Provider"
 import { psmUsdcContract } from "lib/contracts"
 import { FROM_BLOCK } from "utils/constants"
-import { formatUnits } from "viem"
+import { Address, formatUnits } from "viem"
 
 export interface MintRedeemLogs {
   userAddress: Address
@@ -19,9 +19,9 @@ export async function getAllMintRedeemLogs(
   userAddress?: Address,
   duration?: number
 ): Promise<MintRedeemLogs[]> {
-  const currentBlock = await getPublicClient().getBlockNumber()
+  const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber()
 
-  const mintLogs = await getPublicClient().getLogs({
+  const mintLogs = await getPublicClient(wagmiConfig).getLogs({
     address: psmUsdcContract.address,
     event: {
       type: "event",
@@ -37,7 +37,7 @@ export async function getAllMintRedeemLogs(
     toBlock: currentBlock,
   })
 
-  const redeemLogs = await getPublicClient().getLogs({
+  const redeemLogs = await getPublicClient(wagmiConfig).getLogs({
     address: psmUsdcContract.address,
     event: {
       type: "event",
@@ -55,6 +55,7 @@ export async function getAllMintRedeemLogs(
 
   const mintLogsMod = mintLogs.map((log) => {
     return {
+      termAddress: "",
       userAddress: log.args.to as Address,
       category: "mintRedeem",
       type: "Mint",
@@ -68,6 +69,7 @@ export async function getAllMintRedeemLogs(
 
   const redeemLogsMod = redeemLogs.map((log) => {
     return {
+      termAddress: "",
       userAddress: log.args.to as Address,
       category: "mintRedeem",
       type: "Redeem",

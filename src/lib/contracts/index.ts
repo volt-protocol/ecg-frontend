@@ -1,5 +1,4 @@
-import { Abi } from "viem"
-import { Address } from "wagmi"
+import { Abi, Address } from "viem"
 import GuildABI from "./abi/GuildABI.json"
 import CreditABI from "./abi/CreditABI.json"
 import OffboardGovernorGuildABI from "./abi/OffboardGovernorGuildABI.json"
@@ -16,6 +15,11 @@ import OnboardGovernorGuildABI from "./abi/OnboardGovernorGuildABI.json"
 import OnboardVetoCreditABI from "./abi/OnboardVetoCreditABI.json"
 import OnboardVetoGuildABI from "./abi/OnboardVetoGuildABI.json"
 import OnboardTimelockABI from "./abi/OnboardTimelockABI.json"
+import AuctionHouseABI from "./abi/AuctionHouseABI.json"
+import ERC20PermitABI from "./abi/ERC20PermitABI.json"
+import GatewayABI from "./abi/GatewayABI.json"
+import UniswapRouterABI from "./abi/UniswapRouterABI.json"
+import LendingTermFactoryABI from "./abi/LendingTermFactoryABI.json"
 
 export { default as CreditABI } from "./abi/CreditABI.json"
 export { default as GuildABI } from "./abi/GuildABI.json"
@@ -33,7 +37,22 @@ export { default as OnboardGovernorGuildABI } from "./abi/OnboardGovernorGuildAB
 export { default as OnboardVetoCreditABI } from "./abi/OnboardVetoCreditABI.json"
 export { default as OnboardVetoGuildABI } from "./abi/OnboardVetoGuildABI.json"
 export { default as OnboardTimelockABI } from "./abi/OnboardTimelockABI.json"
+export { default as AuctionHouseABI } from "./abi/AuctionHouseABI.json"
+export { default as ERC20PermitABI } from "./abi/ERC20PermitABI.json"
+export { default as GatewayABI } from "./abi/GatewayABI.json"
+export { default as UniswapRouterABI } from "./abi/UniswapRouterABI.json"
 
+/* UniSwap */
+export const uniswapRouterContract = {
+  address: process.env.NEXT_PUBLIC_UNISWAP_ROUTER_ADDRESS as Address,
+  abi: UniswapRouterABI as Abi,
+}
+
+/* Gateway */
+export const gatewayContract = {
+  address: process.env.NEXT_PUBLIC_GATEWAY_ADDRESS as Address,
+  abi: GatewayABI as Abi,
+}
 
 /* DAO */
 export const daoGovernorGuildContract = {
@@ -99,22 +118,32 @@ export const lendingTermOffboardingContract = {
 
 export const profitManagerContract = {
   address: process.env.NEXT_PUBLIC_PROFIT_MANAGER_ADDRESS as Address,
-  abi: ProfitManagerABI as Abi
+  abi: ProfitManagerABI as Abi,
 }
 
 export const psmUsdcContract = {
   address: process.env.NEXT_PUBLIC_PSM_USDC_ADDRESS as Address,
-  abi: PsmUsdcABI as Abi
+  abi: PsmUsdcABI as Abi,
 }
 
 export const surplusGuildMinterContract = {
   address: process.env.NEXT_PUBLIC_SURPLUS_GUILD_MINTER_ADDRESS as Address,
-  abi: SurplusGuildMinterABI as Abi
+  abi: SurplusGuildMinterABI as Abi,
 }
 
-export const lendingTermV1Implementation = {
+export const lendingTermV1ImplementationContract = {
   address: process.env.NEXT_PUBLIC_LENDING_TERM_V1_ADDRESS as Address,
   abi: TermABI as Abi,
+}
+
+export const auctionHouseContract = {
+  address: process.env.NEXT_PUBLIC_AUCTION_HOUSE_ADDRESS as Address,
+  abi: AuctionHouseABI as Abi,
+}
+
+export const lendingTermFactoryContract = {
+  address: process.env.NEXT_PUBLIC_LENDING_TERM_FACTORY_ADDRESS as Address,
+  abi: LendingTermFactoryABI as Abi,
 }
 
 export const termContract = (address: Address) => {

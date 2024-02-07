@@ -38,6 +38,19 @@ input:checked.defaultCheckbox::before {
   opacity: 1;
 }
 
+
+/* Apex Chart */
+.custom-apex-tooltip {
+  background-color: #f8f8f8;
+  border-radius: 5px;
+  box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
+  padding: 10px;
+  font-size: 12px;
+  color: #373d3f;
+
+}
+/* End Apex Chart */
+
 .dynamic-shadow-dom {
   --dynamic-font-family-primary: "Inter", sans-serif;
   --dynamic-font-family-numbers: "Inter", monospace, sans-serif;

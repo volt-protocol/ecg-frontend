@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react"
+import Image from "next/image"
 import { LoansObj, loanObj } from "types/lending"
 import {
-  CellContext,
   createColumnHelper,
   flexRender,
   getCoreRowModel,
@@ -9,25 +9,24 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table"
-import { Address, readContract, waitForTransaction, writeContract } from "@wagmi/core"
-import { toastError, toastRocket } from "components/toast"
-import { GuildABI, TermABI, ProfitManagerABI } from "lib/contracts"
-import {
-  DecimalToUnit,
-  preciseRound,
-  secondsToAppropriateUnit,
-  UnitToDecimal,
-} from "utils/utils-old"
+import { readContract, waitForTransactionReceipt, writeContract } from "@wagmi/core"
+import { toastError } from "components/toast"
+import { GuildABI, TermABI } from "lib/contracts"
+import { DecimalToUnit, secondsToAppropriateUnit, UnitToDecimal } from "utils/utils-old"
 import { useAccount } from "wagmi"
 import { QuestionMarkIcon, TooltipHorizon } from "components/tooltip"
-import axios from "axios"
 import { Step } from "components/stepLoader/stepType"
 import StepModal from "components/stepLoader"
-import { FaArrowLeft, FaArrowRight, FaSort, FaSortDown, FaSortUp } from "react-icons/fa"
-import { MdArrowBack, MdArrowForward, MdChevronLeft, MdChevronRight, MdOpenInNew } from "react-icons/md"
+import { FaSort, FaSortDown, FaSortUp } from "react-icons/fa"
+import { MdChevronLeft, MdChevronRight } from "react-icons/md"
 import Spinner from "components/spinner"
 import { useAppStore } from "store"
 import { coinsList } from "store/slices/pair-prices"
+import { wagmiConfig } from "contexts/Web3Provider"
+import { ItemIdBadge } from "components/badge/ItemIdBadge"
+import { AddressBadge } from "components/badge/AddressBadge"
+import { formatUnits, Address } from "viem"
+import { formatDecimal } from "utils/numbers"
 
 const columnHelper = createColumnHelper<loanObj>()
 
@@ -52,33 +51,27 @@ function ActiveLoans({
   const { prices } = useAppStore()
   const [loading, setLoading] = React.useState(false)
   const { address, isConnected } = useAccount()
-  const [creditMultiplier, setCreditMultiplier] = React.useState(0)
   const [collateralPrice, setCollateralPrice] = React.useState(0)
   const [pegPrice, setPegPrice] = React.useState(0)
   const [isGauge, setIsGauge] = React.useState(false)
-  // const [isRepayPassed, setIsRepayPassed] = React.useState(false);
   const [repays, setRepays] = React.useState<Record<string, number>>({})
   const [showModal, setShowModal] = useState(false)
+
+  const [activeLoansWithDebt, setActiveLoansWithDebt] = useState<loanObj[]>([])
+
   const createSteps = (): Step[] => {
     const baseSteps = [{ name: "Call", status: "Not Started" }]
 
-    // if (match) {
-    //   baseSteps.splice(1, 1, { name: "Repay", status: "Not Started" });
-    // }
-
     return baseSteps
   }
-
   const [steps, setSteps] = useState<Step[]>(createSteps())
-  const [activeLoansWithDebt, setActiveLoansWithDebt] = useState<loanObj[]>([])
+
   let defaultData = activeLoansWithDebt
-  const pageSize = 5
-  const [currentPage, setCurrentPage] = React.useState(1)
   const [data, setData] = React.useState(() =>
     defaultData.filter(
       (loan) =>
         // loan.status !== "closed" &&
-        loan.callTime === BigInt(0) &&
+        loan.callTime === 0 &&
         loan.borrowAmount + loan.loanDebt !== BigInt(0) &&
         loan.borrower === address
     )
@@ -91,9 +84,9 @@ function ActiveLoans({
         ...loan,
         loanDebt: debts[index],
       }))
-
       setActiveLoansWithDebt(newTableData)
     }
+
     const fetchRepays = async () => {
       const newRepays: Record<string, number> = {}
       for (let loan of activeLoans) {
@@ -106,7 +99,7 @@ function ActiveLoans({
   }, [activeLoans, reload])
 
   async function getLoanDebt(loanId: string): Promise<bigint> {
-    const result = await readContract({
+    const result = await readContract(wagmiConfig, {
       address: termAddress as Address,
       abi: TermABI,
       functionName: "getLoanDebt",
@@ -119,14 +112,14 @@ function ActiveLoans({
     const [isCallable, setIsCallable] = React.useState(true)
     useEffect(() => {
       async function isCallable() {
-        const isGauge = await readContract({
+        const isGauge = await readContract(wagmiConfig, {
           address: process.env.NEXT_PUBLIC_ERC20_GUILD_ADDRESS as Address,
           abi: GuildABI,
           functionName: "isGauge",
           args: [termAddress],
         })
         setIsGauge(isGauge as boolean)
-        const termRepayDelayPassed = await readContract({
+        const termRepayDelayPassed = await readContract(wagmiConfig, {
           address: termAddress as Address,
           abi: TermABI,
           functionName: "partialRepayDelayPassed",
@@ -151,15 +144,18 @@ function ActiveLoans({
       </div>
     )
   }
+
   async function lastPartialRepay(id: string): Promise<number> {
-    const response = await readContract({
+    const response = await readContract(wagmiConfig, {
       address: termAddress as Address,
       abi: TermABI,
-      functionName: "lastPartialRepay",
+      functionName: "getLoan",
       args: [id],
     })
-    return Number(response)
+
+    return Number(response.lastPartialRepay)
   }
+
   function updateStepName(oldName: string, newName: string) {
     setSteps((prevSteps) =>
       prevSteps.map((step) => (step.name === oldName ? { ...step, name: newName } : step))
@@ -180,13 +176,13 @@ function ActiveLoans({
     try {
       setShowModal(true)
       updateStepStatus("Call", "In Progress")
-      const { hash } = await writeContract({
+      const hash = await writeContract(wagmiConfig, {
         address: termAddress,
         abi: TermABI,
         functionName: "call",
         args: [loandId],
       })
-      const checkCall = await waitForTransaction({
+      const checkCall = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
       })
 
@@ -201,6 +197,7 @@ function ActiveLoans({
       updateStepStatus("Call", "Error")
     }
   }
+
   async function callMany() {
     const updateStepStatus = (stepName: string, status: Step["status"]) => {
       setSteps((prevSteps) =>
@@ -216,14 +213,14 @@ function ActiveLoans({
         return
       }
       setLoading(true)
-      const responde = await writeContract({
+      const hash = await writeContract(wagmiConfig, {
         address: termAddress,
         abi: TermABI,
         functionName: "callMany",
         args: [data.map((loan) => loan.id)],
       })
-      const checkCall = await waitForTransaction({
-        hash: responde.hash,
+      const checkCall = await waitForTransactionReceipt(wagmiConfig, {
+        hash: hash,
       })
       if (checkCall.status != "success") {
         updateStepStatus("Call Many", "Error")
@@ -237,16 +234,6 @@ function ActiveLoans({
   }
 
   useEffect(() => {
-    async function getcreditMultiplier() {
-      const creditMultiplier = await readContract({
-        address: process.env.NEXT_PUBLIC_PROFIT_MANAGER_ADDRESS as Address,
-        abi: ProfitManagerABI,
-        functionName: "creditMultiplier",
-      })
-
-      setCreditMultiplier(Number(creditMultiplier))
-    }
-
     async function getCollateralPrice() {
       const nameCG = coinsList.find((name) => name.nameECG === collateralName)?.nameCG
       const price = prices[nameCG].usd
@@ -258,8 +245,6 @@ function ActiveLoans({
       const price = prices[nameCG].usd
       setPegPrice(price)
     }
-
-    getcreditMultiplier()
     getCollateralPrice()
     getPegPrice()
   }, [])
@@ -269,30 +254,19 @@ function ActiveLoans({
       id: "loadId",
       header: "Loan ID",
       enableSorting: true,
-      cell: (info) => info.getValue().slice(0, 8) + "...",
+      cell: (info) => <ItemIdBadge id={info.getValue()} />,
     }),
     columnHelper.accessor("borrower", {
       id: "borrower",
       header: "Borrower",
       enableSorting: true,
-      cell: (info) => (
-        <a
-          className="flex items-center gap-1 transition-all duration-150 ease-in-out hover:text-brand-500"
-          target="__blank"
-          href={`${
-            process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS
-          }/${info.getValue()}`}
-        >
-          {info.getValue().slice(0, 4) + "..." + info.getValue().slice(-4)}{" "}
-          <MdOpenInNew />
-        </a>
-      ),
+      cell: (info) => <AddressBadge address={info.getValue()} />,
     }),
     {
       id: "ltv",
       header: "LTV",
       cell: (info: any) => {
-        const LTV = preciseRound(
+        const LTV = formatDecimal(
           (Number(
             info.row.original.borrowAmount * info.row.original.borrowCreditMultiplier
           ) /
@@ -308,7 +282,7 @@ function ActiveLoans({
             BigInt(1e18),
           18
         )
-        const collateralValue = preciseRound(
+        const collateralValue = formatDecimal(
           DecimalToUnit(
             BigInt(Number(info.row.original.collateralAmount) * collateralPrice),
             collateralDecimals
@@ -325,7 +299,7 @@ function ActiveLoans({
                     Collateral Amount :{" "}
                     <span className="font-semibold">
                       {" "}
-                      {preciseRound(
+                      {formatDecimal(
                         DecimalToUnit(
                           info.row.original.collateralAmount,
                           collateralDecimals
@@ -344,36 +318,38 @@ function ActiveLoans({
                   <p>
                     Debt Amount :{" "}
                     <strong>
-                      {preciseRound(DecimalToUnit(info.row.original.loanDebt, 18), 2)}
+                      {formatDecimal(DecimalToUnit(info.row.original.loanDebt, 18), 2)}
                     </strong>{" "}
                     gUSDC
                   </p>
                   <p>
-                    Debt Value : <strong>{preciseRound(borrowValue, 2)}</strong> USDC
+                    Debt Value : <strong>{formatDecimal(borrowValue, 2)}</strong> USDC
                   </p>
                   <p>
                     Debt Value :{" "}
-                    <strong>{preciseRound(borrowValue * pegPrice, 2)}</strong> $
+                    <strong>{formatDecimal(borrowValue * pegPrice, 2)}</strong> $
                   </p>
                 </div>
                 <div>
                   <p>
                     Unit Collateral Price:{" "}
                     <span className="font-semibold">
-                      {preciseRound(collateralPrice, 2)}
+                      {formatDecimal(collateralPrice, 2)}
                     </span>{" "}
                     $
                   </p>
                   <p>
                     Unit USDC Price:{" "}
-                    <span className="font-semibold">{preciseRound(pegPrice, 6)}</span> $
+                    <span className="font-semibold">{formatDecimal(pegPrice, 6)}</span> $
                   </p>
                 </div>
               </div>
             }
             trigger={
               <div className="flex items-center">
-                <p>{LTV == "0.00" ? "-.--" : LTV}%</p>
+                <p className="font-semibold text-gray-700 dark:text-white">
+                  {LTV == "0.00" ? "-.--" : LTV}%
+                </p>
                 <div className="ml-1">
                   <QuestionMarkIcon />
                 </div>
@@ -388,7 +364,16 @@ function ActiveLoans({
       id: "DebtAmount",
       header: "Debt Amount",
       cell: (info: any) => (
-        <p>{preciseRound(DecimalToUnit(info.row.original.loanDebt, 18), 2)} gUSDC</p>
+        <p className="font-semibold text-gray-700 dark:text-white">
+          <div className="flex items-center gap-1">
+            {formatDecimal(
+              Number(formatUnits(info.row.original.loanDebt, 18)) *
+                Number(formatUnits(info.row.original.borrowCreditMultiplier, 18)),
+              2
+            )}
+            <Image src="/img/crypto-logos/usdc.png" width={20} height={20} alt="logo" />
+          </div>
+        </p>
       ),
     },
     {
@@ -399,7 +384,7 @@ function ActiveLoans({
         const sumOfTimestamps = repays[info.row.original.id] + maxDelayBetweenPartialRepay
         return (
           <>
-            <p>
+            <p className="font-semibold text-gray-700 dark:text-white">
               {maxDelayBetweenPartialRepay === 0
                 ? "n/a"
                 : Number.isNaN(sumOfTimestamps)
@@ -429,8 +414,7 @@ function ActiveLoans({
   useEffect(() => {
     setData(
       defaultData.filter(
-        (loan) =>
-          loan.callTime === BigInt(0) && loan.borrowAmount + loan.loanDebt !== BigInt(0)
+        (loan) => loan.callTime === 0 && loan.borrowAmount + loan.loanDebt !== BigInt(0)
         // &&loan.status !== "closed"
       )
     )
@@ -482,98 +466,95 @@ function ActiveLoans({
           </div>
         )}
       </div>
-      {isLoadingEventLoans? (
+      {isLoadingEventLoans ? (
         <div className="flex flex-grow flex-col items-center justify-center gap-2">
           <Spinner />
         </div>
       ) : (
-            <>
-              <div className="overflow-auto">
-                <table className="mt-4 w-full">
-                  <thead>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <tr key={headerGroup.id} className="!border-px !border-gray-400">
-                        {headerGroup.headers.map((header) => (
-                          <th
-                            key={header.id}
-                            colSpan={header.colSpan}
-                            onClick={header.column.getToggleSortingHandler()}
-                            className="cursor-pointer border-b-[1px] border-gray-200 pb-2 pt-4 text-center text-start dark:border-gray-400"
-                          >
-                            <div className="flex items-center">
-                              <p className="text-sm font-medium text-gray-500 dark:text-white">
-                                {flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
-                              </p>
-                              {header.column.columnDef.enableSorting && (
-                                <span className="text-sm text-gray-400">
-                                  {{
-                                    asc: <FaSortDown />,
-                                    desc: <FaSortUp />,
-                                    null: <FaSort />,
-                                  }[header.column.getIsSorted() as string] ?? <FaSort />}
-                                </span>
-                              )}
-                            </div>
-                          </th>
-                        ))}
-                      </tr>
-                    ))}
-                  </thead>
-                  <tbody>
-                    {table.getRowModel().rows.map((row) => (
-                      <tr
-                        key={row.id}
-                        className="border-b border-gray-100 transition-all duration-150 ease-in-out last:border-none hover:cursor-pointer hover:bg-gray-50 dark:border-gray-500 dark:hover:bg-navy-700"
+        <>
+          <div className="overflow-auto">
+            <table className="mt-4 w-full">
+              <thead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <tr key={headerGroup.id} className="!border-px !border-gray-400">
+                    {headerGroup.headers.map((header) => (
+                      <th
+                        key={header.id}
+                        colSpan={header.colSpan}
+                        onClick={header.column.getToggleSortingHandler()}
+                        className="cursor-pointer border-b-[1px] border-gray-200 pb-2 pt-4 text-center text-start dark:border-gray-400"
                       >
-                        {row.getVisibleCells().map((cell) => (
-                          <td
-                            key={cell.id}
-                            className="relative min-w-[85px] border-white/0 py-2"
-                          >
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </td>
-                        ))}
-                      </tr>
+                        <div className="flex items-center">
+                          <p className="text-sm font-medium text-gray-500 dark:text-white">
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                          </p>
+                          {header.column.columnDef.enableSorting && (
+                            <span className="text-sm text-gray-400">
+                              {{
+                                asc: <FaSortDown />,
+                                desc: <FaSortUp />,
+                                null: <FaSort />,
+                              }[header.column.getIsSorted() as string] ?? <FaSort />}
+                            </span>
+                          )}
+                        </div>
+                      </th>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-              <nav
-                className="flex w-full items-center justify-between border-t border-gray-200 px-2 py-3 text-gray-400"
-                aria-label="Pagination"
+                  </tr>
+                ))}
+              </thead>
+              <tbody>
+                {table.getRowModel().rows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="border-b border-gray-100 transition-all duration-200 ease-in-out last:border-none hover:cursor-pointer hover:bg-stone-100/80 dark:border-gray-500 dark:hover:bg-navy-700"
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="relative border-white/0 py-2">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <nav
+            className="flex w-full items-center justify-between border-t border-gray-200 px-2 py-3 text-gray-400"
+            aria-label="Pagination"
+          >
+            <div className="hidden sm:block">
+              <p className="text-sm ">
+                Showing page{" "}
+                <span className="font-medium">
+                  {table.getState().pagination.pageIndex + 1}
+                </span>{" "}
+                of <span className="font-semibold">{table.getPageCount()}</span>
+              </p>
+            </div>
+            <div className="flex flex-1 justify-between sm:justify-end">
+              <button
+                onClick={() => table.previousPage()}
+                className="relative inline-flex items-center rounded-md px-1.5 py-1 text-sm  hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-gray-100/0"
+                disabled={!table.getCanPreviousPage()}
               >
-                <div className="hidden sm:block">
-                  <p className="text-sm ">
-                    Showing page{" "}
-                    <span className="font-medium">
-                      {table.getState().pagination.pageIndex + 1}
-                    </span>{" "}
-                    of <span className="font-semibold">{table.getPageCount()}</span>
-                  </p>
-                </div>
-                <div className="flex flex-1 justify-between sm:justify-end">
-                  <button
-                    onClick={() => table.previousPage()}
-                    className="relative inline-flex items-center rounded-md px-1.5 py-1 text-sm  hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-gray-100/0"
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    <MdChevronLeft />
-                    Previous
-                  </button>
-                  <button
-                    onClick={() => table.nextPage()}
-                    className="relative ml-3 inline-flex items-center rounded-md px-1.5 py-1 text-sm  hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-gray-100/0"
-                    disabled={!table.getCanNextPage()}
-                  >
-                    Next
-                    <MdChevronRight />
-                  </button>
-                </div>
-              </nav>
-            </>
+                <MdChevronLeft />
+                Previous
+              </button>
+              <button
+                onClick={() => table.nextPage()}
+                className="relative ml-3 inline-flex items-center rounded-md px-1.5 py-1 text-sm  hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-gray-100/0"
+                disabled={!table.getCanNextPage()}
+              >
+                Next
+                <MdChevronRight />
+              </button>
+            </div>
+          </nav>
+        </>
       )}
     </>
   )

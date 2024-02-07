@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from "react"
-import { Address, readContract, waitForTransaction, writeContract } from "@wagmi/core"
+import {
+  Address,
+  readContract,
+  waitForTransactionReceipt,
+  writeContract,
+} from "@wagmi/core"
 import { toastError } from "components/toast"
 import {
   CreditABI,
@@ -21,6 +26,7 @@ import { AlertMessage } from "components/message/AlertMessage"
 import DefiInputBox from "components/box/DefiInputBox"
 import { getTitleDisabledStake, getTitleDisabledUnstake } from "./helper"
 import { LendingTerms } from "types/lending"
+import { wagmiConfig } from "contexts/Web3Provider"
 
 function StakeCredit({
   debtCeiling,
@@ -115,14 +121,14 @@ function StakeCredit({
         setShowModal(true)
         updateStepStatus("Approve", "In Progress")
         try {
-          const approve = await writeContract({
+          const hash = await writeContract(wagmiConfig, {
             ...creditContract,
             functionName: "approve",
             args: [surplusGuildMinterContract.address, parseEther(value.toString())],
           })
 
-          const checkApprove = await waitForTransaction({
-            hash: approve.hash,
+          const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
+            hash: hash,
           })
 
           if (checkApprove.status != "success") {
@@ -147,13 +153,13 @@ function StakeCredit({
         updateStepStatus("Stake", "In Progress")
 
         try {
-          const { hash } = await writeContract({
+          const hash = await writeContract(wagmiConfig, {
             ...surplusGuildMinterContract,
             functionName: "stake",
             args: [termAddress, parseEther(value.toString())],
           })
 
-          const checkStake = await waitForTransaction({
+          const checkStake = await waitForTransactionReceipt(wagmiConfig, {
             hash: hash,
           })
 
@@ -188,13 +194,13 @@ function StakeCredit({
         setShowModal(true)
         updateStepStatus("Unstake", "In Progress")
         try {
-          const { hash } = await writeContract({
+          const hash = await writeContract(wagmiConfig, {
             ...surplusGuildMinterContract,
             functionName: "unstake",
             args: [termAddress, parseEther(value.toString())],
           })
 
-          const checkUnstake = await waitForTransaction({
+          const checkUnstake = await waitForTransactionReceipt(wagmiConfig, {
             hash: hash,
           })
 
@@ -239,7 +245,7 @@ function StakeCredit({
       amount = -parseEther((Number(value) * ratioGuildCredit).toString())
     }
 
-    const data = await readContract({
+    const data = await readContract(wagmiConfig, {
       address: lendingTerm.address as Address,
       abi: TermABI as Abi,
       functionName: "debtCeiling",
@@ -278,127 +284,104 @@ function StakeCredit({
         />
       )}
       <div>
-        <div className="grid grid-cols-5 gap-x-1 gap-y-1">
-          <div className="col-span-2"></div>
-
-          {/* <p className="font-semibold">
-            Current interest rate:{" "}
-            <span className="text-xl">{interestRate * 100 + "%"}</span>{" "}
-          </p> */}
-        </div>
-        {/* {textButton === "Stake" ? (
-          <div className="relative mt-4 rounded-md">
-            <input
-              onChange={handleInputChange}
-              value={value as number}
-              className="block w-full rounded-md border-2 border-gray-300 py-3 pl-7 pr-12 text-gray-800 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:border-brand-400/80 focus:!ring-0 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-50 sm:text-lg sm:leading-6"
-              placeholder="0"
-              pattern="^[0-9]*[.,]?[0-9]*$"
-            />
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-              <span className="text-gray-500 dark:text-gray-50 sm:text-lg">
-                {textButton === "Stake" ? "gUSDC to stake" : ""}
-              </span>
-            </div>
-          </div>
-        ) : (
-          <></>
-        )} */}
-        <DefiInputBox
-          topLabel={"Amount of gUSDC to " + textButton.toLowerCase()}
-          currencyLogo="/img/crypto-logos/credit.png"
-          currencySymbol="gUSDC"
-          placeholder="0"
-          pattern="^[0-9]*[.,]?[0-9]*$"
-          inputSize="text-xl xl:text-3xl"
-          value={value}
-          onChange={handleInputChange}
-          rightLabel={
-            <>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Available: {setAvailable()}
-              </p>
-              <button
-                className="text-sm font-medium text-brand-500 hover:text-brand-400"
-                onClick={(e) => setMax()}
-              >
-                Max
-              </button>
-            </>
-          }
-        />
-
-        <ButtonPrimary
-          variant="lg"
-          title={textButton}
-          titleDisabled={
-            textButton == "Stake"
-              ? getTitleDisabledStake(value, creditBalance)
-              : getTitleDisabledUnstake(value, creditAllocated)
-          }
-          extra="w-full mt-2 !rounded-xl"
-          onClick={handlestake}
-          disabled={
-            (Number(value) > Number(formatUnits(creditBalance, 18)) &&
-              textButton === "Stake") ||
-            (Number(value) > Number(formatUnits(creditAllocated, 18)) &&
-              textButton === "Unstake") ||
-            Number(value) <= 0 ||
-            !value
-          }
-        />
-        <AlertMessage
-          type="info"
-          message={
-            textButton === "Stake" ? (
+        <div className="flex flex-col items-center gap-2 mb-2">
+          <DefiInputBox
+            topLabel={"Amount of gUSDC to " + textButton.toLowerCase()}
+            currencyLogo="/img/crypto-logos/credit.png"
+            currencySymbol="gUSDC"
+            placeholder="0"
+            pattern="^[0-9]*[.,]?[0-9]*$"
+            inputSize="text-xl xl:text-3xl"
+            value={value}
+            onChange={handleInputChange}
+            rightLabel={
               <>
-                <div>
-                  The GUILD / gUSDC ratio is{" "}
-                  <div className="inline-flex items-center">
-                    <span className="mr-1 font-bold">
-                      {formatDecimal(ratioGuildCredit, 2)}
-                    </span>
-                    <TooltipHorizon
-                      extra=""
-                      trigger={
-                        <div className="inline-block">
-                          <QuestionMarkIcon />
-                        </div>
-                      }
-                      content={
-                        <div className="w-[15rem] p-2">
-                          <p>
-                            When you stake <span className="font-semibold">gUSDC</span>,
-                            you provide first-loss capital on this term, and in exchange
-                            an amount of <span className="font-semibold">GUILD</span> will
-                            be minted to vote for this term.
-                          </p>
-                        </div>
-                      }
-                      placement="top"
-                    ></TooltipHorizon>
-                  </div>
-                  {". "}
-                  Your stake will allow{" "}
-                  <span className="font-bold">
-                    {formatCurrencyValue(Number(formatDecimal(debtDelta, 2)))} more gUSDC
-                  </span>{" "}
-                  to be borrowed.
-                </div>
-              </>
-            ) : (
-              <>
-                <p>
-                  Your unstake will decrease the borrow capacity on this term by{" "}
-                  <span className="font-bold">
-                    {formatCurrencyValue(Number(formatDecimal(debtDelta, 2)))}{" "}
-                  </span>{" "}
-                  gUSDC
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Available: {setAvailable()}
                 </p>
+                <button
+                  className="text-sm font-medium text-brand-500 hover:text-brand-400"
+                  onClick={(e) => setMax()}
+                >
+                  Max
+                </button>
               </>
-            )
-          }
-        />
+            }
+          />
+
+          <ButtonPrimary
+            variant="lg"
+            title={textButton}
+            titleDisabled={
+              textButton == "Stake"
+                ? getTitleDisabledStake(value, creditBalance)
+                : getTitleDisabledUnstake(value, creditAllocated)
+            }
+            extra="w-full !rounded-xl"
+            onClick={handlestake}
+            disabled={
+              (Number(value) > Number(formatUnits(creditBalance, 18)) &&
+                textButton === "Stake") ||
+              (Number(value) > Number(formatUnits(creditAllocated, 18)) &&
+                textButton === "Unstake") ||
+              Number(value) <= 0 ||
+              !value
+            }
+          />
+          <AlertMessage
+            type="info"
+            message={
+              textButton === "Stake" ? (
+                <>
+                  <div>
+                    The GUILD / gUSDC ratio is{" "}
+                    <div className="inline-flex items-center">
+                      <span className="mr-1 font-bold">
+                        {formatDecimal(ratioGuildCredit, 2)}
+                      </span>
+                      <TooltipHorizon
+                        extra=""
+                        trigger={
+                          <div className="inline-block">
+                            <QuestionMarkIcon />
+                          </div>
+                        }
+                        content={
+                          <div className="w-[15rem] p-2">
+                            <p>
+                              When you stake <span className="font-semibold">gUSDC</span>,
+                              you provide first-loss capital on this term, and in exchange
+                              an amount of <span className="font-semibold">GUILD</span>{" "}
+                              will be minted to vote for this term.
+                            </p>
+                          </div>
+                        }
+                        placement="top"
+                      ></TooltipHorizon>
+                    </div>
+                    {". "}
+                    Your stake will allow{" "}
+                    <span className="font-bold">
+                      {formatCurrencyValue(Number(formatDecimal(debtDelta, 2)))} more
+                      gUSDC
+                    </span>{" "}
+                    to be borrowed.
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p>
+                    Your unstake will decrease the borrow capacity on this term by{" "}
+                    <span className="font-bold">
+                      {formatCurrencyValue(Number(formatDecimal(debtDelta, 2)))}{" "}
+                    </span>{" "}
+                    gUSDC
+                  </p>
+                </>
+              )
+            }
+          />
+        </div>
       </div>
     </>
   )

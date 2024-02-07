@@ -10,7 +10,7 @@ export default function ButtonPrimary({
   extra,
 }: {
   type?: "submit" | "button"
-  title: string
+  title?: string
   titleDisabled?: string
   onClick?: () => void
   variant?: "xs" | "sm" | "md" | "lg" | "xl"

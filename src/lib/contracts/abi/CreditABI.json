@@ -91,6 +91,25 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "oldValue",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newValue",
+        "type": "uint256"
+      }
+    ],
+    "name": "DelegateLockupUpdate",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": true,
         "internalType": "address",
         "name": "delegate",
@@ -179,6 +198,12 @@
         "indexed": false,
         "internalType": "uint256",
         "name": "amountDistributed",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "totalPendingDistributions",
         "type": "uint256"
       },
       {
@@ -447,6 +472,13 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "delegateLockupPeriod",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [{ "internalType": "address", "name": "delegator", "type": "address" }],
     "name": "delegates",
     "outputs": [{ "internalType": "address[]", "name": "", "type": "address[]" }],
@@ -583,6 +615,13 @@
     "type": "function"
   },
   {
+    "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "name": "lastDelegation",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "maxDelegates",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
@@ -683,6 +722,13 @@
   {
     "inputs": [{ "internalType": "address", "name": "newCore", "type": "address" }],
     "name": "setCore",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "uint256", "name": "newValue", "type": "uint256" }],
+    "name": "setDelegateLockupPeriod",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

@@ -7,16 +7,17 @@ import { yupResolver } from "@hookform/resolvers/yup"
 import * as yup from "yup"
 import { ErrorMessage } from "components/message/ErrorMessage"
 import clsx from "clsx"
-import { waitForTransaction, writeContract, readContract } from "@wagmi/core"
-import { lendingTermV1Implementation, onboardGovernorGuildContract } from "lib/contracts"
+import { waitForTransactionReceipt, writeContract, readContract } from "@wagmi/core"
+import { auctionHouseContract, lendingTermFactoryContract, lendingTermV1ImplementationContract, onboardGovernorGuildContract } from "lib/contracts"
 import { toastError } from "components/toast"
 import { Step } from "components/stepLoader/stepType"
 import { Address, parseEther } from "viem"
 import { SECONDS_IN_YEAR } from "utils/constants"
-import { erc20ABI, readContracts } from "wagmi"
 import { MdCabin, MdCheck, MdCheckCircle, MdClose } from "react-icons/md"
 import { formatNumberDecimal } from "utils/numbers"
-import { getToken } from "./helper"
+import getToken from "lib/getToken"
+import ComboSelect from "components/select/ComboSelect"
+import { wagmiConfig } from "contexts/Web3Provider"
 
 //Define form schema
 const schema = yup
@@ -44,18 +45,14 @@ export default function Create() {
     resolver: yupResolver(schema),
     mode: "onChange",
   })
-  // const watchCollateralToken = watch("collateralToken")
   const watchBorrowRatio = watch("borrowRatio")
   const watchInterestRate = watch("interestRate")
   const [collateralToken, setCollateralToken] = useState<{
     symbol: string
     address: Address
     decimals: number
-  }>({
-    symbol: "USDC",
-    address: "0xe9248437489bc542c68ac90e178f6ca3699c3f6b",
-    decimals: 6,
-  })
+  }>({})
+   const [query, setQuery] = useState("")
 
   const createSteps = (): Step[] => {
     return [{ name: "Propose Offboarding", status: "Not Started" }]
@@ -63,21 +60,22 @@ export default function Create() {
 
   const [steps, setSteps] = useState<Step[]>(createSteps())
 
-  // useEffect(() => {
-  //   if (
-  //     watchCollateralToken &&
-  //     watchCollateralToken.length == 42 &&
-  //     watchCollateralToken.match(/^0x[A-Fa-f0-9]+$/i)
-  //   ) {
-  //     getTokenDetails(watchCollateralToken as Address)
-  //   }
-  // }, [watchCollateralToken])
+  useEffect(() => {
+    if (
+      query &&
+      query.length == 42 &&
+      query.match(/^0x[A-Fa-f0-9]+$/i)
+    ) {
+      getTokenDetails(query as Address)
+      setQuery("")
+    }
+  }, [query])
 
   /* Form Validation */
   const onSubmit: SubmitHandler<any> = async (data) => {
     let minPartialRepayPercent
     let maxDelayBetweenPartialRepay
-    const interestRate = Number(parseEther((data.interestRate / 100).toString()))
+    const interestRate = parseEther((data.interestRate / 100).toString())
 
     switch (selectedPeriod) {
       case "None":
@@ -85,15 +83,15 @@ export default function Create() {
         maxDelayBetweenPartialRepay = 0
         break
       case "Weekly":
-        minPartialRepayPercent = Math.round(interestRate / 52)
+        minPartialRepayPercent = Math.round(Number(interestRate) / 52)
         maxDelayBetweenPartialRepay = 7 * 24 * 3600
         break
       case "Monthly":
-        minPartialRepayPercent = Math.round(interestRate / 12)
+        minPartialRepayPercent = Math.round(Number(interestRate) / 12)
         maxDelayBetweenPartialRepay = SECONDS_IN_YEAR / 12
         break
       case "Quarterly":
-        minPartialRepayPercent = Math.round(interestRate / 4)
+        minPartialRepayPercent = Math.round(Number(interestRate) / 4)
         maxDelayBetweenPartialRepay = SECONDS_IN_YEAR / 4
         break
       case "Yearly":
@@ -118,21 +116,26 @@ export default function Create() {
   }
 
   /* Smart contract Write & Read */
-  // const getTokenDetails = async (tokenAddress: Address): Promise<void> => {
-  //   try {
-  //     const result = await getToken(tokenAddress)
-  //     if (result[0].status == "failure" || result[1].status == "failure") {
-  //       toastError("Collateral address is not a valid ERC20 token")
-  //     }
+  const getTokenDetails = async (tokenAddress: Address): Promise<void> => {
+    try {
+      const result = await getToken(tokenAddress)
 
-  //     setCollateralTokenDecimal(result[0].result)
-  //     setCollateralTokenSymbol(result[1].result)
-  //   } catch (e: any) {
-  //     setCollateralTokenDecimal(undefined)
-  //     setCollateralTokenSymbol(undefined)
-  //     toastError("Collateral address is not a valid ERC20 token")
-  //   }
-  // }
+      if (result[0].status == "failure" || result[1].status == "failure") {
+        toastError("Collateral address is not a valid ERC20 token")
+        setCollateralToken({})
+        return
+      }
+
+      setCollateralToken({
+        symbol: result[1].result,
+        address: tokenAddress,
+        decimals: result[0].result,
+      })
+    } catch (e: any) {
+      setCollateralToken({})
+      toastError("Collateral address is not a valid ERC20 token")
+    }
+  }
 
   const createTerm = async (args: any): Promise<void> => {
     //Init Steps
@@ -148,13 +151,18 @@ export default function Create() {
       setShowModal(true)
       updateStepStatus("Create New Term", "In Progress")
 
-      const { hash } = await writeContract({
-        ...onboardGovernorGuildContract,
+      const hash = await writeContract(wagmiConfig, {
+        ...lendingTermFactoryContract,
         functionName: "createTerm",
-        args: [lendingTermV1Implementation.address, args],
+        args: [
+          1, //gauge type
+          lendingTermV1ImplementationContract.address, //implementation
+          auctionHouseContract.address, //auction house
+          args
+        ]
       })
 
-      const tx = await waitForTransaction({
+      const tx = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
       })
 
@@ -167,6 +175,7 @@ export default function Create() {
       reset() // reset form
       //TODO: trigger refetch terms in offboarding page
     } catch (e: any) {
+      console.error(e)
       updateStepStatus("Create New Term", "Error")
       toastError(e.shortMessage)
     }
@@ -191,11 +200,11 @@ export default function Create() {
               className="text-md block font-medium leading-6 sm:pt-1.5"
             >
               Collateral Token
-              {/* {collateralTokenDecimal && collateralTokenSymbol ? (
+              {collateralToken && collateralToken.address ? (
                 <MdCheckCircle className="ml-1 inline text-green-500" />
               ) : (
                 <MdClose className="ml-1 inline text-red-500" />
-              )} */}
+              )}
             </label>
             <div className="mt-2 sm:col-span-2 sm:mt-0">
               {/* <input
@@ -214,7 +223,35 @@ export default function Create() {
                   "sm:text-md block w-full rounded-md border-0 px-2 py-1.5 ring-1 ring-inset ring-gray-300 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:ring-2 focus:ring-inset  sm:leading-6"
                 )}
               /> */}
-              <DropdownSelect
+              <ComboSelect
+                options={[
+                  {
+                    symbol: "USDC",
+                    address: process.env.NEXT_PUBLIC_ERC20_USDC_ADDRESS as Address,
+                    decimals: 6,
+                  },
+                  {
+                    symbol: "sDAI",
+                    address: process.env.NEXT_PUBLIC_ERC20_SDAI_ADDRESS as Address,
+                    decimals: 18,
+                  },
+                  {
+                    symbol: "WBTC",
+                    address: process.env.NEXT_PUBLIC_ERC20_WBTC_ADDRESS as Address,
+                    decimals: 8,
+                  },
+                ]}
+                selectedOption={collateralToken}
+                onChangeSelect={setCollateralToken}
+                onChangeQuery={setQuery}
+                query={query}
+                getLabel={(item) => {
+                  return `${item.symbol} - ${item.address}`
+                }}
+                extra={"w-full"}
+                placeholder="Select or type collateral token address"
+              />
+              {/* <DropdownSelect
                 {...register("collateralToken")}
                 options={[
                   {
@@ -239,13 +276,9 @@ export default function Create() {
                   return `${item.symbol} - ${item.address}`
                 }}
                 extra={"w-full"}
-              />
+              /> */}
             </div>
           </div>
-          <ErrorMessage
-            title={formState.errors.collateralToken?.message}
-            variant="error"
-          />
           <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">
             <label
               htmlFor="openingFee"

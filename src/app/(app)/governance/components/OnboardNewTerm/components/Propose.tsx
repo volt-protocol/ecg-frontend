@@ -1,4 +1,9 @@
-import { Address, getPublicClient, writeContract, waitForTransaction } from "@wagmi/core"
+import {
+  Address,
+  getPublicClient,
+  writeContract,
+  waitForTransactionReceipt,
+} from "@wagmi/core"
 import DropdownSelect from "components/select/DropdownSelect"
 import Spinner from "components/spinner"
 import StepModal from "components/stepLoader"
@@ -7,9 +12,6 @@ import { use, useEffect, useState } from "react"
 import Create, { CreateTermForm } from "./Create"
 import { formatEther, formatUnits } from "viem"
 import {
-  decimalToUnit,
-  formatCurrencyValue,
-  formatDecimal,
   formatNumberDecimal,
 } from "utils/numbers"
 import { toastError } from "components/toast"
@@ -19,8 +21,9 @@ import { onboardGovernorGuildContract, guildContract } from "lib/contracts"
 import { generateTermName } from "utils/strings"
 import { SECONDS_IN_DAY } from "utils/constants"
 import { MdError, MdOpenInNew, MdWarning } from "react-icons/md"
-import { useAccount, useContractReads } from "wagmi"
+import { useAccount, useReadContracts } from "wagmi"
 import { AlertMessage } from "components/message/AlertMessage"
+import { wagmiConfig } from "contexts/Web3Provider"
 
 export type ProposedTerm = {
   termAddress: Address
@@ -43,7 +46,7 @@ export default function Propose() {
   const [selectedTerm, setSelectedTerm] = useState<ProposedTerm | null>(null)
   const [reload, setReload] = useState<boolean>(false)
 
-  const { data, isError, isLoading } = useContractReads({
+  const { data, isError, isLoading } = useReadContracts({
     contracts: [
       {
         ...onboardGovernorGuildContract,
@@ -55,11 +58,13 @@ export default function Propose() {
         args: [address],
       },
     ],
-    select: (data) => {
-      return {
-        proposalThreshold: data[0].result,
-        guildVotes: data[1].result,
-      }
+    query: {
+      select: (data) => {
+        return {
+          proposalThreshold: data[0].result,
+          guildVotes: data[1].result,
+        }
+      },
     },
   })
 
@@ -106,13 +111,13 @@ export default function Propose() {
       setShowModal(true)
       updateStepStatus("Propose Onboard", "In Progress")
 
-      const { hash } = await writeContract({
+      const hash = await writeContract(wagmiConfig, {
         ...onboardGovernorGuildContract,
         functionName: "proposeOnboard",
         args: [selectedTerm?.termAddress],
       })
 
-      const tx = await waitForTransaction({
+      const tx = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
       })
 
@@ -123,7 +128,6 @@ export default function Propose() {
 
       updateStepStatus("Propose Onboard", "Success")
       setReload(true)
-
     } catch (e: any) {
       updateStepStatus("Propose Onboard", "Error")
       toastError(e.shortMessage)
@@ -244,7 +248,7 @@ export default function Propose() {
                     </div>
                   </dl>
                 </div>
-                <div className="mt-2 block w-full">
+                <div className="mt-2 flex flex-col w-full gap-2">
                   <ButtonPrimary
                     onClick={() => proposeOnboard()}
                     type="button"
@@ -275,5 +279,5 @@ export default function Propose() {
         )}
       </div>
     </>
-  ) 
+  )
 }

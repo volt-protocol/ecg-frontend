@@ -11,7 +11,7 @@ export const AlertMessage = ({
   return (
     <div
       className={clsx(
-        "my-4 flex items-center justify-center gap-2 rounded-md px-2.5 py-1.5 text-sm",
+        "my-1 flex items-center justify-center gap-2 rounded-md px-2.5 py-1.5 text-sm",
         type == "danger"
           ? "bg-red-100 text-red-500/90 dark:bg-red-100/0 dark:text-red-500"
           : "",
@@ -20,7 +20,8 @@ export const AlertMessage = ({
           : "",
         type == "info"
           ? "bg-cyan-100 text-cyan-500/90 dark:bg-cyan-100/0 dark:text-cyan-500"
-          : ""
+          : "",
+          'w-full'
       )}
     >
       {type == "danger" && <MdError className="h-6 w-6" />}

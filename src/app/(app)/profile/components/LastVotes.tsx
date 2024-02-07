@@ -8,23 +8,12 @@ import {
 } from "@tanstack/react-table"
 import CustomTable from "components/table/CustomTable"
 import moment from "moment"
-import { formatDecimal, ucFirst } from "utils/numbers"
-import {
-  MdNote,
-  MdOpenInNew,
-  MdOutlineDrafts,
-  MdOutlineNote,
-  MdOutlineThumbDown,
-  MdOutlineThumbUp,
-  MdRemove,
-} from "react-icons/md"
-import clsx from "clsx"
-import Link from "next/link"
-import { Address, useAccount } from "wagmi"
+import { Address } from "viem"
 import { fromNow } from "utils/date"
 import { BLOCK_LENGTH_MILLISECONDS } from "utils/constants"
 import { VoteLogs } from "lib/logs/votes"
 import { getLastVoteEventDescription } from "../helper"
+import { TransactionBadge } from "components/badge/TransactionBadge"
 
 export default function LastVotes({
   userAddress,
@@ -58,7 +47,7 @@ export default function LastVotes({
       enableSorting: true,
       cell: (info) => {
         return (
-          <span className="inline-flex items-center gap-x-1.5 rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600  dark:bg-navy-600 dark:text-gray-100">
+          <span className="inline-flex items-center gap-x-1.5 rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-navy-600 dark:text-gray-100">
             {info.row.original.type}
           </span>
         )
@@ -88,18 +77,7 @@ export default function LastVotes({
       id: "txHash",
       header: "Transaction",
       enableSorting: true,
-      cell: (info) => {
-        return (
-          <a
-            className="text-sm text-brand-500 hover:text-brand-400"
-            target="_blank"
-            href={process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_TX + "/" + info.getValue()}
-          >
-            {info.getValue().slice(0, 6) + "..." + info.getValue().slice(-4)}
-            <MdOpenInNew className="ml-1.5 inline-block h-4 w-4" />
-          </a>
-        )
-      },
+      cell: (info) => <TransactionBadge txHash={info.getValue()} />,
     }),
   ]
 

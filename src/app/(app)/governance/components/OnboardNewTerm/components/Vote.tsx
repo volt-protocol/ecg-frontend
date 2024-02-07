@@ -2,13 +2,17 @@ import React, { useEffect, useState } from "react"
 import { ethers } from "ethers"
 import {
   getPublicClient,
-  Address,
-  readContract,
-  waitForTransaction,
+  readContracts,
+  waitForTransactionReceipt,
   writeContract,
 } from "@wagmi/core"
 import { toastError, toastRocket } from "components/toast"
-import { guildContract, onboardGovernorGuildContract, termContract } from "lib/contracts"
+import {
+  guildContract,
+  onboardGovernorGuildContract,
+  onboardTimelockContract,
+  termContract,
+} from "lib/contracts"
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa"
 import { Step } from "components/stepLoader/stepType"
 import StepModal from "components/stepLoader"
@@ -20,26 +24,31 @@ import {
   flexRender,
   getPaginationRowModel,
 } from "@tanstack/react-table"
-import { MdChevronLeft, MdChevronRight } from "react-icons/md"
+import { MdChevronLeft, MdChevronRight, MdOpenInNew } from "react-icons/md"
 import Spinner from "components/spinner"
 import DropdownSelect from "components/select/DropdownSelect"
 import { useAppStore } from "store"
 import ButtonPrimary from "components/button/ButtonPrimary"
-import { readContracts, useAccount, useContractReads } from "wagmi"
-import { decimalToUnit, formatCurrencyValue, formatDecimal } from "utils/numbers"
+import { useAccount} from "wagmi"
+import { formatCurrencyValue, formatDecimal } from "utils/numbers"
 import { ActiveOnboardingVotes, VoteOption, ProposalState } from "types/governance"
 import { fromNow } from "utils/date"
 import moment from "moment"
-import { formatUnits, keccak256, parseUnits, stringToBytes } from "viem"
+import { formatUnits, keccak256, parseUnits, stringToBytes, Address } from "viem"
 import { QuestionMarkIcon, TooltipHorizon } from "components/tooltip"
-import { BLOCK_LENGTH_MILLISECONDS, FROM_BLOCK } from "utils/constants"
+import {
+  BLOCK_LENGHT_SECONDS,
+  BLOCK_LENGTH_MILLISECONDS,
+  FROM_BLOCK,
+} from "utils/constants"
 import { getVotableTerms } from "./helper"
 import VoteStatusBar from "components/bar/VoteStatusBar"
 import { extractTermAddress } from "utils/strings"
+import { wagmiConfig } from "contexts/Web3Provider"
 
 function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   const { address } = useAccount()
-  const { lendingTerms } = useAppStore()
+  const { lendingTerms, fetchLendingTerms } = useAppStore()
   const [showModal, setShowModal] = useState(false)
   const [activeOnboardingVotes, setActiveOnboardingVotes] = useState<
     ActiveOnboardingVotes[]
@@ -61,14 +70,14 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   /* Getters */
   const fetchActiveOnboardingVotes = async () => {
     setLoading(true)
-    const currentBlockData = await getPublicClient().getBlockNumber()
+    const currentBlockData = await getPublicClient(wagmiConfig).getBlockNumber()
     setCurrentBlock(currentBlockData)
 
     // get TermCreated logs
     const termsCreated = await getVotableTerms()
 
     //logs are returned from oldest to newest
-    const logs = await getPublicClient().getLogs({
+    const logs = await getPublicClient(wagmiConfig).getLogs({
       address: process.env.NEXT_PUBLIC_ONBOARD_GOVERNOR_GUILD_ADDRESS as Address,
       event: {
         type: "event",
@@ -135,7 +144,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         )
 
         //Get votes for a given proposal id
-        const proposalVoteInfo = await readContracts({
+        const proposalVoteInfo = await readContracts(wagmiConfig, {
           contracts: [
             {
               ...onboardGovernorGuildContract,
@@ -157,17 +166,23 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
               functionName: "state",
               args: [log.args.proposalId],
             },
+            {
+              ...onboardGovernorGuildContract,
+              functionName: "proposalEta",
+              args: [log.args.proposalId],
+            },
           ],
         })
 
         return {
+          termAddress: term.termAddress,
           termName: term.termName,
           collateralTokenSymbol: term.collateralTokenSymbol,
           interestRate: term.interestRate,
           borrowRatio: term.borrowRatio,
           quorum:
             proposalVoteInfo[1].status == "success" &&
-            formatUnits(proposalVoteInfo[2].result, 18),
+            formatUnits(proposalVoteInfo[2].result as bigint, 18),
           proposalId: BigInt(log.args.proposalId),
           proposer: log.args.proposer as Address,
           votes: proposalVoteInfo[0].status == "success" && proposalVoteInfo[0].result,
@@ -183,6 +198,9 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
             log.args.calldatas,
             log.args.description,
           ],
+          queueEnd: Number(
+            proposalVoteInfo[3].status == "success" && proposalVoteInfo[4].result
+          ),
         }
       })
     )
@@ -220,13 +238,13 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         "Vote for Proposal " + proposalId.toString().slice(0, 6) + "...",
         "In Progress"
       )
-      const { hash } = await writeContract({
+      const hash = await writeContract(wagmiConfig, {
         ...onboardGovernorGuildContract,
         functionName: "castVote",
         args: [proposalId, vote],
       })
 
-      const tx = await waitForTransaction({
+      const tx = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
       })
 
@@ -274,7 +292,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         "Queue Proposal " + proposal.proposalId.toString().slice(0, 6) + "...",
         "In Progress"
       )
-      const { hash } = await writeContract({
+      const hash = await writeContract(wagmiConfig, {
         ...onboardGovernorGuildContract,
         functionName: "queue",
         args: [
@@ -285,7 +303,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         ],
       })
 
-      const tx = await waitForTransaction({
+      const tx = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
       })
 
@@ -312,6 +330,67 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
     }
   }
 
+  const execute = async (proposal: ActiveOnboardingVotes): Promise<void> => {
+    //Init Steps
+    setSteps([
+      {
+        name: "Execute Proposal " + proposal.proposalId.toString().slice(0, 6) + "...",
+        status: "Not Started",
+      },
+    ])
+
+    const updateStepStatus = (stepName: string, status: Step["status"]) => {
+      setSteps((prevSteps) =>
+        prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step))
+      )
+    }
+
+    try {
+      setShowModal(true)
+      updateStepStatus(
+        "Execute Proposal " + proposal.proposalId.toString().slice(0, 6) + "...",
+        "In Progress"
+      )
+      const hash = await writeContract(wagmiConfig, {
+        ...onboardGovernorGuildContract,
+        functionName: "execute",
+        args: [
+          proposal.proposeArgs[0],
+          proposal.proposeArgs[1],
+          proposal.proposeArgs[2],
+          keccak256(stringToBytes(proposal.proposeArgs[3])),
+        ],
+      })
+
+      const tx = await waitForTransactionReceipt(wagmiConfig, {
+        hash: hash,
+      })
+
+      if (tx.status != "success") {
+        updateStepStatus(
+          "Execute Proposal " + proposal.proposalId.toString().slice(0, 6) + "...",
+          "Error"
+        )
+        return
+      }
+
+      updateStepStatus(
+        "Execute Proposal " + proposal.proposalId.toString().slice(0, 6) + "...",
+        "Success"
+      )
+      await fetchActiveOnboardingVotes()
+      //fetch lending terms globally
+      await fetchLendingTerms()
+    } catch (e: any) {
+      console.log(e)
+      updateStepStatus(
+        "Execute Proposal " + proposal.proposalId.toString().slice(0, 6) + "...",
+        "Error"
+      )
+      toastError(e.shortMessage)
+    }
+  }
+
   /* End Smart Contract Writes */
 
   /* Create Modal Steps */
@@ -332,9 +411,14 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
       enableSorting: true,
       cell: (info) => {
         return (
-          <span className="text-center text-sm font-bold text-gray-600 dark:text-white">
+          <a
+            className="flex items-center gap-1 pl-2 text-center text-sm font-bold text-gray-600 hover:text-brand-500 dark:text-white"
+            target="__blank"
+            href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS}/${info.row.original.termAddress}`}
+          >
             {info.getValue()}
-          </span>
+            <MdOpenInNew />
+          </a>
         )
       },
     }),
@@ -520,7 +604,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   const getActionButton = (proposal: ActiveOnboardingVotes) => {
     if (proposal.hasVoted && proposal.isActive)
       return (
-        <span className="items-center rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-600">
+        <span className="items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
           Already voted
         </span>
       )
@@ -537,10 +621,33 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
       )
     }
 
-    if (proposal.proposalState === ProposalState.Queued) {
+    if (
+      proposal.proposalState === ProposalState.Queued &&
+      Number(moment().unix()) < proposal.queueEnd
+    ) {
       return (
         <span className="items-center rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-600">
           Queued
+        </span>
+      )
+    }
+
+    // Execute proposal
+    if (proposal.proposalState === ProposalState.Queued) {
+      return (
+        <ButtonPrimary
+          variant="xs"
+          title="Execute"
+          onClick={() => execute(proposal)}
+          extra="mt-1"
+        />
+      )
+    }
+
+    if (proposal.proposalState === ProposalState.Executed) {
+      return (
+        <span className="items-center rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-600">
+          Executed
         </span>
       )
     }
@@ -606,7 +713,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
           <p>
             Your GUILD voting weight:{" "}
             <span className="font-semibold">
-              {guildVotingWeight &&
+              {guildVotingWeight != undefined &&
                 formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2)}
             </span>
           </p>

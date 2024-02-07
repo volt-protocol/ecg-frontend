@@ -37,7 +37,7 @@ function OnboardNewterm({
                 <Tab.Panel key={item.key} className={"p-3"}>
                   {React.cloneElement(item.content as React.ReactElement<any>, {
                     creditVotingWeight,
-                    guildVotingWeight,
+                    guildVotingWeight
                   })}
                 </Tab.Panel>
               ))}

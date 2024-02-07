@@ -1,5 +1,6 @@
 import { getPublicClient, getWalletClient } from "@wagmi/core"
-import { Address, readContract } from "@wagmi/core"
+import { wagmiConfig } from "contexts/Web3Provider"
+import { Address } from "viem"
 import {
   daoGovernorGuildContract,
   lendingTermOffboardingContract,
@@ -9,6 +10,7 @@ import {
 import { BLOCK_LENGTH_MILLISECONDS, FROM_BLOCK } from "utils/constants"
 
 export interface VoteLogs {
+  termAddress: Address
   userAddress: Address
   category: "vote"
   type: 'Governor' | 'VetoGovernor' | 'LendingTermOnboarding' | 'LendingTermOffboarding'
@@ -18,9 +20,9 @@ export interface VoteLogs {
 }
 
 export async function getVotesLendingOffboarding(address?: Address, duration?: number) {
-  const currentBlock = await getPublicClient().getBlockNumber()
+  const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber()
 
-  const logs = await getPublicClient().getLogs({
+  const logs = await getPublicClient(wagmiConfig).getLogs({
     address: lendingTermOffboardingContract.address,
     event: {
       type: "event",
@@ -41,6 +43,7 @@ export async function getVotesLendingOffboarding(address?: Address, duration?: n
     .filter((log) => address ? log.args.user === address : true)
     .map((log) => {
       return {
+        termAddress: "",
         userAddress: log.args.user as Address,
         category: "vote",
         type: "LendingTermOffboarding",
@@ -52,9 +55,9 @@ export async function getVotesLendingOffboarding(address?: Address, duration?: n
 }
 
 export async function getVotesGovernor(contractAddress: Address, address?: Address, duration?: number) {
-  const currentBlock = await getPublicClient().getBlockNumber()
+  const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber()
 
-  const logs = await getPublicClient().getLogs({
+  const logs = await getPublicClient(wagmiConfig).getLogs({
     address: contractAddress,
     event: {
       type: "event",
@@ -88,6 +91,7 @@ export async function getVotesGovernor(contractAddress: Address, address?: Addre
       }
 
       return {
+        termAddress: "",
         userAddress: log.args.voter as Address,
         category: "vote",
         type: type,

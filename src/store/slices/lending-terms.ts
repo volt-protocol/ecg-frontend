@@ -3,14 +3,15 @@ import { LendingTerms, LendingTermsResponse } from "types/lending"
 import { StateCreator } from "zustand"
 import axios, { AxiosResponse } from "axios"
 import { getTermsLogs } from "lib/logs/terms"
-import { Abi, Address, formatUnits } from "viem"
+import { Abi, Address, formatUnits, parseUnits } from "viem"
 import { formatCurrencyValue, formatDecimal, formatNumberDecimal } from "utils/numbers"
 import { generateTermName } from "utils/strings"
 import { SECONDS_IN_DAY } from "utils/constants"
 import getToken from "lib/getToken"
 import { TermABI } from "lib/contracts"
-import { readContracts } from "wagmi"
+import { readContracts } from "@wagmi/core"
 import { coinsList } from "./pair-prices"
+import { wagmiConfig } from "contexts/Web3Provider"
 
 const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL
 
@@ -30,7 +31,7 @@ export const createLendingTermsSlice: StateCreator<LendingTermsSlice> = (set, ge
       termLogs.map(async (log) => {
         const collateralTokenDetails = await getToken(log.collateralToken as Address)
 
-        const data = await readContracts({
+        const data = await readContracts(wagmiConfig, {
           contracts: [
             {
               address: log.term as Address,
@@ -44,15 +45,13 @@ export const createLendingTermsSlice: StateCreator<LendingTermsSlice> = (set, ge
             },
           ],
         })
+        
+        //calcultaed borrow ratio without precision loss and taken into account collateral token decimals
+        const calculatedBorrowRatio: bigint =
+          BigInt(log.maxDebtPerCollateralToken) /
+          (BigInt(10 ** (18 - Number(collateralTokenDetails[0].result))))
 
-        //Calulate borrow ratio and interest rate
-        const calculatedBorrowRatio = Number(
-          formatNumberDecimal(
-            Number(log.maxDebtPerCollateralToken) /
-              (Number(10 ** (18 - collateralTokenDetails[0].result)) * 1e18)
-          )
-        )
-
+        //calculate interest rate
         const calculatedInterestRate = Number(
           formatDecimal(Number(formatUnits(log.interestRate, 18)), 3)
         )
@@ -62,14 +61,16 @@ export const createLendingTermsSlice: StateCreator<LendingTermsSlice> = (set, ge
           collateral: {
             address: log.collateralToken as Address,
             name: collateralTokenDetails[1].result,
-            logo: coinsList.find(item => item.nameECG === collateralTokenDetails[1].result)?.logo,
+            logo: coinsList.find(
+              (item) => item.nameECG === collateralTokenDetails[1].result
+            )?.logo,
             decimals: collateralTokenDetails[0].result,
           },
           // collateral: collateralTokenDetails[1].result,
           // collateralAddress: log.collateralToken as Address,
           // collateralDecimals: collateralTokenDetails[0].result,
           interestRate: calculatedInterestRate,
-          borrowRatio: calculatedBorrowRatio,
+          borrowRatio: Number(formatUnits(calculatedBorrowRatio, 18)),
           debtCeiling: Number(formatUnits(data[1].result as bigint, 18)),
           currentDebt: Number(formatUnits(data[0].result as bigint, 18)),
           openingFee: Number(formatUnits(log.openingFee, 18)),
@@ -81,12 +82,7 @@ export const createLendingTermsSlice: StateCreator<LendingTermsSlice> = (set, ge
             Number(formatUnits(log.minPartialRepayPercent, 18)) * 100,
             4
           ),
-          status: log.status,
-          label: generateTermName(
-            collateralTokenDetails[1].result,
-            calculatedInterestRate,
-            calculatedBorrowRatio
-          ),
+          status: log.status
         }
       })
     )

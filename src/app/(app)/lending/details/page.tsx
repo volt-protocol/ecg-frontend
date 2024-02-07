@@ -1,10 +1,11 @@
 "use client"
 
-import { erc20ABI, useAccount, useContractReads } from "wagmi"
+import { useAccount, useReadContracts } from "wagmi"
 import Disconnected from "components/error/disconnected"
 import React, { useEffect, useState } from "react"
 import Card from "components/card"
 import {
+  ERC20PermitABI,
   TermABI,
   profitManagerContract,
   creditContract,
@@ -12,7 +13,7 @@ import {
   surplusGuildMinterContract,
   usdcContract,
 } from "lib/contracts"
-import { Address, readContract } from "@wagmi/core"
+import { readContract } from "@wagmi/core"
 import { preciseRound } from "utils/utils-old"
 import Myloans from "./components/MyLoans"
 import CreateLoan from "./components/CreateLoan"
@@ -28,10 +29,11 @@ import LendingStats from "./components/LendingStats"
 import { useAppStore } from "store"
 import { Tab } from "@headlessui/react"
 import clsx from "clsx"
-import { Abi, formatUnits } from "viem"
+import { Abi, formatUnits, erc20Abi, Address } from "viem"
 import { generateTermName } from "utils/strings"
 import { formatDecimal } from "utils/numbers"
 import { coinsList } from "store/slices/pair-prices"
+import { wagmiConfig } from "contexts/Web3Provider"
 
 const LendingDetails = () => {
   const { address, isConnected } = useAccount()
@@ -72,17 +74,48 @@ const LendingDetails = () => {
   }, [lendingTerms])
 
   /* Smart contract reads */
-  const { data, isError, isLoading, refetch } = useContractReads({
+  const { data, isError, isLoading, refetch } = useReadContracts({
     contracts: [
       {
         ...profitManagerContract,
         functionName: "creditMultiplier",
       },
+      {
+        ...usdcContract,
+        functionName: "balanceOf",
+        args: [address],
+      },
+      {
+        ...creditContract,
+        functionName: "balanceOf",
+        args: [address],
+      },
+      {
+        ...creditContract,
+        functionName: "nonces",
+        args: [address],
+      },
+      {
+        ...usdcContract,
+        functionName: "nonces",
+        args: [address],
+      },
+      {
+        ...profitManagerContract,
+        functionName: "minBorrow",
+      },
     ],
-    select: (data) => {
-      return {
-        creditMultiplier: data[0].result as bigint,
-      }
+    query: {
+      select: (data) => {
+        return {
+          creditMultiplier: data[0].result as bigint,
+          usdcBalance: data[1].result as bigint,
+          creditBalance: data[2].result as bigint,
+          gusdcNonces: data[3].result as bigint,
+          usdcNonces: data[4].result as bigint,
+          minBorrow: data[5].result as bigint,
+        }
+      },
     },
   })
   /* End Smart contract reads */
@@ -104,9 +137,9 @@ const LendingDetails = () => {
     }
 
     async function getTermsTotalCollateral() {
-      const result = await readContract({
+      const result = await readContract(wagmiConfig, {
         address: lendingTermData.collateral.address as Address,
-        abi: erc20ABI as Abi,
+        abi: erc20Abi as Abi,
         functionName: "balanceOf",
         args: [lendingTermData.address],
       })
@@ -132,7 +165,7 @@ const LendingDetails = () => {
   //fetch smart contract data
   useEffect(() => {
     async function guildUserGaugeWeight(): Promise<void> {
-      const result = await readContract({
+      const result = await readContract(wagmiConfig, {
         ...guildContract,
         functionName: "getUserGaugeWeight",
         args: [address, termAddress],
@@ -140,7 +173,7 @@ const LendingDetails = () => {
       setGuildUserGaugeWeight(result as bigint)
     }
     async function guildBalance(): Promise<void> {
-      const result = await readContract({
+      const result = await readContract(wagmiConfig, {
         ...guildContract,
         functionName: "balanceOf",
         args: [address],
@@ -149,7 +182,7 @@ const LendingDetails = () => {
       setGuildBalance(result as bigint)
     }
     async function getGuildAvailableToStake(): Promise<void> {
-      const result = await readContract({
+      const result = await readContract(wagmiConfig, {
         ...guildContract,
         functionName: "getUserWeight",
         args: [address],
@@ -158,7 +191,7 @@ const LendingDetails = () => {
     }
 
     async function getCreditAllocated(): Promise<void> {
-      const result = await readContract({
+      const result = await readContract(wagmiConfig, {
         ...surplusGuildMinterContract,
         functionName: "getUserStake",
         args: [address, termAddress],
@@ -167,7 +200,7 @@ const LendingDetails = () => {
     }
 
     async function getCreditdBalance(): Promise<void> {
-      const result = await readContract({
+      const result = await readContract(wagmiConfig, {
         ...creditContract,
         functionName: "balanceOf",
         args: [address],
@@ -188,21 +221,22 @@ const LendingDetails = () => {
       getCreditAllocated()
       getCreditdBalance()
       getGuildAvailableToStake()
-    }
-    else {
+    } else {
       setGuildUserGaugeWeight(undefined)
       setGuildBalance(undefined)
       setCreditAllocated(undefined)
       setCreditBalance(undefined)
     }
     getEventLoans()
+    //refect onchain data (!important for signatures)
+    refetch()
     setReload(false)
   }, [isConnected, reload])
 
   //fetch other smart contract data
   useEffect(() => {
     async function getDebtCeiling(): Promise<void> {
-      const result = await readContract({
+      const result = await readContract(wagmiConfig, {
         address: lendingTermData.address as Address,
         abi: TermABI,
         functionName: "debtCeiling",
@@ -211,7 +245,7 @@ const LendingDetails = () => {
     }
 
     async function getGaugeWeight(): Promise<void> {
-      const result = await readContract({
+      const result = await readContract(wagmiConfig, {
         ...guildContract,
         functionName: "getGaugeWeight",
         args: [lendingTermData.address],
@@ -220,7 +254,7 @@ const LendingDetails = () => {
     }
 
     async function getTotalWeight(): Promise<void> {
-      const result = await readContract({
+      const result = await readContract(wagmiConfig, {
         ...guildContract,
         functionName: "totalTypeWeight",
         args: [1],
@@ -228,7 +262,7 @@ const LendingDetails = () => {
       setTotalWeight(Number(formatUnits(result as bigint, 18)))
     }
     async function getCreditTotalSupply(): Promise<void> {
-      const result = await readContract({
+      const result = await readContract(wagmiConfig, {
         ...creditContract,
         functionName: "totalSupply",
         args: [],
@@ -236,14 +270,14 @@ const LendingDetails = () => {
       setCreditTotalSupply(Number(formatUnits(result as bigint, 18)))
     }
     async function getRationGUILDCREDIT() {
-      const ratio = await readContract({
+      const ratio = await readContract(wagmiConfig, {
         ...surplusGuildMinterContract,
         functionName: "mintRatio",
       })
       setRatioGuildCredit(Number(formatUnits(ratio as bigint, 18)))
     }
     async function getProfitSharing(): Promise<void> {
-      const result = await readContract({
+      const result = await readContract(wagmiConfig, {
         ...profitManagerContract,
         functionName: "getProfitSharingConfig",
       })
@@ -265,7 +299,7 @@ const LendingDetails = () => {
       }
     }
     async function getCurrentDebt(): Promise<void> {
-      const result = await readContract({
+      const result = await readContract(wagmiConfig, {
         address: lendingTermData.address as Address,
         abi: TermABI,
         functionName: "issuance",
@@ -288,7 +322,7 @@ const LendingDetails = () => {
     return <Disconnected />
   }
 
-  if (lendingTermData) {
+  if (lendingTermData && data) {
     return (
       <div>
         <div className="flex items-center gap-2">
@@ -296,7 +330,8 @@ const LendingDetails = () => {
             {generateTermName(
               lendingTermData.collateral.name,
               lendingTermData.interestRate,
-              lendingTermData.borrowRatio
+              lendingTermData.borrowRatio /
+                Number(formatUnits(data?.creditMultiplier, 18))
             )}
           </h3>
           <a
@@ -310,6 +345,7 @@ const LendingDetails = () => {
           </a>
         </div>
         <LendingStats
+          creditMultiplier={data?.creditMultiplier}
           lendingTermData={lendingTermData}
           currentDebt={currentDebt}
           debtCeilling={debtCeilling}
@@ -324,8 +360,13 @@ const LendingDetails = () => {
           <Card extra="order-1 w-full h-full sm:overflow-auto px-6 py-4" title="New Loan">
             <CreateLoan
               lendingTerm={lendingTermData}
-              availableDebt={debtCeilling - currentDebt}
+              availableDebt={
+                debtCeilling - currentDebt > 0 ? debtCeilling - currentDebt : 0
+              }
               creditMultiplier={data?.creditMultiplier}
+              usdcBalance={data?.usdcBalance}
+              gusdcNonces={data?.gusdcNonces}
+              minBorrow={Number(formatUnits(data?.minBorrow, 18))}
               reload={setReload}
             />
           </Card>
@@ -340,6 +381,11 @@ const LendingDetails = () => {
               collateralPrice={collateralPrice}
               pegPrice={pegPrice}
               reload={setReload}
+              creditMultiplier={data?.creditMultiplier}
+              usdcBalance={data?.usdcBalance}
+              creditBalance={data?.creditBalance}
+              usdcNonces={data?.usdcNonces}
+              minBorrow={data?.minBorrow}
             />
           </Card>
         </div>

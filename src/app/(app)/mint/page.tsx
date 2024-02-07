@@ -3,7 +3,7 @@
 import Disconnected from "components/error/disconnected"
 import React, { useEffect, useState } from "react"
 import Card from "components/card"
-import { Address, useAccount, useContractReads } from "wagmi"
+import { useAccount, useReadContracts } from "wagmi"
 import {
   CreditABI,
   ProfitManagerABI,
@@ -12,7 +12,7 @@ import {
   psmUsdcContract,
   usdcContract,
 } from "lib/contracts"
-import { waitForTransaction, writeContract } from "@wagmi/core"
+import { waitForTransactionReceipt, writeContract } from "@wagmi/core"
 import { formatDecimal } from "utils/numbers"
 import { toastError } from "components/toast"
 import MintOrRedeem from "./components/MintOrRedeem"
@@ -20,8 +20,8 @@ import { Step } from "components/stepLoader/stepType"
 import StepModal from "components/stepLoader"
 import clsx from "clsx"
 import { Switch } from "@headlessui/react"
-
-import { formatUnits } from "viem"
+import { formatUnits, Address } from "viem"
+import { wagmiConfig } from "contexts/Web3Provider"
 
 function MintAndSaving() {
   const { address, isConnected } = useAccount()
@@ -36,7 +36,7 @@ function MintAndSaving() {
   const [steps, setSteps] = useState<Step[]>(createSteps())
 
   /* Smart contract reads */
-  const { data, isError, isLoading, refetch } = useContractReads({
+  const { data, isError, isLoading, refetch } = useReadContracts({
     contracts: [
       {
         ...usdcContract,
@@ -67,26 +67,28 @@ function MintAndSaving() {
         functionName: "getProfitSharingConfig",
       },
     ],
-    select: (data) => {
-      return {
-        usdcBalance: Number(formatUnits(data[0].result as bigint, 6)),
-        creditBalance: Number(formatUnits(data[1].result as bigint, 18)),
-        conversionRate: Number(formatUnits(data[2].result as bigint, 18)),
-        usdcAvailableToRedeem: Number(formatUnits(data[3].result as bigint, 6)),
-        isRebasing: data[4].result as boolean,
-        creditSplit: formatDecimal(
-          Number(formatUnits(data[5].result[1] as bigint, 18)) * 100,
-          2
-        ),
-        guildSplit: formatDecimal(
-          Number(formatUnits(data[5].result[2] as bigint, 18)) * 100,
-          2
-        ),
-        surplusBufferSplit: formatDecimal(
-          Number(formatUnits(data[5].result[0] as bigint, 18)) * 100,
-          2
-        ),
-      }
+    query: {
+      select: (data) => {
+        return {
+          usdcBalance: Number(formatUnits(data[0].result as bigint, 6)),
+          creditBalance: Number(formatUnits(data[1].result as bigint, 18)),
+          conversionRate: Number(formatUnits(data[2].result as bigint, 18)),
+          usdcAvailableToRedeem: Number(formatUnits(data[3].result as bigint, 6)),
+          isRebasing: data[4].result as boolean,
+          creditSplit: formatDecimal(
+            Number(formatUnits(data[5].result[1] as bigint, 18)) * 100,
+            2
+          ),
+          guildSplit: formatDecimal(
+            Number(formatUnits(data[5].result[2] as bigint, 18)) * 100,
+            2
+          ),
+          surplusBufferSplit: formatDecimal(
+            Number(formatUnits(data[5].result[0] as bigint, 18)) * 100,
+            2
+          ),
+        }
+      },
     },
   })
 
@@ -112,11 +114,12 @@ function MintAndSaving() {
       setShowModal(true)
       updateStepStatus("Rebasing", "In Progress")
 
-      const { hash } = await writeContract({
+      const hash = await writeContract(wagmiConfig, {
         ...creditContract,
         functionName: rebaseMode,
       })
-      const checkStartSaving = await waitForTransaction({
+
+      const checkStartSaving = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
       })
       if (checkStartSaving.status != "success") {
@@ -195,7 +198,9 @@ function MintAndSaving() {
                   Your current gUSDC Balance :
                   <span className="font-semibold">
                     {" "}
-                    {data.creditBalance === undefined ? "-" : formatDecimal(data.creditBalance, 2)}
+                    {data.creditBalance === undefined
+                      ? "-"
+                      : formatDecimal(data.creditBalance, 2)}
                   </span>
                 </p>
                 <p>
@@ -214,6 +219,7 @@ function MintAndSaving() {
               creditBalance={data.creditBalance}
               conversionRate={data.conversionRate}
               usdcAvailableToRedeem={data.usdcAvailableToRedeem}
+              isRebasing={data.isRebasing}
             />
           </Card>
         </div>

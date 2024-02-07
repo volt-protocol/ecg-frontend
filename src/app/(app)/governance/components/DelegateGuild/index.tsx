@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from "react"
-import { Address, readContract, waitForTransaction, writeContract } from "@wagmi/core"
+import {
+  Address,
+  readContract,
+  waitForTransactionReceipt,
+  writeContract,
+} from "@wagmi/core"
 import { toastError, toastRocket } from "components/toast"
 import { GuildABI, guildContract } from "lib/contracts"
 import { DecimalToUnit, UnitToDecimal, preciseRound } from "utils/utils-old"
@@ -22,6 +27,7 @@ import { formatDecimal } from "utils/numbers"
 import { formatUnits, isAddress, parseEther } from "viem"
 import ButtonPrimary from "components/button/ButtonPrimary"
 import DefiInputBox from "components/box/DefiInputBox"
+import { wagmiConfig } from "contexts/Web3Provider"
 
 interface Delegatee {
   address: string
@@ -70,7 +76,7 @@ function DelegateGuild({
   }
 
   async function getDelegatee(): Promise<string[]> {
-    const result = await readContract({
+    const result = await readContract(wagmiConfig, {
       ...guildContract,
       functionName: "delegates",
       args: [userAddress],
@@ -82,7 +88,7 @@ function DelegateGuild({
     const tempDelegatees: Delegatee[] = []
 
     async function getDelegateeAndVotes(delegatee: string): Promise<void> {
-      const result = await readContract({
+      const result = await readContract(wagmiConfig, {
         ...guildContract,
         functionName: "delegatesVotesCount",
         args: [userAddress, delegatee],
@@ -132,13 +138,13 @@ function DelegateGuild({
       setSteps(createSteps("Delegate"))
       updateStepStatus("Delegate GUILD", "In Progress")
 
-      const { hash } = await writeContract({
+      const hash = await writeContract(wagmiConfig, {
         ...guildContract,
         functionName: "incrementDelegation",
         args: [addressValue, parseEther(value.toString())],
       })
 
-      const checkdelegate = await waitForTransaction({
+      const checkdelegate = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
       })
 
@@ -170,13 +176,13 @@ function DelegateGuild({
     try {
       setShowModal(true)
       updateStepStatus("Undelegate GUILD", "In Progress")
-      const { hash } = await writeContract({
+      const hash = await writeContract(wagmiConfig, {
         ...guildContract,
         functionName: "undelegate",
         args: [address, amount],
       })
 
-      const checkdelegate = await waitForTransaction({
+      const checkdelegate = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
       })
 
@@ -288,65 +294,66 @@ function DelegateGuild({
           </p>
         </div>
 
-        <DefiInputBox
-          topLabel="Delegate GUILD to"
-          placeholder="0x..."
-          pattern="^[0-9a-fA-F]$"
-          inputSize="text-xl"
-          value={addressValue as Address}
-          onChange={(e) => setAddressValue(e.target.value as Address)}
-          rightLabel={
-            <button
-              className="text-sm font-medium text-brand-500 hover:text-brand-400"
-              onClick={(e) => setAddressValue(address as Address)}
-            >
-              Delegate to myself
-            </button>
-          }
-        />
-
-        <DefiInputBox
-          topLabel="Amount of GUILD you delegate"
-          currencyLogo="/img/crypto-logos/guild.png"
-          currencySymbol="GUILD"
-          placeholder="0"
-          pattern="^[0-9]*[.,]?[0-9]*$"
-          inputSize="text-2xl sm:text-3xl"
-          value={value}
-          onChange={handleInputChange}
-          rightLabel={
-            <>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Available:{" "}
-                {guildNotUsed
-                  ? formatDecimal(Number(formatUnits(guildNotUsed, 18)), 2)
-                  : 0}
-              </p>
+        <div className="flex flex-col gap-2">
+          <DefiInputBox
+            topLabel="Delegate GUILD to"
+            placeholder="0x..."
+            pattern="^[0-9a-fA-F]$"
+            inputSize="text-xl"
+            value={addressValue as Address}
+            onChange={(e) => setAddressValue(e.target.value as Address)}
+            rightLabel={
               <button
                 className="text-sm font-medium text-brand-500 hover:text-brand-400"
-                onClick={(e) => setValue(formatUnits(guildNotUsed, 18))}
+                onClick={(e) => setAddressValue(address as Address)}
               >
-                Max
+                Delegate to myself
               </button>
-            </>
-          }
-        />
+            }
+          />
 
-        <ButtonPrimary
-          variant="lg"
-          title="Delegate GUILD"
-          titleDisabled={getTitleDisabled(Number(value), addressValue, guildNotUsed)}
-          extra="w-full mt-2 !rounded-xl"
-          onClick={handleDelegate}
-          disabled={
-            !guildNotUsed ||
-            Number(value) > Number(formatUnits(guildNotUsed, 18)) ||
-            Number(value) <= 0 ||
-            !value ||
-            !isAddress(addressValue)
-          }
-        />
+          <DefiInputBox
+            topLabel="Amount of GUILD you delegate"
+            currencyLogo="/img/crypto-logos/guild.png"
+            currencySymbol="GUILD"
+            placeholder="0"
+            pattern="^[0-9]*[.,]?[0-9]*$"
+            inputSize="text-2xl sm:text-3xl"
+            value={value}
+            onChange={handleInputChange}
+            rightLabel={
+              <>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Available:{" "}
+                  {guildNotUsed
+                    ? formatDecimal(Number(formatUnits(guildNotUsed, 18)), 2)
+                    : 0}
+                </p>
+                <button
+                  className="text-sm font-medium text-brand-500 hover:text-brand-400"
+                  onClick={(e) => setValue(formatUnits(guildNotUsed, 18))}
+                >
+                  Max
+                </button>
+              </>
+            }
+          />
 
+          <ButtonPrimary
+            variant="lg"
+            title="Delegate GUILD"
+            titleDisabled={getTitleDisabled(Number(value), addressValue, guildNotUsed)}
+            extra="w-full mt-1 !rounded-xl"
+            onClick={handleDelegate}
+            disabled={
+              !guildNotUsed ||
+              Number(value) > Number(formatUnits(guildNotUsed, 18)) ||
+              Number(value) <= 0 ||
+              !value ||
+              !isAddress(addressValue)
+            }
+          />
+        </div>
         <div>
           {isLoadingDelegations ? (
             <div className="mt-4 flex flex-grow flex-col items-center justify-center gap-2">

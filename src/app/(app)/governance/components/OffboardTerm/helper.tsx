@@ -15,15 +15,3 @@ export const isActivePoll = (timestamp: number, nbBlock: number): boolean => {
   }
   return false
 }
-
-//get the right issuance for the term contract. Issuances are fetched in the useContractReads hook
-export const mapContractToIssuance = (
-  termAddress: Address,
-  issuances: number[],
-  lendingTerms: LendingTerms[]
-): number => {
-  //get key of termAddress in lendingTerms
-  const termIndex = lendingTerms.findIndex((term) => term.address === termAddress)
-
-  return issuances[termIndex]
-}

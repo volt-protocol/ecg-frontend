@@ -1,14 +1,16 @@
 import { getPublicClient, getWalletClient } from "@wagmi/core"
-import { Address, readContract } from "@wagmi/core"
+import { readContract } from "@wagmi/core"
+import { wagmiConfig } from "contexts/Web3Provider"
 import { TermABI } from "lib/contracts"
 import { LoansObj, loanObj, loanObjCall } from "types/lending"
 import { FROM_BLOCK } from "utils/constants"
+import { Address } from "viem"
 
 //get all open loans logs from a lending term contract
 export async function getOpenLoanLogs(address: Address, borrower?: Address) {
-  const currentBlock = await getPublicClient().getBlockNumber()
+  const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber()
 
-  const openLogs = await getPublicClient().getLogs({
+  const openLogs = await getPublicClient(wagmiConfig).getLogs({
     address: address,
     event: {
       type: "event",
@@ -30,6 +32,7 @@ export async function getOpenLoanLogs(address: Address, borrower?: Address) {
 
   return openLogs.map((log) => {
     return {
+      termAddress: address,
       ...log.args,
       block: log.blockNumber,
       userAddress: log.args.borrower,
@@ -43,9 +46,9 @@ export async function getOpenLoanLogs(address: Address, borrower?: Address) {
 
 //get all closed loans  logs (fully repaid) from a lending term contract
 export async function getCloseLoanLogs(address: Address) {
-  const currentBlock = await getPublicClient().getBlockNumber()
+  const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber()
 
-  const closeLogs = await getPublicClient().getLogs({
+  const closeLogs = await getPublicClient(wagmiConfig).getLogs({
     address: address,
     event: {
       type: "event",
@@ -63,6 +66,7 @@ export async function getCloseLoanLogs(address: Address) {
   
   return closeLogs.map((log) => {
     return {
+      termAddress: address,
       ...log.args,
       block: log.blockNumber,
       userAddress: log.address,
@@ -114,7 +118,7 @@ export async function getActiveLoanDetails(address: Address) {
   const uniqueOpenLogs = await getActiveLoanLogs(address)
 
   for (const log of uniqueOpenLogs) {
-    const loan = await readContract({
+    const loan = await readContract(wagmiConfig, {
       address: address,
       abi: TermABI,
       functionName: "getLoan",

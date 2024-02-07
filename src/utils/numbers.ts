@@ -1,3 +1,5 @@
+import { parseUnits } from "viem"
+
 // Add 2 decimal to number < 1000
 export const formatNumberDecimal = (value: number): string => {
   let decimals = value > 1000 ? 0 : 2
@@ -6,21 +8,11 @@ export const formatNumberDecimal = (value: number): string => {
   return (Math.round(value * factor) / factor).toFixed(decimals)
 }
 
+// Set the number of decimals
 export const formatDecimal = (value: number, decimals: number): string => {
   const factor = Math.pow(10, decimals)
   return value != 0 ? (Math.round(value * factor) / factor).toFixed(decimals) : '0'
 }
-
-export const decimalToUnit = (number:number, decimals:number):number => {
-  const divider = BigInt(Math.pow(10, decimals));
-  return Number(number) / Number(divider);
-}
-
-export const parseToUnit = (number:number, decimals:number):number => {
-  const multiplier = BigInt(Math.pow(10, decimals));
-  return Number(number) * Number(multiplier);
-}
-
 
 export const formatCurrencyValue = (value: number): string => {
   if (value === undefined) {
@@ -35,6 +27,11 @@ export const formatCurrencyValue = (value: number): string => {
   return value.toString();
 }
 
-export const ucFirst = (string: string): string => {
-  return string.charAt(0).toUpperCase() + string.slice(1);
+// Convert USDC to gUSDC (1 USDC = 1e30 * gUSDC / creditMultiplier)
+export const gUsdcToUsdc = (value: bigint, creditMultiplier: bigint): bigint => {
+  return value * creditMultiplier / parseUnits('1', 30)
+}
+
+export const usdcToGUsdc = (value: bigint, creditMultiplier: bigint): bigint => {
+  return value * parseUnits('1', 30) / creditMultiplier 
 }

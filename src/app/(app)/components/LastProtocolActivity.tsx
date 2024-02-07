@@ -9,17 +9,16 @@ import {
 import CustomTable from "components/table/CustomTable"
 import moment from "moment"
 import { formatDecimal } from "utils/numbers"
-import {
-  MdArrowDownward,
-  MdArrowUpward,
-  MdOpenInNew,
-} from "react-icons/md"
+import { MdArrowDownward, MdArrowUpward, MdOpenInNew } from "react-icons/md"
 import { fromNow } from "utils/date"
 import { BLOCK_LENGTH_MILLISECONDS } from "utils/constants"
 import { MintRedeemLogs } from "lib/logs/mint-redeem"
 import { VoteLogs } from "lib/logs/votes"
 import { addSlash, camelCasetoString } from "utils/strings"
 import { getLastVoteEventDescription } from "../profile/helper"
+import { AddressBadge } from "components/badge/AddressBadge"
+import { Address } from "viem"
+import { TransactionBadge } from "components/badge/TransactionBadge"
 
 export type LastActivitiesLogs = MintRedeemLogs | VoteLogs
 
@@ -35,7 +34,7 @@ export const LastProtocolActivity = ({
   const getDescription = (event: LastActivitiesLogs): any => {
     if (event.category === "mintRedeem") {
       return (
-        <div className="ml-4 text-sm inline-flex items-center gap-1">
+        <div className="ml-4 inline-flex items-center gap-1 text-sm">
           {event.type == "Mint" ? (
             <MdArrowUpward className="inline-block h-4 w-4 text-green-500" />
           ) : (
@@ -52,10 +51,10 @@ export const LastProtocolActivity = ({
       return getLastVoteEventDescription(event)
     }
 
-    if(event.category == 'loan') {
-      return event.type == 'opening' ? 
-        'Openned loan #'+event.loanId.slice(0, 6) + "..." + event.loanId.slice(-4) :
-        'Closed loan #'+event.loanId.slice(0, 6) + "..." + event.loanId.slice(-4)
+    if (event.category == "loan") {
+      return event.type == "opening"
+        ? "Opened loan #" + event.loanId.slice(0, 6) + "..." + event.loanId.slice(-4)
+        : "Closed loan #" + event.loanId.slice(0, 6) + "..." + event.loanId.slice(-4)
     }
   }
 
@@ -66,20 +65,11 @@ export const LastProtocolActivity = ({
     columnHelper.accessor("userAddress", {
       id: "userAddress",
       header: "Wallet",
-      cell: (info) => {
-        return (
-          <a
-            className="text-sm text-brand-500 hover:text-brand-400"
-            target="_blank"
-            href={
-              process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS + "/" + info.getValue()
-            }
-          >
-            {info.getValue().slice(0, 6) + "..." + info.getValue().slice(-4)}
-            <MdOpenInNew className="ml-1.5 inline-block h-4 w-4" />
-          </a>
-        )
-      },
+      cell: (info) => (
+        <div className="flex justify-center">
+          <AddressBadge address={info.getValue()} />
+        </div>
+      ),
     }),
     columnHelper.accessor("category", {
       id: "category",
@@ -87,11 +77,23 @@ export const LastProtocolActivity = ({
       enableSorting: true,
       cell: (info) => {
         return (
-          <span className="inline-flex items-center gap-x-1.5 rounded-md bg-gray-100 dark:bg-navy-600 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-100">
+          <span className="inline-flex items-center gap-x-1.5 rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-navy-600 dark:text-gray-100">
             {addSlash(camelCasetoString(info.getValue()))}
           </span>
         )
       },
+    }),
+    columnHelper.accessor("termAddress", {
+      id: "termAddress",
+      header: "Lending Term",
+      cell: (info) =>
+        info.getValue() ? (
+          <div className="flex justify-center">
+            <AddressBadge address={info.getValue() as Address} />
+          </div>
+        ) : (
+          "-"
+        ),
     }),
     columnHelper.accessor("type", {
       id: "type",
@@ -99,7 +101,7 @@ export const LastProtocolActivity = ({
       enableSorting: true,
       cell: (info) => {
         return (
-          <span className="inline-flex items-center gap-x-1.5 text-sm ">
+          <span className="inline-flex items-center gap-x-1.5 text-sm">
             {getDescription(info.row.original)}
           </span>
         )
@@ -129,18 +131,11 @@ export const LastProtocolActivity = ({
       id: "txHash",
       header: "Transaction",
       enableSorting: true,
-      cell: (info) => {
-        return (
-          <a
-            className="text-sm text-brand-500 hover:text-brand-400"
-            target="_blank"
-            href={process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_TX + "/" + info.getValue()}
-          >
-            {info.getValue().slice(0, 6) + "..." + info.getValue().slice(-4)}
-            <MdOpenInNew className="ml-1.5 inline-block h-4 w-4" />
-          </a>
-        )
-      },
+      cell: (info) => (
+        <div className="flex justify-center">
+          <TransactionBadge txHash={info.getValue()} />
+        </div>
+      ),
     }),
   ]
 

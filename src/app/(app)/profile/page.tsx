@@ -23,6 +23,7 @@ import { MintRedeemLogs, getAllMintRedeemLogs } from "lib/logs/mint-redeem"
 import { shortenAddress, underscoreToString } from "utils/strings"
 import Disconnected from "components/error/disconnected"
 import { LoansObj } from "types/lending"
+import { wagmiConfig } from "contexts/Web3Provider"
 
 const UserDashboard = () => {
   const searchParams = useSearchParams()
@@ -99,7 +100,7 @@ const UserDashboard = () => {
     let lastVotes = []
     let lastMints = []
 
-    const currentBlockData = await getPublicClient().getBlockNumber()
+    const currentBlockData = await getPublicClient(wagmiConfig).getBlockNumber()
     setCurrentBlock(currentBlockData)
 
     const existingUserData = userData.find((user) => user.address == userAddress)

@@ -6,54 +6,60 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-  columnHelper,
   createColumnHelper,
 } from "@tanstack/react-table"
-import { Address, readContract, waitForTransaction, writeContract } from "@wagmi/core"
-import { TermABI, CreditABI, creditContract } from "lib/contracts"
+import { readContract, waitForTransactionReceipt, writeContract } from "@wagmi/core"
+import { TermABI, creditContract, usdcContract, gatewayContract } from "lib/contracts"
 import { preciseRound, secondsToAppropriateUnit, UnitToDecimal } from "utils/utils-old"
-import { toastError, toastRocket } from "components/toast"
-import { LendingTerms, LoansObj, loanObj } from "types/lending"
+import { LendingTerms, loanObj } from "types/lending"
 import { useAccount } from "wagmi"
 import { Step } from "components/stepLoader/stepType"
-import { MdOutlineError, MdWarning } from "react-icons/md"
-import { formatDecimal } from "utils/numbers"
-import Link from "next/link"
-import { FaSlideshare, FaSort, FaSortDown, FaSortUp } from "react-icons/fa"
-import { formatUnits, parseEther } from "viem"
-import { shortenAddress, shortenUint } from "utils/strings"
+import { MdChevronLeft, MdChevronRight, MdOutlineError, MdWarning } from "react-icons/md"
+import { formatDecimal, gUsdcToUsdc, usdcToGUsdc } from "utils/numbers"
+import { FaSort, FaSortDown, FaSortUp } from "react-icons/fa"
+import { Address, formatUnits, parseEther, parseUnits } from "viem"
 import clsx from "clsx"
-import { Modal } from "flowbite-react"
 import ModalRepay from "./ModalRepay"
 import StepModal from "components/stepLoader"
 import Spinner from "components/spinner"
+import { wagmiConfig } from "contexts/Web3Provider"
+import { ItemIdBadge } from "components/badge/ItemIdBadge"
+import { signPermit } from "lib/transactions/signPermit"
+import moment, { min } from "moment"
+import { simpleRepay } from "./helper/simpleRepay"
+import { getMulticallsDecoded } from "lib/transactions/getMulticallsDecoded"
+import { HOURS_IN_YEAR } from "utils/constants"
 
 function Myloans({
   lendingTerm,
   isLoadingEventLoans,
   tableData,
   collateralPrice,
+  creditMultiplier,
   pegPrice,
+  usdcBalance,
+  creditBalance,
+  usdcNonces,
   reload,
+  minBorrow
 }: {
   lendingTerm: LendingTerms
   isLoadingEventLoans: boolean
   tableData: loanObj[]
   collateralPrice: number
+  creditMultiplier: bigint
   pegPrice: number
+  usdcBalance: bigint
+  creditBalance: bigint
+  usdcNonces: bigint
+  minBorrow: bigint
   reload: React.Dispatch<React.SetStateAction<boolean>>
 }) {
-  const inputRefs = React.useRef<{
-    [key: string]: React.RefObject<HTMLInputElement>
-  }>({})
-
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const [loading, setLoading] = React.useState(false)
   const { address } = useAccount()
   const [showModal, setShowModal] = useState(false)
   const [tableDataWithDebts, setTableDataWithDebts] = useState<loanObj[]>([])
   const [repays, setRepays] = React.useState<Record<string, number>>({})
-  const [creditBalance, setCreditBalance] = useState<number>(0)
   const [open, setOpen] = useState<boolean>(false)
   const [selectedRow, setSelectedRow] = useState<loanObj>()
 
@@ -61,7 +67,7 @@ function Myloans({
     tableDataWithDebts.filter(
       (loan) =>
         // loan.status !== "closed" &&
-        loan.callTime === BigInt(0) &&
+        loan.callTime === 0 &&
         loan.borrowAmount + loan.loanDebt !== BigInt(0) &&
         loan.borrower === address
     )
@@ -69,10 +75,28 @@ function Myloans({
 
   const createSteps = (): Step[] => {
     const baseSteps = [
-      { name: "Approve", status: "Not Started" },
-      { name: "Partial Repay", status: "Not Started" },
+      { name: "Sign Permit for USDC", status: "Not Started" },
+      { name: "Partial Repay (Multicall)", status: "Not Started" },
     ]
     return baseSteps
+  }
+
+  function updateStepName(oldName: string, newName: string) {
+    setSteps((prevSteps) =>
+      prevSteps.map((step) => (step.name === oldName ? { ...step, name: newName } : step))
+    )
+  }
+
+  const updateStepStatus = (
+    stepName: string,
+    status: Step["status"],
+    description?: any[]
+  ) => {
+    setSteps((prevSteps) =>
+      prevSteps.map((step) =>
+        step.name === stepName ? { ...step, status, description: description } : step
+      )
+    )
   }
 
   const [steps, setSteps] = useState<Step[]>(createSteps())
@@ -90,18 +114,18 @@ function Myloans({
     const fetchRepays = async () => {
       const newRepays: Record<string, number> = {}
       for (let loan of tableData) {
-        newRepays[loan.id] = await lastPartialRepay(loan.id)
+        const loanDetails = await getLoan(loan.id)
+        newRepays[loan.id] = loanDetails.lastPartialRepay
       }
       setRepays(newRepays)
     }
 
     fetchRepays()
     fetchLoanDebts()
-    getCreditBalance()
   }, [tableData, reload])
 
   async function getLoanDebt(loanId: string): Promise<bigint> {
-    const result = await readContract({
+    const result = await readContract(wagmiConfig, {
       address: lendingTerm.address as Address,
       abi: TermABI,
       functionName: "getLoanDebt",
@@ -111,129 +135,22 @@ function Myloans({
     return result as bigint
   }
 
-  async function getCreditBalance(): Promise<void> {
-    const result = await readContract({
-      ...creditContract,
-      functionName: "balanceOf",
-      args: [address],
-    })
-    setCreditBalance(Number(formatUnits(result as bigint, 18)))
-  }
-
-  async function lastPartialRepay(id: string): Promise<number> {
-    const response = await readContract({
+  async function getLoan(id: string): Promise<any> {
+    const response = await readContract(wagmiConfig, {
       address: lendingTerm.address as Address,
       abi: TermABI,
-      functionName: "lastPartialRepay",
+      functionName: "getLoan",
       args: [id],
     })
-    return Number(response)
+    return response
   }
-
-  // function RepayCell({ original }: { original: loanObj }) {
-  //   const [inputValue, setInputValue] = useState("")
-  //   const [match, setMatch] = useState<boolean>(false)
-
-  //   if (!inputRefs.current[original.id]) {
-  //     inputRefs.current[original.id] = React.createRef()
-  //   }
-
-  //   useEffect(() => {
-  //     setMatch(
-  //       Number(inputValue) >=
-  //         Number(preciseRound(Number(formatUnits(original.loanDebt, 18)), 2))
-  //     )
-  //   }, [inputValue, original.borrowAmount])
-
-  //   return (
-  //     <div className="flex flex-col items-center space-y-2">
-  //       <div className="text-sm">
-  //         Balance:{" "}
-  //         <span className="font-semibold">
-  //           {creditBalance != undefined ? formatDecimal(creditBalance, 2) : "?"} gUSDC
-  //         </span>
-  //         {" -"}
-  //         <a
-  //           className="ml-1 cursor-pointer text-brand-500 hover:text-brand-400"
-  //           onClick={() =>
-  //             setInputValue(preciseRound(Number(formatUnits(original.loanDebt, 18)), 2))
-  //           }
-  //         >
-  //           Full Repay
-  //         </a>
-  //       </div>
-  //       <input
-  //         type="number"
-  //         ref={inputRefs.current[original.id]}
-  //         value={inputValue}
-  //         onChange={(e) => {
-  //           if (Number(e.target.value) >= Number(formatUnits(original.loanDebt, 18)))
-  //             setInputValue(preciseRound(Number(formatUnits(original.loanDebt, 18)), 2))
-  //           else setInputValue(e.target.value)
-  //         }}
-  //         className="block rounded-md border border-gray-300 py-3 pl-7 pr-12 text-gray-800 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:border-brand-400/80 focus:!ring-0 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-50 sm:text-lg sm:leading-6"
-  //         placeholder="0"
-  //       />
-  //       {/* 
-  //       <DefiInputBox
-  //         topLabel={"Amount of gUSDC to repay"}
-  //         currencyLogo="/img/crypto-logos/credit.png"
-  //         currencySymbol="gUSDC"
-  //         placeholder="0"
-  //         pattern="^[0-9]*[.,]?[0-9]*$"
-  //         inputSize="text-xl xl:text-3xl"
-  //         value={inputValue}
-  //         onChange={(e) => {
-  //           if (Number(e.target.value) >= formatUnits(original.loanDebt, 18))
-  //             setInputValue(preciseRound(formatUnits(original.loanDebt, 18), 2))
-  //           else setInputValue(e.target.value)
-  //         }}
-  //         rightLabel={
-  //           <>
-  //             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-  //               Balance: {formatDecimal(creditBalance, 2)}
-  //             </p>
-  //           </>
-  //         }
-  //         ref={inputRefs.current[original.id]}
-  //       /> */}
-
-  //       <button
-  //         disabled={!inputValue || Number(inputValue) > Number(creditBalance)}
-  //         onClick={() =>
-  //           match
-  //             ? repay(
-  //                 original.id,
-  //                 original.loanDebt + (original.loanDebt * BigInt(5)) / BigInt(10000000)
-  //               )
-  //             : partialRepay(original.id)
-  //         }
-  //         className={`mb-2 mr-2 mt-4 flex min-w-[9rem] cursor-pointer items-center justify-center rounded-md bg-brand-500 bg-gradient-to-br px-4 py-2 font-semibold text-white transition-all duration-150 ease-in-out hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-700 dark:disabled:bg-navy-900 dark:disabled:text-navy-400`}
-  //       >
-  //         {match ? "Repay" : "Partial Repay"}
-  //       </button>
-  //       {Number(inputValue) > Number(creditBalance) && (
-  //         <div className="my-4 flex items-center justify-center gap-x-3 rounded-md bg-amber-100 px-2.5 py-1.5 text-sm text-amber-500/90 dark:bg-amber-100/0 dark:text-amber-500">
-  //           <MdWarning className="h-5 w-5" />
-  //           <p>
-  //             You do not have enought gUSDC. Go to{" "}
-  //             <Link href="/mint" className="font-bold">
-  //               Mint & Saving
-  //             </Link>{" "}
-  //             to mint new gUSDCs.
-  //           </p>
-  //         </div>
-  //       )}
-  //     </div>
-  //   )
-  // }
 
   useEffect(() => {
     setData(
       tableDataWithDebts.filter(
         (loan) =>
           // loan.status !== "closed" &&
-          loan.callTime === BigInt(0) &&
+          loan.callTime === 0 &&
           loan.borrowAmount + loan.loanDebt !== BigInt(0) &&
           loan.borrower === address
       )
@@ -241,77 +158,177 @@ function Myloans({
   }, [tableDataWithDebts])
 
   /* Smart contract writes */
-  function updateStepName(oldName: string, newName: string) {
-    setSteps((prevSteps) =>
-      prevSteps.map((step) => (step.name === oldName ? { ...step, name: newName } : step))
-    )
-  }
-
   async function partialRepay(loanId: string, value: string) {
     setOpen(false)
 
-    if (Number(value) <= 0 || Number(value) === null || Number(value) === undefined) {
-      setLoading(false)
-      return toastError("Please enter a value")
-    }
+    let signatureUSDC: any
 
-    const updateStepStatus = (stepName: string, status: Step["status"]) => {
-      setSteps((prevSteps) =>
-        prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step))
-      )
-    }
+    const usdcAmount = parseUnits(value, 6)
+    const debtToRepay = usdcToGUsdc(
+      usdcAmount,
+      tableDataWithDebts.find((item) => item.id == loanId)
+        .borrowCreditMultiplier as bigint
+    )
 
+    setShowModal(true)
+
+    /* Sign permit on USDC for Gateway*/
     try {
-      setShowModal(true)
-      updateStepStatus("Approve", "In Progress")
-      const approve = await writeContract({
-        address: process.env.NEXT_PUBLIC_ERC20_CREDIT_ADDRESS,
-        abi: CreditABI,
-        functionName: "approve",
-        args: [lendingTerm.address, parseEther(value)],
+      updateStepStatus(`Sign Permit for USDC`, "In Progress")
+
+      signatureUSDC = await signPermit({
+        contractAddress: usdcContract.address,
+        erc20Name: "ECG Testnet USDC",
+        ownerAddress: address,
+        spenderAddress: gatewayContract.address as Address,
+        value: usdcAmount,
+        deadline: BigInt(Number(moment().add(10, "seconds"))),
+        nonce: usdcNonces,
+        chainId: wagmiConfig.chains[0].id,
+        permitVersion: "1",
       })
 
-      const data = await waitForTransaction({
-        hash: approve.hash,
-      })
-
-      if (data.status != "success") {
-        updateStepStatus("Approve", "Error")
+      if (!signatureUSDC) {
+        updateStepStatus(`Sign Permit for USDC`, "Error")
         return
       }
-      updateStepStatus("Approve", "Success")
+      updateStepStatus(`Sign Permit for USDC`, "Success")
     } catch (e) {
       console.log(e)
-      updateStepStatus("Approve", "Error")
+      updateStepStatus(`Sign Permit for USDC`, "Error")
       return
     }
 
+    /* Call gateway.multicall() */
     try {
-      updateStepStatus("Partial Repay", "In Progress")
-      const { hash } = await writeContract({
-        address: lendingTerm.address,
-        abi: TermABI,
-        functionName: "partialRepay",
-        args: [loanId, parseEther(value)],
+      //build multicall
+      const calls = simpleRepay(
+        "partial",
+        lendingTerm,
+        loanId,
+        usdcAmount,
+        debtToRepay,
+        signatureUSDC
+      )
+
+      //get description of calls in multicall
+      const callsDescription = getMulticallsDecoded(calls, lendingTerm)
+      updateStepStatus(`Partial Repay (Multicall)`, "In Progress", callsDescription)
+
+      const hash = await writeContract(wagmiConfig, {
+        ...gatewayContract,
+        functionName: "multicall",
+        args: [calls],
       })
 
-      const checkPartialPay = await waitForTransaction({
+      const checkBorrow = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
       })
 
-      if (checkPartialPay.status === "success") {
-        updateStepStatus("Partial Repay", "Success")
+      if (checkBorrow.status === "success") {
         reload(true)
+        updateStepStatus("Partial Repay (Multicall)", "Success")
+        return
       } else {
-        updateStepStatus("Partial Repay", "Error")
+        updateStepStatus("Partial Repay (Multicall)", "Error")
       }
+
+      updateStepStatus(`Partial Repay (Multicall)`, "Success")
     } catch (e) {
-      updateStepStatus("Partial Repay", "Error")
       console.log(e)
+      updateStepStatus("Partial Repay (Multicall)", "Error")
+      return
     }
   }
 
-  async function repay(loanId: string, borrowCredit: bigint) {
+  async function repay(loanId: string) {
+    setOpen(false)
+    updateStepName("Partial Repay (Multicall)", "Repay (Multicall)")
+
+    let signatureUSDC: any
+
+    const debtToRepay = tableDataWithDebts.find((item) => item.id == loanId).loanDebt
+    const hourlyFees =
+      (parseUnits(lendingTerm.interestRate.toString(), 2) * debtToRepay) /
+      BigInt(100) /
+      BigInt(HOURS_IN_YEAR)
+    const usdcAmountToApprove = gUsdcToUsdc(
+      tableDataWithDebts.find((item) => item.id == loanId).loanDebt + hourlyFees,
+      creditMultiplier
+    )
+
+    setShowModal(true)
+
+    /* Sign permit on USDC for Gateway*/
+    try {
+      updateStepStatus(`Sign Permit for USDC`, "In Progress")
+
+      signatureUSDC = await signPermit({
+        contractAddress: usdcContract.address,
+        erc20Name: "ECG Testnet USDC",
+        ownerAddress: address,
+        spenderAddress: gatewayContract.address as Address,
+        value: usdcAmountToApprove,
+        deadline: BigInt(Number(moment().add(10, "seconds"))),
+        nonce: usdcNonces,
+        chainId: wagmiConfig.chains[0].id,
+        permitVersion: "1",
+      })
+
+      if (!signatureUSDC) {
+        updateStepStatus(`Sign Permit for USDC`, "Error")
+        return
+      }
+      updateStepStatus(`Sign Permit for USDC`, "Success")
+    } catch (e) {
+      console.log(e)
+      updateStepStatus(`Sign Permit for USDC`, "Error")
+      return
+    }
+
+    /* Call gateway.multicall() */
+    try {
+      //build multicall
+      const calls = simpleRepay(
+        "full",
+        lendingTerm,
+        loanId,
+        usdcAmountToApprove,
+        tableDataWithDebts.find((item) => item.id == loanId).loanDebt + hourlyFees,
+        signatureUSDC
+      )
+
+      //get description of calls in multicall
+      const callsDescription = getMulticallsDecoded(calls, lendingTerm)
+      updateStepStatus(`Repay (Multicall)`, "In Progress", callsDescription)
+
+      const hash = await writeContract(wagmiConfig, {
+        ...gatewayContract,
+        functionName: "multicall",
+        args: [calls],
+      })
+
+      const checkBorrow = await waitForTransactionReceipt(wagmiConfig, {
+        hash: hash,
+      })
+
+      if (checkBorrow.status === "success") {
+        reload(true)
+        updateStepStatus("Repay (Multicall)", "Success")
+        return
+      } else {
+        updateStepStatus("Repay (Multicall)", "Error")
+      }
+
+      updateStepStatus(`Repay (Multicall)`, "Success")
+    } catch (e) {
+      console.log(e)
+      updateStepStatus("Repay (Multicall)", "Error")
+      return
+    }
+  }
+
+  async function repay2(loanId: string, borrowCredit: bigint) {
     setOpen(false)
 
     const updateStepStatus = (stepName: string, status: Step["status"]) => {
@@ -325,14 +342,14 @@ function Myloans({
     try {
       setShowModal(true)
       updateStepStatus("Approve", "In Progress")
-      const approve = await writeContract({
+      const hash = await writeContract(wagmiConfig, {
         ...creditContract,
         functionName: "approve",
         args: [lendingTerm.address, borrowCredit],
       })
 
-      const data = await waitForTransaction({
-        hash: approve.hash,
+      const data = await waitForTransactionReceipt(wagmiConfig, {
+        hash: hash,
       })
 
       if (data.status != "success") {
@@ -347,14 +364,14 @@ function Myloans({
     }
     try {
       updateStepStatus("Repay", "In Progress")
-      const { hash } = await writeContract({
+      const hash = await writeContract(wagmiConfig, {
         address: lendingTerm.address,
         abi: TermABI,
         functionName: "repay",
         args: [loanId],
       })
 
-      const checkRepay = await waitForTransaction({
+      const checkRepay = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
       })
 
@@ -388,7 +405,7 @@ function Myloans({
       ),
       cell: (info: any) => (
         <div className="ml-3 text-center">
-          <p className=" text-gray-700 dark:text-white">{shortenUint(info.getValue())}</p>
+          <ItemIdBadge id={info.getValue()} />
         </div>
       ),
     }),
@@ -417,9 +434,9 @@ function Myloans({
           <div className="ml-3 text-center">
             <p className="font-semibold text-gray-700 dark:text-white">
               <div className="flex items-center justify-center gap-1">
-                {formatDecimal(Number(formatUnits(info.getValue(), 18)), 2)}
+                {formatDecimal(borrowValue, 2)}
                 <Image
-                  src="/img/crypto-logos/credit.png"
+                  src="/img/crypto-logos/usdc.png"
                   width={20}
                   height={20}
                   alt="logo"
@@ -604,6 +621,17 @@ function Myloans({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     debugTable: true,
+    initialState: {
+      pagination: {
+        pageSize: 3,
+      },
+      sorting: [
+        {
+          id: "borrowTime",
+          desc: true,
+        },
+      ],
+    },
   })
   /* End of table */
 
@@ -622,7 +650,7 @@ function Myloans({
 
   if (data && !isLoadingEventLoans && data.length == 0) {
     return (
-      <div className="mt-20 flex justify-center">You do not have any acive loans</div>
+      <div className="mt-20 flex justify-center">You do not have any active loans</div>
     )
   }
 
@@ -637,13 +665,15 @@ function Myloans({
         />
       )}
       <ModalRepay
-        lendingTerm={lendingTerm}
         setOpen={setOpen}
         isOpen={open}
         creditBalance={creditBalance}
+        usdcBalance={usdcBalance}
         rowData={selectedRow}
         repay={repay}
         partialRepay={partialRepay}
+        creditMultiplier={creditMultiplier}
+        minBorrow={minBorrow}
       />
 
       <div className="mt-4 overflow-auto">
@@ -710,6 +740,38 @@ function Myloans({
           </tbody>
         </table>
       </div>
+      <nav
+        className="flex w-full items-center justify-between border-t border-gray-200 px-2 py-3 text-gray-400"
+        aria-label="Pagination"
+      >
+        <div className="hidden sm:block">
+          <p className="text-sm ">
+            Showing page{" "}
+            <span className="font-medium">
+              {table.getState().pagination.pageIndex + 1}
+            </span>{" "}
+            of <span className="font-semibold">{table.getPageCount()}</span>
+          </p>
+        </div>
+        <div className="flex flex-1 justify-between sm:justify-end">
+          <button
+            onClick={() => table.previousPage()}
+            className="relative inline-flex items-center rounded-md px-1.5 py-1 text-sm  hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-gray-100/0"
+            disabled={!table.getCanPreviousPage()}
+          >
+            <MdChevronLeft />
+            Previous
+          </button>
+          <button
+            onClick={() => table.nextPage()}
+            className="relative ml-3 inline-flex items-center rounded-md px-1.5 py-1 text-sm  hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-gray-100/0"
+            disabled={!table.getCanNextPage()}
+          >
+            Next
+            <MdChevronRight />
+          </button>
+        </div>
+      </nav>
     </>
   )
 }

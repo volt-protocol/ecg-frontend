@@ -2,12 +2,13 @@
 import { guildContract, creditContract } from "lib/contracts"
 import { readContract } from "@wagmi/core"
 import { useEffect, useState } from "react"
-import { useAccount, useContractReads } from "wagmi"
+import { useAccount, useReadContracts } from "wagmi"
 import { Address, formatUnits } from "viem"
 import { formatDecimal } from "utils/numbers"
 import { Delegatee } from "app/(app)/governance/page"
 import { ApexChartWrapper } from "components/charts/ApexChartWrapper"
 import Spinner from "components/spinner"
+import { wagmiConfig } from "contexts/Web3Provider"
 
 export default function VotingPower({ userAddress }: { userAddress: Address }) {
   const [guildDelegatees, setGuildDelegatees] = useState<Delegatee[]>([])
@@ -18,7 +19,7 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
   const [creditChart, setCreditChart] = useState<any>(undefined)
 
   /* Read contracts */
-  const { data, isError, isLoading, isFetched } = useContractReads({
+  const { data, isError, isLoading, isFetched } = useReadContracts({
     contracts: [
       {
         ...guildContract,
@@ -61,17 +62,19 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
         args: [userAddress],
       },
     ],
-    select: (data) => {
-      return {
-        guildBalance: data[0].result as bigint,
-        guildNotUsed: data[1].result as bigint,
-        guildVotingWeight: data[2].result as bigint,
-        creditBalance: data[3].result as bigint,
-        creditNotUsed: data[4].result as bigint,
-        creditVotingWeight: data[5].result as bigint,
-        guildDelegatees: data[6].result as string[],
-        creditDelegatees: data[7].result as string[],
-      }
+    query: {
+      select: (data) => {
+        return {
+          guildBalance: data[0].result as bigint,
+          guildNotUsed: data[1].result as bigint,
+          guildVotingWeight: data[2].result as bigint,
+          creditBalance: data[3].result as bigint,
+          creditNotUsed: data[4].result as bigint,
+          creditVotingWeight: data[5].result as bigint,
+          guildDelegatees: data[6].result as string[],
+          creditDelegatees: data[7].result as string[],
+        }
+      },
     },
   })
 
@@ -79,7 +82,7 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
     async function getDelegateeAndVotes(): Promise<void> {
       setLoadingGuildDelegation(true)
       for (const delegatee of data.guildDelegatees) {
-        const result = await readContract({
+        const result = await readContract(wagmiConfig, {
           ...guildContract,
           functionName: "delegatesVotesCount",
           args: [userAddress, delegatee],
@@ -101,7 +104,7 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
     async function getDelegateeAndVotes(): Promise<void> {
       setLoadingCreditDelegation(true)
       for (const delegatee of data.creditDelegatees) {
-        const result = await readContract({
+        const result = await readContract(wagmiConfig, {
           ...creditContract,
           functionName: "delegatesVotesCount",
           args: [userAddress, delegatee],

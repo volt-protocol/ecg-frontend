@@ -22,12 +22,11 @@ export type loanObjCall = {
   borrowAmount: bigint
   borrowCreditMultiplier: bigint
   callDebt: number
-  callTime: bigint
+  callTime: number
   caller: string
   closeTime: number
   collateralAmount: bigint
   borrower: Address
-
   loanDebt?: bigint
 }
 export type loanObj = loanObjCall & {

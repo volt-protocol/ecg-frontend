@@ -51,12 +51,12 @@ export default function SearchBar() {
         leaveTo="opacity-0 translate-y-1"
         show={searchFocused}
       >
-        <div className="lg:max-w-98 left-1/2 z-10 mt-1 hidden w-screen max-w-sm -translate-x-1/2 transform px-4 sm:absolute sm:block sm:px-0">
+        <div className="lg:max-w-98 left-1/2 z-10 mt-1 hidden w-screen max-w-sm dark:bg-navy-600 -translate-x-1/2 transform px-4 sm:absolute sm:block sm:px-0">
           <div className="overflow-hidden rounded-md shadow-lg">
             <div className="flex items-center justify-between bg-stone-100 dark:bg-navy-600 p-2 text-sm text-stone-500 dark:text-stone-200">
               <span>Latest searches</span>
               {searchHistory.length != 0 && (
-                <div className="rounded-md p-1 text-base hover:bg-stone-50">
+                <div className="rounded-md p-1 text-base hover:bg-stone-50 dark:hover:bg-navy-400 ">
                   <MdDelete
                     className="cursor-pointer"
                     onClick={() => cleanSearchHistory()}
@@ -64,12 +64,12 @@ export default function SearchBar() {
                 </div>
               )}
             </div>
-            <div className="flex flex-col bg-white dark:bg-navy-600/80 py-2">
+            <div className="flex flex-col bg-white dark:bg-navy-50/5 py-2">
               {searchHistory.map((item) => (
                 <Link
                   key={item}
                   href={`/profile?search=${item}`}
-                  className="flex items-center overflow-hidden px-2 py-4 transition-all duration-200 ease-in-out hover:bg-stone-50 dark:hover:bg-navy-600/80"
+                  className="flex items-center overflow-hidden px-2 py-4 transition-all duration-200 ease-in-out hover:bg-stone-50 dark:hover:bg-navy-100/5"
                 >
                   {/* <div className="flex shrink-0 items-center justify-center px-4 py-2 text-white">
                     <item.icon aria-hidden="true" />

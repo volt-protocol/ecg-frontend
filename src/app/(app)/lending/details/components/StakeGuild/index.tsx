@@ -1,5 +1,5 @@
 import React, { Dispatch, SetStateAction, useEffect, useState } from "react"
-import { Address, readContract, waitForTransaction, writeContract } from "@wagmi/core"
+import { Address, readContract, waitForTransactionReceipt, writeContract } from "@wagmi/core"
 import { GuildABI, TermABI, guildContract } from "lib/contracts"
 import { DecimalToUnit, UnitToDecimal, formatCurrencyValue } from "utils/utils-old"
 import { toastError, toastRocket } from "components/toast"
@@ -14,6 +14,7 @@ import { getTitleDisabledStake, getTitleDisabledUnstake } from "./helper"
 import { AlertMessage } from "components/message/AlertMessage"
 import { LendingTerms } from "types/lending"
 import Spinner from "components/spinner"
+import { wagmiConfig } from "contexts/Web3Provider"
 
 function StakeGuild({
   debtCeiling,
@@ -91,12 +92,12 @@ function StakeGuild({
         try {
           setShowModal(true)
           updateStepStatus("Stake", "In Progress")
-          const { hash } = await writeContract({
+          const hash = await writeContract(wagmiConfig, {
             ...guildContract,
             functionName: "incrementGauge",
             args: [smartContractAddress, parseEther(value.toString())],
           })
-          const checkAllocate = await waitForTransaction({
+          const checkAllocate = await waitForTransactionReceipt(wagmiConfig, {
             hash: hash,
           })
           if (checkAllocate.status != "success") {
@@ -129,12 +130,12 @@ function StakeGuild({
         setShowModal(true)
         updateStepStatus("Unstake", "In Progress")
         try {
-          const { hash } = await writeContract({
+          const hash = await writeContract(wagmiConfig, {
             ...guildContract,
             functionName: "decrementGauge",
             args: [smartContractAddress, parseEther(value.toString())],
           })
-          const checkUnstack = await waitForTransaction({
+          const checkUnstack = await waitForTransactionReceipt(wagmiConfig, {
             hash: hash,
           })
           if (checkUnstack.status != "success") {
@@ -184,7 +185,7 @@ function StakeGuild({
       amount = -parseEther(value)
     }
 
-    const data = await readContract({
+    const data = await readContract(wagmiConfig, {
       address: lendingTerm.address as Address,
       abi: TermABI as Abi,
       functionName: "debtCeiling",
@@ -236,6 +237,7 @@ function StakeGuild({
           setSteps={setSteps}
         />
       )}
+      <div className="flex flex-col items-center gap-2 mb-2">
       <DefiInputBox
         topLabel={"Amount of GUILD to " + textButton.toLowerCase()}
         currencyLogo="/img/crypto-logos/guild.png"
@@ -267,7 +269,7 @@ function StakeGuild({
             ? getTitleDisabledStake(value, guildBalance, guildUserWeight)
             : getTitleDisabledUnstake(value, guildUserGaugeWeight)
         }
-        extra="w-full mt-2 !rounded-xl"
+        extra="w-full !rounded-xl"
         onClick={handleVote}
         disabled={
           (Number(value) >
@@ -307,6 +309,7 @@ function StakeGuild({
           )
         }
       />
+      </div>
     </div>
   )
 }

@@ -14,14 +14,15 @@ import { formatCurrencyValue, secondsToAppropriateUnit } from "utils/utils-old"
 import { LendingTerms } from "types/lending"
 import Progress from "components/progress"
 import { TooltipHorizon, QuestionMarkIcon } from "components/tooltip"
-import { creditContract, guildContract, TermABI } from "lib/contracts"
-import { Address, readContract } from "@wagmi/core"
+import { creditContract, guildContract, profitManagerContract, TermABI } from "lib/contracts"
+import { readContracts } from "@wagmi/core"
 import { formatDecimal, formatNumberDecimal } from "utils/numbers"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { FaSort, FaSortDown, FaSortUp } from "react-icons/fa"
-import { Abi, formatUnits } from "viem"
-import { readContracts, useContractReads } from "wagmi"
+import { Abi, formatUnits, Address } from "viem"
+import { useReadContracts } from "wagmi"
+import { wagmiConfig } from "contexts/Web3Provider"
 
 export default function LendingTermsTable(props: { tableData: LendingTerms[] }) {
   const { tableData } = props
@@ -42,18 +43,25 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
     isError,
     isLoading,
     refetch,
-  } = useContractReads({
+  } = useReadContracts({
     contracts: [
       {
         ...creditContract,
         functionName: "totalSupply",
         args: [],
       },
+      {
+        ...profitManagerContract,
+        functionName: "creditMultiplier",
+      },
     ],
-    select: (contractData) => {
-      return {
-        creditTotalSupply: Number(formatUnits(contractData[0].result as bigint, 18)),
-      }
+    query: {
+      select: (contractData) => {
+        return {
+          creditTotalSupply: Number(formatUnits(contractData[0].result as bigint, 18)),
+          creditMultiplier: Number(formatUnits(contractData[1].result as bigint, 18)),
+        }
+      },
     },
   })
   /* End Smart contract reads */
@@ -80,7 +88,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
   }, [tableData, contractData])
 
   async function getExtraTermData(term: LendingTerms): Promise<any> {
-    const result = await readContracts({
+    const result = await readContracts(wagmiConfig, {
       contracts: [
         {
           ...guildContract,
@@ -171,7 +179,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
       cell: (info: any) => (
         <div className="ml-3 text-center">
           <p className="text-sm font-bold text-gray-700 dark:text-white">
-            {formatNumberDecimal(info.getValue())}
+            {formatNumberDecimal(info.getValue() / contractData?.creditMultiplier)}
           </p>
         </div>
       ),
@@ -213,7 +221,11 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
                     Available Debt:{" "}
                     <span className="font-semibold">
                       {" "}
-                      {formatCurrencyValue(debtCeilling - info.row.original.currentDebt)}
+                      {formatCurrencyValue(
+                        debtCeilling - info.row.original.currentDebt > 0
+                          ? debtCeilling - info.row.original.currentDebt
+                          : 0
+                      )}
                     </span>
                   </p>
                 </div>
@@ -221,6 +233,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
               trigger={
                 <div className="flex items-center justify-center gap-1">
                   <Progress
+                    useColors={true}
                     width="w-[110px]"
                     value={
                       debtCeilling
@@ -229,7 +242,6 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
                           : (info.row.original.currentDebt / debtCeilling) * 100
                         : 0
                     }
-                    color={info.row.original.currentDebt > debtCeilling ? "red" : "green"}
                   />
                   <div className="ml-1">
                     <QuestionMarkIcon />
@@ -260,9 +272,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
           <p className="ml-3 text-center text-sm font-bold text-gray-600 dark:text-white">
             {formatNumberDecimal(info.getValue())}
           </p>
-          <span className="text-sm font-medium text-gray-600 dark:text-white">
-            gUSDC
-          </span>
+          <span className="text-sm font-medium text-gray-600 dark:text-white">gUSDC</span>
         </div>
       ),
     }),

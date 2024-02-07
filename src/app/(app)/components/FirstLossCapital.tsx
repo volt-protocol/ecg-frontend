@@ -17,7 +17,7 @@ export const FirstLossCapital = ({
       },
       tooltip: {
         y: {
-          formatter: (val) => "$" + val,
+          formatter: (val) => val+' gUSDC',
         },
       },
       chart: {

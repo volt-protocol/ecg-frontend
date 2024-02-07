@@ -28,7 +28,7 @@ export default function DefiInputBox({
   ref?: any
 }) {
   return (
-    <div className="relative mt-2 rounded-xl bg-brand-100/50 dark:bg-navy-700">
+    <div className="relative w-full rounded-xl bg-brand-100/50 dark:bg-navy-700">
       <div className="mb-1 px-5 pt-4 text-sm font-medium text-gray-700 dark:text-gray-300">
         {topLabel}
       </div>

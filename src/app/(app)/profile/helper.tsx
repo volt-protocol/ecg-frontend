@@ -1,4 +1,5 @@
 import { readContract } from "@wagmi/core"
+import { wagmiConfig } from "contexts/Web3Provider"
 import { termContract } from "lib/contracts"
 import { getActiveLoanLogs, getCloseLoanLogsbyUser } from "lib/logs/loans"
 import { MintRedeemLogs } from "lib/logs/mint-redeem"
@@ -23,7 +24,7 @@ export const getUserLoans = async (
   const allLogs = [...activeLogs, ...closeLogs]
 
   for (const log of allLogs) {
-    const loan = await readContract({
+    const loan = await readContract(wagmiConfig, {
       ...termContract(termAddress),
       functionName: "getLoan",
       args: [log.loanId],

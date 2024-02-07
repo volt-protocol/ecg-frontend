@@ -1,70 +1,75 @@
 "use client"
+import { createWeb3Modal } from "@web3modal/wagmi/react"
+import { cookieStorage, createStorage, http, createConfig, WagmiProvider, State } from "wagmi"
+import { mainnet, sepolia } from "wagmi/chains"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { walletConnect, injected, coinbaseWallet } from "wagmi/connectors"
 
-import "@rainbow-me/rainbowkit/styles.css"
-import merge from "lodash.merge"
-import {
-  darkTheme,
-  getDefaultWallets,
-  lightTheme,
-  RainbowKitProvider,
-  Theme,
-} from "@rainbow-me/rainbowkit"
-import {
-  createConfig,
-  configureChains,
-  mainnet,
-  sepolia,
-  Chain,
-  WagmiConfig,
-} from "wagmi"
-import { publicProvider } from "wagmi/providers/public"
-import { alchemyProvider } from "wagmi/providers/alchemy"
+// 0. Setup queryClient
+const queryClient = new QueryClient()
 
-const chainsList: Chain[] = []
-process.env.NEXT_PUBLIC_APP_ENV == "production"
-  ? chainsList.push(mainnet)
-  : chainsList.push(sepolia)
+const metadata = {
+  name: "ECG Guild",
+  description: "ECG Guild",
+  url: "https://web3modal.com",
+  icons: ["https://avatars.githubusercontent.com/u/37784886"],
+  verifyUrl: "https://web3modal.com/verify",
+}
 
-const { chains, publicClient, webSocketPublicClient } = configureChains(chainsList, [
-  alchemyProvider({ apiKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY_SEPOLIA }),
-  publicProvider(),
-])
+const chains =
+  process.env.NEXT_PUBLIC_APP_ENV === "production"
+    ? ([mainnet] as const)
+    : ([sepolia] as const)
+    
+const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID
 
-const { connectors } = getDefaultWallets({
-  appName: "Credit Guild",
+export const wagmiConfig = createConfig({
+  chains,
+  transports: {
+    [mainnet.id]: http(
+      `https://eth-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY_MAINNET}`
+    ),
+    [sepolia.id]: http(
+      `https://eth-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY_SEPOLIA}`
+    ),
+  },
+  connectors: [
+    walletConnect({ projectId, metadata, showQrModal: false }),
+    injected({ shimDisconnect: true }),
+    coinbaseWallet({
+      appName: metadata.name,
+      appLogoUrl: metadata.icons[0],
+    }),
+  ],
+  storage: createStorage({
+    storage: cookieStorage,
+  }),
+})
+
+// 3. Create modal
+createWeb3Modal({
+  wagmiConfig,
   projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID,
   chains,
+  themeMode: "light",
+  termsConditionsUrl: "/terms-conditions",
+  privacyPolicyUrl: "/risk-statement",
+  themeVariables: {
+    "--w3m-accent": "#4ab8a6",
+  },
 })
 
-const myCustomTheme = merge(lightTheme(), {
-  colors: {
-    accentColor: "#4ab8a6"
-  },
-  shadows: {
-    connectButton: "none",
-  },
-  radii: {
-    connectButton: "0.375rem",
-  },
-} as Theme)
-
-const config = createConfig({
-  autoConnect: true,
-  connectors,
-  publicClient,
-  webSocketPublicClient,
-})
-
-export const Web3Provider = ({ children }: { children: React.ReactNode }) => (
-  <WagmiConfig config={config}>
-    <RainbowKitProvider
-      chains={chains}
-      theme={myCustomTheme}
-      // showRecentTransactions={true}
-    >
+export const Web3Provider = ({
+  children
+}: {
+  children: React.ReactNode
+  initialState?: State
+}) => (
+  <WagmiProvider config={wagmiConfig}>
+    <QueryClientProvider client={queryClient}>
       {children}
-    </RainbowKitProvider>
-  </WagmiConfig>
+    </QueryClientProvider>
+  </WagmiProvider>
 )
 
 export default Web3Provider

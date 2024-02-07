@@ -12,8 +12,7 @@ import StoreProvider from "contexts/StoreProvider"
 import KBarWrapper from "layouts/KBarWrapper"
 
 const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
+  subsets: ["latin"]
 })
 
 export default function RootLayout({ children }: { children: ReactNode }) {

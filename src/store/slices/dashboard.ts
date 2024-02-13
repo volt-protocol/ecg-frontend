@@ -1,28 +1,112 @@
-import { VoteLogs, MintRedeemLogs } from "types/governance"
+import axios, { AxiosResponse } from "axios"
+import { MintRedeemLogs } from "lib/logs/mint-redeem"
+import { VoteLogs } from "lib/logs/votes"
+import { formatDecimal } from "utils/numbers"
 import { Address } from "viem"
 import { StateCreator } from "zustand"
+
+const getCreditSupply = async () => {
+  const res: AxiosResponse<any, any> = await axios.get(
+    process.env.NEXT_PUBLIC_BACKEND_API_URL + `/history/CreditSupply`
+  )
+  const formattedValues = res.data.values.map((item) => {
+    return formatDecimal(Number(item), 0)
+  })
+
+  const formattedTimestamps = res.data.timestamps.map((item) => {
+    return item * 1000
+  })
+
+  return {
+    values: formattedValues,
+    timestamps: formattedTimestamps,
+  }
+}
+
+const getCreditTotalIssuance = async () => {
+  const res: AxiosResponse<any, any> = await axios.get(
+    process.env.NEXT_PUBLIC_BACKEND_API_URL + `/history/CreditTotalIssuance`
+  )
+
+  const formattedValues = res.data.values.map((item) => {
+    return formatDecimal(Number(item), 0)
+  })
+
+  const formattedTimestamps = res.data.timestamps.map((item) => {
+    return item * 1000
+  })
+
+  return {
+    values: formattedValues,
+    timestamps: formattedTimestamps,
+  }
+}
+
+const getAverageInterestRate = async () => {
+  const res: AxiosResponse<any, any> = await axios.get(
+    process.env.NEXT_PUBLIC_BACKEND_API_URL + `/history/AverageInterestRate`
+  )
+
+  const formattedValues = res.data.values.map((item) => {
+    return (Number(item) * 100).toFixed(2)
+  })
+
+  const formattedTimestamps = res.data.timestamps.map((item) => {
+    return item * 1000
+  })
+
+  return {
+    values: formattedValues,
+    timestamps: formattedTimestamps,
+  }
+}
+
+const getTVL = async () => {
+  const res: AxiosResponse<any, any> = await axios.get(
+    process.env.NEXT_PUBLIC_BACKEND_API_URL + `/history/TVL`
+  )
+
+  const formattedValues = res.data.values.map((item) => {
+    return formatDecimal(Number(item), 0)
+  })
+
+  const formattedTimestamps = res.data.timestamps.map((item) => {
+    return item * 1000
+  })
+
+  return {
+    values: formattedValues,
+    timestamps: formattedTimestamps,
+  }
+}
+
+export interface HistoricalData {
+  creditSupply: { values: string[]; timestamps: string[] }
+  creditTotalIssuance: { values: string[]; timestamps: string[] }
+  averageInterestRate: { values: string[]; timestamps: string[] }
+  tvl: { values: string[]; timestamps: string[] }
+}
 
 export interface DashboardSlice {
   allLoans: any[]
   userData: any[]
   lastLoanUpdate: number | null
-  creditMultiplier: bigint
+  historicalData: HistoricalData
   setAllLoans: (array: any[]) => void
   addUserLoans: (userAddress: Address, array: any[]) => void
   addLastVotes: (userAddress: Address, array: VoteLogs[]) => void
   addLastMints: (userAddress: Address, array: MintRedeemLogs[]) => void
   setLastLoanUpdate: (timestamp: number) => void
-  setCreditMultiplier: (value: bigint) => void
+  fetchHistoricalData: () => void
 }
 
 export const createDashboardSlice: StateCreator<DashboardSlice> = (set, get) => ({
-  creditMultiplier: 0,
   allLoans: [],
   userData: [],
   lastLoanUpdate: null,
+  historicalData: null,
   setAllLoans: (array) => set(() => ({ allLoans: [...array] })),
   addLastVotes: (userAddress, array) => {
-
     //check if user already exists
     const user = get().userData.find((item) => item.address === userAddress)
     if (!user) {
@@ -62,7 +146,6 @@ export const createDashboardSlice: StateCreator<DashboardSlice> = (set, get) => 
     }
   },
   addUserLoans: (userAddress, array) => {
-
     //check if user already exists
     const user = get().userData.find((item) => item.address === userAddress)
 
@@ -83,7 +166,19 @@ export const createDashboardSlice: StateCreator<DashboardSlice> = (set, get) => 
     }
   },
   setLastLoanUpdate: (timestamp) => set(() => ({ lastLoanUpdate: timestamp })),
-  setCreditMultiplier: (value: bigint) => {
-    set({ creditMultiplier: value })
+  fetchHistoricalData: async () => {
+    const creditSupplyData = await getCreditSupply()
+    const creditTotalIssuanceData = await getCreditTotalIssuance()
+    const averageInterestRateData = await getAverageInterestRate()
+    const tvlData = await getTVL()
+
+    const data = {
+      creditSupply: creditSupplyData,
+      creditTotalIssuance: creditTotalIssuanceData,
+      averageInterestRate: averageInterestRateData,
+      tvl: tvlData,
+    }
+
+    set({ historicalData: data })
   },
 })

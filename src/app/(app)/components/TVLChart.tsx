@@ -1,40 +1,33 @@
 "use client"
 
-import Card from "components/card"
 import { ApexChartWrapper } from "components/charts/ApexChartWrapper"
-import Spinner from "components/spinner"
-import { useEffect, useState } from "react"
-import { ChartTimeline } from "types/charts"
 import { getDateFrom, getTimelineButton } from "./helper"
 import moment from "moment"
+import { useEffect, useState } from "react"
+import { ChartTimeline } from "types/charts"
+import Spinner from "components/spinner"
+import Card from "components/card"
 
-export const AverageInterestRate = ({
-  averageInterestRate,
-}: {
-  averageInterestRate: any
-}) => {
+export const TVLChart = ({ tvl }: { tvl: any }) => {
   const [chartData, setChartData] = useState<any>([])
   const [timeline, setTimeline] = useState<ChartTimeline>("all")
 
+  console.log("chartData", chartData)
+
   useEffect(() => {
-    if (!averageInterestRate) return
+    if (!tvl) return
 
     const state = {
       series: [
         {
-          name: "Average Interest Rate",
-          data: averageInterestRate.values,
+          name: "TVL",
+          data: tvl.values,
           color: "#50bdae",
         },
       ],
       options: {
-        tooltip: {
-          y: {
-            formatter: (val) => val + "%",
-          },
-        },
         chart: {
-          id: "averageInterestChart",
+          id: "tvlChart",
           toolbar: {
             show: false,
           },
@@ -42,6 +35,11 @@ export const AverageInterestRate = ({
           type: "area",
           zoom: {
             autoScaleYaxis: true,
+          },
+        },
+        tooltip: {
+          y: {
+            formatter: (val) => "$" + val,
           },
         },
         dataLabels: {
@@ -61,8 +59,8 @@ export const AverageInterestRate = ({
               hour: "HH:mm",
             },
           },
-          min: new Date(averageInterestRate.timestamps[0]).getTime(),
-          categories: averageInterestRate.timestamps,
+          min: new Date(tvl.timestamps[0]).getTime(),
+          categories: tvl.timestamps,
         },
         fill: {
           colors: ["#50bdae"],
@@ -78,12 +76,12 @@ export const AverageInterestRate = ({
     }
 
     setChartData(state)
-  }, [averageInterestRate])
+  }, [tvl])
 
   const updateData = (timeline: ChartTimeline) => {
     // reload the chart with the new timeline
     ApexCharts.exec(
-      "averageInterestChart",
+      "tvlChart",
       "zoomX",
       getDateFrom(timeline, chartData),
       moment().toDate().getTime()
@@ -94,7 +92,7 @@ export const AverageInterestRate = ({
 
   return (
     <Card
-      title="Average Interest Rate"
+      title="TVL"
       extra="w-full min-h-[300px] md:col-span-2 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
       rightText={getTimelineButton({ timeline, updateData })}
     >

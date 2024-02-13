@@ -130,7 +130,7 @@ const LendingDetails = () => {
 
     function getCollateralPrice() {
       const nameCG = coinsList.find(
-        (name) => name.nameECG === lendingTermData.collateral.name
+        (name) => name.nameECG === lendingTermData.collateral.symbol
       )?.nameCG
       const price = prices[nameCG].usd
       setCollateralPrice(price)
@@ -328,7 +328,7 @@ const LendingDetails = () => {
         <div className="flex items-center gap-2">
           <h3 className="text-2xl font-semibold text-gray-700 dark:text-white">
             {generateTermName(
-              lendingTermData.collateral.name,
+              lendingTermData.collateral.symbol,
               lendingTermData.interestRate,
               lendingTermData.borrowRatio /
                 Number(formatUnits(data?.creditMultiplier, 18))
@@ -706,7 +706,7 @@ const LendingDetails = () => {
           >
             <ActiveLoans
               maxDelayBetweenPartialRepay={lendingTermData.maxDelayBetweenPartialRepay}
-              collateralName={lendingTermData.collateral.name}
+              collateralName={lendingTermData.collateral.symbol}
               termAddress={termAddress}
               activeLoans={eventLoans}
               collateralDecimals={lendingTermData.collateral.decimals}

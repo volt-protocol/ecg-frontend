@@ -1,11 +1,8 @@
 "use client"
+import axios, { AxiosResponse } from "axios"
 import Image from "next/image"
-import { IoMdHome } from "react-icons/io"
-import { IoDocuments } from "react-icons/io5"
-import { MdBarChart, MdDashboard } from "react-icons/md"
 import { readContract } from "@wagmi/core"
-import Widget from "components/widget/Widget"
-import { useAccount, useReadContracts } from "wagmi"
+import { useReadContracts } from "wagmi"
 import { useAppStore } from "store"
 import { Abi, Address, formatUnits, erc20Abi } from "viem"
 import { coinsList } from "store/slices/pair-prices"
@@ -36,15 +33,17 @@ import { getAllVotes } from "lib/logs/votes"
 import { BLOCK_PER_WEEK } from "utils/constants"
 import { wagmiConfig } from "contexts/Web3Provider"
 import { generateTermName } from "utils/strings"
+import { GlobalStatCarts } from "./components/GlobalStatCarts"
+import { TVLChart } from "./components/TVLChart"
 
 const GlobalDashboard = () => {
-  const { lendingTerms, prices, userData } = useAppStore()
+  const { lendingTerms, prices, historicalData } = useAppStore()
   const [totalActiveLoans, setTotalActiveLoans] = useState<number>()
   const [debtCeilingData, setDebtCeilingData] = useState([])
   const [collateralData, setCollateralData] = useState([])
   const [firstLossData, setFirstLossData] = useState([])
   const [lastActivities, setLastActivites] = useState<LastActivitiesLogs[]>([])
-  const { isConnected, address } = useAccount()
+
   const { data: currentBlock } = useBlockNumber()
 
   /* Read contracts */
@@ -89,7 +88,6 @@ const GlobalDashboard = () => {
       const ceilingData = await getDebtCeilingData()
       setDebtCeilingData(ceilingData)
       const collateralData = await getCollateralData()
-      console.log("collateralData", collateralData)
       setCollateralData(collateralData)
       const firstLossData = await getFirstLossCapital()
       setFirstLossData(firstLossData)
@@ -100,7 +98,7 @@ const GlobalDashboard = () => {
     data?.creditMultiplier && asyncFunc()
   }, [data])
 
-  /* Get Dashboard data */
+  /**** Get Dashboard data ****/
   const getTotalActiveLoans = async () => {
     let total = 0
     for (const term of lendingTerms) {
@@ -124,12 +122,12 @@ const GlobalDashboard = () => {
           })
 
           //get coin gecko name
-          const nameCG = coinsList.find((x) => x.nameECG === term.collateral.name).nameCG
+          const nameCG = coinsList.find((x) => x.nameECG === term.collateral.symbol).nameCG
           const exchangeRate = prices[nameCG].usd
 
           return {
             collateral: generateTermName(
-              term.collateral.name,
+              term.collateral.symbol,
               term.interestRate,
               term.borrowRatio / data?.creditMultiplier
             ),
@@ -154,7 +152,7 @@ const GlobalDashboard = () => {
 
           return {
             collateral: generateTermName(
-              term.collateral.name,
+              term.collateral.symbol,
               term.interestRate,
               term.borrowRatio / data?.creditMultiplier
             ),
@@ -181,7 +179,7 @@ const GlobalDashboard = () => {
             args: [term.address],
           })
           return {
-            term: term.collateral.name,
+            term: term.collateral.symbol,
             value: Number(formatUnits(termSurplusBuffer as bigint, 18)),
           }
         })
@@ -213,59 +211,27 @@ const GlobalDashboard = () => {
     return [...lastMintRedeem, ...lastVotes, ...allOpenLoans]
   }
 
-  /* End get dashboard data */
+  /***** End get dashboard data *****/
 
-  if (isLoading) return <Spinner />
+  if (isLoading || !historicalData) return <Spinner />
 
   return (
     <div>
       {/* Card widget */}
-
       <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 3xl:grid-cols-6">
-        <Widget
-          icon={<MdBarChart className="h-7 w-7" />}
-          title={"Total Collateral"}
-          subtitle={`$${collateralData
-            .reduce((a, b) => a + b.collateralValueDollar, 0)
-            .toFixed(2)}`}
+        <GlobalStatCarts
+          lendingTerms={lendingTerms}
+          data={data}
+          collateralData={collateralData}
+          totalActiveLoans={totalActiveLoans}
         />
-        <Widget
-          icon={<IoDocuments className="h-6 w-6" />}
-          title={"Total Debt"}
-          subtitle={`$${(
-            lendingTerms?.reduce((a, b) => a + b.currentDebt, 0) * data?.creditMultiplier
-          ).toFixed(2)}`}
-        />
-        <Widget
-          icon={<MdBarChart className="h-7 w-7" />}
-          title={"Lending Terms"}
-          subtitle={lendingTerms.length}
-        />
-        <Widget
-          icon={<MdDashboard className="h-6 w-6" />}
-          title={"Active Loans"}
-          subtitle={totalActiveLoans ?? "-"}
-        />
-        <Widget
-          icon={<MdBarChart className="h-7 w-7" />}
-          title={"GUILD Staked"}
-          subtitle={`${formatDecimal(data?.totalWeight, 2)}`}
-        />
-        <div className="opacity-40">
-          <Widget
-            icon={<IoMdHome className="h-6 w-6" />}
-            title={"All Time P&L"}
-            subtitle={"$2433"}
-          />
-        </div>
       </div>
 
       {/* Charts */}
-
-      <div className="my-3 grid grid-cols-1 gap-5 md:grid-cols-4">
+      <div className="my-3 grid grid-cols-1 gap-5 md:grid-cols-3">
         <Card
           title="Collateral Types"
-          extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
+          extra="w-full min-h-[300px] md:col-span-1 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
         >
           {debtCeilingData.length == 0 ? (
             <div className="flex h-96 items-center justify-center">
@@ -280,9 +246,24 @@ const GlobalDashboard = () => {
             />
           )}
         </Card>
+
+        <TVLChart tvl={historicalData.tvl} />
+        {/* <Card
+          title="Loan Success Rate"
+          extra="w-full min-h-[300px] md:col-span-2 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4 opacity-40"
+        >
+          <LoanSuccessRate />
+        </Card> */}
+      </div>
+
+      <div className="my-3 grid grid-cols-1 gap-5 md:grid-cols-3">
+          <CreditTotalSupply
+            creditTotalIssuance={historicalData.creditTotalIssuance}
+            creditSupply={historicalData.creditSupply}
+          />
         <Card
           title="Debt Ceiling"
-          extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
+          extra="w-full min-h-[300px] md:col-span-1 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
         >
           {debtCeilingData.length == 0 ? (
             <div className="flex h-96 items-center justify-center">
@@ -295,30 +276,12 @@ const GlobalDashboard = () => {
             />
           )}
         </Card>
-        <Card
-          title="Loan Success Rate"
-          extra="w-full min-h-[300px] md:col-span-2 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4 opacity-40"
-        >
-          <LoanSuccessRate />
-        </Card>
       </div>
 
-      <div className="my-3 grid grid-cols-1 gap-5 md:grid-cols-4">
-        <Card
-          title="gUSDC Total Supply"
-          extra="w-full min-h-[300px] md:col-span-2 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4 opacity-40"
-        >
-          <CreditTotalSupply />
-        </Card>
-        <Card
-          title="Average Interest Rate"
-          extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4 opacity-40"
-        >
-          <AverageInterestRate />
-        </Card>
+      <div className="my-3 grid grid-cols-1 gap-5 md:grid-cols-3">
         <Card
           title="First-loss Capital"
-          extra="w-full min-h-[300px]  sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
+          extra="w-full min-h-[300px] md:col-span-1 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
         >
           <dl className="mt-3 grid grid-cols-1 divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow dark:divide-navy-600 dark:bg-navy-700 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
             <div key="guildVotingPower" className="px-2 py-4 sm:p-5">
@@ -377,6 +340,8 @@ const GlobalDashboard = () => {
             />
           )}
         </Card>
+
+        <AverageInterestRate averageInterestRate={historicalData.averageInterestRate} />
       </div>
 
       <div className="mb-10 mt-3 flex">

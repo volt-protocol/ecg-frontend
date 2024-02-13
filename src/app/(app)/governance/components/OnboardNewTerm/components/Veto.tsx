@@ -90,7 +90,7 @@ function Veto({
     })
 
     const termsCreated = await getVotableTerms()
-
+    console.log("termsCreated", termsCreated)
     const activeVetoVotes = await Promise.all(
       logs
         .map((log) => {
@@ -228,7 +228,6 @@ function Veto({
 
     setLoading(false)
     setActiveVetoVotes(activeVetoVotes)
-    console.log("activeVetoVotes", activeVetoVotes)
   }
   /* End Getters*/
 

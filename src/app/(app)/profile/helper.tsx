@@ -46,7 +46,7 @@ export const getUserLoans = async (
       id: log.loanId as Address,
       txHashOpen: log.txHashOpen,
       txHashClose: loan.closeTime ? log.txHashClose : "",
-      collateral: lendingTerm.collateral.name,
+      collateral: lendingTerm.collateral.symbol,
       interestRate: lendingTerm.interestRate,
       borrowRatio: lendingTerm.borrowRatio,
       termAddress: termAddress as Address,

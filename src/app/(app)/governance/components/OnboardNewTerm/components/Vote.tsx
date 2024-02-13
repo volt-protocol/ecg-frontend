@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react"
-import { ethers } from "ethers"
 import {
   getPublicClient,
   readContracts,
@@ -8,10 +7,7 @@ import {
 } from "@wagmi/core"
 import { toastError, toastRocket } from "components/toast"
 import {
-  guildContract,
   onboardGovernorGuildContract,
-  onboardTimelockContract,
-  termContract,
 } from "lib/contracts"
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa"
 import { Step } from "components/stepLoader/stepType"
@@ -34,10 +30,9 @@ import { formatCurrencyValue, formatDecimal } from "utils/numbers"
 import { ActiveOnboardingVotes, VoteOption, ProposalState } from "types/governance"
 import { fromNow } from "utils/date"
 import moment from "moment"
-import { formatUnits, keccak256, parseUnits, stringToBytes, Address } from "viem"
+import { formatUnits, keccak256, stringToBytes, Address } from "viem"
 import { QuestionMarkIcon, TooltipHorizon } from "components/tooltip"
 import {
-  BLOCK_LENGHT_SECONDS,
   BLOCK_LENGTH_MILLISECONDS,
   FROM_BLOCK,
 } from "utils/constants"

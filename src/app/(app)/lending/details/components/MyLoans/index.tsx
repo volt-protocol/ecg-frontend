@@ -9,15 +9,21 @@ import {
   createColumnHelper,
 } from "@tanstack/react-table"
 import { readContract, waitForTransactionReceipt, writeContract } from "@wagmi/core"
-import { TermABI, creditContract, usdcContract, gatewayContract } from "lib/contracts"
+import {
+  TermABI,
+  creditContract,
+  usdcContract,
+  gatewayContract,
+  ERC20PermitABI,
+} from "lib/contracts"
 import { preciseRound, secondsToAppropriateUnit, UnitToDecimal } from "utils/utils-old"
 import { LendingTerms, loanObj } from "types/lending"
-import { useAccount } from "wagmi"
+import { useAccount, useReadContracts } from "wagmi"
 import { Step } from "components/stepLoader/stepType"
 import { MdChevronLeft, MdChevronRight, MdOutlineError, MdWarning } from "react-icons/md"
 import { formatDecimal, gUsdcToUsdc, usdcToGUsdc } from "utils/numbers"
 import { FaSort, FaSortDown, FaSortUp } from "react-icons/fa"
-import { Address, formatUnits, parseEther, parseUnits } from "viem"
+import { Abi, Address, erc20Abi, formatUnits, parseEther, parseUnits } from "viem"
 import clsx from "clsx"
 import ModalRepay from "./ModalRepay"
 import StepModal from "components/stepLoader"
@@ -29,6 +35,9 @@ import moment, { min } from "moment"
 import { simpleRepay } from "./helper/simpleRepay"
 import { getMulticallsDecoded } from "lib/transactions/getMulticallsDecoded"
 import { HOURS_IN_YEAR } from "utils/constants"
+import { permitConfig } from "config"
+import { repayWithLeverage } from "./helper/repayWithLeverage"
+import { set } from "react-hook-form"
 
 function Myloans({
   lendingTerm,
@@ -41,7 +50,7 @@ function Myloans({
   creditBalance,
   usdcNonces,
   reload,
-  minBorrow
+  minBorrow,
 }: {
   lendingTerm: LendingTerms
   isLoadingEventLoans: boolean
@@ -75,6 +84,14 @@ function Myloans({
 
   const createSteps = (): Step[] => {
     const baseSteps = [
+      permitConfig.find(
+        (item) => item.collateralAddress === lendingTerm.collateral.address
+      )?.hasPermit
+        ? {
+            name: `Sign Permit for ${lendingTerm.collateral.symbol}`,
+            status: "Not Started",
+          }
+        : { name: `Approve ${lendingTerm.collateral.symbol}`, status: "Not Started" },
       { name: "Sign Permit for USDC", status: "Not Started" },
       { name: "Partial Repay (Multicall)", status: "Not Started" },
     ]
@@ -100,6 +117,31 @@ function Myloans({
   }
 
   const [steps, setSteps] = useState<Step[]>(createSteps())
+
+  /* Smart contract reads */
+  const {
+    data: contractData,
+    isError,
+    isLoading,
+    refetch,
+  } = useReadContracts({
+    contracts: [
+      {
+        address: lendingTerm.collateral.address as Address,
+        abi: ERC20PermitABI as Abi,
+        functionName: "nonces",
+        args: [address],
+      },
+    ],
+    query: {
+      select: (data) => {
+        return {
+          collateralNonces: data[0].result as bigint,
+        }
+      },
+    },
+  })
+  /* End Smart contract reads */
 
   useEffect(() => {
     const fetchLoanDebts = async () => {
@@ -160,7 +202,14 @@ function Myloans({
   /* Smart contract writes */
   async function partialRepay(loanId: string, value: string) {
     setOpen(false)
-
+    const createSteps = (): Step[] => {
+      const baseSteps = [
+        { name: "Sign Permit for USDC", status: "Not Started" },
+        { name: "Partial Repay", status: "Not Started" },
+      ]
+      return baseSteps
+    }
+    setSteps(createSteps())
     let signatureUSDC: any
 
     const usdcAmount = parseUnits(value, 6)
@@ -213,7 +262,7 @@ function Myloans({
 
       //get description of calls in multicall
       const callsDescription = getMulticallsDecoded(calls, lendingTerm)
-      updateStepStatus(`Partial Repay (Multicall)`, "In Progress", callsDescription)
+      updateStepStatus(`Partial Repay`, "In Progress", callsDescription)
 
       const hash = await writeContract(wagmiConfig, {
         ...gatewayContract,
@@ -226,24 +275,211 @@ function Myloans({
       })
 
       if (checkBorrow.status === "success") {
+        refetch()
         reload(true)
-        updateStepStatus("Partial Repay (Multicall)", "Success")
+        updateStepStatus("Partial Repay", "Success")
         return
       } else {
-        updateStepStatus("Partial Repay (Multicall)", "Error")
+        updateStepStatus("Partial Repay", "Error")
       }
 
-      updateStepStatus(`Partial Repay (Multicall)`, "Success")
+      updateStepStatus(`Partial Repay`, "Success")
     } catch (e) {
       console.log(e)
-      updateStepStatus("Partial Repay (Multicall)", "Error")
+      updateStepStatus("Partial Repay", "Error")
+      return
+    }
+  }
+
+  async function partialRepayLeverage(
+    loanId: string,
+    value: string,
+    flashloanValue: string
+  ) {
+    setOpen(false)
+    updateStepName("Partial Repay (Multicall)", "Partial Repay with Leverage")
+
+    let signatureUSDC: any
+    let signatureCollateral: any
+
+    const usdcAmount = parseUnits(value, 6)
+    const usdcAmountFlashloan = parseUnits(flashloanValue, 6)
+    const debtToRepay = usdcToGUsdc(
+      usdcAmount + usdcAmountFlashloan,
+      tableDataWithDebts.find((item) => item.id == loanId)
+        .borrowCreditMultiplier as bigint
+    )
+    const flashloanCollateralAmount = calculateCollateralAmount(
+      usdcToGUsdc(
+        usdcAmountFlashloan,
+        tableDataWithDebts.find((item) => item.id == loanId)
+          .borrowCreditMultiplier as bigint
+      )
+    )
+    const collateralAmount = calculateCollateralAmount(debtToRepay)
+    console.log("usdcAmount", usdcAmount)
+    console.log("usdcAmountFlashloan", usdcAmountFlashloan)
+    console.log("debtToRepay", debtToRepay)
+    console.log("flashloanCollateralAmount", flashloanCollateralAmount)
+    console.log("collateralAmount", collateralAmount)
+
+    setShowModal(true)
+
+    /* Set allowance for collateral token */
+    if (
+      permitConfig.find(
+        (item) => item.collateralAddress === lendingTerm.collateral.address
+      )?.hasPermit
+    ) {
+      try {
+        updateStepStatus(
+          `Sign Permit for ${lendingTerm.collateral.symbol}`,
+          "In Progress"
+        )
+
+        signatureCollateral = await signPermit({
+          contractAddress: lendingTerm.collateral.address,
+          erc20Name: lendingTerm.collateral.name,
+          ownerAddress: address,
+          spenderAddress: gatewayContract.address as Address,
+          value: collateralAmount,
+          deadline: BigInt(Number(moment().add(10, "seconds"))),
+          nonce: contractData?.collateralNonces,
+          chainId: wagmiConfig.chains[0].id,
+          permitVersion: "1",
+        })
+
+        if (!signatureCollateral) {
+          updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Error")
+          return
+        }
+        updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Success")
+      } catch (e) {
+        console.log(e)
+        updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Error")
+        return
+      }
+    } else {
+      try {
+        updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "In Progress")
+
+        const hash = await writeContract(wagmiConfig, {
+          address: lendingTerm.collateral.address,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [gatewayContract.address as Address, collateralAmount],
+        })
+        const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
+          hash: hash,
+        })
+
+        if (checkApprove.status != "success") {
+          updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Error")
+          return
+        }
+        updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Success")
+      } catch (e) {
+        console.log(e)
+        updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Error")
+        return
+      }
+    }
+
+    /* Sign permit on USDC for Gateway*/
+    try {
+      updateStepStatus(`Sign Permit for USDC`, "In Progress")
+
+      signatureUSDC = await signPermit({
+        contractAddress: usdcContract.address,
+        erc20Name: "ECG Testnet USDC",
+        ownerAddress: address,
+        spenderAddress: gatewayContract.address as Address,
+        value: usdcAmount,
+        deadline: BigInt(Number(moment().add(10, "seconds"))),
+        nonce: usdcNonces,
+        chainId: wagmiConfig.chains[0].id,
+        permitVersion: "1",
+      })
+
+      if (!signatureUSDC) {
+        updateStepStatus(`Sign Permit for USDC`, "Error")
+        return
+      }
+      updateStepStatus(`Sign Permit for USDC`, "Success")
+    } catch (e) {
+      console.log(e)
+      updateStepStatus(`Sign Permit for USDC`, "Error")
+      return
+    }
+
+    const deadlineSwap = BigInt(Number(moment().add(3600, "seconds")))
+    console.log(
+      "repayMode",
+      debtToRepay >= tableDataWithDebts.find((item) => item.id == loanId).loanDebt
+        ? "full"
+        : "partial"
+    )
+
+    /* Call gateway.multicall() */
+    try {
+      //build multicall
+      const calls = repayWithLeverage(
+        debtToRepay >= tableDataWithDebts.find((item) => item.id == loanId).loanDebt
+          ? "full"
+          : "partial",
+        lendingTerm,
+        loanId,
+        debtToRepay, //in gUSDC
+        usdcAmount, //in USDC
+        collateralAmount, // eg: sDAI
+        flashloanCollateralAmount, // eg: sDAI
+        usdcAmountFlashloan,
+        signatureCollateral,
+        signatureUSDC,
+        deadlineSwap
+      )
+
+      //get description of calls in multicall
+      const callsDescription = getMulticallsDecoded(calls, lendingTerm)
+      updateStepStatus(`Partial Repay with Leverage`, "In Progress", callsDescription)
+
+      const hash = await writeContract(wagmiConfig, {
+        ...gatewayContract,
+        functionName: "multicallWithBalancerFlashLoan",
+        args: [[lendingTerm.collateral.address], [flashloanCollateralAmount], calls],
+      })
+
+      const checkBorrow = await waitForTransactionReceipt(wagmiConfig, {
+        hash: hash,
+      })
+
+      if (checkBorrow.status === "success") {
+        refetch()
+        reload(true)
+        updateStepStatus("Partial Repay with Leverage", "Success")
+        return
+      } else {
+        updateStepStatus("Partial Repay with Leverage", "Error")
+      }
+
+      updateStepStatus(`Partial Repay with Leverage`, "Success")
+    } catch (e) {
+      console.log(e)
+      updateStepStatus("Partial Repay with Leverage", "Error")
       return
     }
   }
 
   async function repay(loanId: string) {
     setOpen(false)
-    updateStepName("Partial Repay (Multicall)", "Repay (Multicall)")
+    const createSteps = (): Step[] => {
+      const baseSteps = [
+        { name: "Sign Permit for USDC", status: "Not Started" },
+        { name: "Repay", status: "Not Started" },
+      ]
+      return baseSteps
+    }
+    setSteps(createSteps())
 
     let signatureUSDC: any
 
@@ -300,7 +536,7 @@ function Myloans({
 
       //get description of calls in multicall
       const callsDescription = getMulticallsDecoded(calls, lendingTerm)
-      updateStepStatus(`Repay (Multicall)`, "In Progress", callsDescription)
+      updateStepStatus(`Repay`, "In Progress", callsDescription)
 
       const hash = await writeContract(wagmiConfig, {
         ...gatewayContract,
@@ -313,79 +549,89 @@ function Myloans({
       })
 
       if (checkBorrow.status === "success") {
+        refetch()
         reload(true)
-        updateStepStatus("Repay (Multicall)", "Success")
+        updateStepStatus("Repay", "Success")
         return
       } else {
-        updateStepStatus("Repay (Multicall)", "Error")
-      }
-
-      updateStepStatus(`Repay (Multicall)`, "Success")
-    } catch (e) {
-      console.log(e)
-      updateStepStatus("Repay (Multicall)", "Error")
-      return
-    }
-  }
-
-  async function repay2(loanId: string, borrowCredit: bigint) {
-    setOpen(false)
-
-    const updateStepStatus = (stepName: string, status: Step["status"]) => {
-      setSteps((prevSteps) =>
-        prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step))
-      )
-    }
-
-    updateStepName("Partial Repay", "Repay")
-
-    try {
-      setShowModal(true)
-      updateStepStatus("Approve", "In Progress")
-      const hash = await writeContract(wagmiConfig, {
-        ...creditContract,
-        functionName: "approve",
-        args: [lendingTerm.address, borrowCredit],
-      })
-
-      const data = await waitForTransactionReceipt(wagmiConfig, {
-        hash: hash,
-      })
-
-      if (data.status != "success") {
-        updateStepStatus("Approve", "Error")
-        return
-      }
-      updateStepStatus("Approve", "Success")
-    } catch (e) {
-      console.log(e)
-      updateStepStatus("Approve", "Error")
-      return
-    }
-    try {
-      updateStepStatus("Repay", "In Progress")
-      const hash = await writeContract(wagmiConfig, {
-        address: lendingTerm.address,
-        abi: TermABI,
-        functionName: "repay",
-        args: [loanId],
-      })
-
-      const checkRepay = await waitForTransactionReceipt(wagmiConfig, {
-        hash: hash,
-      })
-
-      if (checkRepay.status != "success") {
         updateStepStatus("Repay", "Error")
       }
-      updateStepStatus("Repay", "Success")
-      reload(true)
+
+      updateStepStatus(`Repay`, "Success")
     } catch (e) {
       console.log(e)
       updateStepStatus("Repay", "Error")
+      return
     }
   }
+
+  // async function repay2(loanId: string, borrowCredit: bigint) {
+  //   setOpen(false)
+
+  //   const updateStepStatus = (stepName: string, status: Step["status"]) => {
+  //     setSteps((prevSteps) =>
+  //       prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step))
+  //     )
+  //   }
+
+  //   updateStepName("Partial Repay", "Repay")
+
+  //   try {
+  //     setShowModal(true)
+  //     updateStepStatus("Approve", "In Progress")
+  //     const hash = await writeContract(wagmiConfig, {
+  //       ...creditContract,
+  //       functionName: "approve",
+  //       args: [lendingTerm.address, borrowCredit],
+  //     })
+
+  //     const data = await waitForTransactionReceipt(wagmiConfig, {
+  //       hash: hash,
+  //     })
+
+  //     if (data.status != "success") {
+  //       updateStepStatus("Approve", "Error")
+  //       return
+  //     }
+  //     updateStepStatus("Approve", "Success")
+  //   } catch (e) {
+  //     console.log(e)
+  //     updateStepStatus("Approve", "Error")
+  //     return
+  //   }
+  //   try {
+  //     updateStepStatus("Repay", "In Progress")
+  //     const hash = await writeContract(wagmiConfig, {
+  //       address: lendingTerm.address,
+  //       abi: TermABI,
+  //       functionName: "repay",
+  //       args: [loanId],
+  //     })
+
+  //     const checkRepay = await waitForTransactionReceipt(wagmiConfig, {
+  //       hash: hash,
+  //     })
+
+  //     if (checkRepay.status != "success") {
+  //       updateStepStatus("Repay", "Error")
+  //     }
+  //     updateStepStatus("Repay", "Success")
+  //     reload(true)
+  //   } catch (e) {
+  //     console.log(e)
+  //     updateStepStatus("Repay", "Error")
+  //   }
+  // }
   /* End of smart contract writes */
+
+  const calculateCollateralAmount = (borrowAmount: bigint) => {
+    let collateralAmount: bigint =
+      (borrowAmount /
+        BigInt(10 ** (18 - lendingTerm.collateral.decimals)) /
+        parseUnits(lendingTerm.borrowRatio.toString(), 18)) *
+      creditMultiplier
+    return collateralAmount
+  }
 
   /* Set table */
   const columnHelper = createColumnHelper<loanObj>()
@@ -672,6 +918,7 @@ function Myloans({
         rowData={selectedRow}
         repay={repay}
         partialRepay={partialRepay}
+        partialRepayLeverage={partialRepayLeverage}
         creditMultiplier={creditMultiplier}
         minBorrow={minBorrow}
       />

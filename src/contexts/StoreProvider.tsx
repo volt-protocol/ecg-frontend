@@ -1,21 +1,19 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useAppStore } from "store"
 
 const StoreProvider = ({ children }: { children: React.ReactNode }) => {
-  const { fetchLendingTerms, fetchPrices } = useAppStore()
+  const { fetchLendingTerms, fetchPrices, fetchHistoricalData } = useAppStore()
 
-  //Fetch prices
   useEffect(() => {
+    //fetch collateral prices
     fetchPrices()
-  }, [])
-
-  //Fetch lending terms
-  useEffect(() => {
+    //fetch lending terms
     fetchLendingTerms()
+    //fetch historical data
+    fetchHistoricalData()
   }, [])
-
 
   return <>{children}</>
 }

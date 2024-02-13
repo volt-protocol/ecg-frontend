@@ -118,7 +118,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
 
   /* eslint-disable */
   const columns = [
-    columnHelper.accessor("collateral.name", {
+    columnHelper.accessor("collateral.symbol", {
       id: "collateral",
       enableSorting: true,
       header: () => (

@@ -67,10 +67,10 @@ function CreateLoan({
         (item) => item.collateralAddress === lendingTerm.collateral.address
       )?.hasPermit
         ? {
-            name: `Sign Permit for ${lendingTerm.collateral.name}`,
+            name: `Sign Permit for ${lendingTerm.collateral.symbol}`,
             status: "Not Started",
           }
-        : { name: `Approve ${lendingTerm.collateral.name}`, status: "Not Started" },
+        : { name: `Approve ${lendingTerm.collateral.symbol}`, status: "Not Started" },
       { name: `Sign Permit for gUSDC`, status: "Not Started" },
       { name: "Multicall", status: "Not Started" },
     ]
@@ -173,11 +173,11 @@ function CreateLoan({
       )?.hasPermit
     ) {
       try {
-        updateStepStatus(`Sign Permit for ${lendingTerm.collateral.name}`, "In Progress")
+        updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "In Progress")
 
         signatureCollateral = await signPermit({
           contractAddress: lendingTerm.collateral.address,
-          erc20Name: "ECG Testnet sDAI",
+          erc20Name:lendingTerm.collateral.name,
           ownerAddress: address,
           spenderAddress: gatewayContract.address as Address,
           value: parseUnits(collateralAmount, lendingTerm.collateral.decimals),
@@ -188,18 +188,18 @@ function CreateLoan({
         })
 
         if (!signatureCollateral) {
-          updateStepStatus(`Sign Permit for ${lendingTerm.collateral.name}`, "Error")
+          updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Error")
           return
         }
-        updateStepStatus(`Sign Permit for ${lendingTerm.collateral.name}`, "Success")
+        updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Success")
       } catch (e) {
         console.log(e)
-        updateStepStatus(`Sign Permit for ${lendingTerm.collateral.name}`, "Error")
+        updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Error")
         return
       }
     } else {
       try {
-        updateStepStatus(`Approve ${lendingTerm.collateral.name}`, "In Progress")
+        updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "In Progress")
 
         const hash = await writeContract(wagmiConfig, {
           address: lendingTerm.collateral.address,
@@ -215,13 +215,13 @@ function CreateLoan({
         })
 
         if (checkApprove.status != "success") {
-          updateStepStatus(`Approve ${lendingTerm.collateral.name}`, "Error")
+          updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Error")
           return
         }
-        updateStepStatus(`Approve ${lendingTerm.collateral.name}`, "Success")
+        updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Success")
       } catch (e) {
         console.log(e)
-        updateStepStatus(`Approve ${lendingTerm.collateral.name}`, "Error")
+        updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Error")
         return
       }
     }
@@ -310,11 +310,11 @@ function CreateLoan({
       )?.hasPermit
     ) {
       try {
-        updateStepStatus(`Sign Permit for ${lendingTerm.collateral.name}`, "In Progress")
+        updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "In Progress")
 
         signatureCollateral = await signPermit({
           contractAddress: lendingTerm.collateral.address,
-          erc20Name: "ECG Testnet sDAI",
+          erc20Name:lendingTerm.collateral.name,
           ownerAddress: address,
           spenderAddress: gatewayContract.address as Address,
           value: parseUnits(collateralAmount, lendingTerm.collateral.decimals),
@@ -325,18 +325,18 @@ function CreateLoan({
         })
 
         if (!signatureCollateral) {
-          updateStepStatus(`Sign Permit for ${lendingTerm.collateral.name}`, "Error")
+          updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Error")
           return
         }
-        updateStepStatus(`Sign Permit for ${lendingTerm.collateral.name}`, "Success")
+        updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Success")
       } catch (e) {
         console.log(e)
-        updateStepStatus(`Sign Permit for ${lendingTerm.collateral.name}`, "Error")
+        updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Error")
         return
       }
     } else {
       try {
-        updateStepStatus(`Approve ${lendingTerm.collateral.name}`, "In Progress")
+        updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "In Progress")
 
         const hash = await writeContract(wagmiConfig, {
           address: lendingTerm.collateral.address,
@@ -352,13 +352,13 @@ function CreateLoan({
         })
 
         if (checkApprove.status != "success") {
-          updateStepStatus(`Approve ${lendingTerm.collateral.name}`, "Error")
+          updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Error")
           return
         }
-        updateStepStatus(`Approve ${lendingTerm.collateral.name}`, "Success")
+        updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Success")
       } catch (e) {
         console.log(e)
-        updateStepStatus(`Approve ${lendingTerm.collateral.name}`, "Error")
+        updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Error")
         return
       }
     }
@@ -538,10 +538,10 @@ function CreateLoan({
         <div className="mt-2 flex flex-col gap-2">
           <DefiInputBox
             topLabel={
-              "Amount of" + " " + lendingTerm.collateral.name + " " + "to deposit"
+              "Amount of" + " " + lendingTerm.collateral.symbol + " " + "to deposit"
             }
             currencyLogo={lendingTerm.collateral.logo}
-            currencySymbol={lendingTerm.collateral.name}
+            currencySymbol={lendingTerm.collateral.symbol}
             placeholder="0"
             pattern="[0-9]*\.[0-9]"
             inputSize="text-2xl xl:text-3xl"

@@ -15,6 +15,11 @@ const getToken = async (tokenAddress: string): Promise<any> => {
         abi: erc20Abi,
         functionName: "symbol",
       },
+      {
+        address: tokenAddress as Address,
+        abi: erc20Abi,
+        functionName: "name",
+      }
     ],
   })
 }

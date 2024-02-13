@@ -344,7 +344,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
             }/${info.getValue()}`}
           >
             {generateTermName(
-              lendingTerm.collateral.name,
+              lendingTerm.collateral.symbol,
               lendingTerm.interestRate,
               lendingTerm.borrowRatio
             )}
@@ -558,7 +558,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
             selectedOption={selectedTerm}
             getLabel={(item) => {
               return generateTermName(
-                item.collateral.name,
+                item.collateral.symbol,
                 item.interestRate,
                 item.borrowRatio
               )

@@ -17,11 +17,11 @@ export const FirstLossCapital = ({
       },
       tooltip: {
         y: {
-          formatter: (val) => val+' gUSDC',
+          formatter: (val) => val + " gUSDC",
         },
       },
       chart: {
-        width: 380,
+        width: 350,
         type: "pie",
       },
       labels: labels,
@@ -35,13 +35,22 @@ export const FirstLossCapital = ({
           },
         },
       ],
+      colors: [
+        "#50bdae",
+        "#f7b924",
+      ],
     },
   }
 
   return (
     <div className="my-auto">
       {typeof window !== "undefined" && (
-        <ApexChartWrapper options={state.options} series={state.series} type="pie" />
+        <ApexChartWrapper
+          options={state.options}
+          series={state.series}
+          type="pie"
+          height={250}
+        />
       )}
     </div>
   )

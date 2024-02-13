@@ -451,9 +451,6 @@ export default function AuctionsTable({
   const table = useReactTable({
     data,
     columns,
-    state: {
-      sorting,
-    },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),

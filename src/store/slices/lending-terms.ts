@@ -1,19 +1,14 @@
 // Libraries
-import { LendingTerms, LendingTermsResponse } from "types/lending"
+import { LendingTerms } from "types/lending"
 import { StateCreator } from "zustand"
-import axios, { AxiosResponse } from "axios"
 import { getTermsLogs } from "lib/logs/terms"
-import { Abi, Address, formatUnits, parseUnits } from "viem"
-import { formatCurrencyValue, formatDecimal, formatNumberDecimal } from "utils/numbers"
-import { generateTermName } from "utils/strings"
-import { SECONDS_IN_DAY } from "utils/constants"
+import { Abi, Address, formatUnits } from "viem"
+import { formatDecimal } from "utils/numbers"
 import getToken from "lib/getToken"
 import { TermABI } from "lib/contracts"
 import { readContracts } from "@wagmi/core"
 import { coinsList } from "./pair-prices"
 import { wagmiConfig } from "contexts/Web3Provider"
-
-const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL
 
 export interface LendingTermsSlice {
   lendingTerms: LendingTerms[]
@@ -45,11 +40,11 @@ export const createLendingTermsSlice: StateCreator<LendingTermsSlice> = (set, ge
             },
           ],
         })
-        
+
         //calcultaed borrow ratio without precision loss and taken into account collateral token decimals
         const calculatedBorrowRatio: bigint =
           BigInt(log.maxDebtPerCollateralToken) /
-          (BigInt(10 ** (18 - Number(collateralTokenDetails[0].result))))
+          BigInt(10 ** (18 - Number(collateralTokenDetails[0].result)))
 
         //calculate interest rate
         const calculatedInterestRate = Number(
@@ -60,7 +55,8 @@ export const createLendingTermsSlice: StateCreator<LendingTermsSlice> = (set, ge
           address: log.term,
           collateral: {
             address: log.collateralToken as Address,
-            name: collateralTokenDetails[1].result,
+            name: collateralTokenDetails[2].result,
+            symbol: collateralTokenDetails[1].result,
             logo: coinsList.find(
               (item) => item.nameECG === collateralTokenDetails[1].result
             )?.logo,
@@ -82,7 +78,7 @@ export const createLendingTermsSlice: StateCreator<LendingTermsSlice> = (set, ge
             Number(formatUnits(log.minPartialRepayPercent, 18)) * 100,
             4
           ),
-          status: log.status
+          status: log.status,
         }
       })
     )

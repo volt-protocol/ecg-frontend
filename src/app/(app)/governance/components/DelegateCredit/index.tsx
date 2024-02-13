@@ -28,6 +28,7 @@ import { formatUnits, isAddress, parseEther } from "viem"
 import ButtonPrimary from "components/button/ButtonPrimary"
 import DefiInputBox from "components/box/DefiInputBox"
 import { wagmiConfig } from "contexts/Web3Provider"
+import { AlertMessage } from "components/message/AlertMessage"
 
 interface Delegatee {
   address: string
@@ -41,6 +42,7 @@ function DelegateCredit({
   creditVotingWeight,
   userAddress,
   isConnected,
+  delegateLockupPeriod,
 }: {
   creditNotUsed: bigint
   reloadCredit: React.Dispatch<React.SetStateAction<boolean>>
@@ -48,6 +50,7 @@ function DelegateCredit({
   creditVotingWeight: bigint
   userAddress: string
   isConnected: boolean
+  delegateLockupPeriod: bigint
 }) {
   const { address } = useAccount()
   const [value, setValue] = useState<string>("")
@@ -345,6 +348,18 @@ function DelegateCredit({
               Number(value) <= 0 ||
               !value ||
               !isAddress(addressValue)
+            }
+          />
+
+          <AlertMessage
+            type="warning"
+            message={
+              <p>
+                After a delegation, you will not be able to transfer tokens for{" "}
+                <span className="font-bold">
+                  {formatDecimal(Number(delegateLockupPeriod) / 3600, 2)} hours.
+                </span>
+              </p>
             }
           />
         </div>

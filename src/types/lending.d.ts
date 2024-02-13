@@ -50,6 +50,7 @@ export type ProposedTerm = {
 export type LendingTerms = {
   address: Address
   collateral : {
+    symbol: string
     address: Address
     name: string
     logo: string

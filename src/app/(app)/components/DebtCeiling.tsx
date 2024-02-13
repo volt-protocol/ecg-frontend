@@ -5,8 +5,7 @@ import * as am5radar from "@amcharts/amcharts5/radar"
 import * as am5xy from "@amcharts/amcharts5/xy"
 import am5themes_Animated from "@amcharts/amcharts5/themes/Animated"
 import am5themes_Responsive from "@amcharts/amcharts5/themes/Responsive"
-import { useLayoutEffect, useEffect, useMemo } from "react"
-import { formatCurrencyValue } from "utils/numbers"
+import { useLayoutEffect, useMemo } from "react"
 
 export const DebtCeiling = ({ data, labels }: { data: any[]; labels: string[] }) => {
   const dataProcessed = useMemo(() => {
@@ -43,6 +42,18 @@ export const DebtCeiling = ({ data, labels }: { data: any[]; labels: string[] })
       })
     )
 
+    chart
+      .get("colors")
+      .set("colors", [
+        am5.color(0x50bdae),
+        am5.color(0xf7b924),
+        am5.color(0x9966cc),
+        am5.color(0x80bf80),
+        am5.color(0xf28073),
+        am5.color(0xb2cce6),
+        am5.color(0x800021),
+      ])
+
     let xRenderer = am5radar.AxisRendererCircular.new(root, {})
     xRenderer.labels.template.setAll({
       radius: 10,
@@ -75,7 +86,6 @@ export const DebtCeiling = ({ data, labels }: { data: any[]; labels: string[] })
         })
       )
 
-      series.set("stroke", root.interfaceColors.get("background"))
       series.columns.template.setAll({
         width: am5.p100,
         strokeOpacity: 0.1,
@@ -99,7 +109,7 @@ export const DebtCeiling = ({ data, labels }: { data: any[]; labels: string[] })
   return (
     <div
       id="chartdiv"
-      style={{ width: "320px", height: "320px" }}
+      style={{ width: "420px", height: "380px" }}
       className="dark:text-gray-200"
     ></div>
   )

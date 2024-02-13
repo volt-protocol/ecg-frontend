@@ -1,5 +1,12 @@
-import { Abi, decodeFunctionData, erc20Abi } from "viem";
-import { GatewayABI, PsmUsdcABI, TermABI, creditContract, psmUsdcContract, uniswapRouterContract, usdcContract } from "lib/contracts"
+import { Abi, decodeFunctionData, erc20Abi } from "viem"
+import {
+  GatewayABI,
+  TermABI,
+  creditContract,
+  psmUsdcContract,
+  uniswapRouterContract,
+  usdcContract,
+} from "lib/contracts"
 
 export const getMulticallsDecoded = (calls: any[], lendingTerm) => {
   return calls.map((call) => {
@@ -10,8 +17,7 @@ export const getMulticallsDecoded = (calls: any[], lendingTerm) => {
     })
 
     if (decodedCall.functionName === "callExternal") {
-
-      let abiCallExternal;
+      let abiCallExternal
 
       switch (String(decodedCall.args[0]).toLowerCase()) {
         case usdcContract.address.toLowerCase():

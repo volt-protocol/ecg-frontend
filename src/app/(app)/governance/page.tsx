@@ -54,9 +54,14 @@ function Governance() {
         functionName: "getVotes",
         args: [address],
       },
+      {
+        ...creditContract,
+        functionName: "delegateLockupPeriod",
+      }
     ],
     query: {
       select: (data) => {
+        console.log(data)
         return {
           guildBalance: data[0].result as bigint,
           guildNotUsed: data[1].result as bigint,
@@ -64,6 +69,7 @@ function Governance() {
           creditBalance: data[3].result as bigint,
           creditNotUsed: data[4].result as bigint,
           creditVotingWeight: data[5].result as bigint,
+          delegateLockupPeriod: data[6].result as number
         }
       },
     },
@@ -113,6 +119,7 @@ function Governance() {
               creditVotingWeight={data?.creditVotingWeight}
               userAddress={address}
               isConnected={isConnected}
+              delegateLockupPeriod={data?.delegateLockupPeriod}
             />
           </Card>
         </div>

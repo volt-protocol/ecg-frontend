@@ -16,12 +16,13 @@ export const CollateralTypes = ({
         show: false,
       },
       tooltip: {
+        colors: ["#50bdae", "f7b924"],
         y: {
-          formatter: val => '$'+val
-        }
-      },  
+          formatter: (val) => "$" + val,
+        },
+      },
       chart: {
-        width: 380,
+        width: 300,
         type: "pie",
       },
       labels: labels,
@@ -35,12 +36,26 @@ export const CollateralTypes = ({
           },
         },
       ],
+      colors: [
+        "#50bdae",
+        "#f7b924",
+        "#9966CC",
+        "#80BF80",
+        "#F28073",
+        "#B2CCE6",
+        "#800021",
+      ],
     },
   }
 
   return (
     <div className="my-auto">
-      <ApexChartWrapper options={state.options} series={state.series} type="pie" />
+      <ApexChartWrapper
+        options={state.options}
+        series={state.series}
+        type="pie"
+        height={300}
+      />
     </div>
   )
 }

@@ -42,7 +42,7 @@ export default function LendingStats({
               <span className="font-semibold">
                 {formatDecimal(termTotalCollateral, 2)}
               </span>{" "}
-              {lendingTermData.collateral.name}
+              {lendingTermData.collateral.symbol}
             </p>
             <p>
               Unit Collateral Price :{" "}
@@ -176,7 +176,7 @@ export default function LendingStats({
               <span className="font-semibold">
                 {preciseRound(lendingTermData.borrowRatio / Number(formatUnits(creditMultiplier, 18)), 2)}
               </span>{" "}
-              gUSDC per unit of {lendingTermData.collateral.name} collateral.
+              gUSDC per unit of {lendingTermData.collateral.symbol} collateral.
             </p>
           </div>
         }

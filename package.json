@@ -64,7 +64,8 @@
     "export": "next export",
     "lint": "next lint",
     "predeploy": "yarn run build",
-    "deploy": "gh-pages -d build"
+    "deploy": "gh-pages -d build",
+    "pages:build": "npx @cloudflare/next-on-pages"
   },
   "eslintConfig": {
     "extends": [
@@ -89,6 +90,7 @@
     ]
   },
   "devDependencies": {
+    "@cloudflare/next-on-pages": "^1.8.6",
     "@types/jest": "^25.2.3",
     "@types/node": "^18.7.6",
     "@types/react": "18.2.0",

@@ -1,6 +1,5 @@
 import { Table, flexRender } from "@tanstack/react-table"
 import clsx from "clsx"
-import Spinner from "components/spinner"
 import { FaSort, FaSortDown, FaSortUp } from "react-icons/fa"
 import { MdChevronLeft, MdChevronRight } from "react-icons/md"
 

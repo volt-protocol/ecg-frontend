@@ -5,7 +5,6 @@ import Disconnected from "components/error/disconnected"
 import React, { useEffect, useState } from "react"
 import Card from "components/card"
 import {
-  ERC20PermitABI,
   TermABI,
   profitManagerContract,
   creditContract,
@@ -14,7 +13,6 @@ import {
   usdcContract,
 } from "lib/contracts"
 import { readContract } from "@wagmi/core"
-import { preciseRound } from "utils/utils-old"
 import Myloans from "./components/MyLoans"
 import CreateLoan from "./components/CreateLoan"
 import StakeCredit from "./components/StakeCredit"
@@ -34,6 +32,8 @@ import { generateTermName } from "utils/strings"
 import { formatDecimal } from "utils/numbers"
 import { coinsList } from "store/slices/pair-prices"
 import { wagmiConfig } from "contexts/Web3Provider"
+import { lendingTermConfig } from "config"
+import { ToggleCredit } from "components/switch/ToggleCredit"
 
 const LendingDetails = () => {
   const { address, isConnected } = useAccount()
@@ -66,6 +66,7 @@ const LendingDetails = () => {
   const [utilization, setUtilization] = useState<string>("")
   const [eventLoans, setEventLoans] = useState<loanObj[]>([])
   const { lendingTerms } = useAppStore()
+  const [currencyType, setCurrencyType] = useState<"gUSDC" | "USDC">("gUSDC")
 
   useEffect(() => {
     if (lendingTerms && termAddress) {
@@ -154,10 +155,10 @@ const LendingDetails = () => {
       getCollateralPrice()
       getTermsTotalCollateral()
       setUtilization(
-        preciseRound(
+        formatDecimal(
           (currentDebt / creditTotalSupply) * (gaugeWeight / totalWeight) * 100,
           2
-        ).toString()
+        )
       )
     }
   }, [lendingTermData, creditTotalSupply, gaugeWeight, totalWeight])
@@ -284,12 +285,12 @@ const LendingDetails = () => {
 
       if (Array.isArray(result) && result.length >= 3) {
         setProfitSharing({
-          creditSplit: preciseRound(
+          creditSplit: formatDecimal(
             Number(formatUnits(result[1] as bigint, 18)) * 100,
             2
           ),
-          guildSplit: preciseRound(Number(formatUnits(result[2] as bigint, 18)) * 100, 2),
-          surplusBufferSplit: preciseRound(
+          guildSplit: formatDecimal(Number(formatUnits(result[2] as bigint, 18)) * 100, 2),
+          surplusBufferSplit: formatDecimal(
             Number(formatUnits(result[0] as bigint, 18)) * 100,
             2
           ),
@@ -325,24 +326,50 @@ const LendingDetails = () => {
   if (lendingTermData && data) {
     return (
       <div>
-        <div className="flex items-center gap-2">
-          <h3 className="text-2xl font-semibold text-gray-700 dark:text-white">
-            {generateTermName(
-              lendingTermData.collateral.symbol,
-              lendingTermData.interestRate,
-              lendingTermData.borrowRatio /
-                Number(formatUnits(data?.creditMultiplier, 18))
-            )}
-          </h3>
-          <a
-            target="_blank"
-            href={process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS + "/" + termAddress}
-            type="button"
-            className="flex items-center gap-1 rounded-md bg-stone-100 px-2 py-1.5 text-xs transition-all duration-150 ease-in-out  dark:bg-navy-700 dark:text-stone-300 dark:ring-navy-600 dark:hover:text-stone-100 "
-          >
-            View in explorer
-            <MdOutlineOpenInNew />
-          </a>
+        <div className="my-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h3 className="text-2xl font-semibold text-gray-700 dark:text-white">
+              {generateTermName(
+                lendingTermData.collateral.symbol,
+                lendingTermData.interestRate,
+                lendingTermData.borrowRatio /
+                  Number(formatUnits(data?.creditMultiplier, 18))
+              )}
+            </h3>
+            <a
+              target="_blank"
+              href={
+                process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS + "/" + termAddress
+              }
+              type="button"
+              className="flex items-center gap-1 rounded-md bg-stone-100 px-2 py-1.5 text-xs transition-all duration-150 ease-in-out  dark:bg-navy-700 dark:text-stone-300 dark:ring-navy-600 dark:hover:text-stone-100 "
+            >
+              View in explorer
+              <MdOutlineOpenInNew />
+            </a>
+          </div>
+          <div className="flex items-center gap-1">
+            <TooltipHorizon
+              extra="dark:text-gray-200 w-[240px]"
+              content={
+                  <p>
+                    Use USDC for your borrows and repays when lending term allows it.
+                  </p>
+              }
+              trigger={
+                <div>
+                  <QuestionMarkIcon />
+                </div>
+              }
+              placement="left"
+            />
+
+            <ToggleCredit
+              selectType={setCurrencyType}
+              type={currencyType}
+              disabled={!lendingTermConfig.find((item) => item.termAddress == termAddress)?.useGateway}
+            />
+          </div>
         </div>
         <LendingStats
           creditMultiplier={data?.creditMultiplier}
@@ -364,10 +391,12 @@ const LendingDetails = () => {
                 debtCeilling - currentDebt > 0 ? debtCeilling - currentDebt : 0
               }
               creditMultiplier={data?.creditMultiplier}
+              creditBalance={data?.creditBalance}
               usdcBalance={data?.usdcBalance}
               gusdcNonces={data?.gusdcNonces}
               minBorrow={Number(formatUnits(data?.minBorrow, 18))}
               reload={setReload}
+              currencyType={currencyType}
             />
           </Card>
           <Card
@@ -386,6 +415,7 @@ const LendingDetails = () => {
               creditBalance={data?.creditBalance}
               usdcNonces={data?.usdcNonces}
               minBorrow={data?.minBorrow}
+              currencyType={currencyType}
             />
           </Card>
         </div>
@@ -609,7 +639,7 @@ const LendingDetails = () => {
 
                             <p>
                               For each gUSDC staked,{" "}
-                              <strong>{preciseRound(ratioGuildCredit, 2)}</strong> GUILD
+                              <strong>{formatDecimal(ratioGuildCredit, 2)}</strong> GUILD
                               will be minted & staked for this term (see Stake GUILD
                               tooltip), which will increase the debt ceiling (available
                               gUSDC to borrow) in this term.
@@ -705,13 +735,11 @@ const LendingDetails = () => {
             title="Active Loans"
           >
             <ActiveLoans
-              maxDelayBetweenPartialRepay={lendingTermData.maxDelayBetweenPartialRepay}
-              collateralName={lendingTermData.collateral.symbol}
-              termAddress={termAddress}
+              lendingTerm={lendingTermData}
               activeLoans={eventLoans}
-              collateralDecimals={lendingTermData.collateral.decimals}
               isLoadingEventLoans={isLoadingEventLoans}
               reload={setReload}
+              currencyType={currencyType}
             />
           </Card>
         </div>

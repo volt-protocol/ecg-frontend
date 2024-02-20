@@ -6,15 +6,16 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
   SortingState,
   useReactTable,
 } from "@tanstack/react-table"
-import { auctionHouseContract } from "lib/contracts"
-import { waitForTransactionReceipt, writeContract } from "@wagmi/core"
+import { auctionHouseContract, creditContract } from "lib/contracts"
+import { waitForTransactionReceipt, writeContract, readContract } from "@wagmi/core"
 import { formatDecimal } from "utils/numbers"
 import { FaSort, FaSortDown, FaSortUp } from "react-icons/fa"
-import { formatUnits } from "viem"
+import { formatUnits, parseUnits } from "viem"
 import moment from "moment"
 import { Auction } from "lib/logs/auctions"
 import { MdChevronLeft, MdChevronRight, MdOpenInNew, MdShowChart } from "react-icons/md"
@@ -28,18 +29,22 @@ import { wagmiConfig } from "contexts/Web3Provider"
 import { ConnectWeb3Button } from "components/button/ConnectWeb3Button"
 import { TransactionBadge } from "components/badge/TransactionBadge"
 import { ItemIdBadge } from "components/badge/ItemIdBadge"
+import { useAppStore } from "store"
+import { shortenUint } from "utils/strings"
 
 export default function AuctionsTable({
   auctionDuration,
   tableData,
   setOpen,
+  setReload,
 }: {
   auctionDuration: number
   tableData: Auction[]
   setOpen: (arg: boolean) => void
+  setReload: (arg: boolean) => void
 }) {
+  const { lendingTerms } = useAppStore()
   const { isConnected } = useAccount()
-  const [sorting, setSorting] = React.useState<SortingState>([])
   const columnHelper = createColumnHelper<Auction>()
   const [showModal, setShowModal] = useState(false)
   const [data, setData] = React.useState<Auction[]>([])
@@ -51,6 +56,12 @@ export default function AuctionsTable({
 
   const [steps, setSteps] = useState<Step[]>(createSteps())
   /* End Create Modal Steps */
+
+  const updateStepStatus = (stepName: string, status: Step["status"]) => {
+    setSteps((prevSteps) =>
+      prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step))
+    )
+  }
 
   useEffect(() => {
     setData([...tableData])
@@ -129,24 +140,55 @@ export default function AuctionsTable({
 
   /* Smart contract writes */
   const bid = async (loanId: string): Promise<void> => {
+    setShowModal(true)
+
+    //get auction details
+    const auctionDetails = await readContract(wagmiConfig, {
+      ...auctionHouseContract,
+      functionName: "getAuction",
+      args: [loanId],
+    })
+
+    console.log(auctionDetails)
+
     //Init Steps
     setSteps([
+      { name: `Approve gUSDC`, status: "Not Started" },
       {
-        name: "Bid for loan " + loanId.toString().slice(0, 6) + "...",
+        name: "Bid for loan " + shortenUint(loanId),
         status: "Not Started",
       },
     ])
 
-    const updateStepStatus = (stepName: string, status: Step["status"]) => {
-      setSteps((prevSteps) =>
-        prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step))
-      )
+    try {
+      updateStepStatus(`Approve gUSDC`, "In Progress")
+
+      const hash = await writeContract(wagmiConfig, {
+        ...creditContract,
+        functionName: "approve",
+        args: [
+          auctionDetails.lendingTerm,
+          auctionDetails.callDebt,
+        ],
+      })
+      const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
+        hash: hash,
+      })
+
+      if (checkApprove.status != "success") {
+        updateStepStatus(`Approve gUSDC`, "Error")
+        return
+      }
+      updateStepStatus(`Approve gUSDC`, "Success")
+    } catch (e) {
+      console.log(e)
+      updateStepStatus(`Approve gUSDC`, "Error")
+      return
     }
 
     try {
-      setShowModal(true)
       updateStepStatus(
-        "Bid for loan  " + loanId.toString().slice(0, 6) + "...",
+        "Bid for loan " + shortenUint(loanId),
         "In Progress"
       )
       const hash = await writeContract(wagmiConfig, {
@@ -161,19 +203,20 @@ export default function AuctionsTable({
 
       if (tx.status != "success") {
         updateStepStatus(
-          "Bid for loan  " + loanId.toString().slice(0, 6) + "...",
+          "Bid for loan " + shortenUint(loanId),
           "Error"
         )
         return
       }
 
       updateStepStatus(
-        "Bid for loan  " + loanId.toString().slice(0, 6) + "...",
+        "Bid for loan " + shortenUint(loanId),
         "Success"
       )
+      setReload(true)
     } catch (e: any) {
       console.log(e)
-      updateStepStatus("Bid for loan  " + loanId.toString().slice(0, 6) + "...", "Error")
+      updateStepStatus("Bid for loan " + shortenUint(loanId), "Error")
       toastError(e.shortMessage)
       setShowModal(false)
     }
@@ -183,21 +226,15 @@ export default function AuctionsTable({
     //Init Steps
     setSteps([
       {
-        name: "Forgive for loan  " + loanId.toString().slice(0, 6) + "...",
+        name: "Forgive for loan  " + shortenUint(loanId),
         status: "Not Started",
       },
     ])
 
-    const updateStepStatus = (stepName: string, status: Step["status"]) => {
-      setSteps((prevSteps) =>
-        prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step))
-      )
-    }
-
     try {
       setShowModal(true)
       updateStepStatus(
-        "Forgive for loan  " + loanId.toString().slice(0, 6) + "...",
+        "Forgive for loan  " + shortenUint(loanId),
         "In Progress"
       )
       const hash = await writeContract(wagmiConfig, {
@@ -212,20 +249,21 @@ export default function AuctionsTable({
 
       if (tx.status != "success") {
         updateStepStatus(
-          "Forgive for loan  " + loanId.toString().slice(0, 6) + "...",
+          "Forgive for loan  " + shortenUint(loanId),
           "Error"
         )
         return
       }
 
       updateStepStatus(
-        "Forgive for loan  " + loanId.toString().slice(0, 6) + "...",
+        "Forgive for loan  " + shortenUint(loanId),
         "Success"
       )
+      setReload(true)
     } catch (e: any) {
       console.log(e)
       updateStepStatus(
-        "Forgive for loan  " + loanId.toString().slice(0, 6) + "...",
+        "Forgive for loan  " + shortenUint(loanId),
         "Error"
       )
       toastError(e.shortMessage)
@@ -451,9 +489,9 @@ export default function AuctionsTable({
   const table = useReactTable({
     data,
     columns,
-    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     debugTable: true,
     initialState: {
       pagination: {

@@ -15,7 +15,7 @@ export type LoansObj = {
   status: string
   originationTime: number
   ltv: number
-  loanDebt?: number
+  loanDebt?: bigint
 }
 
 export type loanObjCall = {

@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from "react"
 import {
-  Address,
   readContract,
   waitForTransactionReceipt,
   writeContract,
 } from "@wagmi/core"
-import { toastError, toastRocket } from "components/toast"
-import { GuildABI, guildContract } from "lib/contracts"
-import { DecimalToUnit, UnitToDecimal, preciseRound } from "utils/utils-old"
+import { toastError } from "components/toast"
+import { guildContract } from "lib/contracts"
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa"
 import { Step } from "components/stepLoader/stepType"
 import StepModal from "components/stepLoader"
@@ -18,10 +16,11 @@ import {
   getSortedRowModel,
   flexRender,
 } from "@tanstack/react-table"
-import { getTitleDisabled, style } from "./helper"
+import { getTitleDisabled } from "./helper"
 import { MdOpenInNew } from "react-icons/md"
 import Spinner from "components/spinner"
 import { useAccount } from "wagmi"
+import { Address } from "viem"
 import ButtonDanger from "components/button/ButtonDanger"
 import { formatDecimal } from "utils/numbers"
 import { formatUnits, isAddress, parseEther } from "viem"

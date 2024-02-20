@@ -90,7 +90,6 @@ function Veto({
     })
 
     const termsCreated = await getVotableTerms()
-    console.log("termsCreated", termsCreated)
     const activeVetoVotes = await Promise.all(
       logs
         .map((log) => {

@@ -94,6 +94,28 @@
   },
   {
     "inputs": [
+      { "internalType": "address", "name": "term", "type": "address" },
+      { "internalType": "address", "name": "psm", "type": "address" },
+      { "internalType": "address", "name": "uniswapRouter", "type": "address" },
+      { "internalType": "address", "name": "collateralToken", "type": "address" },
+      { "internalType": "address", "name": "pegToken", "type": "address" },
+      { "internalType": "uint256", "name": "collateralAmount", "type": "uint256" },
+      {
+        "internalType": "uint256",
+        "name": "flashloanCollateralAmount",
+        "type": "uint256"
+      },
+      { "internalType": "uint256", "name": "maxLoanDebt", "type": "uint256" },
+      { "internalType": "bytes[]", "name": "pullCollateralCalls", "type": "bytes[]" },
+      { "internalType": "bytes", "name": "allowBorrowedCreditCall", "type": "bytes" }
+    ],
+    "name": "borrowWithBalancerFlashLoan",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
       { "internalType": "address", "name": "target", "type": "address" },
       { "internalType": "bytes", "name": "data", "type": "bytes" }
     ],
@@ -180,6 +202,22 @@
   {
     "inputs": [],
     "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "loanId", "type": "bytes32" },
+      { "internalType": "address", "name": "term", "type": "address" },
+      { "internalType": "address", "name": "psm", "type": "address" },
+      { "internalType": "address", "name": "uniswapRouter", "type": "address" },
+      { "internalType": "address", "name": "collateralToken", "type": "address" },
+      { "internalType": "address", "name": "pegToken", "type": "address" },
+      { "internalType": "uint256", "name": "maxCollateralSold", "type": "uint256" },
+      { "internalType": "bytes", "name": "allowCollateralTokenCall", "type": "bytes" }
+    ],
+    "name": "repayWithBalancerFlashLoan",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

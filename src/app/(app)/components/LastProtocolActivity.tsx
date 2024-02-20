@@ -14,7 +14,7 @@ import { fromNow } from "utils/date"
 import { BLOCK_LENGTH_MILLISECONDS } from "utils/constants"
 import { MintRedeemLogs } from "lib/logs/mint-redeem"
 import { VoteLogs } from "lib/logs/votes"
-import { addSlash, camelCasetoString } from "utils/strings"
+import { addSlash, camelCasetoString, shortenAddress, shortenUint } from "utils/strings"
 import { getLastVoteEventDescription } from "../profile/helper"
 import { AddressBadge } from "components/badge/AddressBadge"
 import { Address } from "viem"
@@ -53,8 +53,8 @@ export const LastProtocolActivity = ({
 
     if (event.category == "loan") {
       return event.type == "opening"
-        ? "Opened loan #" + event.loanId.slice(0, 6) + "..." + event.loanId.slice(-4)
-        : "Closed loan #" + event.loanId.slice(0, 6) + "..." + event.loanId.slice(-4)
+        ? "Opened loan #" + shortenUint(event.loanId)
+        : "Closed loan #" + shortenUint(event.loanId)
     }
   }
 

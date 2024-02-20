@@ -11,13 +11,12 @@ function StepModal({
 }: {
   steps: Step[]
   close: Dispatch<SetStateAction<boolean>>
-  initialStep: () => Step[]
+  initialStep?: () => Step[]
   setSteps: Dispatch<SetStateAction<Step[]>>
 }) {
   const [showCloseButton, setShowCloseButton] = React.useState(false)
 
   useEffect(() => {
-    console.log(steps)
     const hasError = steps.some((step) => step.status.toLowerCase().includes("error"))
     const allSuccess = steps.every((step) => step.status === "Success")
     if (hasError || allSuccess) {
@@ -27,7 +26,7 @@ function StepModal({
 
   const handleClose = () => {
     if (showCloseButton) {
-      setSteps(initialStep())
+      initialStep && setSteps(initialStep())
       close(false)
     }
   }

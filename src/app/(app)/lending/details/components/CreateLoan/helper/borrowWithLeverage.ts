@@ -14,8 +14,8 @@ import { Abi, Address, encodeFunctionData, erc20Abi } from "viem"
 export const borrowWithLeverage = (
   userAddress: Address,
   lendingTerm: LendingTerms,
-  debtAmount: bigint, // borrowAmount + flashloanAmountInUSDC
-  collateralAmount: bigint, // eg: sDAI 
+  debtAmount: bigint, // borrowAmount + flashloanAmount in gUSDC
+  collateralAmount: bigint, // eg: sDAI
   flashloanAmount: bigint, // eg: sDAI
   amountUSDC: bigint,
   permitDataCollateral: any | undefined,
@@ -172,8 +172,8 @@ export const borrowWithLeverage = (
             amountUSDC,
             path,
             gatewayContract.address,
-            deadlineSwap
-          ]
+            deadlineSwap,
+          ],
         }),
       ],
     })
@@ -189,7 +189,7 @@ export const borrowWithLeverage = (
         encodeFunctionData({
           abi: usdcContract.abi as Abi,
           functionName: "approve",
-          args: [uniswapRouterContract.address, 0]
+          args: [uniswapRouterContract.address, 0],
         }),
       ],
     })
@@ -200,6 +200,67 @@ export const borrowWithLeverage = (
       abi: GatewayABI as Abi,
       functionName: "sweep",
       args: [usdcContract.address],
+    })
+  )
+
+  return calls
+}
+
+export const getPullCollateralCalls = (
+  lendingTerm: LendingTerms,
+  collateralAmount: bigint, // eg: sDAI
+  permitDataCollateral: any | undefined,
+) => {
+  let calls = []
+
+  // consume user permit
+  if (permitDataCollateral) {
+    calls.push(
+      encodeFunctionData({
+        abi: GatewayABI as Abi,
+        functionName: "consumePermit",
+        args: [
+          lendingTerm.collateral.address,
+          collateralAmount,
+          permitDataCollateral.deadline,
+          permitDataCollateral.v,
+          permitDataCollateral.r,
+          permitDataCollateral.s,
+        ],
+      })
+    )
+  }
+
+  // consumer user allowance
+  calls.push(
+    encodeFunctionData({
+      abi: GatewayABI as Abi,
+      functionName: "consumeAllowance",
+      args: [lendingTerm.collateral.address, collateralAmount],
+    })
+  )
+
+  return calls
+}
+
+export const getAllowBorrowedCreditCall = (
+  debtAmount: bigint, //  borrowAmount + flashloanAmount in gUSDC
+  permitDatagUSDC: any,
+) => {
+  let calls = []
+
+  calls.push(
+    encodeFunctionData({
+      abi: GatewayABI as Abi,
+      functionName: "consumePermit",
+      args: [
+        creditContract.address,
+        debtAmount,
+        permitDatagUSDC.deadline,
+        permitDatagUSDC.v,
+        permitDatagUSDC.r,
+        permitDatagUSDC.s,
+      ],
     })
   )
 

@@ -117,7 +117,8 @@ export const getVotableTerms = async () => {
 
 export const checkVetoVoteValidity = (targets: Address[], datas: string[]): boolean => {
   //check if there are 3 calls scheduled
-  if (targets.length != 3) {
+
+  if (targets.length != 4) {
     return false
   }
 

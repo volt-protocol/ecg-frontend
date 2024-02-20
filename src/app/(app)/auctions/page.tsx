@@ -13,8 +13,9 @@ import { auctionHouseContract } from "lib/contracts"
 const Auctions = () => {
   const { isConnected } = useAccount()
   const [auctions, setAuctions] = useState<Auction[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState<boolean>(false)
+  const [reload, setReload] = useState<boolean>(true)
 
   const { data, isError, isLoading } = useReadContracts({
     contracts: [
@@ -39,13 +40,14 @@ const Auctions = () => {
 
   useEffect(() => {
     const getAuctions = async () => {
+      setLoading(true)
       const auctions = await getAllAuctions()
-      console.log(auctions)
       setAuctions(auctions)
       setLoading(false)
+      setReload(false)
     }
-    getAuctions()
-  }, [])
+    reload && getAuctions()
+  }, [reload])
 
   return (
     <>
@@ -79,6 +81,7 @@ const Auctions = () => {
                 tableData={auctions}
                 setOpen={setOpen}
                 auctionDuration={data?.auctionDuration}
+                setReload={setReload}
               />
             )}
           </Card>

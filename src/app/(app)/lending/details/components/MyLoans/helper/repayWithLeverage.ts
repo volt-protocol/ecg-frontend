@@ -213,3 +213,22 @@ export const repayWithLeverage = (
 
   return calls
 }
+
+export const getAllowCollateralTokenCall = (
+  lendingTerm: LendingTerms,
+  collateralAmount: bigint, // eg: sDAI
+  permitDataCollateral: any | undefined
+) => {
+  return encodeFunctionData({
+    abi: GatewayABI as Abi,
+    functionName: "consumePermit",
+    args: [
+      lendingTerm.collateral.address,
+      collateralAmount,
+      permitDataCollateral.deadline,
+      permitDataCollateral.v,
+      permitDataCollateral.r,
+      permitDataCollateral.s,
+    ],
+  })
+}

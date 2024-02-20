@@ -6,13 +6,9 @@ import { GiProgression } from "react-icons/gi"
 import { MdBarChart, MdCurrencyExchange } from "react-icons/md"
 import { TbArrowsExchange } from "react-icons/tb"
 import { LendingTerms } from "types/lending"
-import { formatDecimal, formatNumberDecimal } from "utils/numbers"
-import {
-  formatCurrencyValue,
-  preciseRound,
-  secondsToAppropriateUnit,
-} from "utils/utils-old"
+import { formatDecimal, formatNumberDecimal, formatCurrencyValue } from "utils/numbers"
 import { formatUnits } from "viem"
+import { secondsToAppropriateUnit } from "utils/date"
 
 export default function LendingStats({
   lendingTermData,
@@ -67,9 +63,7 @@ export default function LendingStats({
                   ? "-.--$"
                   : formatCurrencyValue(
                       parseFloat(
-                        formatNumberDecimal(
-                          termTotalCollateral * collateralPrice
-                        )
+                        formatNumberDecimal(termTotalCollateral * collateralPrice)
                       )
                     ) + "$"
               }
@@ -85,22 +79,17 @@ export default function LendingStats({
           <div>
             <p>
               Current Debt :{" "}
-              <span className="font-semibold">
-                {formatDecimal(currentDebt, 2)}
-              </span>{" "}
-              gUSDC
+              <span className="font-semibold">{formatDecimal(currentDebt, 2)}</span> gUSDC
             </p>
             <p>
               Debt Ceilling :{" "}
-              <span className="font-semibold">
-                {formatDecimal(debtCeilling, 2)}
-              </span>{" "}
+              <span className="font-semibold">{formatDecimal(debtCeilling, 2)}</span>{" "}
               gUSDC
             </p>
             <p>
               <br />
-                New borrows increase the Current Debt.{" "}
-                GUILD & gUSDC stake increase the Debt Ceiling.
+              New borrows increase the Current Debt. GUILD & gUSDC stake increase the Debt
+              Ceiling.
             </p>
           </div>
         }
@@ -112,7 +101,7 @@ export default function LendingStats({
               subtitle={
                 utilization === "NaN"
                   ? "-.--%"
-                  : preciseRound((currentDebt / debtCeilling) * 100, 2) + "%"
+                  : formatDecimal((currentDebt / debtCeilling) * 100, 2) + "%"
               }
               extra={<QuestionMarkIcon />}
             />
@@ -125,7 +114,8 @@ export default function LendingStats({
         content={
           <div>
             <p>
-              The opening fee is added to the interest owed directly after you open a new loan.
+              The opening fee is added to the interest owed directly after you open a new
+              loan.
             </p>
           </div>
         }
@@ -135,7 +125,7 @@ export default function LendingStats({
               icon={<MdBarChart className="h-7 w-7" />}
               title={"Opening Fee"}
               subtitle={
-                preciseRound(lendingTermData.openingFee * 100, 2).toString() + "%"
+                formatDecimal(lendingTermData.openingFee * 100, 2).toString() + "%"
               }
               extra={<QuestionMarkIcon />}
             />
@@ -148,7 +138,8 @@ export default function LendingStats({
         content={
           <div>
             <p>
-              Interest rate is non-compounding, and is charged based on a period of ~1 year (31557600 seconds).
+              Interest rate is non-compounding, and is charged based on a period of ~1
+              year (31557600 seconds).
             </p>
           </div>
         }
@@ -158,8 +149,7 @@ export default function LendingStats({
               icon={<TbArrowsExchange className="h-6 w-6" />}
               title={"Interest Rate"}
               subtitle={
-                preciseRound(lendingTermData.interestRate * 100, 2).toString() +
-                "%"
+                formatDecimal(lendingTermData.interestRate * 100, 2).toString() + "%"
               }
               extra={<QuestionMarkIcon />}
             />
@@ -174,7 +164,10 @@ export default function LendingStats({
             <p>
               This term allows to borrow{" "}
               <span className="font-semibold">
-                {preciseRound(lendingTermData.borrowRatio / Number(formatUnits(creditMultiplier, 18)), 2)}
+                {formatDecimal(
+                  lendingTermData.borrowRatio / Number(formatUnits(creditMultiplier, 18)),
+                  2
+                )}
               </span>{" "}
               gUSDC per unit of {lendingTermData.collateral.symbol} collateral.
             </p>
@@ -185,7 +178,10 @@ export default function LendingStats({
             <Widget
               icon={<MdCurrencyExchange className="h-7 w-7" />}
               title={"Borrow Ratio"}
-              subtitle={preciseRound(lendingTermData.borrowRatio / Number(formatUnits(creditMultiplier, 18)), 2).toString()}
+              subtitle={formatDecimal(
+                lendingTermData.borrowRatio / Number(formatUnits(creditMultiplier, 18)),
+                2
+              ).toString()}
               extra={<QuestionMarkIcon />}
             />
           </div>
@@ -205,15 +201,12 @@ export default function LendingStats({
             <p>
               Periodic Payment maximum interval :{" "}
               <span className="font-semibold">
-                {secondsToAppropriateUnit(
-                  lendingTermData.maxDelayBetweenPartialRepay
-                )}
+                {secondsToAppropriateUnit(lendingTermData.maxDelayBetweenPartialRepay)}
               </span>
             </p>
             <p>
               <br />
-                As a borrower, if you miss Periodic Payments, your loan will be
-                called.
+              As a borrower, if you miss Periodic Payments, your loan will be called.
             </p>
           </>
         }

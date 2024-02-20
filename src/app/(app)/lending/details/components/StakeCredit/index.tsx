@@ -1,24 +1,23 @@
 import React, { useEffect, useState } from "react"
-import {
-  Address,
-  readContract,
-  waitForTransactionReceipt,
-  writeContract,
-} from "@wagmi/core"
+import { readContract, waitForTransactionReceipt, writeContract } from "@wagmi/core"
 import { toastError } from "components/toast"
 import {
-  CreditABI,
-  SurplusGuildMinterABI,
   TermABI,
   creditContract,
   surplusGuildMinterContract,
 } from "lib/contracts"
-import { DecimalToUnit, UnitToDecimal, formatCurrencyValue } from "utils/utils-old"
+import { formatCurrencyValue } from "utils/numbers"
 import { TooltipHorizon } from "components/tooltip"
 import { useAccount } from "wagmi"
 import { Step } from "components/stepLoader/stepType"
 import StepModal from "components/stepLoader"
-import { Abi, ContractFunctionExecutionError, formatUnits, parseEther } from "viem"
+import {
+  Abi,
+  ContractFunctionExecutionError,
+  formatUnits,
+  parseEther,
+  Address,
+} from "viem"
 import { QuestionMarkIcon } from "components/tooltip"
 import ButtonPrimary from "components/button/ButtonPrimary"
 import { formatDecimal } from "utils/numbers"
@@ -48,7 +47,6 @@ function StakeCredit({
   reload: React.Dispatch<React.SetStateAction<boolean>>
 }) {
   const [value, setValue] = useState<string>("")
-  const [loading, setLoading] = useState<boolean>(false)
   const { address, isConnected } = useAccount()
   const [showModal, setShowModal] = useState<boolean>(false)
   const [debtDelta, setDebtDelta] = useState(0)
@@ -81,19 +79,6 @@ function StakeCredit({
     }
   }
 
-  // useEffect(() => {
-  //   async function getStakeRatio() {
-  //     const ratio = await readContract({
-  //       ...surplusGuildMinterContract,
-  //       functionName: "stakeRatio",
-  //       args: [address, termAddress],
-  //     })
-  //     setStakeRatio(DecimalToUnit(ratio as bigint, 18))
-  //   }
-
-  //   getStakeRatio()
-  // }, [value])
-
   async function handlestake(): Promise<void> {
     const updateStepStatus = (stepName: string, status: Step["status"]) => {
       setSteps((prevSteps) =>
@@ -104,18 +89,15 @@ function StakeCredit({
     if (textButton === "Stake") {
       if (isConnected == false) {
         toastError("Please connect your wallet")
-        setLoading(false)
         return
       }
       if (Number(value) == 0) {
         toastError("Please enter a value")
-        setLoading(false)
         return
       }
 
       if (Number(value) > creditBalance) {
         toastError("Not enough gUSDC")
-        setLoading(false)
         return
       } else {
         setShowModal(true)
@@ -188,7 +170,6 @@ function StakeCredit({
     } else if (textButton === "Unstake") {
       if (Number(value) > creditAllocated) {
         toastError("Not enough gUSDC allocated")
-        setLoading(false)
         return
       } else {
         setShowModal(true)
@@ -284,7 +265,7 @@ function StakeCredit({
         />
       )}
       <div>
-        <div className="flex flex-col items-center gap-2 mb-2">
+        <div className="mb-2 flex flex-col items-center gap-2">
           <DefiInputBox
             topLabel={"Amount of gUSDC to " + textButton.toLowerCase()}
             currencyLogo="/img/crypto-logos/credit.png"

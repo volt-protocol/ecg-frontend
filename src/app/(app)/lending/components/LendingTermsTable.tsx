@@ -10,13 +10,18 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table"
-import { formatCurrencyValue, secondsToAppropriateUnit } from "utils/utils-old"
+import { secondsToAppropriateUnit } from "utils/date"
 import { LendingTerms } from "types/lending"
 import Progress from "components/progress"
 import { TooltipHorizon, QuestionMarkIcon } from "components/tooltip"
-import { creditContract, guildContract, profitManagerContract, TermABI } from "lib/contracts"
+import {
+  creditContract,
+  guildContract,
+  profitManagerContract,
+  TermABI,
+} from "lib/contracts"
 import { readContracts } from "@wagmi/core"
-import { formatDecimal, formatNumberDecimal } from "utils/numbers"
+import { formatDecimal, formatNumberDecimal, formatCurrencyValue } from "utils/numbers"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { FaSort, FaSortDown, FaSortUp } from "react-icons/fa"
@@ -192,10 +197,6 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
         </p>
       ),
       cell: (info: any) => {
-        // const debtCeilling =
-        //   info.row.original.creditTotalSupply *
-        //   (info.row.original.gaugeWeight / info.row.original.totalWeight) *
-        //   1.2
         const debtCeilling = info.row.original.debtCeiling
 
         return (
@@ -310,7 +311,6 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
       ),
       cell: (info) => (
         <p className="ml-3 text-center text-sm font-bold text-gray-600 dark:text-white">
-          {/* {secondsToAppropriateUnit(info.getValue())} */}
           {info.getValue() != 0 ? (
             <div className="flex items-center justify-center gap-1">
               Yes{" "}

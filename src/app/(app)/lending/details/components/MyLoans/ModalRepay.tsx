@@ -9,8 +9,10 @@ import { formatDecimal, gUsdcToUsdc, usdcToGUsdc } from "utils/numbers"
 import { formatUnits, parseUnits } from "viem"
 import { getTitleDisabled } from "./helper"
 import Link from "next/link"
-import { borrowConfig } from "config"
+import { lendingTermConfig } from "config"
 import { RangeSlider } from "components/rangeSlider/RangeSlider"
+import { CurrencyTypes } from "components/switch/ToggleCredit"
+import { parse } from "path"
 
 export default function ModalRepay({
   isOpen,
@@ -21,8 +23,11 @@ export default function ModalRepay({
   rowData,
   repay,
   partialRepay,
-  partialRepayLeverage,
+  repayGateway,
+  partialRepayGateway,
+  partialRepayGatewayLeverage,
   minBorrow,
+  currencyType,
 }: {
   isOpen: boolean
   setOpen: (arg: boolean) => void
@@ -32,8 +37,15 @@ export default function ModalRepay({
   rowData: any
   repay: (id: string) => void
   partialRepay: (id: string, amount: string) => void
-  partialRepayLeverage: (id: string, amount: string, flashloanValue: string) => void
+  repayGateway: (id: string) => void
+  partialRepayGateway: (id: string, amount: string) => void
+  partialRepayGatewayLeverage: (
+    id: string,
+    amount: string,
+    flashloanValue: string
+  ) => void
   minBorrow: bigint
+  currencyType: CurrencyTypes
 }) {
   const [value, setValue] = useState<string>("")
   const [flashloanValue, setFlashloanValue] = useState<number>(0)
@@ -47,24 +59,34 @@ export default function ModalRepay({
   }, [isOpen])
 
   useEffect(() => {
-    rowData &&
-      setMatch(parseUnits(value, 6) >= gUsdcToUsdc(rowData.loanDebt, creditMultiplier))
+    if (rowData) {
+      currencyType == "USDC"
+        ? setMatch(
+            parseUnits(value, 6) >= gUsdcToUsdc(rowData.loanDebt, creditMultiplier)
+          )
+        : setMatch(parseUnits(value, 18) >= rowData.loanDebt)
+    }
   }, [value, rowData])
 
   useEffect(() => {
-
     setFlashloanValue(Number(value) * leverageValue - Number(value))
   }, [leverageValue, value])
 
   /* Handlers */
   const setAvailable = (): string => {
-    return formatDecimal(Number(formatUnits(usdcBalance, 6)), 2)
+    return currencyType == "USDC"
+      ? formatDecimal(Number(formatUnits(usdcBalance, 6)), 2)
+      : formatDecimal(Number(formatUnits(creditBalance, 18)), 2)
   }
 
   const setMax = () => {
-    usdcBalance > gUsdcToUsdc(rowData.loanDebt, creditMultiplier)
-      ? setValue(formatUnits(gUsdcToUsdc(rowData.loanDebt, creditMultiplier), 6))
-      : setValue(formatUnits(usdcBalance, 6))
+    currencyType == "USDC"
+      ? usdcBalance > gUsdcToUsdc(rowData.loanDebt, creditMultiplier)
+        ? setValue(formatUnits(gUsdcToUsdc(rowData.loanDebt, creditMultiplier), 6))
+        : setValue(formatUnits(usdcBalance, 6))
+      : creditBalance > rowData.loanDebt
+      ? setValue(formatUnits(rowData.loanDebt, 18))
+      : setValue(formatUnits(creditBalance, 18))
   }
 
   const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,11 +94,30 @@ export default function ModalRepay({
 
     // Vérifier si la valeur saisie ne contient que des numéros
     if (/^[0-9]*\.?[0-9]*$/i.test(inputValue)) {
-      usdcToGUsdc(parseUnits(inputValue, 6), creditMultiplier) > rowData.loanDebt
-        ? setValue(formatUnits(gUsdcToUsdc(rowData.loanDebt, creditMultiplier), 6))
+      currencyType == "USDC"
+        ? usdcToGUsdc(parseUnits(inputValue, 6), creditMultiplier) > rowData.loanDebt
+          ? setValue(formatUnits(gUsdcToUsdc(rowData.loanDebt, creditMultiplier), 6))
+          : setValue(inputValue as string)
+        : parseUnits(inputValue, 18) > rowData.loanDebt
+        ? setValue(formatUnits(rowData.loanDebt, 18))
         : setValue(inputValue as string)
     }
   }
+
+  const getBorrowFunction = () => {
+    currencyType == "USDC"
+      ? match
+        ? withLeverage && leverageValue > 1
+          ? partialRepayGatewayLeverage(rowData.id, value, flashloanValue.toString())
+          : repayGateway(rowData.id)
+        : withLeverage && leverageValue > 1
+        ? partialRepayGatewayLeverage(rowData.id, value, flashloanValue.toString())
+        : partialRepayGateway(rowData.id, value)
+      : match
+      ? repay(rowData.id)
+      : partialRepay(rowData.id, value)
+  }
+
   /* End Handlers */
 
   return (
@@ -114,9 +155,15 @@ export default function ModalRepay({
 
                     <div className="mt-2 flex w-full flex-col gap-2">
                       <DefiInputBox
-                        topLabel={"Amount of USDC to use from wallet"}
-                        currencyLogo="/img/crypto-logos/usdc.png"
-                        currencySymbol="USDC"
+                        topLabel={`Amount of ${
+                          currencyType == "USDC" ? "USDC" : "gUSDC"
+                        } to use from wallet`}
+                        currencyLogo={
+                          currencyType == "USDC"
+                            ? "/img/crypto-logos/usdc.png"
+                            : "/img/crypto-logos/credit.png"
+                        }
+                        currencySymbol={currencyType}
                         placeholder="0"
                         pattern="^[0-9]*[.,]?[0-9]*$"
                         inputSize="text-2xl sm:text-3xl"
@@ -152,32 +199,35 @@ export default function ModalRepay({
                           value={formatDecimal(flashloanValue + Number(value), 2)}
                         />
                       )}
-                      <div className="flex flex-col gap-4 rounded-xl bg-gray-100 py-4 dark:bg-navy-900">
-                        {borrowConfig.find(
-                          (item) => item.termAddress === rowData.termAddress
-                        )?.hasLeverage && (
-                          <div className="mt w-full px-5">
-                            <RangeSlider
-                              withSwitch={true}
-                              title={`Leverage: ${leverageValue}x`}
-                              value={leverageValue}
-                              onChange={(value) => setLeverageValue(value)}
-                              min={1}
-                              max={
-                                borrowConfig.find(
-                                  (item) => item.termAddress === rowData.termAddress
-                                )?.maxLeverage
-                              }
-                              step={0.1}
-                              show={withLeverage}
-                              setShow={() => {
-                                setLeverageValue(1)
-                                setWithLeverage(!withLeverage)
-                              }}
-                            />
+
+                      {lendingTermConfig.find(
+                        (item) => item.termAddress === rowData.termAddress
+                      )?.hasLeverage &&
+                        currencyType == "USDC" && (
+                          <div className="flex flex-col gap-4 rounded-xl bg-gray-100 py-4 dark:bg-navy-900">
+                            <div className="mt w-full px-5">
+                              <RangeSlider
+                                withSwitch={true}
+                                title={`Leverage: ${leverageValue}x`}
+                                value={leverageValue}
+                                onChange={(value) => setLeverageValue(value)}
+                                min={1}
+                                max={
+                                  lendingTermConfig.find(
+                                    (item) => item.termAddress === rowData.termAddress
+                                  )?.maxLeverage
+                                }
+                                step={0.1}
+                                show={withLeverage}
+                                setShow={() => {
+                                  setLeverageValue(1)
+                                  setWithLeverage(!withLeverage)
+                                }}
+                              />
+                            </div>
                           </div>
                         )}
-                      </div>
+
                       <ButtonPrimary
                         variant="lg"
                         title={
@@ -204,23 +254,7 @@ export default function ModalRepay({
                               usdcToGUsdc(parseUnits(value, 6), creditMultiplier) <
                               minBorrow)
                         }
-                        onClick={() =>
-                          match
-                            ? withLeverage && leverageValue > 1
-                              ? partialRepayLeverage(
-                                rowData.id,
-                                value,
-                                flashloanValue.toString()
-                              )
-                              : repay(rowData.id)
-                            : withLeverage && leverageValue > 1
-                            ? partialRepayLeverage(
-                                rowData.id,
-                                value,
-                                flashloanValue.toString()
-                              )
-                            : partialRepay(rowData.id, value)
-                        }
+                        onClick={getBorrowFunction}
                       />
 
                       {/* TODO */}

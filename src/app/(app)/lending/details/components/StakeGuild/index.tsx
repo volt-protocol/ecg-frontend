@@ -1,19 +1,23 @@
 import React, { Dispatch, SetStateAction, useEffect, useState } from "react"
-import { Address, readContract, waitForTransactionReceipt, writeContract } from "@wagmi/core"
-import { GuildABI, TermABI, guildContract } from "lib/contracts"
-import { DecimalToUnit, UnitToDecimal, formatCurrencyValue } from "utils/utils-old"
-import { toastError, toastRocket } from "components/toast"
+import { readContract, waitForTransactionReceipt, writeContract } from "@wagmi/core"
+import { TermABI, guildContract } from "lib/contracts"
+import { toastError } from "components/toast"
 import { useAccount } from "wagmi"
 import { Step } from "components/stepLoader/stepType"
 import StepModal from "components/stepLoader"
-import { Abi, ContractFunctionExecutionError, formatUnits, parseEther } from "viem"
+import {
+  Abi,
+  ContractFunctionExecutionError,
+  formatUnits,
+  parseEther,
+  Address,
+} from "viem"
 import ButtonPrimary from "components/button/ButtonPrimary"
 import DefiInputBox from "components/box/DefiInputBox"
-import { formatDecimal } from "utils/numbers"
+import { formatDecimal, formatCurrencyValue } from "utils/numbers"
 import { getTitleDisabledStake, getTitleDisabledUnstake } from "./helper"
 import { AlertMessage } from "components/message/AlertMessage"
 import { LendingTerms } from "types/lending"
-import Spinner from "components/spinner"
 import { wagmiConfig } from "contexts/Web3Provider"
 
 function StakeGuild({
@@ -36,7 +40,6 @@ function StakeGuild({
   reload: Dispatch<SetStateAction<boolean>>
 }) {
   const [value, setValue] = useState<string>("")
-  const [loading, setLoading] = useState<boolean>(false)
   const { isConnected } = useAccount()
   const [showModal, setShowModal] = useState(false)
   const [debtDelta, setDebtDelta] = useState(0)
@@ -77,7 +80,6 @@ function StakeGuild({
     }
     if (isConnected == false) {
       toastError("Please connect your wallet")
-      setLoading(false)
       return
     }
     if (textButton === "Stake") {
@@ -85,7 +87,6 @@ function StakeGuild({
         Number(value) >
         Number(formatUnits(guildBalance, 18)) - Number(formatUnits(guildUserWeight, 18))
       ) {
-        setLoading(false)
         toastError("Not enough guild")
         return
       } else {
@@ -237,78 +238,78 @@ function StakeGuild({
           setSteps={setSteps}
         />
       )}
-      <div className="flex flex-col items-center gap-2 mb-2">
-      <DefiInputBox
-        topLabel={"Amount of GUILD to " + textButton.toLowerCase()}
-        currencyLogo="/img/crypto-logos/guild.png"
-        currencySymbol="GUILD"
-        placeholder="0"
-        pattern="^[0-9]*[.,]?[0-9]*$"
-        inputSize="text-xl xl:text-3xl"
-        value={value}
-        onChange={handleInputChange}
-        rightLabel={
-          <>
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Available: {setAvailable()}
-            </p>
-            <button
-              className="text-sm font-medium text-brand-500 hover:text-brand-400"
-              onClick={(e) => setMax()}
-            >
-              Max
-            </button>
-          </>
-        }
-      />
-      <ButtonPrimary
-        variant="lg"
-        title={textButton}
-        titleDisabled={
-          textButton == "Stake"
-            ? getTitleDisabledStake(value, guildBalance, guildUserWeight)
-            : getTitleDisabledUnstake(value, guildUserGaugeWeight)
-        }
-        extra="w-full !rounded-xl"
-        onClick={handleVote}
-        disabled={
-          (Number(value) >
-            Number(formatUnits(guildBalance, 18)) -
-              Number(formatUnits(guildUserWeight, 18)) &&
-            textButton == "Stake") ||
-          (Number(value) > Number(formatUnits(guildUserGaugeWeight, 18)) &&
-            textButton == "Unstake") ||
-          Number(value) <= 0 ||
-          !value
-        }
-      />
+      <div className="mb-2 flex flex-col items-center gap-2">
+        <DefiInputBox
+          topLabel={"Amount of GUILD to " + textButton.toLowerCase()}
+          currencyLogo="/img/crypto-logos/guild.png"
+          currencySymbol="GUILD"
+          placeholder="0"
+          pattern="^[0-9]*[.,]?[0-9]*$"
+          inputSize="text-xl xl:text-3xl"
+          value={value}
+          onChange={handleInputChange}
+          rightLabel={
+            <>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Available: {setAvailable()}
+              </p>
+              <button
+                className="text-sm font-medium text-brand-500 hover:text-brand-400"
+                onClick={(e) => setMax()}
+              >
+                Max
+              </button>
+            </>
+          }
+        />
+        <ButtonPrimary
+          variant="lg"
+          title={textButton}
+          titleDisabled={
+            textButton == "Stake"
+              ? getTitleDisabledStake(value, guildBalance, guildUserWeight)
+              : getTitleDisabledUnstake(value, guildUserGaugeWeight)
+          }
+          extra="w-full !rounded-xl"
+          onClick={handleVote}
+          disabled={
+            (Number(value) >
+              Number(formatUnits(guildBalance, 18)) -
+                Number(formatUnits(guildUserWeight, 18)) &&
+              textButton == "Stake") ||
+            (Number(value) > Number(formatUnits(guildUserGaugeWeight, 18)) &&
+              textButton == "Unstake") ||
+            Number(value) <= 0 ||
+            !value
+          }
+        />
 
-      <AlertMessage
-        type="info"
-        message={
-          textButton === "Stake" ? (
-            <>
-              <p>
-                Your stake will allow{" "}
-                <span className="font-bold">
-                  {formatCurrencyValue(Number(formatDecimal(debtDelta, 2)))} more gUSDC
-                </span>{" "}
-                to be borrowed
-              </p>
-            </>
-          ) : (
-            <>
-              <p>
-                Your unstake will decrease the borrow capacity on this term by{" "}
-                <span className="font-bold">
-                  {" "}
-                  {formatCurrencyValue(Number(formatDecimal(debtDelta, 2)))} gUSDC
-                </span>
-              </p>
-            </>
-          )
-        }
-      />
+        <AlertMessage
+          type="info"
+          message={
+            textButton === "Stake" ? (
+              <>
+                <p>
+                  Your stake will allow{" "}
+                  <span className="font-bold">
+                    {formatCurrencyValue(Number(formatDecimal(debtDelta, 2)))} more gUSDC
+                  </span>{" "}
+                  to be borrowed
+                </p>
+              </>
+            ) : (
+              <>
+                <p>
+                  Your unstake will decrease the borrow capacity on this term by{" "}
+                  <span className="font-bold">
+                    {" "}
+                    {formatCurrencyValue(Number(formatDecimal(debtDelta, 2)))} gUSDC
+                  </span>
+                </p>
+              </>
+            )
+          }
+        />
       </div>
     </div>
   )

@@ -1,3 +1,7 @@
+import { CurrencyTypes } from "components/switch/ToggleCredit"
+import { formatDecimal } from "utils/numbers"
+import { formatUnits } from "viem"
+
 export const getTitleDisabled = (
   collateralAmount: number,
   borrowAmount: number,
@@ -27,4 +31,3 @@ export const getTitleDisabled = (
     return "Borrow minimum USDC amount"
   }
 }
-

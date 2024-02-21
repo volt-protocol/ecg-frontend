@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-table"
 import CustomTable from "components/table/CustomTable"
 import moment from "moment"
-import { formatDecimal} from "utils/numbers"
+import { formatDecimal, toLocaleString} from "utils/numbers"
 import {
   MdArrowDownward,
   MdArrowUpward,
@@ -69,7 +69,7 @@ export default function LastMintEvents({
         return (
           <div className="ml-4 text-sm ">
             <span className="font-semibold mr-1">
-              {formatDecimal(info.getValue(), 2)}
+              {toLocaleString(formatDecimal(info.getValue(), 2))}
             </span>
             {info.row.original.type == "Mint" ? "USDC" : "gUSDC"}
           </div>
@@ -83,7 +83,7 @@ export default function LastMintEvents({
         return (
           <div className="ml-4 text-sm ">
             <span className="font-semibold mr-1">
-              {formatDecimal(info.getValue(), 2)}
+              {toLocaleString(formatDecimal(info.getValue(), 2))}
             </span>
             {info.row.original.type == "Mint" ? "gUSDC" : "USDC"}
           </div>

@@ -4,7 +4,7 @@ import { readContract } from "@wagmi/core"
 import { useEffect, useState } from "react"
 import { useAccount, useReadContracts } from "wagmi"
 import { Address, formatUnits } from "viem"
-import { formatDecimal } from "utils/numbers"
+import { formatDecimal, toLocaleString } from "utils/numbers"
 import { Delegatee } from "app/(app)/governance/page"
 import { ApexChartWrapper } from "components/charts/ApexChartWrapper"
 import Spinner from "components/spinner"
@@ -225,7 +225,7 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
             <div className="flex items-baseline overflow-hidden text-lg font-semibold text-gray-700 dark:text-gray-200 xl:text-2xl">
               {data &&
                 data.guildBalance &&
-                formatDecimal(Number(formatUnits(data.guildBalance, 18)), 2)}{" "}
+                toLocaleString(formatDecimal(Number(formatUnits(data.guildBalance, 18)), 2))}{" "}
               <span className="ml-1 text-base font-medium">GUILD</span>
             </div>
           </dd>
@@ -238,7 +238,7 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
             <div className="flex items-baseline overflow-hidden text-lg font-semibold text-gray-700 dark:text-gray-200 xl:text-2xl">
               {data &&
                 data.guildBalance &&
-                formatDecimal(Number(formatUnits(data.creditBalance, 18)), 2)}{" "}
+                toLocaleString(formatDecimal(Number(formatUnits(data.creditBalance, 18)), 2))}{" "}
               <span className="ml-1 text-base font-medium">gUSDC</span>
             </div>
           </dd>

@@ -6,7 +6,7 @@ import {
   creditContract,
   surplusGuildMinterContract,
 } from "lib/contracts"
-import { formatCurrencyValue } from "utils/numbers"
+import { formatCurrencyValue, toLocaleString } from "utils/numbers"
 import { TooltipHorizon } from "components/tooltip"
 import { useAccount } from "wagmi"
 import { Step } from "components/stepLoader/stepType"
@@ -278,7 +278,7 @@ function StakeCredit({
             rightLabel={
               <>
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Available: {setAvailable()}
+                  Available: {toLocaleString(setAvailable())}
                 </p>
                 <button
                   className="text-sm font-medium text-brand-500 hover:text-brand-400"

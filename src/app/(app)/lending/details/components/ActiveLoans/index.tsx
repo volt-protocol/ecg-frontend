@@ -25,7 +25,7 @@ import { wagmiConfig } from "contexts/Web3Provider"
 import { ItemIdBadge } from "components/badge/ItemIdBadge"
 import { AddressBadge } from "components/badge/AddressBadge"
 import { formatUnits, Address, parseUnits, Abi } from "viem"
-import { formatDecimal } from "utils/numbers"
+import { formatDecimal, toLocaleString } from "utils/numbers"
 import { secondsToAppropriateUnit } from "utils/date"
 import { CurrencyTypes } from "components/switch/ToggleCredit"
 import CustomTable from "components/table/CustomTable"
@@ -85,7 +85,6 @@ function ActiveLoans({
     },
   })
   /* End Smart contract reads */
-
 
   useEffect(() => {
     async function fetchLoanDebts() {
@@ -299,18 +298,16 @@ function ActiveLoans({
           18
         )
 
-        const currentDebtInCollateralEquivalent = Number(
-          formatUnits(
-            (info.row.original.borrowAmount /
-              BigInt(10 ** (18 - lendingTerm.collateral.decimals)) /
-              parseUnits(lendingTerm.borrowRatio.toString(), 18)) *
-              info.row.original.borrowCreditMultiplier,
-            18
-          )
-        )
+        const currentDebtInCollateralEquivalent =
+          Number(
+            formatUnits(
+              info.row.original.borrowAmount / BigInt(lendingTerm.borrowRatio),
+              18
+            )
+          ) * Number(formatUnits(info.row.original.borrowCreditMultiplier, 18))
 
         const collateralValue = Number(
-          formatUnits(info.row.original.collateralAmount, 18)
+          formatUnits(info.row.original.collateralAmount, lendingTerm.collateral.decimals)
         )
 
         const ltvValue = formatDecimal(
@@ -328,48 +325,66 @@ function ActiveLoans({
                     Collateral Amount :{" "}
                     <span className="font-semibold">
                       {" "}
-                      {formatDecimal(
-                        Number(formatUnits(
-                          info.row.original.collateralAmount,
-                          lendingTerm.collateral.decimals
-                        )),
-                        2
+                      {toLocaleString(
+                        formatDecimal(
+                          Number(
+                            formatUnits(
+                              info.row.original.collateralAmount,
+                              lendingTerm.collateral.decimals
+                            )
+                          ),
+                          2
+                        )
                       )}
                     </span>{" "}
                     {lendingTerm.collateral.name}
                   </p>
                   <p>
-                    Collateral Value :{" "}
-                    <span className="font-semibold">{collateralValue}</span> $
+                    Collateral Value : ${" "}
+                    <span className="font-semibold">
+                      {toLocaleString(collateralValue.toString())}
+                    </span>
                   </p>
                 </div>
                 <div>
                   <p>
                     Debt Amount :{" "}
                     <strong>
-                      {formatDecimal(Number(formatUnits(info.row.original.loanDebt, 18)), 2)}
+                      {toLocaleString(
+                        formatDecimal(
+                          Number(formatUnits(info.row.original.loanDebt, 18)),
+                          2
+                        )
+                      )}
                     </strong>{" "}
                     gUSDC
                   </p>
                   <p>
-                    Debt Value : <strong>{formatDecimal(Number(borrowValue), 2)}</strong> USDC
+                    Debt Value :{" "}
+                    <strong>
+                      {toLocaleString(formatDecimal(Number(borrowValue), 2))}
+                    </strong>{" "}
+                    USDC
                   </p>
                   <p>
                     Debt Value :{" "}
-                    <strong>{formatDecimal(Number(borrowValue) * pegPrice, 2)}</strong> $
+                    <strong>
+                      $ {toLocaleString(formatDecimal(Number(borrowValue) * pegPrice, 2))}
+                    </strong>
                   </p>
                 </div>
                 <div>
                   <p>
                     Unit Collateral Price:{" "}
                     <span className="font-semibold">
-                      {formatDecimal(collateralPrice, 2)}
+                      $ {toLocaleString(formatDecimal(collateralPrice, 2))}
                     </span>{" "}
-                    $
                   </p>
                   <p>
                     Unit USDC Price:{" "}
-                    <span className="font-semibold">{formatDecimal(pegPrice, 6)}</span> $
+                    <span className="font-semibold">
+                      $ {toLocaleString(formatDecimal(pegPrice, 6))}
+                    </span>
                   </p>
                 </div>
               </div>
@@ -405,14 +420,18 @@ function ActiveLoans({
         <p className="font-semibold text-gray-700 dark:text-white">
           <div className="flex justify-center gap-1">
             {currencyType == "USDC"
-              ? formatDecimal(
-                  Number(formatUnits(info.row.original.loanDebt, 18)) *
-                    Number(formatUnits(info.row.original.borrowCreditMultiplier, 18)),
-                  2
+              ? toLocaleString(
+                  formatDecimal(
+                    Number(formatUnits(info.row.original.loanDebt, 18)) *
+                      Number(formatUnits(info.row.original.borrowCreditMultiplier, 18)),
+                    2
+                  )
                 )
-              : formatDecimal(Number(formatUnits(info.row.original.loanDebt, 18)), 2)}
+              : toLocaleString(
+                  formatDecimal(Number(formatUnits(info.row.original.loanDebt, 18)), 2)
+                )}
             {currencyType == "USDC" ? (
-              <Image src="/img/crypto-logos/usdc.png" width={20} height={20} alt="logo" />
+              <Image src="/img/crypto-logos/usdc.png" width={25} height={25} alt="logo" />
             ) : (
               <Image
                 src="/img/crypto-logos/credit.png"
@@ -477,7 +496,7 @@ function ActiveLoans({
     },
   })
 
-  if(!contractData) return null
+  if (!contractData) return null
 
   return (
     <>

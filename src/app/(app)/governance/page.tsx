@@ -69,7 +69,7 @@ function Governance() {
           creditBalance: data[3].result as bigint,
           creditNotUsed: data[4].result as bigint,
           creditVotingWeight: data[5].result as bigint,
-          delegateLockupPeriod: data[6].result as number
+          delegateLockupPeriod: data[6].result as bigint
         }
       },
     },

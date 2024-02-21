@@ -10,6 +10,7 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table"
+import { toLocaleString } from "utils/numbers"
 import { secondsToAppropriateUnit } from "utils/date"
 import { LendingTerms } from "types/lending"
 import Progress from "components/progress"
@@ -184,7 +185,9 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
       cell: (info: any) => (
         <div className="ml-3 text-center">
           <p className="text-sm font-bold text-gray-700 dark:text-white">
-            {formatNumberDecimal(info.getValue() / contractData?.creditMultiplier)}
+            {toLocaleString(
+              formatDecimal(info.getValue() / contractData?.creditMultiplier, 2)
+            )}
           </p>
         </div>
       ),
@@ -271,7 +274,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
       cell: (info) => (
         <div className="flex items-center justify-center gap-1">
           <p className="ml-3 text-center text-sm font-bold text-gray-600 dark:text-white">
-            {formatNumberDecimal(info.getValue())}
+            {toLocaleString(formatDecimal(info.getValue(), 2))}
           </p>
           <span className="text-sm font-medium text-gray-600 dark:text-white">gUSDC</span>
         </div>

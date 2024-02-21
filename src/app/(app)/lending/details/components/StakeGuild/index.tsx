@@ -14,7 +14,7 @@ import {
 } from "viem"
 import ButtonPrimary from "components/button/ButtonPrimary"
 import DefiInputBox from "components/box/DefiInputBox"
-import { formatDecimal, formatCurrencyValue } from "utils/numbers"
+import { formatDecimal, formatCurrencyValue, toLocaleString } from "utils/numbers"
 import { getTitleDisabledStake, getTitleDisabledUnstake } from "./helper"
 import { AlertMessage } from "components/message/AlertMessage"
 import { LendingTerms } from "types/lending"
@@ -251,7 +251,7 @@ function StakeGuild({
           rightLabel={
             <>
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Available: {setAvailable()}
+                Available: {toLocaleString(setAvailable())}
               </p>
               <button
                 className="text-sm font-medium text-brand-500 hover:text-brand-400"

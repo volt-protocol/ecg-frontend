@@ -29,7 +29,7 @@ import { Tab } from "@headlessui/react"
 import clsx from "clsx"
 import { Abi, formatUnits, erc20Abi, Address } from "viem"
 import { generateTermName } from "utils/strings"
-import { formatDecimal } from "utils/numbers"
+import { formatDecimal, toLocaleString } from "utils/numbers"
 import { coinsList } from "store/slices/pair-prices"
 import { wagmiConfig } from "contexts/Web3Provider"
 import { lendingTermConfig } from "config"
@@ -289,7 +289,10 @@ const LendingDetails = () => {
             Number(formatUnits(result[1] as bigint, 18)) * 100,
             2
           ),
-          guildSplit: formatDecimal(Number(formatUnits(result[2] as bigint, 18)) * 100, 2),
+          guildSplit: formatDecimal(
+            Number(formatUnits(result[2] as bigint, 18)) * 100,
+            2
+          ),
           surplusBufferSplit: formatDecimal(
             Number(formatUnits(result[0] as bigint, 18)) * 100,
             2
@@ -352,9 +355,7 @@ const LendingDetails = () => {
             <TooltipHorizon
               extra="dark:text-gray-200 w-[240px]"
               content={
-                  <p>
-                    Use USDC for your borrows and repays when lending term allows it.
-                  </p>
+                <p>Use USDC for your borrows and repays when lending term allows it.</p>
               }
               trigger={
                 <div>
@@ -367,7 +368,10 @@ const LendingDetails = () => {
             <ToggleCredit
               selectType={setCurrencyType}
               type={currencyType}
-              disabled={!lendingTermConfig.find((item) => item.termAddress == termAddress)?.useGateway}
+              disabled={
+                !lendingTermConfig.find((item) => item.termAddress == termAddress)
+                  ?.useGateway
+              }
             />
           </div>
         </div>
@@ -438,9 +442,11 @@ const LendingDetails = () => {
                       <dd className="mt-1 flex items-baseline justify-between gap-6 md:block lg:flex">
                         <div className="flex items-baseline text-2xl font-semibold text-brand-500">
                           {guildUserGaugeWeight != undefined &&
-                            formatDecimal(
-                              Number(formatUnits(guildUserGaugeWeight, 18)),
-                              2
+                            toLocaleString(
+                              formatDecimal(
+                                Number(formatUnits(guildUserGaugeWeight, 18)),
+                                2
+                              )
                             )}
                         </div>
                         <div className="inline-flex items-baseline rounded-full bg-green-100 px-2.5 py-0.5 text-sm font-medium text-green-800 md:mt-2 lg:mt-0">
@@ -458,7 +464,9 @@ const LendingDetails = () => {
                       <span className="ml-2 text-sm font-medium text-gray-500 dark:text-gray-300">
                         /{" "}
                         {guildBalance != undefined &&
-                          formatDecimal(Number(formatUnits(guildBalance, 18)), 2)}
+                          toLocaleString(
+                            formatDecimal(Number(formatUnits(guildBalance, 18)), 2)
+                          )}
                       </span>
                     </div>
                     <div className="mx-auto flex flex-col items-center justify-center px-4 text-center">
@@ -600,7 +608,9 @@ const LendingDetails = () => {
                       <dd className="mt-1 flex items-baseline justify-between gap-6 md:block lg:flex">
                         <div className="flex items-baseline text-2xl font-semibold text-brand-500">
                           {creditAllocated != undefined &&
-                            formatDecimal(Number(formatUnits(creditAllocated, 18)), 2)}
+                            toLocaleString(
+                              formatDecimal(Number(formatUnits(creditAllocated, 18)), 2)
+                            )}
                         </div>
                         <div className="inline-flex items-baseline rounded-full bg-green-100 px-2.5 py-0.5 text-sm font-medium text-green-800 md:mt-2 lg:mt-0">
                           {creditAllocated != undefined &&
@@ -619,10 +629,12 @@ const LendingDetails = () => {
                         /{" "}
                         {creditBalance != undefined &&
                           creditAllocated != undefined &&
-                          formatDecimal(
-                            Number(formatUnits(creditBalance, 18)) +
-                              Number(formatUnits(creditAllocated, 18)),
-                            2
+                          toLocaleString(
+                            formatDecimal(
+                              Number(formatUnits(creditBalance, 18)) +
+                                Number(formatUnits(creditAllocated, 18)),
+                              2
+                            )
                           )}
                       </span>
                     </div>

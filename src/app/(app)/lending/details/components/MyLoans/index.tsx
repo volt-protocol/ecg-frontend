@@ -23,7 +23,7 @@ import { LendingTerms, loanObj } from "types/lending"
 import { useAccount, useReadContracts } from "wagmi"
 import { Step } from "components/stepLoader/stepType"
 import { MdOutlineError } from "react-icons/md"
-import { formatDecimal, gUsdcToUsdc, usdcToGUsdc } from "utils/numbers"
+import { formatDecimal, gUsdcToUsdc, usdcToGUsdc, toLocaleString } from "utils/numbers"
 import { Abi, Address, erc20Abi, formatUnits, parseUnits } from "viem"
 import clsx from "clsx"
 import ModalRepay from "./ModalRepay"
@@ -37,9 +37,7 @@ import { simpleRepay } from "./helper/simpleRepay"
 import { getMulticallsDecoded } from "lib/transactions/getMulticallsDecoded"
 import { HOURS_IN_YEAR } from "utils/constants"
 import { permitConfig } from "config"
-import {
-  getAllowCollateralTokenCall,
-} from "./helper/repayWithLeverage"
+import { getAllowCollateralTokenCall } from "./helper/repayWithLeverage"
 import { CurrencyTypes } from "components/switch/ToggleCredit"
 import CustomTable from "components/table/CustomTable"
 
@@ -70,7 +68,6 @@ function Myloans({
   reload: React.Dispatch<React.SetStateAction<boolean>>
   currencyType: CurrencyTypes
 }) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
   const { address } = useAccount()
   const [showModal, setShowModal] = useState(false)
   const [tableDataWithDebts, setTableDataWithDebts] = useState<loanObj[]>([])
@@ -937,7 +934,7 @@ function Myloans({
           <div className="ml-3 text-center">
             <p className="font-semibold text-gray-700 dark:text-white">
               <div className="flex items-center justify-center gap-1">
-                {formatDecimal(borrowValue, 2)}
+                {toLocaleString(formatDecimal(borrowValue, 2))}
                 {currencyType == "USDC" ? (
                   <Image
                     src="/img/crypto-logos/usdc.png"
@@ -956,7 +953,7 @@ function Myloans({
               </div>
             </p>
             <p className="text-sm text-gray-700 dark:text-gray-200">
-              {formatDecimal(borrowValue * usdRate, 2)}$
+              $ {toLocaleString(formatDecimal(borrowValue * usdRate, 2))}
             </p>
           </div>
         )
@@ -976,7 +973,12 @@ function Myloans({
       ),
       cell: (info: any) => {
         const collateralValue = formatDecimal(
-          Number(formatUnits(info.row.original.collateralAmount, lendingTerm.collateral.decimals)) * collateralPrice,
+          Number(
+            formatUnits(
+              info.row.original.collateralAmount,
+              lendingTerm.collateral.decimals
+            )
+          ) * collateralPrice,
           2
         )
 
@@ -984,9 +986,11 @@ function Myloans({
           <div className="ml-3 text-center">
             <p className="font-semibold text-gray-700 dark:text-white">
               <div className="flex items-center justify-center gap-1">
-                {formatDecimal(
-                  Number(formatUnits(info.getValue(), lendingTerm.collateral.decimals)),
-                  2
+                {toLocaleString(
+                  formatDecimal(
+                    Number(formatUnits(info.getValue(), lendingTerm.collateral.decimals)),
+                    2
+                  )
                 )}{" "}
                 <Image
                   src={lendingTerm.collateral.logo}
@@ -996,7 +1000,9 @@ function Myloans({
                 />
               </div>
             </p>
-            <p className="text-sm text-gray-700 dark:text-gray-200">{collateralValue}$</p>
+            <p className="text-sm text-gray-700 dark:text-gray-200">
+              $ {toLocaleString(collateralValue)}
+            </p>
           </div>
         )
       },
@@ -1027,7 +1033,7 @@ function Myloans({
             : secondsToAppropriateUnit(sumOfTimestamps - currentDateInSeconds)
 
         return (
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center">
             {lendingTerm.maxDelayBetweenPartialRepay != 0 ? (
               <>
                 <div
@@ -1044,10 +1050,13 @@ function Myloans({
                 <p className="text-xs text-gray-700 dark:text-gray-200">
                   Min. repay:{" "}
                   <strong>
-                    {formatDecimal(
-                      Number(formatUnits(info.row.original.borrowAmount, 18)) *
-                        lendingTerm.minPartialRepayPercent,
-                      2
+                    ${" "}
+                    {toLocaleString(
+                      formatDecimal(
+                        Number(formatUnits(info.row.original.borrowAmount, 18)) *
+                          lendingTerm.minPartialRepayPercent,
+                        2
+                      )
                     )}
                   </strong>
                 </p>
@@ -1071,19 +1080,16 @@ function Myloans({
         </div>
       ),
       cell: (info: any) => {
-
-        const currentDebtInCollateralEquivalent = Number(
-          formatUnits(
-            (info.row.original.borrowAmount /
-              BigInt(10 ** (18 - lendingTerm.collateral.decimals)) /
-              parseUnits(lendingTerm.borrowRatio.toString(), 18)) *
-              info.row.original.borrowCreditMultiplier,
-            18
-          )
-        )
+        const currentDebtInCollateralEquivalent =
+          Number(
+            formatUnits(
+              info.row.original.borrowAmount / BigInt(lendingTerm.borrowRatio),
+              18
+            )
+          ) * Number(formatUnits(info.row.original.borrowCreditMultiplier, 18))
 
         const collateralValue = Number(
-          formatUnits(info.row.original.collateralAmount, 18)
+          formatUnits(info.row.original.collateralAmount, lendingTerm.collateral.decimals)
         )
 
         const ltvValue = formatDecimal(

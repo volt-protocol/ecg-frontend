@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-table"
 import CustomTable from "components/table/CustomTable"
 import moment from "moment"
-import { formatDecimal } from "utils/numbers"
+import { formatDecimal, toLocaleString } from "utils/numbers"
 import { MdArrowDownward, MdArrowUpward, MdOpenInNew } from "react-icons/md"
 import { fromNow } from "utils/date"
 import { BLOCK_LENGTH_MILLISECONDS } from "utils/constants"
@@ -41,7 +41,9 @@ export const LastProtocolActivity = ({
             <MdArrowDownward className="inline-block h-4 w-4 text-red-500" />
           )}
           {event.type == "Mint" ? "Minted" : "Redeemed"}
-          <span className="font-semibold">{formatDecimal(event.amountIn, 2)}</span>
+          <span className="font-semibold">
+            {toLocaleString(formatDecimal(event.amountIn, 2))}
+          </span>
           {event.type == "Mint" ? "gUSDC" : "USDC"}
         </div>
       )

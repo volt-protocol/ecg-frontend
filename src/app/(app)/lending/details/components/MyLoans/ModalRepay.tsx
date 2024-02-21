@@ -5,7 +5,7 @@ import { Dialog, Transition } from "@headlessui/react"
 import { MdWarning } from "react-icons/md"
 import ButtonPrimary from "components/button/ButtonPrimary"
 import DefiInputBox from "components/box/DefiInputBox"
-import { formatDecimal, gUsdcToUsdc, usdcToGUsdc } from "utils/numbers"
+import { formatDecimal, gUsdcToUsdc, toLocaleString, usdcToGUsdc } from "utils/numbers"
 import { formatUnits, parseUnits } from "viem"
 import { getTitleDisabled } from "./helper"
 import Link from "next/link"
@@ -172,7 +172,7 @@ export default function ModalRepay({
                         rightLabel={
                           <>
                             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Available: {setAvailable()}
+                              Available: {toLocaleString(setAvailable())}
                             </p>
                             <button
                               className="text-sm font-medium text-brand-500 hover:text-brand-400"

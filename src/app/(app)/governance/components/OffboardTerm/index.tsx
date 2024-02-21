@@ -37,7 +37,7 @@ import { LendingTerms } from "types/lending"
 import { generateTermName } from "utils/strings"
 import ButtonPrimary from "components/button/ButtonPrimary"
 import { useAccount, useReadContracts } from "wagmi"
-import { formatCurrencyValue, formatDecimal } from "utils/numbers"
+import { formatCurrencyValue, formatDecimal, toLocaleString } from "utils/numbers"
 import { ActiveOffboardingPolls } from "types/governance"
 import Progress from "components/progress"
 import { fromNow } from "utils/date"
@@ -576,7 +576,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
             Your GUILD voting weight:{" "}
             <span className="font-semibold">
               {guildVotingWeight != undefined &&
-                formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2)}
+                toLocaleString(formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2))}
             </span>
           </p>
         </div>

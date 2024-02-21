@@ -1,9 +1,5 @@
 import React, { useEffect, useState } from "react"
-import {
-  readContract,
-  waitForTransactionReceipt,
-  writeContract,
-} from "@wagmi/core"
+import { readContract, waitForTransactionReceipt, writeContract } from "@wagmi/core"
 import { toastError } from "components/toast"
 import { guildContract } from "lib/contracts"
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa"
@@ -22,7 +18,7 @@ import Spinner from "components/spinner"
 import { useAccount } from "wagmi"
 import { Address } from "viem"
 import ButtonDanger from "components/button/ButtonDanger"
-import { formatDecimal } from "utils/numbers"
+import { formatDecimal, toLocaleString } from "utils/numbers"
 import { formatUnits, isAddress, parseEther } from "viem"
 import ButtonPrimary from "components/button/ButtonPrimary"
 import DefiInputBox from "components/box/DefiInputBox"
@@ -234,7 +230,7 @@ function DelegateGuild({
       enableSorting: true,
       cell: (info) => (
         <p className="text-sm font-bold text-gray-600 dark:text-gray-200">
-          {formatDecimal(Number(formatUnits(info.getValue(), 18)), 2)}
+          {toLocaleString(formatDecimal(Number(formatUnits(info.getValue(), 18)), 2))}
         </p>
       ),
     }),
@@ -280,14 +276,18 @@ function DelegateGuild({
           <p className="col-span-2">
             Your GUILD balance :{" "}
             <span className="font-semibold">
-              {guildBalance ? formatDecimal(Number(formatUnits(guildBalance, 18)), 2) : 0}
+              {guildBalance
+                ? toLocaleString(formatDecimal(Number(formatUnits(guildBalance, 18)), 2))
+                : 0}
             </span>
           </p>
           <p className="col-span-2">
             Your GUILD voting weight:{" "}
             <span className="font-semibold">
               {guildVotingWeight
-                ? formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2)
+                ? toLocaleString(
+                    formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2)
+                  )
                 : 0}
             </span>
           </p>
@@ -325,7 +325,9 @@ function DelegateGuild({
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Available:{" "}
                   {guildNotUsed
-                    ? formatDecimal(Number(formatUnits(guildNotUsed, 18)), 2)
+                    ? toLocaleString(
+                        formatDecimal(Number(formatUnits(guildNotUsed, 18)), 2)
+                      )
                     : 0}
                 </p>
                 <button

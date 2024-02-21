@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-table"
 import CustomTable from "components/table/CustomTable"
 import moment from "moment"
-import { formatDecimal } from "utils/numbers"
+import { formatDecimal, toLocaleString } from "utils/numbers"
 import { MdOpenInNew } from "react-icons/md"
 import clsx from "clsx"
 import Link from "next/link"
@@ -42,7 +42,7 @@ export default function UserLoan({
         return (
           <>
             <span className="font-semibold">
-              {formatDecimal(Number(info.getValue()), 2) + " "}
+              {toLocaleString(formatDecimal(Number(info.getValue()), 2)) + " "}
             </span>
             <span>{info.row.original.collateral}</span>
           </>
@@ -59,7 +59,7 @@ export default function UserLoan({
         return (
           <>
             <span className="font-semibold">
-              {formatDecimal(collateralValue * borrowRatio, 2)}
+              {toLocaleString(formatDecimal(collateralValue * borrowRatio, 2))}
             </span>
             <span>{" gUSDC"}</span>
           </>

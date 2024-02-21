@@ -28,7 +28,7 @@ import { MdCheckCircle, MdChevronLeft, MdChevronRight, MdOpenInNew } from "react
 import Spinner from "components/spinner"
 import ButtonPrimary from "components/button/ButtonPrimary"
 import { useAccount } from "wagmi"
-import { formatCurrencyValue, formatDecimal } from "utils/numbers"
+import { formatCurrencyValue, formatDecimal, toLocaleString } from "utils/numbers"
 import { ActivOnboardingVetoVotes } from "types/governance"
 import { fromNow } from "utils/date"
 import moment from "moment"
@@ -679,7 +679,7 @@ function Veto({
                         as="span"
                         className="mt-2 text-xl font-medium text-gray-700"
                       >
-                        {formatDecimal(Number(formatUnits(creditVotingWeight, 18)), 2)}{" "}
+                        {toLocaleString(formatDecimal(Number(formatUnits(creditVotingWeight, 18)), 2))}{" "}
                         gUSDC
                       </RadioGroup.Description>
                     </span>
@@ -726,7 +726,7 @@ function Veto({
                         as="span"
                         className="mt-2 text-xl font-medium text-gray-700"
                       >
-                        {formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2)}{" "}
+                        {toLocaleString(formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2))}{" "}
                         GUILD
                       </RadioGroup.Description>
                     </span>

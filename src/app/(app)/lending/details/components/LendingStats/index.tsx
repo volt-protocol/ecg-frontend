@@ -6,7 +6,7 @@ import { GiProgression } from "react-icons/gi"
 import { MdBarChart, MdCurrencyExchange } from "react-icons/md"
 import { TbArrowsExchange } from "react-icons/tb"
 import { LendingTerms } from "types/lending"
-import { formatDecimal, formatNumberDecimal, formatCurrencyValue } from "utils/numbers"
+import { formatDecimal, formatNumberDecimal, formatCurrencyValue, toLocaleString } from "utils/numbers"
 import { formatUnits } from "viem"
 import { secondsToAppropriateUnit } from "utils/date"
 
@@ -60,12 +60,12 @@ export default function LendingStats({
               title={"TVL"}
               subtitle={
                 collateralPrice === 0
-                  ? "-.--$"
-                  : formatCurrencyValue(
+                  ? "$ -.--"
+                  :  "$ " + formatCurrencyValue(
                       parseFloat(
                         formatNumberDecimal(termTotalCollateral * collateralPrice)
                       )
-                    ) + "$"
+                    )
               }
               extra={<QuestionMarkIcon />}
             />
@@ -164,9 +164,12 @@ export default function LendingStats({
             <p>
               This term allows to borrow{" "}
               <span className="font-semibold">
-                {formatDecimal(
-                  lendingTermData.borrowRatio / Number(formatUnits(creditMultiplier, 18)),
-                  2
+                {toLocaleString(
+                  formatDecimal(
+                    lendingTermData.borrowRatio /
+                      Number(formatUnits(creditMultiplier, 18)),
+                    2
+                  )
                 )}
               </span>{" "}
               gUSDC per unit of {lendingTermData.collateral.symbol} collateral.
@@ -178,10 +181,12 @@ export default function LendingStats({
             <Widget
               icon={<MdCurrencyExchange className="h-7 w-7" />}
               title={"Borrow Ratio"}
-              subtitle={formatDecimal(
-                lendingTermData.borrowRatio / Number(formatUnits(creditMultiplier, 18)),
-                2
-              ).toString()}
+              subtitle={toLocaleString(
+                formatDecimal(
+                  lendingTermData.borrowRatio / Number(formatUnits(creditMultiplier, 18)),
+                  2
+                )
+              )}
               extra={<QuestionMarkIcon />}
             />
           </div>

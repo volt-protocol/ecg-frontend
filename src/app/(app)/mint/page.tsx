@@ -4,9 +4,8 @@ import Disconnected from "components/error/disconnected"
 import React, { useEffect, useState } from "react"
 import Card from "components/card"
 import { useAccount, useReadContracts } from "wagmi"
+import { toLocaleString } from "utils/numbers"
 import {
-  CreditABI,
-  ProfitManagerABI,
   creditContract,
   profitManagerContract,
   psmUsdcContract,
@@ -200,7 +199,7 @@ function MintAndSaving() {
                     {" "}
                     {data.creditBalance === undefined
                       ? "-"
-                      : formatDecimal(data.creditBalance, 2)}
+                      : toLocaleString(formatDecimal(data.creditBalance, 2))}
                   </span>
                 </p>
                 <p>

@@ -13,7 +13,7 @@ import {
 } from "@tanstack/react-table"
 import { auctionHouseContract, creditContract } from "lib/contracts"
 import { waitForTransactionReceipt, writeContract, readContract } from "@wagmi/core"
-import { formatDecimal } from "utils/numbers"
+import { formatDecimal, toLocaleString } from "utils/numbers"
 import { FaSort, FaSortDown, FaSortUp } from "react-icons/fa"
 import { formatUnits, parseUnits } from "viem"
 import moment from "moment"
@@ -43,7 +43,6 @@ export default function AuctionsTable({
   setOpen: (arg: boolean) => void
   setReload: (arg: boolean) => void
 }) {
-  const { lendingTerms } = useAppStore()
   const { isConnected } = useAccount()
   const columnHelper = createColumnHelper<Auction>()
   const [showModal, setShowModal] = useState(false)
@@ -82,11 +81,13 @@ export default function AuctionsTable({
           <p className="flex items-center justify-center gap-1 text-sm text-gray-700 dark:text-white">
             Collateral Sold:{" "}
             <span className="font-semibold">
-              {formatDecimal(
-                Number(
-                  formatUnits(auction.collateralSold, auction.collateralTokenDecimals)
-                ),
-                4
+              {toLocaleString(
+                formatDecimal(
+                  Number(
+                    formatUnits(auction.collateralSold, auction.collateralTokenDecimals)
+                  ),
+                  4
+                )
               )}
             </span>
             <Image
@@ -102,7 +103,9 @@ export default function AuctionsTable({
           <p className="flex items-center justify-center gap-1 text-sm text-gray-700 dark:text-white">
             Debt Recovered:{" "}
             <span className="font-semibold">
-              {formatDecimal(Number(formatUnits(auction.debtRecovered, 18)), 4)}
+              {toLocaleString(
+                formatDecimal(Number(formatUnits(auction.debtRecovered, 18)), 4)
+              )}
             </span>
             <Image
               src="/img/crypto-logos/credit.png"
@@ -149,8 +152,6 @@ export default function AuctionsTable({
       args: [loanId],
     })
 
-    console.log(auctionDetails)
-
     //Init Steps
     setSteps([
       { name: `Approve gUSDC`, status: "Not Started" },
@@ -166,10 +167,7 @@ export default function AuctionsTable({
       const hash = await writeContract(wagmiConfig, {
         ...creditContract,
         functionName: "approve",
-        args: [
-          auctionDetails.lendingTerm,
-          auctionDetails.callDebt,
-        ],
+        args: [auctionDetails.lendingTerm, auctionDetails.callDebt],
       })
       const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
@@ -187,10 +185,7 @@ export default function AuctionsTable({
     }
 
     try {
-      updateStepStatus(
-        "Bid for loan " + shortenUint(loanId),
-        "In Progress"
-      )
+      updateStepStatus("Bid for loan " + shortenUint(loanId), "In Progress")
       const hash = await writeContract(wagmiConfig, {
         ...auctionHouseContract,
         functionName: "bid",
@@ -202,17 +197,11 @@ export default function AuctionsTable({
       })
 
       if (tx.status != "success") {
-        updateStepStatus(
-          "Bid for loan " + shortenUint(loanId),
-          "Error"
-        )
+        updateStepStatus("Bid for loan " + shortenUint(loanId), "Error")
         return
       }
 
-      updateStepStatus(
-        "Bid for loan " + shortenUint(loanId),
-        "Success"
-      )
+      updateStepStatus("Bid for loan " + shortenUint(loanId), "Success")
       setReload(true)
     } catch (e: any) {
       console.log(e)
@@ -233,10 +222,7 @@ export default function AuctionsTable({
 
     try {
       setShowModal(true)
-      updateStepStatus(
-        "Forgive for loan  " + shortenUint(loanId),
-        "In Progress"
-      )
+      updateStepStatus("Forgive for loan  " + shortenUint(loanId), "In Progress")
       const hash = await writeContract(wagmiConfig, {
         ...auctionHouseContract,
         functionName: "forgive",
@@ -248,24 +234,15 @@ export default function AuctionsTable({
       })
 
       if (tx.status != "success") {
-        updateStepStatus(
-          "Forgive for loan  " + shortenUint(loanId),
-          "Error"
-        )
+        updateStepStatus("Forgive for loan  " + shortenUint(loanId), "Error")
         return
       }
 
-      updateStepStatus(
-        "Forgive for loan  " + shortenUint(loanId),
-        "Success"
-      )
+      updateStepStatus("Forgive for loan  " + shortenUint(loanId), "Success")
       setReload(true)
     } catch (e: any) {
       console.log(e)
-      updateStepStatus(
-        "Forgive for loan  " + shortenUint(loanId),
-        "Error"
-      )
+      updateStepStatus("Forgive for loan  " + shortenUint(loanId), "Error")
       toastError(e.shortMessage)
       setShowModal(false)
     }
@@ -331,11 +308,13 @@ export default function AuctionsTable({
       cell: (info) => (
         <div className="flex items-center justify-center gap-1">
           <p className="text-center text-sm font-semibold text-gray-700 dark:text-white">
-            {formatDecimal(
-              Number(
-                formatUnits(info.getValue(), info.row.original.collateralTokenDecimals)
-              ),
-              4
+            {toLocaleString(
+              formatDecimal(
+                Number(
+                  formatUnits(info.getValue(), info.row.original.collateralTokenDecimals)
+                ),
+                4
+              )
             )}
           </p>
           <Image
@@ -366,7 +345,7 @@ export default function AuctionsTable({
       cell: (info) => (
         <div className="flex justify-center gap-1">
           <p className="text-sm font-semibold text-gray-700 dark:text-white">
-            {formatDecimal(Number(formatUnits(info.getValue(), 18)), 2)}
+            {toLocaleString(formatDecimal(Number(formatUnits(info.getValue(), 18)), 2))}
           </p>
           <Image src="/img/crypto-logos/credit.png" width={20} height={20} alt={"logo"} />
         </div>

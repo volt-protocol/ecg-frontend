@@ -1,9 +1,5 @@
 import React, { useEffect, useState } from "react"
-import {
-  readContract,
-  waitForTransactionReceipt,
-  writeContract,
-} from "@wagmi/core"
+import { readContract, waitForTransactionReceipt, writeContract } from "@wagmi/core"
 import { toastError } from "components/toast"
 import { creditContract } from "lib/contracts"
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa"
@@ -22,7 +18,7 @@ import Spinner from "components/spinner"
 import { useAccount } from "wagmi"
 import { Address } from "viem"
 import ButtonDanger from "components/button/ButtonDanger"
-import { formatDecimal } from "utils/numbers"
+import { formatDecimal, toLocaleString } from "utils/numbers"
 import { formatUnits, isAddress, parseEther } from "viem"
 import ButtonPrimary from "components/button/ButtonPrimary"
 import DefiInputBox from "components/box/DefiInputBox"
@@ -277,7 +273,7 @@ function DelegateCredit({
             Your gUSDC balance :{" "}
             <span className="font-semibold">
               {creditBalance
-                ? formatDecimal(Number(formatUnits(creditBalance, 18)), 2)
+                ? toLocaleString(formatDecimal(Number(formatUnits(creditBalance, 18)), 2))
                 : 0}
             </span>
           </p>
@@ -285,7 +281,9 @@ function DelegateCredit({
             Your gUSDC voting weight:{" "}
             <span className="font-semibold">
               {creditVotingWeight
-                ? formatDecimal(Number(formatUnits(creditVotingWeight, 18)), 2)
+                ? toLocaleString(
+                    formatDecimal(Number(formatUnits(creditVotingWeight, 18)), 2)
+                  )
                 : 0}
             </span>
           </p>
@@ -322,7 +320,9 @@ function DelegateCredit({
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Available:{" "}
                   {creditNotUsed
-                    ? formatDecimal(Number(formatUnits(creditNotUsed, 18)), 2)
+                    ? toLocaleString(
+                        formatDecimal(Number(formatUnits(creditNotUsed, 18)), 2)
+                      )
                     : 0}
                 </p>
                 <button
@@ -356,7 +356,8 @@ function DelegateCredit({
               <p>
                 After a delegation, you will not be able to transfer tokens for{" "}
                 <span className="font-bold">
-                  {formatDecimal(Number(delegateLockupPeriod) / 3600, 2)} hours.
+                  {toLocaleString(formatDecimal(Number(delegateLockupPeriod) / 3600, 2))}{" "}
+                  hours.
                 </span>
               </p>
             }

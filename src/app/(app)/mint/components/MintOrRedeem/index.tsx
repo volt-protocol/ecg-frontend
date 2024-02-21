@@ -9,7 +9,7 @@ import { useAccount } from "wagmi"
 import { Switch, Tab } from "@headlessui/react"
 import clsx from "clsx"
 import DefiInputBox from "components/box/DefiInputBox"
-import { formatDecimal } from "utils/numbers"
+import { formatDecimal, toLocaleString } from "utils/numbers"
 import ButtonPrimary from "components/button/ButtonPrimary"
 import { getTitleDisabled } from "./helper"
 import { AlertMessage } from "components/message/AlertMessage"
@@ -280,7 +280,7 @@ function MintOrRedeem({
                   rightLabel={
                     <>
                       <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Available: {usdcBalance ? formatDecimal(usdcBalance, 2) : 0}
+                        Available: {usdcBalance ? toLocaleString(formatDecimal(usdcBalance, 2)) : 0}
                       </p>
                       <button
                         className="text-sm font-medium text-brand-500 hover:text-brand-400"
@@ -331,7 +331,7 @@ function MintOrRedeem({
                       <p>
                         You will receive{" "}
                         <span className="font-bold">
-                          {formatDecimal(Number(value) / conversionRate, 2)} gUSDC
+                          {toLocaleString(formatDecimal(Number(value) / conversionRate, 2))} gUSDC
                         </span>
                       </p>
                     </>
@@ -353,7 +353,7 @@ function MintOrRedeem({
                   rightLabel={
                     <>
                       <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Available: {creditBalance ? formatDecimal(creditBalance, 2) : 0}
+                        Available: {creditBalance ? toLocaleString(formatDecimal(creditBalance, 2)) : 0}
                       </p>
                       <button
                         className="text-sm font-medium text-brand-500 hover:text-brand-400"
@@ -385,7 +385,7 @@ function MintOrRedeem({
                       <p>
                         You will receive{" "}
                         <span className="font-bold">
-                          {formatDecimal(Number(value) * 1 * conversionRate, 2)} USDC
+                          {toLocaleString(formatDecimal(Number(value) * 1 * conversionRate, 2))} USDC
                         </span>
                       </p>
                     </>

@@ -26,7 +26,7 @@ import DropdownSelect from "components/select/DropdownSelect"
 import { useAppStore } from "store"
 import ButtonPrimary from "components/button/ButtonPrimary"
 import { useAccount} from "wagmi"
-import { formatCurrencyValue, formatDecimal } from "utils/numbers"
+import { formatCurrencyValue, formatDecimal, toLocaleString } from "utils/numbers"
 import { ActiveOnboardingVotes, VoteOption, ProposalState } from "types/governance"
 import { fromNow } from "utils/date"
 import moment from "moment"
@@ -709,7 +709,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
             Your GUILD voting weight:{" "}
             <span className="font-semibold">
               {guildVotingWeight != undefined &&
-                formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2)}
+                toLocaleString(formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2))}
             </span>
           </p>
         </div>

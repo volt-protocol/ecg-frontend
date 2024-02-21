@@ -5,7 +5,6 @@ import {
   ERC20PermitABI,
   TermABI,
   UsdcABI,
-  profitManagerContract,
   psmUsdcContract,
   gatewayContract,
   creditContract,
@@ -15,7 +14,12 @@ import {
 import React, { useEffect, useState } from "react"
 import { erc20Abi, Abi, Address, formatUnits, parseUnits } from "viem"
 import moment from "moment"
-import { formatCurrencyValue, formatDecimal, usdcToGUsdc } from "utils/numbers"
+import {
+  formatCurrencyValue,
+  formatDecimal,
+  usdcToGUsdc,
+  toLocaleString,
+} from "utils/numbers"
 import { AlertMessage } from "components/message/AlertMessage"
 import ButtonPrimary from "components/button/ButtonPrimary"
 import { LendingTerms } from "types/lending"
@@ -29,7 +33,6 @@ import { lendingTermConfig, permitConfig } from "config"
 import { signPermit } from "lib/transactions/signPermit"
 import { getMulticallsDecoded } from "lib/transactions/getMulticallsDecoded"
 import {
-  borrowWithLeverage,
   getAllowBorrowedCreditCall,
   getPullCollateralCalls,
 } from "./helper/borrowWithLeverage"
@@ -640,7 +643,7 @@ function CreateLoan({
         parseUnits(collateralAmount, lendingTerm.collateral.decimals),
         signatureCollateral
       )
-      
+
       const allowBorrowedCreditCall = getAllowBorrowedCreditCall(
         debtAmount,
         signatureGUSDC
@@ -792,7 +795,8 @@ function CreateLoan({
             rightLabel={
               <>
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Available: {formatDecimal(Number(data?.collateralBalance), 2)}
+                  Available:{" "}
+                  {toLocaleString(formatDecimal(Number(data?.collateralBalance), 2))}
                 </p>
                 <button
                   className="text-sm font-medium text-brand-500 hover:text-brand-400"
@@ -831,8 +835,12 @@ function CreateLoan({
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Balance:{" "}
                   {currencyType == "USDC"
-                    ? formatDecimal(Number(formatUnits(usdcBalance, 6)), 2)
-                    : formatDecimal(Number(formatUnits(creditBalance, 18)), 2)}
+                    ? toLocaleString(
+                        formatDecimal(Number(formatUnits(usdcBalance, 6)), 2)
+                      )
+                    : toLocaleString(
+                        formatDecimal(Number(formatUnits(creditBalance, 18)), 2)
+                      )}
                 </p>
               </>
             }
@@ -938,13 +946,15 @@ function CreateLoan({
                   <p>
                     <span className="font-bold">
                       {" "}
-                      {formatDecimal(
-                        Number(formatUnits(borrowAmount, 18)) * lendingTerm.openingFee,
-                        2
+                      {toLocaleString(
+                        formatDecimal(
+                          Number(formatUnits(borrowAmount, 18)) * lendingTerm.openingFee,
+                          2
+                        )
                       )}{" "}
                       gUSDC{" "}
                     </span>{" "}
-                    of interest will accrue instantly after opening the loan
+                    of interest will accrue instantly after opening the loan.
                   </p>
                 }
               />
@@ -955,13 +965,13 @@ function CreateLoan({
                 type="warning"
                 message={
                   <p className="">
-                    You will have to repay <strong>{minToRepay}</strong> gUSDC by{" "}
+                    You will have to repay <strong>{formatDecimal(minToRepay, 2)}</strong> gUSDC by{" "}
                     <strong>
                       {moment()
                         .add(lendingTerm.maxDelayBetweenPartialRepay, "seconds")
                         .format("DD/MM/YYYY HH:mm:ss")}
                     </strong>{" "}
-                    or your loan will be <strong> called</strong>
+                    or your loan will be <strong> called</strong>.
                   </p>
                 }
               />

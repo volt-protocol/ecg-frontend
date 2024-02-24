@@ -1,7 +1,7 @@
 "use client"
 
-import { Fragment, useEffect, useState } from "react"
-import { Dialog, Transition } from "@headlessui/react"
+import { Fragment, use, useEffect, useState } from "react"
+import { Dialog, Switch, Transition } from "@headlessui/react"
 import { MdWarning } from "react-icons/md"
 import ButtonPrimary from "components/button/ButtonPrimary"
 import DefiInputBox from "components/box/DefiInputBox"
@@ -13,6 +13,7 @@ import { lendingTermConfig } from "config"
 import { RangeSlider } from "components/rangeSlider/RangeSlider"
 import { CurrencyTypes } from "components/switch/ToggleCredit"
 import { parse } from "path"
+import clsx from "clsx"
 
 export default function ModalRepay({
   isOpen,
@@ -25,7 +26,7 @@ export default function ModalRepay({
   partialRepay,
   repayGateway,
   partialRepayGateway,
-  partialRepayGatewayLeverage,
+  repayGatewayLeverage,
   minBorrow,
   currencyType,
 }: {
@@ -39,24 +40,25 @@ export default function ModalRepay({
   partialRepay: (id: string, amount: string) => void
   repayGateway: (id: string) => void
   partialRepayGateway: (id: string, amount: string) => void
-  partialRepayGatewayLeverage: (
-    id: string,
-    amount: string,
-    flashloanValue: string
-  ) => void
+  repayGatewayLeverage: (id: string) => void
   minBorrow: bigint
   currencyType: CurrencyTypes
 }) {
   const [value, setValue] = useState<string>("")
-  const [flashloanValue, setFlashloanValue] = useState<number>(0)
   const [match, setMatch] = useState<boolean>(false)
   const [withLeverage, setWithLeverage] = useState<boolean>(false)
-  const [leverageValue, setLeverageValue] = useState<number>(1)
 
   // Reset value when modal opens
   useEffect(() => {
     setValue("")
+    setWithLeverage(false)
   }, [isOpen])
+
+  useEffect(() => {
+    if(withLeverage) {
+      setValue(formatUnits(gUsdcToUsdc(rowData.loanDebt, creditMultiplier), 6))
+    }
+  }, [withLeverage])
 
   useEffect(() => {
     if (rowData) {
@@ -67,10 +69,6 @@ export default function ModalRepay({
         : setMatch(parseUnits(value, 18) >= rowData.loanDebt)
     }
   }, [value, rowData])
-
-  useEffect(() => {
-    setFlashloanValue(Number(value) * leverageValue - Number(value))
-  }, [leverageValue, value])
 
   /* Handlers */
   const setAvailable = (): string => {
@@ -107,11 +105,9 @@ export default function ModalRepay({
   const getBorrowFunction = () => {
     currencyType == "USDC"
       ? match
-        ? withLeverage && leverageValue > 1
-          ? partialRepayGatewayLeverage(rowData.id, value, flashloanValue.toString())
+        ? withLeverage
+          ? repayGatewayLeverage(rowData.id)
           : repayGateway(rowData.id)
-        : withLeverage && leverageValue > 1
-        ? partialRepayGatewayLeverage(rowData.id, value, flashloanValue.toString())
         : partialRepayGateway(rowData.id, value)
       : match
       ? repay(rowData.id)
@@ -157,7 +153,7 @@ export default function ModalRepay({
                       <DefiInputBox
                         topLabel={`Amount of ${
                           currencyType == "USDC" ? "USDC" : "gUSDC"
-                        } to use from wallet`}
+                        } to repay`}
                         currencyLogo={
                           currencyType == "USDC"
                             ? "/img/crypto-logos/usdc.png"
@@ -187,18 +183,6 @@ export default function ModalRepay({
                           </>
                         }
                       />
-                      {withLeverage && (
-                        <DefiInputBox
-                          disabled={true}
-                          topLabel={"Amount of USDC to repay"}
-                          currencyLogo="/img/crypto-logos/usdc.png"
-                          currencySymbol="USDC"
-                          placeholder="0"
-                          pattern="^[0-9]*[.,]?[0-9]*$"
-                          inputSize="text-2xl sm:text-3xl"
-                          value={formatDecimal(flashloanValue + Number(value), 2)}
-                        />
-                      )}
 
                       {lendingTermConfig.find(
                         (item) => item.termAddress === rowData.termAddress
@@ -206,24 +190,27 @@ export default function ModalRepay({
                         currencyType == "USDC" && (
                           <div className="flex flex-col gap-4 rounded-xl bg-gray-100 py-4 dark:bg-navy-900">
                             <div className="mt w-full px-5">
-                              <RangeSlider
-                                withSwitch={true}
-                                title={`Leverage: ${leverageValue}x`}
-                                value={leverageValue}
-                                onChange={(value) => setLeverageValue(value)}
-                                min={1}
-                                max={
-                                  lendingTermConfig.find(
-                                    (item) => item.termAddress === rowData.termAddress
-                                  )?.maxLeverage
-                                }
-                                step={0.1}
-                                show={withLeverage}
-                                setShow={() => {
-                                  setLeverageValue(1)
-                                  setWithLeverage(!withLeverage)
-                                }}
-                              />
+                              <div className="flex items-center justify-between">
+                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                  Full Repay with Leverage
+                                </label>
+                                <Switch
+                                  checked={withLeverage}
+                                  onChange={setWithLeverage}
+                                  className={clsx(
+                                    withLeverage ? "bg-brand-500" : "bg-gray-200",
+                                    "border-transparent relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out"
+                                  )}
+                                >
+                                  <span
+                                    aria-hidden="true"
+                                    className={clsx(
+                                      withLeverage ? "translate-x-5" : "translate-x-0",
+                                      "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                                    )}
+                                  />
+                                </Switch>
+                              </div>
                             </div>
                           </div>
                         )}

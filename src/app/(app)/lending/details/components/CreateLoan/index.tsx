@@ -37,6 +37,7 @@ import {
   getPullCollateralCalls,
 } from "./helper/borrowWithLeverage"
 import { CurrencyTypes } from "components/switch/ToggleCredit"
+import { toastError } from "components/toast"
 
 function CreateLoan({
   lendingTerm,
@@ -46,6 +47,7 @@ function CreateLoan({
   usdcBalance,
   gusdcNonces,
   minBorrow,
+  setReload,
   reload,
   currencyType,
 }: {
@@ -56,10 +58,11 @@ function CreateLoan({
   usdcBalance: bigint
   gusdcNonces: bigint
   minBorrow: number
-  reload: React.Dispatch<React.SetStateAction<boolean>>
+  reload: boolean
+  setReload: React.Dispatch<React.SetStateAction<boolean>>
   currencyType: CurrencyTypes
 }) {
-  const { address, isConnected, isConnecting } = useAccount()
+  const { address } = useAccount()
   const [borrowAmount, setBorrowAmount] = useState<bigint>(BigInt(0))
   const [collateralAmount, setCollateralAmount] = useState<string>("")
   const [showModal, setShowModal] = useState(false)
@@ -123,6 +126,13 @@ function CreateLoan({
     }
   }, [borrowAmount])
 
+  useEffect(() => {
+    if (reload) {
+      refetch()
+      setReload(false)
+    }
+  }, [reload])
+
   /* Calculate borrow amount */
   useEffect(() => {
     const borrowAmount: bigint = calculateBorrowAmount(collateralAmount)
@@ -134,12 +144,6 @@ function CreateLoan({
       (parseUnits(collateralAmount, lendingTerm.collateral.decimals) *
         parseUnits((leverageValue - 1).toString(), 1)) /
       BigInt(10)
-
-    // console.log("collateralAmount:", collateralAmount)
-    // console.log("flashLoanCollateralAmount:", flashLoanCollateralAmount)
-    // console.log("borrowAmount:", borrowAmount)
-    // console.log("flashLoanBorrowAmount:", flashLoanBorrowAmount)
-    // console.log("overCollateralizationValue:", overCollateralizationValue)
 
     setBorrowAmount(borrowAmount)
     setFlashLoanBorrowAmount(flashLoanBorrowAmount)
@@ -201,8 +205,7 @@ function CreateLoan({
       })
 
       if (checkBorrow.status === "success") {
-        refetch()
-        reload(true)
+        setReload(true)
         setBorrowAmount(BigInt(0))
         setCollateralAmount("")
         updateStepStatus("Borrow", "Success")
@@ -353,8 +356,7 @@ function CreateLoan({
       })
 
       if (checkBorrow.status === "success") {
-        refetch()
-        reload(true)
+        setReload(true)
         setBorrowAmount(BigInt(0))
         setCollateralAmount("")
         updateStepStatus("Borrow (Multicall)", "Success")
@@ -370,157 +372,6 @@ function CreateLoan({
       return
     }
   }
-
-  // async function borrowGatewayLeverage() {
-  //   setShowModal(true)
-  //   updateStepName("Multicall", "Multicall with Leverage")
-  //   let signatureCollateral: any
-  //   let signatureGUSDC: any
-  //   const debtAmount = borrowAmount + flashLoanBorrowAmount
-
-  //   /* Set allowance for collateral token */
-  //   if (
-  //     permitConfig.find(
-  //       (item) => item.collateralAddress === lendingTerm.collateral.address
-  //     )?.hasPermit
-  //   ) {
-  //     try {
-  //       updateStepStatus(
-  //         `Sign Permit for ${lendingTerm.collateral.symbol}`,
-  //         "In Progress"
-  //       )
-
-  //       signatureCollateral = await signPermit({
-  //         contractAddress: lendingTerm.collateral.address,
-  //         erc20Name: lendingTerm.collateral.name,
-  //         ownerAddress: address,
-  //         spenderAddress: gatewayContract.address as Address,
-  //         value: parseUnits(collateralAmount, lendingTerm.collateral.decimals),
-  //         deadline: BigInt(Number(moment().add(10, "seconds"))),
-  //         nonce: data?.collateralNonces,
-  //         chainId: wagmiConfig.chains[0].id,
-  //         permitVersion: "1",
-  //       })
-
-  //       if (!signatureCollateral) {
-  //         updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Error")
-  //         return
-  //       }
-  //       updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Success")
-  //     } catch (e) {
-  //       console.log(e)
-  //       updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Error")
-  //       return
-  //     }
-  //   } else {
-  //     try {
-  //       updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "In Progress")
-
-  //       const hash = await writeContract(wagmiConfig, {
-  //         address: lendingTerm.collateral.address,
-  //         abi: erc20Abi,
-  //         functionName: "approve",
-  //         args: [
-  //           gatewayContract.address as Address,
-  //           parseUnits(collateralAmount, lendingTerm.collateral.decimals),
-  //         ],
-  //       })
-  //       const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
-  //         hash: hash,
-  //       })
-
-  //       if (checkApprove.status != "success") {
-  //         updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Error")
-  //         return
-  //       }
-  //       updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Success")
-  //     } catch (e) {
-  //       console.log(e)
-  //       updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Error")
-  //       return
-  //     }
-  //   }
-
-  //   /* Set allowance for gUSDC token */
-  //   try {
-  //     updateStepStatus(`Sign Permit for gUSDC`, "In Progress")
-
-  //     signatureGUSDC = await signPermit({
-  //       contractAddress: creditContract.address as Address,
-  //       erc20Name: "Ethereum Credit Guild - gUSDC",
-  //       ownerAddress: address,
-  //       spenderAddress: gatewayContract.address as Address,
-  //       value: debtAmount,
-  //       deadline: BigInt(Number(moment().add(10, "seconds"))),
-  //       nonce: gusdcNonces,
-  //       chainId: wagmiConfig.chains[0].id,
-  //       permitVersion: "1",
-  //     })
-
-  //     if (!signatureGUSDC) {
-  //       updateStepStatus(`Sign Permit for gUSDC`, "Error")
-  //       return
-  //     }
-  //     updateStepStatus(`Sign Permit for gUSDC`, "Success")
-  //   } catch (e) {
-  //     console.log(e)
-  //     updateStepStatus(`Sign Permit for gUSDC`, "Error")
-  //     return
-  //   }
-
-  //   const amountUSDC = await readContract(wagmiConfig, {
-  //     ...psmUsdcContract,
-  //     functionName: "getRedeemAmountOut",
-  //     args: [debtAmount],
-  //   })
-
-  //   const deadlineSwap = BigInt(Number(moment().add(3600, "seconds")))
-
-  //   /* Call gateway.multicall() */
-  //   try {
-  //     const calls = borrowWithLeverage(
-  //       address,
-  //       lendingTerm,
-  //       debtAmount,
-  //       parseUnits(collateralAmount, lendingTerm.collateral.decimals),
-  //       flashLoanCollateralAmount,
-  //       amountUSDC as bigint,
-  //       signatureCollateral,
-  //       signatureGUSDC,
-  //       deadlineSwap
-  //     )
-
-  //     const callsDescription = getMulticallsDecoded(calls, lendingTerm)
-  //     updateStepStatus(`Multicall with Leverage`, "In Progress", callsDescription)
-
-  //     const hash = await writeContract(wagmiConfig, {
-  //       ...gatewayContract,
-  //       functionName: "multicallWithBalancerFlashLoan",
-  //       args: [[lendingTerm.collateral.address], [flashLoanCollateralAmount], calls],
-  //     })
-
-  //     const checkBorrow = await waitForTransactionReceipt(wagmiConfig, {
-  //       hash: hash,
-  //     })
-
-  //     if (checkBorrow.status === "success") {
-  //       refetch()
-  //       reload(true)
-  //       setBorrowAmount(BigInt(0))
-  //       setCollateralAmount("")
-  //       updateStepStatus("Multicall with Leverage", "Success")
-  //       return
-  //     } else {
-  //       updateStepStatus("Multicall with Leverage", "Error")
-  //     }
-
-  //     updateStepStatus(`Multicall with Leverage`, "Success")
-  //   } catch (e) {
-  //     console.log(e)
-  //     updateStepStatus("Multicall with Leverage", "Error")
-  //     return
-  //   }
-  // }
 
   async function borrowGatewayLeverage() {
     setShowModal(true)
@@ -696,19 +547,20 @@ function CreateLoan({
       })
 
       if (checkBorrow.status === "success") {
-        refetch()
-        reload(true)
+        setReload(true)
         setBorrowAmount(BigInt(0))
         setCollateralAmount("")
         updateStepStatus("Borrow with Leverage (Multicall)", "Success")
         return
       } else {
+        
         updateStepStatus("Borrow with Leverage (Multicall)", "Error")
       }
 
       updateStepStatus(`Borrow with Leverage (Multicall)`, "Success")
     } catch (e) {
       console.log(e)
+      toastError(e.shortMessage)
       updateStepStatus("Borrow with Leverage (Multicall)", "Error")
       return
     }
@@ -965,7 +817,8 @@ function CreateLoan({
                 type="warning"
                 message={
                   <p className="">
-                    You will have to repay <strong>{formatDecimal(minToRepay, 2)}</strong> gUSDC by{" "}
+                    You will have to repay{" "}
+                    <strong>{formatDecimal(Number(minToRepay), 2)}</strong> gUSDC by{" "}
                     <strong>
                       {moment()
                         .add(lendingTerm.maxDelayBetweenPartialRepay, "seconds")

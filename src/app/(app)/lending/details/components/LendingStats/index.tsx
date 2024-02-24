@@ -13,7 +13,7 @@ import { secondsToAppropriateUnit } from "utils/date"
 export default function LendingStats({
   lendingTermData,
   currentDebt,
-  debtCeilling,
+  debtCeiling,
   utilization,
   termTotalCollateral,
   collateralPrice,
@@ -21,7 +21,7 @@ export default function LendingStats({
 }: {
   lendingTermData: LendingTerms
   currentDebt: number
-  debtCeilling: number
+  debtCeiling: number
   utilization: string
   termTotalCollateral: number
   collateralPrice: number
@@ -83,7 +83,7 @@ export default function LendingStats({
             </p>
             <p>
               Debt Ceilling :{" "}
-              <span className="font-semibold">{formatDecimal(debtCeilling, 2)}</span>{" "}
+              <span className="font-semibold">{formatDecimal(debtCeiling, 2)}</span>{" "}
               gUSDC
             </p>
             <p>
@@ -101,7 +101,7 @@ export default function LendingStats({
               subtitle={
                 utilization === "NaN"
                   ? "-.--%"
-                  : formatDecimal((currentDebt / debtCeilling) * 100, 2) + "%"
+                  : formatDecimal((currentDebt / debtCeiling) * 100, 2) + "%"
               }
               extra={<QuestionMarkIcon />}
             />

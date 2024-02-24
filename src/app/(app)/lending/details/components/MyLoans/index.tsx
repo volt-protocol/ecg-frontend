@@ -51,6 +51,7 @@ function Myloans({
   usdcBalance,
   creditBalance,
   usdcNonces,
+  setReload,
   reload,
   minBorrow,
   currencyType,
@@ -65,7 +66,8 @@ function Myloans({
   creditBalance: bigint
   usdcNonces: bigint
   minBorrow: bigint
-  reload: React.Dispatch<React.SetStateAction<boolean>>
+  reload: boolean
+  setReload: React.Dispatch<React.SetStateAction<boolean>>
   currencyType: CurrencyTypes
 }) {
   const { address } = useAccount()
@@ -123,6 +125,13 @@ function Myloans({
     },
   })
   /* End Smart contract reads */
+
+  useEffect(() => {
+    if (reload) {
+      refetch()
+      setReload(false)
+    }
+  }, [reload])
 
   useEffect(() => {
     const fetchLoanDebts = async () => {
@@ -236,7 +245,7 @@ function Myloans({
         updateStepStatus("Partial Repay", "Error")
       }
       updateStepStatus("Partial Repay", "Success")
-      reload(true)
+      setReload(true)
     } catch (e) {
       console.log(e)
       updateStepStatus("Partial Repay", "Error")
@@ -302,7 +311,7 @@ function Myloans({
         updateStepStatus("Repay", "Error")
       }
       updateStepStatus("Repay", "Success")
-      reload(true)
+      setReload(true)
     } catch (e) {
       console.log(e)
       updateStepStatus("Repay", "Error")
@@ -386,8 +395,7 @@ function Myloans({
       })
 
       if (checkBorrow.status === "success") {
-        refetch()
-        reload(true)
+        setReload(true)
         updateStepStatus("Partial Repay", "Success")
         return
       } else {
@@ -580,8 +588,8 @@ function Myloans({
   //     })
 
   //     if (checkBorrow.status === "success") {
-  //       refetch()
-  //       reload(true)
+  //
+  //       setReload(true)
   //       updateStepStatus("Partial Repay with Leverage", "Success")
   //       return
   //     } else {
@@ -596,11 +604,7 @@ function Myloans({
   //   }
   // }
 
-  async function partialRepayGatewayLeverage(
-    loanId: string,
-    value: string,
-    flashloanValue: string
-  ) {
+  async function repayGatewayLeverage(loanId: string) {
     setOpen(false)
     const createSteps = (): Step[] => {
       const baseSteps = [
@@ -612,36 +616,16 @@ function Myloans({
               status: "Not Started",
             }
           : { name: `Approve ${lendingTerm.collateral.symbol}`, status: "Not Started" },
-        { name: "Sign Permit for USDC", status: "Not Started" },
-        { name: "Partial Repay with Leverage", status: "Not Started" },
+        { name: "Repay with Leverage", status: "Not Started" },
       ]
       return baseSteps
     }
     setSteps(createSteps())
 
-    let signatureUSDC: any
     let signatureCollateral: any
 
-    const usdcAmount = parseUnits(value, 6)
-    const usdcAmountFlashloan = parseUnits(flashloanValue, 6)
-    const debtToRepay = usdcToGUsdc(
-      usdcAmount + usdcAmountFlashloan,
-      tableDataWithDebts.find((item) => item.id == loanId)
-        .borrowCreditMultiplier as bigint
-    )
-    const flashloanCollateralAmount = calculateCollateralAmount(
-      usdcToGUsdc(
-        usdcAmountFlashloan,
-        tableDataWithDebts.find((item) => item.id == loanId)
-          .borrowCreditMultiplier as bigint
-      )
-    )
-    const collateralAmount = calculateCollateralAmount(debtToRepay)
-    console.log("usdcAmount", usdcAmount)
-    console.log("usdcAmountFlashloan", usdcAmountFlashloan)
-    console.log("debtToRepay", debtToRepay)
-    console.log("flashloanCollateralAmount", flashloanCollateralAmount)
-    console.log("collateralAmount", collateralAmount)
+    const collateralAmount = tableDataWithDebts.find((item) => item.id == loanId)
+      .collateralAmount as bigint
 
     setShowModal(true)
 
@@ -705,36 +689,9 @@ function Myloans({
       }
     }
 
-    /* Sign permit on USDC for Gateway*/
-    try {
-      updateStepStatus(`Sign Permit for USDC`, "In Progress")
-
-      signatureUSDC = await signPermit({
-        contractAddress: usdcContract.address,
-        erc20Name: "ECG Testnet USDC",
-        ownerAddress: address,
-        spenderAddress: gatewayContract.address as Address,
-        value: usdcAmount,
-        deadline: BigInt(Number(moment().add(10, "seconds"))),
-        nonce: usdcNonces,
-        chainId: wagmiConfig.chains[0].id,
-        permitVersion: "1",
-      })
-
-      if (!signatureUSDC) {
-        updateStepStatus(`Sign Permit for USDC`, "Error")
-        return
-      }
-      updateStepStatus(`Sign Permit for USDC`, "Success")
-    } catch (e) {
-      console.log(e)
-      updateStepStatus(`Sign Permit for USDC`, "Error")
-      return
-    }
-
     /* Call gateway.multicall() */
     try {
-      updateStepStatus("Partial Repay with Leverage", "In Progress")
+      updateStepStatus("Repay with Leverage", "In Progress")
       const hash = await writeContract(wagmiConfig, {
         ...gatewayContract,
         functionName: "repayWithBalancerFlashLoan",
@@ -745,7 +702,7 @@ function Myloans({
           uniswapRouterContract.address,
           lendingTerm.collateral.address,
           usdcContract.address,
-          collateralAmount + flashloanCollateralAmount,
+          collateralAmount,
           getAllowCollateralTokenCall(lendingTerm, collateralAmount, signatureCollateral),
         ],
       })
@@ -755,18 +712,17 @@ function Myloans({
       })
 
       if (checkBorrow.status === "success") {
-        refetch()
-        reload(true)
-        updateStepStatus("Partial Repay with Leverage", "Success")
+        setReload(true)
+        updateStepStatus("Repay with Leverage", "Success")
         return
       } else {
-        updateStepStatus("Partial Repay with Leverage", "Error")
+        updateStepStatus("Repay with Leverage", "Error")
       }
 
-      updateStepStatus(`Partial Repay with Leverage`, "Success")
+      updateStepStatus(`Repay with Leverage`, "Success")
     } catch (e) {
       console.log(e)
-      updateStepStatus("Partial Repay with Leverage", "Error")
+      updateStepStatus("Repay with Leverage", "Error")
       return
     }
   }
@@ -850,8 +806,7 @@ function Myloans({
       })
 
       if (checkBorrow.status === "success") {
-        refetch()
-        reload(true)
+        setReload(true)
         updateStepStatus("Repay", "Success")
         return
       } else {
@@ -867,15 +822,6 @@ function Myloans({
   }
 
   /* End of smart contract writes */
-
-  const calculateCollateralAmount = (borrowAmount: bigint) => {
-    let collateralAmount: bigint =
-      (borrowAmount /
-        BigInt(10 ** (18 - lendingTerm.collateral.decimals)) /
-        parseUnits(lendingTerm.borrowRatio.toString(), 18)) *
-      creditMultiplier
-    return collateralAmount
-  }
 
   /* Set table */
   const columnHelper = createColumnHelper<loanObj>()
@@ -1158,20 +1104,6 @@ function Myloans({
     setOpen(true)
   }
 
-  if (isLoadingEventLoans) {
-    return (
-      <div className="mt-20 flex justify-center">
-        <Spinner />
-      </div>
-    )
-  }
-
-  if (data && !isLoadingEventLoans && data.length == 0) {
-    return (
-      <div className="mt-20 flex justify-center">You do not have any active loans</div>
-    )
-  }
-
   return (
     <>
       {showModal && <StepModal steps={steps} close={setShowModal} setSteps={setSteps} />}
@@ -1185,13 +1117,21 @@ function Myloans({
         partialRepay={partialRepay}
         repayGateway={repayGateway}
         partialRepayGateway={partialRepayGateway}
-        partialRepayGatewayLeverage={partialRepayGatewayLeverage}
+        repayGatewayLeverage={repayGatewayLeverage}
         creditMultiplier={creditMultiplier}
         minBorrow={minBorrow}
         currencyType={currencyType}
       />
 
-      <CustomTable withNav={true} table={table} />
+      {isLoadingEventLoans ? (
+        <div className="mt-20 flex justify-center">
+          <Spinner />
+        </div>
+      ) : data && !isLoadingEventLoans && data.length == 0 ? (
+        <div className="mt-20 flex justify-center">You do not have any active loans</div>
+      ) : (
+        <CustomTable withNav={true} table={table} />
+      )}
     </>
   )
 }

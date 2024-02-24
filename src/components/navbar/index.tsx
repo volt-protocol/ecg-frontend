@@ -18,9 +18,8 @@ const Navbar = (props: {
   [x: string]: any
 }) => {
   const { connector: activeConnector, isConnected } = useAccount()
-  const { connect, connectors, error } = useConnect()
   const router = useRouter()
-  const { onOpenSidenav, brandText, pathname, mini, hovered } = props
+  const { onOpenSidenav, brandText, pathname} = props
   const [darkmode, setDarkmode] = React.useState(document.body.classList.contains("dark"))
 
   return (

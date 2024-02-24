@@ -37,35 +37,18 @@ import { ToggleCredit } from "components/switch/ToggleCredit"
 
 const LendingDetails = () => {
   const { address, isConnected } = useAccount()
-  const { prices } = useAppStore()
+  const { prices, lendingTerms } = useAppStore()
   const searchParams = useSearchParams()
   const termAddress = searchParams.get("term")
 
-  const [guildUserGaugeWeight, setGuildUserGaugeWeight] = useState<bigint>()
-  const [guildBalance, setGuildBalance] = useState<bigint>()
-  const [guildUserWeight, setGuildUserWeight] = useState<bigint>()
-  const [creditAllocated, setCreditAllocated] = useState<bigint>()
-  const [creditBalance, setCreditBalance] = useState<bigint>()
   const [lendingTermData, setLendingTermData] = useState<LendingTerms>()
   const [collateralPrice, setCollateralPrice] = useState(0)
   const [pegPrice, setPegPrice] = useState(0)
   const [termTotalCollateral, setTermTotalCollateral] = useState(0)
-  const [gaugeWeight, setGaugeWeight] = useState<number>(0)
-  const [totalWeight, setTotalWeight] = useState<number>(0)
-  const [creditTotalSupply, setCreditTotalSupply] = useState<number>(0)
-  const [ratioGuildCredit, setRatioGuildCredit] = useState<number>(0)
-  const [debtCeilling, setDebtCeilling] = useState<number>(0)
-  const [currentDebt, setCurrentDebt] = useState<number>(0)
   const [isLoadingEventLoans, setIsLoadingEventLoans] = useState<boolean>(true)
-  const [profitSharing, setProfitSharing] = useState({
-    creditSplit: "",
-    guildSplit: "",
-    surplusBufferSplit: "",
-  })
   const [reload, setReload] = useState<boolean>(false)
   const [utilization, setUtilization] = useState<string>("")
   const [eventLoans, setEventLoans] = useState<loanObj[]>([])
-  const { lendingTerms } = useAppStore()
   const [currencyType, setCurrencyType] = useState<"gUSDC" | "USDC">("gUSDC")
 
   useEffect(() => {
@@ -105,6 +88,59 @@ const LendingDetails = () => {
         ...profitManagerContract,
         functionName: "minBorrow",
       },
+      {
+        ...guildContract,
+        functionName: "getUserWeight",
+        args: [address],
+      },
+      {
+        ...guildContract,
+        functionName: "balanceOf",
+        args: [address],
+      },
+      {
+        ...guildContract,
+        functionName: "getUserGaugeWeight",
+        args: [address, termAddress],
+      },
+      {
+        ...surplusGuildMinterContract,
+        functionName: "getUserStake",
+        args: [address, termAddress],
+      },
+      {
+        address: termAddress as Address,
+        abi: TermABI,
+        functionName: "debtCeiling",
+      },
+      {
+        ...guildContract,
+        functionName: "getGaugeWeight",
+        args: [termAddress],
+      },
+      {
+        ...guildContract,
+        functionName: "totalTypeWeight",
+        args: [1],
+      },
+      {
+        ...creditContract,
+        functionName: "totalSupply",
+        args: [],
+      },
+      {
+        ...surplusGuildMinterContract,
+        functionName: "mintRatio",
+      },
+      {
+        address: termAddress as Address,
+        abi: TermABI,
+        functionName: "issuance",
+      },
+      {
+        ...profitManagerContract,
+        functionName: "getProfitSharingConfig",
+      },
     ],
     query: {
       select: (data) => {
@@ -115,6 +151,30 @@ const LendingDetails = () => {
           gusdcNonces: data[3].result as bigint,
           usdcNonces: data[4].result as bigint,
           minBorrow: data[5].result as bigint,
+          guildUserWeight: data[6].result as bigint,
+          guildBalance: data[7].result as bigint,
+          guildUserGaugeWeight: data[8].result as bigint,
+          creditAllocated: data[9].result.credit as bigint,
+          debtCeiling: Number(formatUnits(data[10].result as bigint, 18)),
+          gaugeWeight: Number(formatUnits(data[11].result as bigint, 18)),
+          totalWeight: Number(formatUnits(data[12].result as bigint, 18)),
+          creditTotalSupply: Number(formatUnits(data[13].result as bigint, 18)),
+          ratioGuildCredit: Number(formatUnits(data[14].result as bigint, 18)),
+          currentDebt: Number(formatUnits(data[15].result as bigint, 18)),
+          profitSharing: {
+            creditSplit: formatDecimal(
+              Number(formatUnits(data[16].result[1] as bigint, 18)) * 100,
+              2
+            ),
+            guildSplit: formatDecimal(
+              Number(formatUnits(data[16].result[2] as bigint, 18)) * 100,
+              2
+            ),
+            surplusBufferSplit: formatDecimal(
+              Number(formatUnits(data[16].result[0] as bigint, 18)) * 100,
+              2
+            ),
+          },
         }
       },
     },
@@ -156,171 +216,28 @@ const LendingDetails = () => {
       getTermsTotalCollateral()
       setUtilization(
         formatDecimal(
-          (currentDebt / creditTotalSupply) * (gaugeWeight / totalWeight) * 100,
+          (data?.currentDebt / data?.creditTotalSupply) *
+            (data?.gaugeWeight / data?.totalWeight) *
+            100,
           2
         )
       )
     }
-  }, [lendingTermData, creditTotalSupply, gaugeWeight, totalWeight])
+  }, [lendingTermData, data?.creditTotalSupply, data?.gaugeWeight, data?.totalWeight])
 
-  //fetch smart contract data
   useEffect(() => {
-    async function guildUserGaugeWeight(): Promise<void> {
-      const result = await readContract(wagmiConfig, {
-        ...guildContract,
-        functionName: "getUserGaugeWeight",
-        args: [address, termAddress],
-      })
-      setGuildUserGaugeWeight(result as bigint)
-    }
-    async function guildBalance(): Promise<void> {
-      const result = await readContract(wagmiConfig, {
-        ...guildContract,
-        functionName: "balanceOf",
-        args: [address],
-      })
-
-      setGuildBalance(result as bigint)
-    }
-    async function getGuildAvailableToStake(): Promise<void> {
-      const result = await readContract(wagmiConfig, {
-        ...guildContract,
-        functionName: "getUserWeight",
-        args: [address],
-      })
-      setGuildUserWeight(result as bigint)
-    }
-
-    async function getCreditAllocated(): Promise<void> {
-      const result = await readContract(wagmiConfig, {
-        ...surplusGuildMinterContract,
-        functionName: "getUserStake",
-        args: [address, termAddress],
-      })
-      setCreditAllocated(result.credit as bigint)
-    }
-
-    async function getCreditdBalance(): Promise<void> {
-      const result = await readContract(wagmiConfig, {
-        ...creditContract,
-        functionName: "balanceOf",
-        args: [address],
-      })
-      setCreditBalance(result as bigint)
-    }
-
     async function getEventLoans(): Promise<Object> {
+      setIsLoadingEventLoans(true)
       const loansCall = await getActiveLoanDetails(termAddress as Address)
       setEventLoans(loansCall)
       setIsLoadingEventLoans(false)
       return loansCall
     }
 
-    if (isConnected) {
-      guildBalance()
-      guildUserGaugeWeight()
-      getCreditAllocated()
-      getCreditdBalance()
-      getGuildAvailableToStake()
-    } else {
-      setGuildUserGaugeWeight(undefined)
-      setGuildBalance(undefined)
-      setCreditAllocated(undefined)
-      setCreditBalance(undefined)
-    }
     getEventLoans()
-    //refect onchain data (!important for signatures)
-    refetch()
+    refetch() //refect onchain data (!important for signatures)
     setReload(false)
-  }, [isConnected, reload])
-
-  //fetch other smart contract data
-  useEffect(() => {
-    async function getDebtCeiling(): Promise<void> {
-      const result = await readContract(wagmiConfig, {
-        address: lendingTermData.address as Address,
-        abi: TermABI,
-        functionName: "debtCeiling",
-      })
-      setDebtCeilling(Number(formatUnits(result as bigint, 18)))
-    }
-
-    async function getGaugeWeight(): Promise<void> {
-      const result = await readContract(wagmiConfig, {
-        ...guildContract,
-        functionName: "getGaugeWeight",
-        args: [lendingTermData.address],
-      })
-      setGaugeWeight(Number(formatUnits(result as bigint, 18)))
-    }
-
-    async function getTotalWeight(): Promise<void> {
-      const result = await readContract(wagmiConfig, {
-        ...guildContract,
-        functionName: "totalTypeWeight",
-        args: [1],
-      })
-      setTotalWeight(Number(formatUnits(result as bigint, 18)))
-    }
-    async function getCreditTotalSupply(): Promise<void> {
-      const result = await readContract(wagmiConfig, {
-        ...creditContract,
-        functionName: "totalSupply",
-        args: [],
-      })
-      setCreditTotalSupply(Number(formatUnits(result as bigint, 18)))
-    }
-    async function getRationGUILDCREDIT() {
-      const ratio = await readContract(wagmiConfig, {
-        ...surplusGuildMinterContract,
-        functionName: "mintRatio",
-      })
-      setRatioGuildCredit(Number(formatUnits(ratio as bigint, 18)))
-    }
-    async function getProfitSharing(): Promise<void> {
-      const result = await readContract(wagmiConfig, {
-        ...profitManagerContract,
-        functionName: "getProfitSharingConfig",
-      })
-
-      if (Array.isArray(result) && result.length >= 3) {
-        setProfitSharing({
-          creditSplit: formatDecimal(
-            Number(formatUnits(result[1] as bigint, 18)) * 100,
-            2
-          ),
-          guildSplit: formatDecimal(
-            Number(formatUnits(result[2] as bigint, 18)) * 100,
-            2
-          ),
-          surplusBufferSplit: formatDecimal(
-            Number(formatUnits(result[0] as bigint, 18)) * 100,
-            2
-          ),
-        })
-      } else {
-        throw new Error("Invalid profit sharing config")
-      }
-    }
-    async function getCurrentDebt(): Promise<void> {
-      const result = await readContract(wagmiConfig, {
-        address: lendingTermData.address as Address,
-        abi: TermABI,
-        functionName: "issuance",
-      })
-      setCurrentDebt(Number(formatUnits(result as bigint, 18)))
-    }
-
-    if (lendingTermData) {
-      getDebtCeiling()
-      getGaugeWeight()
-      getTotalWeight()
-      getCreditTotalSupply()
-      getRationGUILDCREDIT()
-      getCurrentDebt()
-      getProfitSharing()
-    }
-  }, [lendingTermData, reload])
+  }, [reload])
 
   if (!isConnected) {
     return <Disconnected />
@@ -378,8 +295,8 @@ const LendingDetails = () => {
         <LendingStats
           creditMultiplier={data?.creditMultiplier}
           lendingTermData={lendingTermData}
-          currentDebt={currentDebt}
-          debtCeilling={debtCeilling}
+          currentDebt={data?.currentDebt}
+          debtCeiling={data?.debtCeiling}
           utilization={utilization}
           termTotalCollateral={termTotalCollateral}
           collateralPrice={collateralPrice}
@@ -392,14 +309,17 @@ const LendingDetails = () => {
             <CreateLoan
               lendingTerm={lendingTermData}
               availableDebt={
-                debtCeilling - currentDebt > 0 ? debtCeilling - currentDebt : 0
+                data?.debtCeiling - data?.currentDebt > 0
+                  ? data?.debtCeiling - data?.currentDebt
+                  : 0
               }
               creditMultiplier={data?.creditMultiplier}
               creditBalance={data?.creditBalance}
               usdcBalance={data?.usdcBalance}
               gusdcNonces={data?.gusdcNonces}
               minBorrow={Number(formatUnits(data?.minBorrow, 18))}
-              reload={setReload}
+              setReload={setReload}
+              reload={reload}
               currencyType={currencyType}
             />
           </Card>
@@ -413,7 +333,8 @@ const LendingDetails = () => {
               tableData={eventLoans}
               collateralPrice={collateralPrice}
               pegPrice={pegPrice}
-              reload={setReload}
+              setReload={setReload}
+              reload={reload}
               creditMultiplier={data?.creditMultiplier}
               usdcBalance={data?.usdcBalance}
               creditBalance={data?.creditBalance}
@@ -441,20 +362,20 @@ const LendingDetails = () => {
                       </dt>
                       <dd className="mt-1 flex items-baseline justify-between gap-6 md:block lg:flex">
                         <div className="flex items-baseline text-2xl font-semibold text-brand-500">
-                          {guildUserGaugeWeight != undefined &&
+                          {data?.guildUserGaugeWeight != undefined &&
                             toLocaleString(
                               formatDecimal(
-                                Number(formatUnits(guildUserGaugeWeight, 18)),
+                                Number(formatUnits(data?.guildUserGaugeWeight, 18)),
                                 2
                               )
                             )}
                         </div>
                         <div className="inline-flex items-baseline rounded-full bg-green-100 px-2.5 py-0.5 text-sm font-medium text-green-800 md:mt-2 lg:mt-0">
-                          {guildUserGaugeWeight != undefined &&
-                            guildBalance != undefined &&
+                          {data?.guildUserGaugeWeight != undefined &&
+                            data?.guildBalance != undefined &&
                             formatDecimal(
-                              (Number(formatUnits(guildUserGaugeWeight, 18)) /
-                                Number(formatUnits(guildBalance, 18))) *
+                              (Number(formatUnits(data?.guildUserGaugeWeight, 18)) /
+                                Number(formatUnits(data?.guildBalance, 18))) *
                                 100,
                               2
                             )}
@@ -463,9 +384,9 @@ const LendingDetails = () => {
                       </dd>
                       <span className="ml-2 text-sm font-medium text-gray-500 dark:text-gray-300">
                         /{" "}
-                        {guildBalance != undefined &&
+                        {data?.guildBalance != undefined &&
                           toLocaleString(
-                            formatDecimal(Number(formatUnits(guildBalance, 18)), 2)
+                            formatDecimal(Number(formatUnits(data?.guildBalance, 18)), 2)
                           )}
                       </span>
                     </div>
@@ -506,13 +427,13 @@ const LendingDetails = () => {
                             <p>
                               The protocol profit sharing can be updated by governance,
                               and is configured as follow :<br />
-                              &mdash; <strong>{profitSharing.guildSplit}</strong>% to
+                              &mdash; <strong>{data?.profitSharing.guildSplit}</strong>% to
                               GUILD stakers
                               <br />
-                              &mdash; <strong>{profitSharing.creditSplit}</strong>% to
-                              gUSDC savers
+                              &mdash; <strong>{data?.profitSharing.creditSplit}</strong>
+                              % to gUSDC savers
                               <br />
-                              &mdash; <strong>{profitSharing.surplusBufferSplit}</strong>%
+                              &mdash; <strong>{data?.profitSharing.surplusBufferSplit}</strong>%
                               to the Surplus Buffer
                             </p>
                             <p>
@@ -564,25 +485,25 @@ const LendingDetails = () => {
                     <Tab.Panels className="mt-2">
                       <Tab.Panel key="stake-guild" className={"px-3 py-1"}>
                         <StakeGuild
-                          debtCeiling={debtCeilling}
+                          debtCeiling={data?.debtCeiling}
                           lendingTerm={lendingTermData}
                           textButton="Stake"
-                          guildUserGaugeWeight={guildUserGaugeWeight}
-                          guildBalance={guildBalance}
+                          guildUserGaugeWeight={data?.guildUserGaugeWeight}
+                          guildBalance={data?.guildBalance}
                           smartContractAddress={termAddress}
-                          guildUserWeight={guildUserWeight}
+                          guildUserWeight={data?.guildUserWeight}
                           reload={setReload}
                         />
                       </Tab.Panel>
                       <Tab.Panel key="unstake-guild" className={"px-3 py-1"}>
                         <StakeGuild
-                          debtCeiling={debtCeilling}
+                          debtCeiling={data?.debtCeiling}
                           lendingTerm={lendingTermData}
                           textButton="Unstake"
-                          guildUserGaugeWeight={guildUserGaugeWeight}
-                          guildBalance={guildBalance}
+                          guildUserGaugeWeight={data?.guildUserGaugeWeight}
+                          guildBalance={data?.guildBalance}
                           smartContractAddress={termAddress}
-                          guildUserWeight={guildUserWeight}
+                          guildUserWeight={data?.guildUserWeight}
                           reload={setReload}
                         />
                       </Tab.Panel>
@@ -607,18 +528,21 @@ const LendingDetails = () => {
                       </dt>
                       <dd className="mt-1 flex items-baseline justify-between gap-6 md:block lg:flex">
                         <div className="flex items-baseline text-2xl font-semibold text-brand-500">
-                          {creditAllocated != undefined &&
+                          {data?.creditAllocated != undefined &&
                             toLocaleString(
-                              formatDecimal(Number(formatUnits(creditAllocated, 18)), 2)
+                              formatDecimal(
+                                Number(formatUnits(data?.creditAllocated, 18)),
+                                2
+                              )
                             )}
                         </div>
                         <div className="inline-flex items-baseline rounded-full bg-green-100 px-2.5 py-0.5 text-sm font-medium text-green-800 md:mt-2 lg:mt-0">
-                          {creditAllocated != undefined &&
-                            creditBalance != undefined &&
+                          {data?.creditAllocated != undefined &&
+                            data?.creditBalance != undefined &&
                             formatDecimal(
-                              (Number(formatUnits(creditAllocated, 18)) /
-                                (Number(formatUnits(creditBalance, 18)) +
-                                  Number(formatUnits(creditAllocated, 18)))) *
+                              (Number(formatUnits(data?.creditAllocated, 18)) /
+                                (Number(formatUnits(data?.creditBalance, 18)) +
+                                  Number(formatUnits(data?.creditAllocated, 18)))) *
                                 100,
                               2
                             )}
@@ -627,12 +551,12 @@ const LendingDetails = () => {
                       </dd>
                       <span className="ml-2 text-sm font-medium text-gray-500 dark:text-gray-300">
                         /{" "}
-                        {creditBalance != undefined &&
-                          creditAllocated != undefined &&
+                        {data?.creditBalance != undefined &&
+                          data?.creditAllocated != undefined &&
                           toLocaleString(
                             formatDecimal(
-                              Number(formatUnits(creditBalance, 18)) +
-                                Number(formatUnits(creditAllocated, 18)),
+                              Number(formatUnits(data?.creditBalance, 18)) +
+                                Number(formatUnits(data?.creditAllocated, 18)),
                               2
                             )
                           )}
@@ -651,8 +575,8 @@ const LendingDetails = () => {
 
                             <p>
                               For each gUSDC staked,{" "}
-                              <strong>{formatDecimal(ratioGuildCredit, 2)}</strong> GUILD
-                              will be minted & staked for this term (see Stake GUILD
+                              <strong>{formatDecimal(data?.ratioGuildCredit, 2)}</strong>{" "}
+                              GUILD will be minted & staked for this term (see Stake GUILD
                               tooltip), which will increase the debt ceiling (available
                               gUSDC to borrow) in this term.
                             </p>
@@ -709,25 +633,25 @@ const LendingDetails = () => {
                     <Tab.Panels className="mt-2">
                       <Tab.Panel key="stake-credit" className={"px-3 py-1"}>
                         <StakeCredit
-                          debtCeiling={debtCeilling}
+                          debtCeiling={data?.debtCeiling}
                           lendingTerm={lendingTermData}
                           textButton="Stake"
-                          creditAllocated={creditAllocated}
-                          creditBalance={creditBalance}
+                          creditAllocated={data?.creditAllocated}
+                          creditBalance={data?.creditBalance}
                           termAddress={termAddress}
-                          ratioGuildCredit={ratioGuildCredit}
+                          ratioGuildCredit={data?.ratioGuildCredit}
                           reload={setReload}
                         />
                       </Tab.Panel>
                       <Tab.Panel key="unstake-credit" className={"px-3 py-1"}>
                         <StakeCredit
-                          debtCeiling={debtCeilling}
+                          debtCeiling={data?.debtCeiling}
                           lendingTerm={lendingTermData}
                           textButton="Unstake"
-                          creditAllocated={creditAllocated}
-                          creditBalance={creditBalance}
+                          creditAllocated={data?.creditAllocated}
+                          creditBalance={data?.creditBalance}
                           termAddress={termAddress}
-                          ratioGuildCredit={ratioGuildCredit}
+                          ratioGuildCredit={data?.ratioGuildCredit}
                           reload={setReload}
                         />
                       </Tab.Panel>

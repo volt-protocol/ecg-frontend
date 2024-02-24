@@ -5,7 +5,7 @@ export interface ActiveOffboardingPolls {
   timestamp: number
   snapshotBlock: number
   user: Address
-  userWeight: number
+  userWeight: bigint
   canOffboard: boolean
   issuance: number
 }

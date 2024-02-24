@@ -1,38 +1,25 @@
 /* eslint-disable */
-
+import Image from "next/image"
 import { HiX } from "react-icons/hi"
 import Links from "./components/Links"
 import clsx from "clsx"
-
 import { IRoute } from "types/navigation"
 import DropdownSelect from "components/select/DropdownSelect"
-import ethereumLogo from "/public/img/ethereum-logo.svg"
-import Link from "next/link"
-import DashIcon from "components/icons/DashIcon"
 import NavLink from "components/link/NavLink"
-import {
-  MdInfoOutline,
-  MdOpenInBrowser,
-  MdOpenInNew,
-  MdOutbond,
-  MdSwapHoriz,
-} from "react-icons/md"
-import ButtonPrimary from "components/button/ButtonPrimary"
-
-const markets = [
-  {
-    id: 1,
-    name: "USDC Market",
-    avatar: ethereumLogo,
-  },
-]
+import { MdOpenInNew } from "react-icons/md"
+import { useSwitchChain } from "wagmi"
+import { useAppStore } from "store"
+import { marketsConfig } from "config"
 
 function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
+  const { chains } = useSwitchChain()
+  const { appChainId, setAppMarket, appMarket, setAppChainId } = useAppStore()
   const { routes, open, setOpen } = props
+
   return (
     <div
       className={clsx(
-        "sm:none fixed !z-50 flex min-h-full flex-col bg-stone-200 pb-5 shadow-2xl shadow-white/5 dark:!bg-navy-800 dark:text-white md:!z-50 lg:!z-50 xl:!z-0",
+        "sm:none fixed !z-50 flex min-h-full min-w-[260px] flex-col bg-stone-200 pb-5 shadow-2xl shadow-white/5 dark:!bg-navy-800 dark:text-white md:!z-50 lg:!z-50 xl:!z-0",
         open
           ? "transiton-all translate-x-0 duration-150 ease-linear"
           : "transiton-all -translate-x-96 duration-150 ease-linear xl:translate-x-0"
@@ -45,17 +32,47 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
         <HiX />
       </span>
 
-      <div className={`mx-10 mt-5 flex flex-col items-center justify-center`}>
+      <div className={`px-5 mt-5 flex flex-col items-center justify-center`}>
         <div className="font-poppins text-[26px] font-bold uppercase text-gray-800 dark:text-white">
           Credit <span className="font-medium">Guild</span>
         </div>
         <div className="mt-2 px-1">
           <DropdownSelect
-            options={markets}
-            selectedOption={markets[0]}
-            onChange={() => {}}
-            getLabel={(option) => option.name}
-            extra="w-full"
+            options={chains.map((chain) => chain.id)}
+            selectedOption={appChainId}
+            onChange={(option) => setAppChainId(option)}
+            getLabel={(option) => {
+              const chainFound = chains.find((chain) => chain.id == option)
+              if (chainFound) {
+                return (
+                  <div className="flex items-center gap-2 font-semibold text-sm">
+                    <Image
+                      src={`/img/chain-logos/${chainFound.id}.svg`}
+                      width={25}
+                      height={25}
+                      alt={chainFound.name}
+                    />
+                    {chainFound.name}
+                  </div>
+                )
+              }
+              return "Wrong network"
+            }}
+            extra="min-w-[180px]"
+          />
+        </div>
+        <div className="mt-2 px-1">
+          <DropdownSelect
+            options={marketsConfig}
+            selectedOption={marketsConfig.find((market) => market.key === appMarket)}
+            onChange={(option) => setAppMarket(option.key)}
+            getLabel={(option) => (
+              <div className="flex items-center gap-1 text-sm">
+                <Image src={option.logo} width={25} height={25} alt={option.name} />
+                {option.name}
+              </div>
+            )}
+            extra="min-w-[180px]"
           />
         </div>
       </div>

@@ -12,8 +12,6 @@ export const TVLChart = ({ tvl }: { tvl: any }) => {
   const [chartData, setChartData] = useState<any>([])
   const [timeline, setTimeline] = useState<ChartTimeline>("all")
 
-  console.log("chartData", chartData)
-
   useEffect(() => {
     if (!tvl) return
 

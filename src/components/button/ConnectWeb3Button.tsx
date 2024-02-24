@@ -1,11 +1,9 @@
-import { useWeb3Modal } from "@web3modal/wagmi/react"
-import ButtonPrimary from "./ButtonPrimary"
+"use client"
 
 export const ConnectWeb3Button = () => {
-
   return (
     <>
-      <w3m-button />
+      <w3m-button balance={false} />
     </>
   )
 }

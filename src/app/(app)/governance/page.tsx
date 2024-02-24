@@ -8,8 +8,6 @@ import DelegateGuild from "./components/DelegateGuild"
 import DelegateCredit from "./components/DelegateCredit"
 import OffboardTerm from "./components/OffboardTerm"
 import OnboardNewterm from "./components/OnboardNewTerm"
-import Spinner from "components/spinner"
-import { ref } from "yup"
 
 export type Delegatee = {
   address: string
@@ -61,7 +59,6 @@ function Governance() {
     ],
     query: {
       select: (data) => {
-        console.log(data)
         return {
           guildBalance: data[0].result as bigint,
           guildNotUsed: data[1].result as bigint,

@@ -49,7 +49,6 @@ import { BLOCK_LENGTH_MILLISECONDS, FROM_BLOCK } from "utils/constants"
 import { wagmiConfig } from "contexts/Web3Provider"
 
 function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
-  const { address } = useAccount()
   const { lendingTerms, fetchLendingTerms } = useAppStore()
   const [selectedTerm, setSelectedTerm] = useState<LendingTerms>(undefined)
   const [showModal, setShowModal] = useState(false)
@@ -76,9 +75,8 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
     ],
     query: {
       select: (data) => {
-        console.log(data)
         return {
-          quorum: Number(data[0].result),
+          quorum: Number(formatUnits(data[0].result, 18)),
           pollDurationBlock: Number(data[1].result),
           deprecatedTerms: data[2].result,
         }
@@ -121,7 +119,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
           return {
             term: log.args.term as Address,
             timestamp: Number(log.args.timestamp),
-            userWeight: Number(log.args.userWeight),
+            userWeight: log.args.userWeight as bigint,
             snapshotBlock: Number(log.args.snapshotBlock),
             user: log.args.user as Address,
           }
@@ -382,6 +380,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
       id: "support",
       header: "Support",
       cell: (info: any) => {
+        const userWeight = formatUnits(info.row.original.userWeight, 18)
         return (
           <div>
             <TooltipHorizon
@@ -391,9 +390,9 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
                   <span className="font-semibold">Quorum:</span>{" "}
                   {data &&
                     data.quorum &&
-                    formatCurrencyValue(Number(formatUnits(info.row.original.userWeight.toString(), 18))) +
+                    formatCurrencyValue(Number(userWeight)) +
                       "/" +
-                      formatCurrencyValue(Number(formatUnits(BigInt(data.quorum), 18)))}
+                      formatCurrencyValue(data.quorum)}
                 </div>
               }
               trigger={
@@ -402,9 +401,9 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
                     useColors={false}
                     width="w-[100px]"
                     value={
-                      Math.round((info.row.original.userWeight / data.quorum) * 100) > 100
+                      Math.round((Number(userWeight) / data.quorum) * 100) > 100
                         ? 100
-                        : Math.round((info.row.original.userWeight / data.quorum) * 100)
+                        : Math.round((Number(userWeight) / data.quorum) * 100)
                     }
                   />
                   <div className="ml-1">
@@ -576,7 +575,9 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
             Your GUILD voting weight:{" "}
             <span className="font-semibold">
               {guildVotingWeight != undefined &&
-                toLocaleString(formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2))}
+                toLocaleString(
+                  formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2)
+                )}
             </span>
           </p>
         </div>

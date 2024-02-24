@@ -42,3 +42,16 @@ export const permitConfig: PermitConfig[] = [
     hasPermit: false,
   },
 ]
+
+export const marketsConfig = [
+  {
+    key: "usdc",
+    name: "USDC",
+    logo: "/img/crypto-logos/usdc.png",
+  },
+  {
+    key: "usdt",
+    name: "USDT",
+    logo: "/img/crypto-logos/usdt.png",
+  },
+]

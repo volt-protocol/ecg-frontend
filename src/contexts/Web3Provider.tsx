@@ -1,7 +1,7 @@
 "use client"
 import { createWeb3Modal } from "@web3modal/wagmi/react"
 import { cookieStorage, createStorage, http, createConfig, WagmiProvider, State } from "wagmi"
-import { mainnet, sepolia } from "wagmi/chains"
+import { mainnet, sepolia, arbitrum, optimism, arbitrumSepolia, optimismSepolia, polygonMumbai } from "wagmi/chains"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { walletConnect, injected, coinbaseWallet } from "wagmi/connectors"
 
@@ -16,13 +16,15 @@ const metadata = {
   verifyUrl: "https://web3modal.com/verify",
 }
 
+//Add available chains here
 const chains =
   process.env.NEXT_PUBLIC_APP_ENV === "production"
     ? ([mainnet] as const)
-    : ([sepolia] as const)
+    : ([sepolia, arbitrumSepolia, optimismSepolia, polygonMumbai] as const)
     
 const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID
 
+//Add RPC endpoints for available chains here
 export const wagmiConfig = createConfig({
   chains,
   transports: {

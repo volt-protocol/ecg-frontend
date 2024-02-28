@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react"
 import { readContract, waitForTransactionReceipt, writeContract } from "@wagmi/core"
 import { toastError } from "components/toast"
-import { guildContract } from "lib/contracts"
+import { GuildABI } from "lib/contracts"
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa"
 import { Step } from "components/stepLoader/stepType"
 import StepModal from "components/stepLoader"
@@ -13,7 +13,7 @@ import {
   flexRender,
 } from "@tanstack/react-table"
 import { getTitleDisabled } from "./helper"
-import { MdOpenInNew } from "react-icons/md"
+import { MdOpenInNew, MdOutlineAccountBalance } from "react-icons/md"
 import Spinner from "components/spinner"
 import { useAccount } from "wagmi"
 import { Address } from "viem"
@@ -23,6 +23,7 @@ import { formatUnits, isAddress, parseEther } from "viem"
 import ButtonPrimary from "components/button/ButtonPrimary"
 import DefiInputBox from "components/box/DefiInputBox"
 import { wagmiConfig } from "contexts/Web3Provider"
+import { useAppStore } from "store"
 
 interface Delegatee {
   address: string
@@ -44,6 +45,7 @@ function DelegateGuild({
   userAddress: string
   isConnected: boolean
 }) {
+  const { contractsList } = useAppStore()
   const { address } = useAccount()
   const [value, setValue] = useState<string>("")
   const [showModal, setShowModal] = useState(false)
@@ -72,7 +74,8 @@ function DelegateGuild({
 
   async function getDelegatee(): Promise<string[]> {
     const result = await readContract(wagmiConfig, {
-      ...guildContract,
+      address: contractsList.guildAddress,
+      abi: GuildABI,
       functionName: "delegates",
       args: [userAddress],
     })
@@ -84,7 +87,8 @@ function DelegateGuild({
 
     async function getDelegateeAndVotes(delegatee: string): Promise<void> {
       const result = await readContract(wagmiConfig, {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "delegatesVotesCount",
         args: [userAddress, delegatee],
       })
@@ -134,7 +138,8 @@ function DelegateGuild({
       updateStepStatus("Delegate GUILD", "In Progress")
 
       const hash = await writeContract(wagmiConfig, {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "incrementDelegation",
         args: [addressValue, parseEther(value.toString())],
       })
@@ -171,8 +176,10 @@ function DelegateGuild({
     try {
       setShowModal(true)
       updateStepStatus("Undelegate GUILD", "In Progress")
+
       const hash = await writeContract(wagmiConfig, {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "undelegate",
         args: [address, amount],
       })
@@ -367,8 +374,13 @@ function DelegateGuild({
               </p>
             </div>
           ) : delegatees.length === 0 ? (
-            <div className="my-4 flex items-center justify-center text-gray-500 dark:text-gray-100">
-              <p>You haven't delegated any GUILD yet</p>
+            <div className="my-5 flex-col items-center justify-center opacity-40">
+              <div className="flex justify-center">
+                <MdOutlineAccountBalance className="h-10 w-10" />
+              </div>
+              <div className="mt-2 flex justify-center">
+                <p>You haven't delegated any GUILD yet</p>
+              </div>
             </div>
           ) : (
             <table className="mt-4 w-full">

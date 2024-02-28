@@ -1,6 +1,7 @@
 import { getPublicClient } from "@wagmi/core"
 import { wagmiConfig } from "contexts/Web3Provider"
-import { psmUsdcContract } from "lib/contracts"
+import { PsmUsdcABI } from "lib/contracts"
+import { ContractsList } from "store/slices/contracts-list"
 import { FROM_BLOCK } from "utils/constants"
 import { Address, formatUnits } from "viem"
 
@@ -16,13 +17,14 @@ export interface MintRedeemLogs {
 }
 
 export async function getAllMintRedeemLogs(
+  contractsList: ContractsList,
   userAddress?: Address,
   duration?: number
 ): Promise<MintRedeemLogs[]> {
   const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber()
 
   const mintLogs = await getPublicClient(wagmiConfig).getLogs({
-    address: psmUsdcContract.address,
+    address: contractsList.psmUsdcAddress,
     event: {
       type: "event",
       name: "Mint",
@@ -38,7 +40,7 @@ export async function getAllMintRedeemLogs(
   })
 
   const redeemLogs = await getPublicClient(wagmiConfig).getLogs({
-    address: psmUsdcContract.address,
+    address: contractsList.psmUsdcAddress,
     event: {
       type: "event",
       name: "Redeem",

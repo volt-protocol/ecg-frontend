@@ -6,11 +6,11 @@ import React, { useEffect, useState } from "react"
 import Card from "components/card"
 import {
   TermABI,
-  profitManagerContract,
-  creditContract,
-  guildContract,
-  surplusGuildMinterContract,
-  usdcContract,
+  ProfitManagerABI,
+  CreditABI,
+  GuildABI,
+  SurplusGuildMinterABI,
+  ERC20PermitABI,
 } from "lib/contracts"
 import { readContract } from "@wagmi/core"
 import Myloans from "./components/MyLoans"
@@ -37,10 +37,9 @@ import { ToggleCredit } from "components/switch/ToggleCredit"
 
 const LendingDetails = () => {
   const { address, isConnected } = useAccount()
-  const { prices, lendingTerms } = useAppStore()
+  const { prices, lendingTerms, contractsList } = useAppStore()
   const searchParams = useSearchParams()
   const termAddress = searchParams.get("term")
-
   const [lendingTermData, setLendingTermData] = useState<LendingTerms>()
   const [collateralPrice, setCollateralPrice] = useState(0)
   const [pegPrice, setPegPrice] = useState(0)
@@ -61,50 +60,60 @@ const LendingDetails = () => {
   const { data, isError, isLoading, refetch } = useReadContracts({
     contracts: [
       {
-        ...profitManagerContract,
+        address: contractsList.profitManagerAddress,
+        abi: ProfitManagerABI,
         functionName: "creditMultiplier",
       },
       {
-        ...usdcContract,
+        address: contractsList.usdcAddress,
+        abi: erc20Abi,
         functionName: "balanceOf",
         args: [address],
       },
       {
-        ...creditContract,
+        address: contractsList.creditAddress,
+        abi: CreditABI,
         functionName: "balanceOf",
         args: [address],
       },
       {
-        ...creditContract,
+        address: contractsList.creditAddress,
+        abi: CreditABI,
         functionName: "nonces",
         args: [address],
       },
       {
-        ...usdcContract,
+        address: contractsList.usdcAddress,
+        abi: ERC20PermitABI,
         functionName: "nonces",
         args: [address],
       },
       {
-        ...profitManagerContract,
+        address: contractsList.profitManagerAddress,
+        abi: ProfitManagerABI,
         functionName: "minBorrow",
       },
       {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "getUserWeight",
         args: [address],
       },
       {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "balanceOf",
         args: [address],
       },
       {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "getUserGaugeWeight",
         args: [address, termAddress],
       },
       {
-        ...surplusGuildMinterContract,
+        address: contractsList.surplusGuildMinterAddress,
+        abi: SurplusGuildMinterABI,
         functionName: "getUserStake",
         args: [address, termAddress],
       },
@@ -114,22 +123,26 @@ const LendingDetails = () => {
         functionName: "debtCeiling",
       },
       {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "getGaugeWeight",
         args: [termAddress],
       },
       {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "totalTypeWeight",
         args: [1],
       },
       {
-        ...creditContract,
+        address: contractsList.creditAddress,
+        abi: CreditABI,
         functionName: "totalSupply",
         args: [],
       },
       {
-        ...surplusGuildMinterContract,
+        address: contractsList.surplusGuildMinterAddress,
+        abi: SurplusGuildMinterABI,
         functionName: "mintRatio",
       },
       {
@@ -138,7 +151,8 @@ const LendingDetails = () => {
         functionName: "issuance",
       },
       {
-        ...profitManagerContract,
+        address: contractsList.profitManagerAddress,
+        abi: ProfitManagerABI,
         functionName: "getProfitSharingConfig",
       },
     ],
@@ -427,13 +441,14 @@ const LendingDetails = () => {
                             <p>
                               The protocol profit sharing can be updated by governance,
                               and is configured as follow :<br />
-                              &mdash; <strong>{data?.profitSharing.guildSplit}</strong>% to
-                              GUILD stakers
+                              &mdash; <strong>{data?.profitSharing.guildSplit}</strong>%
+                              to GUILD stakers
                               <br />
                               &mdash; <strong>{data?.profitSharing.creditSplit}</strong>
                               % to gUSDC savers
                               <br />
-                              &mdash; <strong>{data?.profitSharing.surplusBufferSplit}</strong>%
+                              &mdash;{" "}
+                              <strong>{data?.profitSharing.surplusBufferSplit}</strong>%
                               to the Surplus Buffer
                             </p>
                             <p>

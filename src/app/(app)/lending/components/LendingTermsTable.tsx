@@ -15,12 +15,7 @@ import { secondsToAppropriateUnit } from "utils/date"
 import { LendingTerms } from "types/lending"
 import Progress from "components/progress"
 import { TooltipHorizon, QuestionMarkIcon } from "components/tooltip"
-import {
-  creditContract,
-  guildContract,
-  profitManagerContract,
-  TermABI,
-} from "lib/contracts"
+import { CreditABI, GuildABI, ProfitManagerABI, TermABI } from "lib/contracts"
 import { readContracts } from "@wagmi/core"
 import { formatDecimal, formatNumberDecimal, formatCurrencyValue } from "utils/numbers"
 import { useRouter } from "next/navigation"
@@ -29,12 +24,13 @@ import { FaSort, FaSortDown, FaSortUp } from "react-icons/fa"
 import { Abi, formatUnits, Address } from "viem"
 import { useReadContracts } from "wagmi"
 import { wagmiConfig } from "contexts/Web3Provider"
+import { useAppStore } from "store"
 
 export default function LendingTermsTable(props: { tableData: LendingTerms[] }) {
+  const { contractsList } = useAppStore()
   const { tableData } = props
   const [sorting, setSorting] = React.useState<SortingState>([])
   const columnHelper = createColumnHelper<LendingTerms>()
-
   const [data, setData] = React.useState<LendingTerms[]>([])
 
   const router = useRouter()
@@ -52,12 +48,14 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
   } = useReadContracts({
     contracts: [
       {
-        ...creditContract,
+        address: contractsList.creditAddress,
+        abi: CreditABI,
         functionName: "totalSupply",
         args: [],
       },
       {
-        ...profitManagerContract,
+        address: contractsList?.profitManagerAddress,
+        abi: ProfitManagerABI as Abi,
         functionName: "creditMultiplier",
       },
     ],
@@ -97,12 +95,14 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
     const result = await readContracts(wagmiConfig, {
       contracts: [
         {
-          ...guildContract,
+          address: contractsList.guildAddress,
+          abi: GuildABI,
           functionName: "getGaugeWeight",
           args: [term.address], // Assuming each term has a unique contractAddress
         },
         {
-          ...guildContract,
+          address: contractsList.guildAddress,
+          abi: GuildABI,
           functionName: "totalTypeWeight",
           args: [1],
         },

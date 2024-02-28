@@ -1,17 +1,11 @@
 "use client"
-import axios, { AxiosResponse } from "axios"
 import Image from "next/image"
 import { readContract } from "@wagmi/core"
 import { useReadContracts } from "wagmi"
 import { useAppStore } from "store"
 import { Abi, Address, formatUnits, erc20Abi } from "viem"
 import { coinsList } from "store/slices/pair-prices"
-import {
-  profitManagerContract,
-  guildContract,
-  creditContract,
-  TermABI,
-} from "lib/contracts"
+import { ProfitManagerABI, GuildABI, CreditABI, TermABI } from "lib/contracts"
 import { useEffect, useState } from "react"
 import { getActiveLoanLogs, getCloseLoanLogs, getOpenLoanLogs } from "lib/logs/loans"
 import Card from "components/card"
@@ -21,7 +15,6 @@ import { FirstLossCapital } from "./components/FirstLossCapital"
 import { AverageInterestRate } from "./components/AverageInterestRate"
 import { CreditTotalSupply } from "./components/CreditTotalSupply"
 import Spinner from "components/spinner"
-import { LoanSuccessRate } from "./components/LoanSuccessRate"
 import {
   LastActivitiesLogs,
   LastProtocolActivity,
@@ -37,7 +30,7 @@ import { GlobalStatCarts } from "./components/GlobalStatCarts"
 import { TVLChart } from "./components/TVLChart"
 
 const GlobalDashboard = () => {
-  const { lendingTerms, prices, historicalData } = useAppStore()
+  const { lendingTerms, prices, historicalData, contractsList } = useAppStore()
   const [totalActiveLoans, setTotalActiveLoans] = useState<number>()
   const [debtCeilingData, setDebtCeilingData] = useState([])
   const [collateralData, setCollateralData] = useState([])
@@ -50,16 +43,19 @@ const GlobalDashboard = () => {
   const { data, isError, isLoading } = useReadContracts({
     contracts: [
       {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "totalTypeWeight",
         args: [1],
       },
       {
-        ...profitManagerContract,
+        address: contractsList?.profitManagerAddress,
+        abi: ProfitManagerABI as Abi,
         functionName: "creditMultiplier",
       },
       {
-        ...creditContract,
+        address: contractsList.creditAddress,
+        abi: CreditABI,
         functionName: "totalSupply",
       },
     ],
@@ -122,7 +118,9 @@ const GlobalDashboard = () => {
           })
 
           //get coin gecko name
-          const nameCG = coinsList.find((x) => x.nameECG === term.collateral.symbol).nameCG
+          const nameCG = coinsList.find(
+            (x) => x.nameECG === term.collateral.symbol
+          ).nameCG
           const exchangeRate = prices[nameCG].usd
 
           return {
@@ -165,7 +163,8 @@ const GlobalDashboard = () => {
 
   const getFirstLossCapital = async () => {
     const globalSurplusBuffer = await readContract(wagmiConfig, {
-      ...profitManagerContract,
+      address: contractsList?.profitManagerAddress,
+      abi: ProfitManagerABI as Abi,
       functionName: "surplusBuffer",
     })
 
@@ -174,7 +173,8 @@ const GlobalDashboard = () => {
         .filter((term) => term.status == "live")
         .map(async (term) => {
           const termSurplusBuffer = await readContract(wagmiConfig, {
-            ...profitManagerContract,
+            address: contractsList?.profitManagerAddress,
+            abi: ProfitManagerABI as Abi,
             functionName: "termSurplusBuffer",
             args: [term.address],
           })
@@ -205,8 +205,8 @@ const GlobalDashboard = () => {
     }
 
     // last loan closing
-    const lastMintRedeem = await getAllMintRedeemLogs(undefined, BLOCK_PER_WEEK * 4)
-    const lastVotes = await getAllVotes(undefined, BLOCK_PER_WEEK * 4)
+    const lastMintRedeem = await getAllMintRedeemLogs(contractsList, undefined, BLOCK_PER_WEEK * 4)
+    const lastVotes = await getAllVotes(contractsList, undefined, BLOCK_PER_WEEK * 4)
 
     return [...lastMintRedeem, ...lastVotes, ...allOpenLoans]
   }
@@ -257,10 +257,10 @@ const GlobalDashboard = () => {
       </div>
 
       <div className="my-3 grid grid-cols-1 gap-5 md:grid-cols-3">
-          <CreditTotalSupply
-            creditTotalIssuance={historicalData.creditTotalIssuance}
-            creditSupply={historicalData.creditSupply}
-          />
+        <CreditTotalSupply
+          creditTotalIssuance={historicalData.creditTotalIssuance}
+          creditSupply={historicalData.creditSupply}
+        />
         <Card
           title="Debt Ceiling"
           extra="w-full min-h-[300px] md:col-span-1 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"

@@ -1,6 +1,6 @@
 "use client"
 
-import { Address, useAccount } from "wagmi"
+import { useAccount } from "wagmi"
 import { useAppStore } from "store"
 import { useEffect, useState } from "react"
 import Card from "components/card"
@@ -8,7 +8,7 @@ import { getUserLevel, getUserLoans } from "./helper"
 import UserLoans from "./components/UserLoans"
 import Spinner from "components/spinner"
 import { useSearchParams } from "next/navigation"
-import { isAddress } from "viem"
+import { isAddress, Address } from "viem"
 import CreditSaving from "./components/CreditSaving"
 import { MdCached, MdFilterAlt, MdVerified } from "react-icons/md"
 import clsx from "clsx"
@@ -28,8 +28,14 @@ import { wagmiConfig } from "contexts/Web3Provider"
 const UserDashboard = () => {
   const searchParams = useSearchParams()
   const { address, isConnected } = useAccount()
-  const { lendingTerms, addUserLoans, userData, addLastVotes, addLastMints } =
-    useAppStore()
+  const {
+    lendingTerms,
+    addUserLoans,
+    userData,
+    addLastVotes,
+    addLastMints,
+    contractsList,
+  } = useAppStore()
   const [userLoansData, setUserLoansData] = useState<LoansObj[]>([])
   const [lastUpdated, setLastUpdated] = useState<number>()
   const [loadingLoans, setLoadingLoans] = useState<boolean>(true)
@@ -118,11 +124,11 @@ const UserDashboard = () => {
       setLastUpdated(data.lastUpdated)
     } else {
       //get last votes
-      lastVotes = await getAllVotes(userAddress)
+      lastVotes = await getAllVotes(contractsList, userAddress)
       addLastVotes(userAddress, lastVotes)
 
       //get last mints
-      lastMints = await getAllMintRedeemLogs(userAddress)
+      lastMints = await getAllMintRedeemLogs(contractsList, userAddress)
       addLastMints(userAddress, lastMints)
     }
 

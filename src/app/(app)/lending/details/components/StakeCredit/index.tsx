@@ -1,11 +1,7 @@
-import React, { useEffect, useState } from "react"
+import React, { useState } from "react"
 import { readContract, waitForTransactionReceipt, writeContract } from "@wagmi/core"
 import { toastError } from "components/toast"
-import {
-  TermABI,
-  creditContract,
-  surplusGuildMinterContract,
-} from "lib/contracts"
+import { TermABI, CreditABI, SurplusGuildMinterABI } from "lib/contracts"
 import { formatCurrencyValue, toLocaleString } from "utils/numbers"
 import { TooltipHorizon } from "components/tooltip"
 import { useAccount } from "wagmi"
@@ -26,6 +22,7 @@ import DefiInputBox from "components/box/DefiInputBox"
 import { getTitleDisabledStake, getTitleDisabledUnstake } from "./helper"
 import { LendingTerms } from "types/lending"
 import { wagmiConfig } from "contexts/Web3Provider"
+import { useAppStore } from "store"
 
 function StakeCredit({
   debtCeiling,
@@ -46,6 +43,7 @@ function StakeCredit({
   ratioGuildCredit: number
   reload: React.Dispatch<React.SetStateAction<boolean>>
 }) {
+  const { contractsList } = useAppStore()
   const [value, setValue] = useState<string>("")
   const { address, isConnected } = useAccount()
   const [showModal, setShowModal] = useState<boolean>(false)
@@ -104,9 +102,10 @@ function StakeCredit({
         updateStepStatus("Approve", "In Progress")
         try {
           const hash = await writeContract(wagmiConfig, {
-            ...creditContract,
+            address: contractsList?.creditAddress,
+            abi: CreditABI,
             functionName: "approve",
-            args: [surplusGuildMinterContract.address, parseEther(value.toString())],
+            args: [contractsList.surplusGuildMinterAddress, parseEther(value.toString())],
           })
 
           const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
@@ -136,7 +135,8 @@ function StakeCredit({
 
         try {
           const hash = await writeContract(wagmiConfig, {
-            ...surplusGuildMinterContract,
+            address: contractsList.surplusGuildMinterAddress,
+            abi: SurplusGuildMinterABI,
             functionName: "stake",
             args: [termAddress, parseEther(value.toString())],
           })
@@ -176,7 +176,8 @@ function StakeCredit({
         updateStepStatus("Unstake", "In Progress")
         try {
           const hash = await writeContract(wagmiConfig, {
-            ...surplusGuildMinterContract,
+            address: contractsList.surplusGuildMinterAddress,
+            abi: SurplusGuildMinterABI,
             functionName: "unstake",
             args: [termAddress, parseEther(value.toString())],
           })

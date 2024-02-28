@@ -1,16 +1,18 @@
 "use client"
-import { guildContract, creditContract } from "lib/contracts"
+import { GuildABI, CreditABI } from "lib/contracts"
 import { readContract } from "@wagmi/core"
 import { useEffect, useState } from "react"
-import { useAccount, useReadContracts } from "wagmi"
+import { useReadContracts } from "wagmi"
 import { Address, formatUnits } from "viem"
 import { formatDecimal, toLocaleString } from "utils/numbers"
 import { Delegatee } from "app/(app)/governance/page"
 import { ApexChartWrapper } from "components/charts/ApexChartWrapper"
 import Spinner from "components/spinner"
 import { wagmiConfig } from "contexts/Web3Provider"
+import { useAppStore } from "store"
 
 export default function VotingPower({ userAddress }: { userAddress: Address }) {
+  const { contractsList } = useAppStore()
   const [guildDelegatees, setGuildDelegatees] = useState<Delegatee[]>([])
   const [creditDelegatees, setCreditDelegatees] = useState<Delegatee[]>([])
   const [loadingGuildDelegation, setLoadingGuildDelegation] = useState<boolean>(true)
@@ -22,42 +24,50 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
   const { data, isError, isLoading, isFetched } = useReadContracts({
     contracts: [
       {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "balanceOf",
         args: [userAddress],
       },
       {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "freeVotes",
         args: [userAddress],
       },
       {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "getVotes",
         args: [userAddress],
       },
       {
-        ...creditContract,
+        address: contractsList.creditAddress,
+        abi: CreditABI,
         functionName: "balanceOf",
         args: [userAddress],
       },
       {
-        ...creditContract,
+        address: contractsList.creditAddress,
+        abi: CreditABI,
         functionName: "freeVotes",
         args: [userAddress],
       },
       {
-        ...creditContract,
+        address: contractsList.creditAddress,
+        abi: CreditABI,
         functionName: "getVotes",
         args: [userAddress],
       },
       {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "delegates",
         args: [userAddress],
       },
       {
-        ...creditContract,
+        address: contractsList.creditAddress,
+        abi: CreditABI,
         functionName: "delegates",
         args: [userAddress],
       },
@@ -83,7 +93,8 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
       setLoadingGuildDelegation(true)
       for (const delegatee of data.guildDelegatees) {
         const result = await readContract(wagmiConfig, {
-          ...guildContract,
+          address: contractsList.guildAddress,
+          abi: GuildABI,
           functionName: "delegatesVotesCount",
           args: [userAddress, delegatee],
         })
@@ -105,7 +116,8 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
       setLoadingCreditDelegation(true)
       for (const delegatee of data.creditDelegatees) {
         const result = await readContract(wagmiConfig, {
-          ...creditContract,
+          address: contractsList.creditAddress,
+        abi: CreditABI,
           functionName: "delegatesVotesCount",
           args: [userAddress, delegatee],
         })
@@ -225,7 +237,9 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
             <div className="flex items-baseline overflow-hidden text-lg font-semibold text-gray-700 dark:text-gray-200 xl:text-2xl">
               {data &&
                 data.guildBalance &&
-                toLocaleString(formatDecimal(Number(formatUnits(data.guildBalance, 18)), 2))}{" "}
+                toLocaleString(
+                  formatDecimal(Number(formatUnits(data.guildBalance, 18)), 2)
+                )}{" "}
               <span className="ml-1 text-base font-medium">GUILD</span>
             </div>
           </dd>
@@ -238,7 +252,9 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
             <div className="flex items-baseline overflow-hidden text-lg font-semibold text-gray-700 dark:text-gray-200 xl:text-2xl">
               {data &&
                 data.guildBalance &&
-                toLocaleString(formatDecimal(Number(formatUnits(data.creditBalance, 18)), 2))}{" "}
+                toLocaleString(
+                  formatDecimal(Number(formatUnits(data.creditBalance, 18)), 2)
+                )}{" "}
               <span className="ml-1 text-base font-medium">gUSDC</span>
             </div>
           </dd>

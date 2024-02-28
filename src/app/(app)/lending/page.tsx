@@ -10,8 +10,7 @@ import clsx from "clsx"
 import { useAppStore } from "store"
 
 const Lending = () => {
-  const { isConnected } = useAccount()
-
+  const { contractsList } = useAppStore()
   const { lendingTerms, lastUpdatedTerms, fetchLendingTerms } = useAppStore()
 
   if (!lendingTerms) return <LendingSkeleton />
@@ -27,7 +26,7 @@ const Lending = () => {
           {/* TODO: update data on demand */}
           <a
             className="cursor-pointer text-gray-400 dark:text-gray-100"
-            onClick={() => fetchLendingTerms()}
+            onClick={() => fetchLendingTerms(contractsList)}
           >
             <MdCached className={clsx("h-3 w-3", false && "animate-spin")} />
           </a>

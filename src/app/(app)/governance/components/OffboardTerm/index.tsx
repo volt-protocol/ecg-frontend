@@ -6,12 +6,7 @@ import {
   readContracts,
 } from "@wagmi/core"
 import { toastError } from "components/toast"
-import {
-  TermABI,
-  guildContract,
-  lendingTermOffboardingContract,
-  termContract,
-} from "lib/contracts"
+import { GuildABI, OffboardGovernorGuildABI, termContract } from "lib/contracts"
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa"
 import { Step } from "components/stepLoader/stepType"
 import StepModal from "components/stepLoader"
@@ -23,20 +18,14 @@ import {
   flexRender,
   getPaginationRowModel,
 } from "@tanstack/react-table"
-import {
-  MdArrowLeft,
-  MdArrowRight,
-  MdChevronLeft,
-  MdChevronRight,
-  MdOpenInNew,
-} from "react-icons/md"
+import { MdChevronLeft, MdChevronRight, MdOpenInNew } from "react-icons/md"
 import Spinner from "components/spinner"
 import DropdownSelect from "components/select/DropdownSelect"
 import { useAppStore } from "store"
 import { LendingTerms } from "types/lending"
 import { generateTermName } from "utils/strings"
 import ButtonPrimary from "components/button/ButtonPrimary"
-import { useAccount, useReadContracts } from "wagmi"
+import { useReadContracts } from "wagmi"
 import { formatCurrencyValue, formatDecimal, toLocaleString } from "utils/numbers"
 import { ActiveOffboardingPolls } from "types/governance"
 import Progress from "components/progress"
@@ -49,7 +38,7 @@ import { BLOCK_LENGTH_MILLISECONDS, FROM_BLOCK } from "utils/constants"
 import { wagmiConfig } from "contexts/Web3Provider"
 
 function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
-  const { lendingTerms, fetchLendingTerms } = useAppStore()
+  const { lendingTerms, contractsList } = useAppStore()
   const [selectedTerm, setSelectedTerm] = useState<LendingTerms>(undefined)
   const [showModal, setShowModal] = useState(false)
   const [activeOffboardingPolls, setActiveOffboardingPolls] = useState<
@@ -61,15 +50,18 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   const { data, isError, isLoading } = useReadContracts({
     contracts: [
       {
-        ...lendingTermOffboardingContract,
+        address: contractsList.lendingTermOffboardingAddress,
+        abi: OffboardGovernorGuildABI,
         functionName: "quorum",
       },
       {
-        ...lendingTermOffboardingContract,
+        address: contractsList.lendingTermOffboardingAddress,
+        abi: OffboardGovernorGuildABI,
         functionName: "POLL_DURATION_BLOCKS",
       },
       {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "deprecatedGauges",
       },
     ],
@@ -143,10 +135,11 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
                 functionName: "issuance",
               },
               {
-                ...lendingTermOffboardingContract,
+                address: contractsList.lendingTermOffboardingAddress,
+                abi: OffboardGovernorGuildABI,
                 functionName: "canOffboard",
                 args: [item.term as Address],
-              },
+              }
             ],
           })
 
@@ -179,7 +172,8 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
       updateStepStatus("Propose Offboarding", "In Progress")
 
       const hash = await writeContract(wagmiConfig, {
-        ...lendingTermOffboardingContract,
+        address: contractsList.lendingTermOffboardingAddress,
+        abi: OffboardGovernorGuildABI,
         functionName: "proposeOffboard",
         args: [address],
       })
@@ -217,7 +211,8 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
       updateStepStatus("Support Offboarding", "In Progress")
 
       const hash = await writeContract(wagmiConfig, {
-        ...lendingTermOffboardingContract,
+        address: contractsList.lendingTermOffboardingAddress,
+        abi: OffboardGovernorGuildABI,
         functionName: "supportOffboard",
         args: [snapshotBlock, term],
       })
@@ -254,7 +249,8 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
       updateStepStatus("Offboard Term", "In Progress")
 
       const hash = await writeContract(wagmiConfig, {
-        ...lendingTermOffboardingContract,
+        address: contractsList.lendingTermOffboardingAddress,
+        abi: OffboardGovernorGuildABI,
         functionName: "offboard",
         args: [termAddress],
       })
@@ -291,7 +287,8 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
       setShowModal(true)
       updateStepStatus("Cleanup Term", "In Progress")
       const hash = await writeContract(wagmiConfig, {
-        ...lendingTermOffboardingContract,
+        address: contractsList.lendingTermOffboardingAddress,
+        abi: OffboardGovernorGuildABI,
         functionName: "cleanup",
         args: [termAddress],
       })
@@ -562,6 +559,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
                 item.borrowRatio
               )
             }}
+            textNoOptionSelected="Select Term"
           />
           <ButtonPrimary
             title="Propose Offboard"

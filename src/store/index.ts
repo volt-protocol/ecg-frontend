@@ -8,6 +8,10 @@ import {
   createPairPricesSlice,
 } from "./slices/pair-prices"
 import {
+  ContractsListSlice,
+  createContractsListSlice,
+} from "./slices/contracts-list"
+import {
   AppSettingsSlice,
   createAppSettingsSlice,
 } from "./slices/app-settings"
@@ -17,7 +21,7 @@ import {
 } from "./slices/dashboard"
 import { persist } from "zustand/middleware"
 
-type StoreState = LendingTermsSlice & PairPricesSlice & AppSettingsSlice & DashboardSlice
+type StoreState = LendingTermsSlice & PairPricesSlice & AppSettingsSlice & DashboardSlice & ContractsListSlice
 
 export const useAppStore = create<StoreState, any>(
   persist(
@@ -25,7 +29,8 @@ export const useAppStore = create<StoreState, any>(
       ...createLendingTermsSlice(...a),
       ...createPairPricesSlice(...a),
       ...createAppSettingsSlice(...a),
-      ...createDashboardSlice(...a)
+      ...createDashboardSlice(...a),
+      ...createContractsListSlice(...a),
     }),
     {
       name: "app-storage", // name of the item in the storage (must be unique)

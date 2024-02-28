@@ -5,10 +5,8 @@ import {
   waitForTransactionReceipt,
   writeContract,
 } from "@wagmi/core"
-import { toastError, toastRocket } from "components/toast"
-import {
-  onboardGovernorGuildContract,
-} from "lib/contracts"
+import { toastError } from "components/toast"
+import { OnboardGovernorGuildABI } from "lib/contracts"
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa"
 import { Step } from "components/stepLoader/stepType"
 import StepModal from "components/stepLoader"
@@ -25,25 +23,23 @@ import Spinner from "components/spinner"
 import DropdownSelect from "components/select/DropdownSelect"
 import { useAppStore } from "store"
 import ButtonPrimary from "components/button/ButtonPrimary"
-import { useAccount} from "wagmi"
+import { useAccount } from "wagmi"
 import { formatCurrencyValue, formatDecimal, toLocaleString } from "utils/numbers"
 import { ActiveOnboardingVotes, VoteOption, ProposalState } from "types/governance"
 import { fromNow } from "utils/date"
 import moment from "moment"
 import { formatUnits, keccak256, stringToBytes, Address } from "viem"
 import { QuestionMarkIcon, TooltipHorizon } from "components/tooltip"
-import {
-  BLOCK_LENGTH_MILLISECONDS,
-  FROM_BLOCK,
-} from "utils/constants"
+import { BLOCK_LENGTH_MILLISECONDS, FROM_BLOCK } from "utils/constants"
 import { getVotableTerms } from "./helper"
 import VoteStatusBar from "components/bar/VoteStatusBar"
 import { extractTermAddress } from "utils/strings"
 import { wagmiConfig } from "contexts/Web3Provider"
 
 function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
+  const { contractsList } = useAppStore()
   const { address } = useAccount()
-  const { lendingTerms, fetchLendingTerms } = useAppStore()
+  const { fetchLendingTerms } = useAppStore()
   const [showModal, setShowModal] = useState(false)
   const [activeOnboardingVotes, setActiveOnboardingVotes] = useState<
     ActiveOnboardingVotes[]
@@ -69,7 +65,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
     setCurrentBlock(currentBlockData)
 
     // get TermCreated logs
-    const termsCreated = await getVotableTerms()
+    const termsCreated = await getVotableTerms(contractsList)
 
     //logs are returned from oldest to newest
     const logs = await getPublicClient(wagmiConfig).getLogs({
@@ -142,27 +138,32 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         const proposalVoteInfo = await readContracts(wagmiConfig, {
           contracts: [
             {
-              ...onboardGovernorGuildContract,
+              address: contractsList.onboardGovernorGuildAddress,
+              abi: OnboardGovernorGuildABI,
               functionName: "proposalVotes",
               args: [log.args.proposalId],
             },
             {
-              ...onboardGovernorGuildContract,
+              address: contractsList.onboardGovernorGuildAddress,
+              abi: OnboardGovernorGuildABI,
               functionName: "hasVoted",
               args: [log.args.proposalId, address],
             },
             {
-              ...onboardGovernorGuildContract,
+              address: contractsList.onboardGovernorGuildAddress,
+              abi: OnboardGovernorGuildABI,
               functionName: "quorum",
               args: [Number(log.args.voteStart)],
             },
             {
-              ...onboardGovernorGuildContract,
+              address: contractsList.onboardGovernorGuildAddress,
+              abi: OnboardGovernorGuildABI,
               functionName: "state",
               args: [log.args.proposalId],
             },
             {
-              ...onboardGovernorGuildContract,
+              address: contractsList.onboardGovernorGuildAddress,
+              abi: OnboardGovernorGuildABI,
               functionName: "proposalEta",
               args: [log.args.proposalId],
             },
@@ -234,7 +235,8 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         "In Progress"
       )
       const hash = await writeContract(wagmiConfig, {
-        ...onboardGovernorGuildContract,
+        address: contractsList.onboardGovernorGuildAddress,
+        abi: OnboardGovernorGuildABI,
         functionName: "castVote",
         args: [proposalId, vote],
       })
@@ -288,7 +290,8 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         "In Progress"
       )
       const hash = await writeContract(wagmiConfig, {
-        ...onboardGovernorGuildContract,
+        address: contractsList.onboardGovernorGuildAddress,
+        abi: OnboardGovernorGuildABI,
         functionName: "queue",
         args: [
           proposal.proposeArgs[0],
@@ -347,7 +350,8 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         "In Progress"
       )
       const hash = await writeContract(wagmiConfig, {
-        ...onboardGovernorGuildContract,
+        address: contractsList.onboardGovernorGuildAddress,
+        abi: OnboardGovernorGuildABI,
         functionName: "execute",
         args: [
           proposal.proposeArgs[0],
@@ -375,7 +379,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
       )
       await fetchActiveOnboardingVotes()
       //fetch lending terms globally
-      await fetchLendingTerms()
+      await fetchLendingTerms(contractsList)
     } catch (e: any) {
       console.log(e)
       updateStepStatus(
@@ -709,7 +713,9 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
             Your GUILD voting weight:{" "}
             <span className="font-semibold">
               {guildVotingWeight != undefined &&
-                toLocaleString(formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2))}
+                toLocaleString(
+                  formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2)
+                )}
             </span>
           </p>
         </div>

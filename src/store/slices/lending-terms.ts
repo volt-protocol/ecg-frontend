@@ -9,18 +9,19 @@ import { TermABI } from "lib/contracts"
 import { readContracts } from "@wagmi/core"
 import { coinsList } from "./pair-prices"
 import { wagmiConfig } from "contexts/Web3Provider"
+import { ContractsList } from "./contracts-list"
 
 export interface LendingTermsSlice {
   lendingTerms: LendingTerms[]
   lastUpdatedTerms: number | null
-  fetchLendingTerms: () => void
+  fetchLendingTerms: (contractsList: ContractsList) => void
 }
 
 export const createLendingTermsSlice: StateCreator<LendingTermsSlice> = (set, get) => ({
   lendingTerms: [],
   lastUpdatedTerms: null,
-  fetchLendingTerms: async () => {
-    const termLogs = await getTermsLogs()
+  fetchLendingTerms: async (contractsList: ContractsList) => {
+    const termLogs = await getTermsLogs(contractsList)
 
     const activeTermLogs = await Promise.all(
       termLogs.map(async (log) => {

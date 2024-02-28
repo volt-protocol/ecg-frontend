@@ -8,10 +8,10 @@ import {
 } from "@wagmi/core"
 import { toastError } from "components/toast"
 import {
-  onboardVetoCreditContract,
-  onboardVetoGuildContract,
-  guildContract,
-  onboardTimelockContract,
+  OnboardVetoCreditABI,
+  OnboardVetoGuildABI,
+  GuildABI,
+  OnboardTimelockABI,
 } from "lib/contracts"
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa"
 import { Step } from "components/stepLoader/stepType"
@@ -43,6 +43,7 @@ import {
 import Progress from "components/progress"
 import clsx from "clsx"
 import { wagmiConfig } from "contexts/Web3Provider"
+import { useAppStore } from "store"
 
 function Veto({
   creditVotingWeight,
@@ -51,6 +52,7 @@ function Veto({
   creditVotingWeight: bigint
   guildVotingWeight: bigint
 }) {
+  const { contractsList } = useAppStore()
   const { address } = useAccount()
   const [showModal, setShowModal] = useState(false)
   const [activeVetoVotes, setActiveVetoVotes] = useState<ActivOnboardingVetoVotes[]>([])
@@ -89,7 +91,7 @@ function Veto({
       toBlock: currentBlockNumber,
     })
 
-    const termsCreated = await getVotableTerms()
+    const termsCreated = await getVotableTerms(contractsList)
     const activeVetoVotes = await Promise.all(
       logs
         .map((log) => {
@@ -121,7 +123,7 @@ function Veto({
         .map((item) => {
           //TODO : get term name decoding data[0]
           const { functionName, args } = decodeFunctionData({
-            abi: guildContract.abi,
+            abi: GuildABI,
             data: item.datas[0] as `0x${string}`,
           })
 
@@ -131,7 +133,7 @@ function Veto({
           )
 
           // TODO : transform action id to proposalID
-          const proposalId = getProposalIdFromActionId(item.timelockId)
+          const proposalId = getProposalIdFromActionId(contractsList, item.timelockId)
 
           return {
             ...item,
@@ -145,57 +147,68 @@ function Veto({
           const data = await readContracts(wagmiConfig, {
             contracts: [
               {
-                ...onboardVetoCreditContract,
+                address: contractsList.onboardVetoCreditAddress,
+                abi: OnboardVetoCreditABI,
                 functionName: "proposalVotes",
                 args: [item.proposalId],
               },
               {
-                ...onboardVetoCreditContract,
+                address: contractsList.onboardVetoCreditAddress,
+                abi: OnboardVetoCreditABI,
                 functionName: "quorum",
                 args: [item.timestamp],
               },
               {
-                ...onboardVetoCreditContract,
+                address: contractsList.onboardVetoCreditAddress,
+                abi: OnboardVetoCreditABI,
                 functionName: "state",
                 args: [item.proposalId],
               },
               {
-                ...onboardVetoGuildContract,
+                address: contractsList.onboardVetoGuildAddress,
+                abi: OnboardVetoGuildABI,
                 functionName: "proposalVotes",
                 args: [item.proposalId],
               },
               {
-                ...onboardVetoGuildContract,
+                address: contractsList.onboardVetoGuildAddress,
+                abi: OnboardVetoGuildABI,
                 functionName: "quorum",
                 args: [item.timestamp],
               },
               {
-                ...onboardVetoGuildContract,
+                address: contractsList.onboardVetoGuildAddress,
+                abi: OnboardVetoGuildABI,
                 functionName: "state",
                 args: [item.proposalId],
               },
               {
-                ...onboardTimelockContract,
+                address: contractsList.onboardTimelockAddress,
+                abi: OnboardTimelockABI,
                 functionName: "isOperationPending",
                 args: [item.timelockId],
               },
               {
-                ...onboardTimelockContract,
+                address: contractsList.onboardTimelockAddress,
+                abi: OnboardTimelockABI,
                 functionName: "isOperationReady",
                 args: [item.timelockId],
               },
               {
-                ...onboardTimelockContract,
+                address: contractsList.onboardTimelockAddress,
+                abi: OnboardTimelockABI,
                 functionName: "isOperationDone",
                 args: [item.timelockId],
               },
               {
-                ...onboardVetoCreditContract,
+                address: contractsList.onboardVetoCreditAddress,
+                abi: OnboardVetoCreditABI,
                 functionName: "hasVoted",
                 args: [item.proposalId, address],
               },
               {
-                ...onboardVetoGuildContract,
+                address: contractsList.onboardVetoGuildAddress,
+                abi: OnboardVetoGuildABI,
                 functionName: "hasVoted",
                 args: [item.proposalId, address],
               },
@@ -258,8 +271,14 @@ function Veto({
 
       const targetContract =
         selectHolderType == "credit"
-          ? onboardVetoCreditContract
-          : onboardVetoGuildContract
+          ? {
+              address: contractsList.onboardVetoCreditAddress,
+              abi: OnboardVetoCreditABI,
+            }
+          : {
+              address: contractsList.onboardVetoGuildAddress,
+              abi: OnboardVetoGuildABI,
+            }
 
       const hash = await writeContract(wagmiConfig, {
         ...targetContract,
@@ -320,8 +339,14 @@ function Veto({
       )
       const targetContract =
         selectHolderType == "credit"
-          ? onboardVetoCreditContract
-          : onboardVetoGuildContract
+          ? {
+              address: contractsList.onboardVetoCreditAddress,
+              abi: OnboardVetoCreditABI,
+            }
+          : {
+              address: contractsList.onboardVetoGuildAddress,
+              abi: OnboardVetoGuildABI,
+            }
 
       const hash = await writeContract(wagmiConfig, {
         ...targetContract,
@@ -380,8 +405,14 @@ function Veto({
       )
       const targetContract =
         selectHolderType == "credit"
-          ? onboardVetoCreditContract
-          : onboardVetoGuildContract
+          ? {
+              address: contractsList.onboardVetoCreditAddress,
+              abi: OnboardVetoCreditABI,
+            }
+          : {
+              address: contractsList.onboardVetoGuildAddress,
+              abi: OnboardVetoGuildABI,
+            }
 
       const hash = await writeContract(wagmiConfig, {
         ...targetContract,
@@ -679,7 +710,9 @@ function Veto({
                         as="span"
                         className="mt-2 text-xl font-medium text-gray-700"
                       >
-                        {toLocaleString(formatDecimal(Number(formatUnits(creditVotingWeight, 18)), 2))}{" "}
+                        {toLocaleString(
+                          formatDecimal(Number(formatUnits(creditVotingWeight, 18)), 2)
+                        )}{" "}
                         gUSDC
                       </RadioGroup.Description>
                     </span>
@@ -726,7 +759,9 @@ function Veto({
                         as="span"
                         className="mt-2 text-xl font-medium text-gray-700"
                       >
-                        {toLocaleString(formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2))}{" "}
+                        {toLocaleString(
+                          formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2)
+                        )}{" "}
                         GUILD
                       </RadioGroup.Description>
                     </span>

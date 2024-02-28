@@ -1,15 +1,7 @@
-import {
-  GatewayABI,
-  PsmUsdcABI,
-  TermABI,
-  creditContract,
-  gatewayContract,
-  psmUsdcContract,
-  uniswapRouterContract,
-  usdcContract,
-} from "lib/contracts"
+import { GatewayABI, PsmUsdcABI, TermABI, CreditABI, UsdcABI } from "lib/contracts"
+import { ContractsList } from "store/slices/contracts-list"
 import { LendingTerms } from "types/lending"
-import { Abi, Address, decodeFunctionData, encodeFunctionData, erc20Abi } from "viem"
+import { Abi, encodeFunctionData } from "viem"
 
 export const simpleRepay = (
   type: "full" | "partial",
@@ -17,7 +9,8 @@ export const simpleRepay = (
   loanId: string,
   usdcAmount: bigint, //in USDC
   debtToRepay: bigint, //in gUSDC
-  permitDataUSDC: any
+  permitDataUSDC: any,
+  contractsList: ContractsList
 ) => {
   let calls = []
 
@@ -27,7 +20,7 @@ export const simpleRepay = (
       abi: GatewayABI as Abi,
       functionName: "consumePermit",
       args: [
-        usdcContract.address,
+        contractsList.usdcAddress,
         usdcAmount,
         permitDataUSDC.deadline,
         permitDataUSDC.v,
@@ -41,7 +34,7 @@ export const simpleRepay = (
     encodeFunctionData({
       abi: GatewayABI as Abi,
       functionName: "consumeAllowance",
-      args: [usdcContract.address, usdcAmount],
+      args: [contractsList.usdcAddress, usdcAmount],
     })
   )
 
@@ -51,11 +44,11 @@ export const simpleRepay = (
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        usdcContract.address,
+        contractsList.usdcAddress,
         encodeFunctionData({
-          abi: usdcContract.abi,
+          abi: UsdcABI,
           functionName: "approve",
-          args: [psmUsdcContract.address, usdcAmount],
+          args: [contractsList.psmUsdcAddress, usdcAmount],
         }),
       ],
     })
@@ -66,11 +59,11 @@ export const simpleRepay = (
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        psmUsdcContract.address,
+        contractsList.psmUsdcAddress,
         encodeFunctionData({
-          abi: psmUsdcContract.abi,
+          abi: PsmUsdcABI,
           functionName: "mint",
-          args: [gatewayContract.address, usdcAmount],
+          args: [contractsList.gatewayAddress, usdcAmount],
         }),
       ],
     })
@@ -82,9 +75,9 @@ export const simpleRepay = (
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        creditContract.address,
+        contractsList.creditAddress,
         encodeFunctionData({
-          abi: creditContract.abi as Abi,
+          abi: CreditABI as Abi,
           functionName: "approve",
           args: [lendingTerm.address, debtToRepay],
         }),
@@ -129,7 +122,7 @@ export const simpleRepay = (
     encodeFunctionData({
       abi: GatewayABI as Abi,
       functionName: "sweep",
-      args: [creditContract.address],
+      args: [contractsList.creditAddress],
     })
   )
 

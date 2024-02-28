@@ -1,4 +1,13 @@
 import { Address } from "viem"
+import {
+  mainnet,
+  sepolia,
+  arbitrum,
+  optimism,
+  arbitrumSepolia,
+  optimismSepolia,
+  polygonMumbai,
+} from "wagmi/chains"
 
 export interface LendingTermConfig {
   termAddress: Address
@@ -13,7 +22,7 @@ export interface PermitConfig {
   hasPermit: boolean
 }
 
-// set borrowing configurations for each term
+// set borrowing configurations for each term here
 export const lendingTermConfig: LendingTermConfig[] = [
   {
     termAddress: "0x938998fca53D8BFD91BC1726D26238e9Eada596C",
@@ -29,7 +38,7 @@ export const lendingTermConfig: LendingTermConfig[] = [
   },
 ]
 
-//set permit configurations for each collateral token
+//set permit configurations for each collateral token here
 export const permitConfig: PermitConfig[] = [
   {
     collateralAddress: "0x9F07498d9f4903B10dB57a3Bd1D91b6B64AEd61e",
@@ -43,6 +52,7 @@ export const permitConfig: PermitConfig[] = [
   },
 ]
 
+// set the available markets here
 export const marketsConfig = [
   {
     key: "usdc",
@@ -54,4 +64,19 @@ export const marketsConfig = [
     name: "USDT",
     logo: "/img/crypto-logos/usdt.png",
   },
+]
+
+// set the available contracts for each chain here
+/*
+ * Note : Don't forget to add supported chains in app/contexts/Web3Provider.tsx
+ */
+export const chainsConfig = [
+  {
+    id: mainnet.id,
+    jsonUrl: "https://raw.githubusercontent.com/volt-protocol/ethereum-credit-guild/main/protocol-configuration/addresses.sepolia.json",
+  },
+  {
+    id: sepolia.id,
+    jsonUrl: "https://raw.githubusercontent.com/volt-protocol/ethereum-credit-guild/main/protocol-configuration/addresses.sepolia.json",
+  }
 ]

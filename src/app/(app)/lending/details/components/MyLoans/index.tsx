@@ -3,26 +3,17 @@ import Image from "next/image"
 import {
   getCoreRowModel,
   getSortedRowModel,
-  SortingState,
   useReactTable,
   createColumnHelper,
   getPaginationRowModel,
 } from "@tanstack/react-table"
 import { readContract, waitForTransactionReceipt, writeContract } from "@wagmi/core"
-import {
-  TermABI,
-  gatewayContract,
-  ERC20PermitABI,
-  creditContract,
-  uniswapRouterContract,
-  usdcContract,
-  psmUsdcContract,
-} from "lib/contracts"
+import { TermABI, ERC20PermitABI, GatewayABI, CreditABI } from "lib/contracts"
 import { secondsToAppropriateUnit } from "utils/date"
 import { LendingTerms, loanObj } from "types/lending"
 import { useAccount, useReadContracts } from "wagmi"
 import { Step } from "components/stepLoader/stepType"
-import { MdOutlineError } from "react-icons/md"
+import { MdHandshake, MdOutlineError, MdOutlineHandshake, MdRealEstateAgent } from "react-icons/md"
 import { formatDecimal, gUsdcToUsdc, usdcToGUsdc, toLocaleString } from "utils/numbers"
 import { Abi, Address, erc20Abi, formatUnits, parseUnits } from "viem"
 import clsx from "clsx"
@@ -40,6 +31,7 @@ import { permitConfig } from "config"
 import { getAllowCollateralTokenCall } from "./helper/repayWithLeverage"
 import { CurrencyTypes } from "components/switch/ToggleCredit"
 import CustomTable from "components/table/CustomTable"
+import { useAppStore } from "store"
 
 function Myloans({
   lendingTerm,
@@ -70,6 +62,7 @@ function Myloans({
   setReload: React.Dispatch<React.SetStateAction<boolean>>
   currencyType: CurrencyTypes
 }) {
+  const { contractsList } = useAppStore()
   const { address } = useAccount()
   const [showModal, setShowModal] = useState(false)
   const [tableDataWithDebts, setTableDataWithDebts] = useState<loanObj[]>([])
@@ -208,7 +201,8 @@ function Myloans({
       updateStepStatus("Approve gUSDC", "In Progress")
 
       const hash = await writeContract(wagmiConfig, {
-        ...creditContract,
+        address: contractsList.creditAddress,
+        abi: CreditABI,
         functionName: "approve",
         args: [lendingTerm.address, debtToRepay],
       })
@@ -274,7 +268,8 @@ function Myloans({
         BigInt(HOURS_IN_YEAR)
 
       const hash = await writeContract(wagmiConfig, {
-        ...creditContract,
+        address: contractsList.creditAddress,
+        abi: CreditABI,
         functionName: "approve",
         args: [lendingTerm.address, debtToRepay + hourlyFees],
       })
@@ -346,10 +341,10 @@ function Myloans({
       updateStepStatus(`Sign Permit for USDC`, "In Progress")
 
       signatureUSDC = await signPermit({
-        contractAddress: usdcContract.address,
+        contractAddress: contractsList.usdcAddress,
         erc20Name: "ECG Testnet USDC",
         ownerAddress: address,
-        spenderAddress: gatewayContract.address as Address,
+        spenderAddress: contractsList.gatewayAddress as Address,
         value: usdcAmount,
         deadline: BigInt(Number(moment().add(10, "seconds"))),
         nonce: usdcNonces,
@@ -377,15 +372,17 @@ function Myloans({
         loanId,
         usdcAmount,
         debtToRepay,
-        signatureUSDC
+        signatureUSDC,
+        contractsList
       )
 
       //get description of calls in multicall
-      const callsDescription = getMulticallsDecoded(calls, lendingTerm)
+      const callsDescription = getMulticallsDecoded(calls, lendingTerm, contractsList)
       updateStepStatus(`Partial Repay`, "In Progress", callsDescription)
 
       const hash = await writeContract(wagmiConfig, {
-        ...gatewayContract,
+        address: contractsList.gatewayAddress,
+        abi: GatewayABI,
         functionName: "multicall",
         args: [calls],
       })
@@ -475,7 +472,7 @@ function Myloans({
   //         contractAddress: lendingTerm.collateral.address,
   //         erc20Name: lendingTerm.collateral.name,
   //         ownerAddress: address,
-  //         spenderAddress: gatewayContract.address as Address,
+  //         spenderAddress: contractsList.gatewayAddress as Address,
   //         value: collateralAmount,
   //         deadline: BigInt(Number(moment().add(10, "seconds"))),
   //         nonce: contractData?.collateralNonces,
@@ -501,7 +498,7 @@ function Myloans({
   //         address: lendingTerm.collateral.address,
   //         abi: erc20Abi,
   //         functionName: "approve",
-  //         args: [gatewayContract.address as Address, collateralAmount],
+  //         args: [contractsList.gatewayAddress as Address, collateralAmount],
   //       })
   //       const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
   //         hash: hash,
@@ -524,10 +521,10 @@ function Myloans({
   //     updateStepStatus(`Sign Permit for USDC`, "In Progress")
 
   //     signatureUSDC = await signPermit({
-  //       contractAddress: usdcContract.address,
+  //       contractAddress: contractsList.usdcAddress,
   //       erc20Name: "ECG Testnet USDC",
   //       ownerAddress: address,
-  //       spenderAddress: gatewayContract.address as Address,
+  //       spenderAddress: contractsList.gatewayAddress as Address,
   //       value: usdcAmount,
   //       deadline: BigInt(Number(moment().add(10, "seconds"))),
   //       nonce: usdcNonces,
@@ -645,7 +642,7 @@ function Myloans({
           contractAddress: lendingTerm.collateral.address,
           erc20Name: lendingTerm.collateral.name,
           ownerAddress: address,
-          spenderAddress: gatewayContract.address as Address,
+          spenderAddress: contractsList.gatewayAddress as Address,
           value: collateralAmount,
           deadline: BigInt(Number(moment().add(10, "seconds"))),
           nonce: contractData?.collateralNonces,
@@ -671,7 +668,7 @@ function Myloans({
           address: lendingTerm.collateral.address,
           abi: erc20Abi,
           functionName: "approve",
-          args: [gatewayContract.address as Address, collateralAmount],
+          args: [contractsList.gatewayAddress as Address, collateralAmount],
         })
         const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
           hash: hash,
@@ -693,15 +690,16 @@ function Myloans({
     try {
       updateStepStatus("Repay with Leverage", "In Progress")
       const hash = await writeContract(wagmiConfig, {
-        ...gatewayContract,
+        address: contractsList.gatewayAddress,
+        abi: GatewayABI,
         functionName: "repayWithBalancerFlashLoan",
         args: [
           loanId,
           lendingTerm.address,
-          psmUsdcContract.address,
-          uniswapRouterContract.address,
+          contractsList.psmUsdcAddress,
+          contractsList.uniswapRouterAddress,
           lendingTerm.collateral.address,
-          usdcContract.address,
+          contractsList.usdcAddress,
           collateralAmount,
           getAllowCollateralTokenCall(lendingTerm, collateralAmount, signatureCollateral),
         ],
@@ -757,10 +755,10 @@ function Myloans({
       updateStepStatus(`Sign Permit for USDC`, "In Progress")
 
       signatureUSDC = await signPermit({
-        contractAddress: usdcContract.address,
+        contractAddress: contractsList.usdcAddress,
         erc20Name: "ECG Testnet USDC",
         ownerAddress: address,
-        spenderAddress: gatewayContract.address as Address,
+        spenderAddress: contractsList.gatewayAddress as Address,
         value: usdcAmountToApprove,
         deadline: BigInt(Number(moment().add(10, "seconds"))),
         nonce: usdcNonces,
@@ -788,15 +786,17 @@ function Myloans({
         loanId,
         usdcAmountToApprove,
         tableDataWithDebts.find((item) => item.id == loanId).loanDebt + hourlyFees,
-        signatureUSDC
+        signatureUSDC,
+        contractsList
       )
 
       //get description of calls in multicall
-      const callsDescription = getMulticallsDecoded(calls, lendingTerm)
+      const callsDescription = getMulticallsDecoded(calls, lendingTerm, contractsList)
       updateStepStatus(`Repay`, "In Progress", callsDescription)
 
       const hash = await writeContract(wagmiConfig, {
-        ...gatewayContract,
+        address: contractsList.gatewayAddress,
+        abi: GatewayABI,
         functionName: "multicall",
         args: [calls],
       })
@@ -1128,7 +1128,14 @@ function Myloans({
           <Spinner />
         </div>
       ) : data && !isLoadingEventLoans && data.length == 0 ? (
-        <div className="mt-20 flex justify-center">You do not have any active loans</div>
+        <div className="flex-col items-center justify-center opacity-40 mt-20">
+          <div className="flex justify-center">
+           <MdOutlineHandshake className="w-10 h-10" />
+          </div>
+          <div className="mt-4 flex justify-center">
+            You do not have any active loans
+          </div>
+        </div>
       ) : (
         <CustomTable withNav={true} table={table} />
       )}

@@ -14,7 +14,7 @@ import {
   waitForTransactionReceipt,
   writeContract,
 } from "@wagmi/core"
-import { TermABI, guildContract } from "lib/contracts"
+import { TermABI, GuildABI } from "lib/contracts"
 import { QuestionMarkIcon, TooltipHorizon } from "components/tooltip"
 import { Step } from "components/stepLoader/stepType"
 import StepModal from "components/stepLoader"
@@ -47,7 +47,7 @@ function ActiveLoans({
   reload: React.Dispatch<React.SetStateAction<boolean>>
   currencyType: CurrencyTypes
 }) {
-  const { prices } = useAppStore()
+  const { prices, contractsList } = useAppStore()
   const [collateralPrice, setCollateralPrice] = useState(0)
   const [pegPrice, setPegPrice] = useState(0)
   const [repays, setRepays] = useState<Record<string, number>>({})
@@ -71,7 +71,8 @@ function ActiveLoans({
   } = useReadContracts({
     contracts: [
       {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "isGauge",
         args: [lendingTerm.address],
       },

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react"
 import { readContract, waitForTransactionReceipt, writeContract } from "@wagmi/core"
 import { toastError } from "components/toast"
-import { creditContract } from "lib/contracts"
+import { CreditABI } from "lib/contracts"
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa"
 import { Step } from "components/stepLoader/stepType"
 import StepModal from "components/stepLoader"
@@ -13,7 +13,7 @@ import {
   flexRender,
 } from "@tanstack/react-table"
 import { getTitleDisabled } from "./helper"
-import { MdOpenInNew } from "react-icons/md"
+import { MdOpenInNew, MdOutlineAccountBalance } from "react-icons/md"
 import Spinner from "components/spinner"
 import { useAccount } from "wagmi"
 import { Address } from "viem"
@@ -24,6 +24,7 @@ import ButtonPrimary from "components/button/ButtonPrimary"
 import DefiInputBox from "components/box/DefiInputBox"
 import { wagmiConfig } from "contexts/Web3Provider"
 import { AlertMessage } from "components/message/AlertMessage"
+import { useAppStore } from "store"
 
 interface Delegatee {
   address: string
@@ -47,6 +48,7 @@ function DelegateCredit({
   isConnected: boolean
   delegateLockupPeriod: bigint
 }) {
+  const { contractsList } = useAppStore()
   const { address } = useAccount()
   const [value, setValue] = useState<string>("")
   const [showModal, setShowModal] = useState(false)
@@ -74,7 +76,8 @@ function DelegateCredit({
 
   async function getDelegatee(): Promise<string[]> {
     const result = await readContract(wagmiConfig, {
-      ...creditContract,
+      address: contractsList?.creditAddress,
+      abi: CreditABI,
       functionName: "delegates",
       args: [userAddress],
     })
@@ -85,7 +88,8 @@ function DelegateCredit({
     const tempDelegatees: Delegatee[] = []
     async function getDelegateeAndVotes(delegatee: string): Promise<void> {
       const result = await readContract(wagmiConfig, {
-        ...creditContract,
+        address: contractsList?.creditAddress,
+        abi: CreditABI,
         functionName: "delegatesVotesCount",
         args: [userAddress, delegatee],
       })
@@ -133,7 +137,8 @@ function DelegateCredit({
       setShowModal(true)
       updateStepStatus("Delegate gUSDC", "In Progress")
       const hash = await writeContract(wagmiConfig, {
-        ...creditContract,
+        address: contractsList?.creditAddress,
+        abi: CreditABI,
         functionName: "incrementDelegation",
         args: [addressValue, parseEther(value.toString())],
       })
@@ -171,7 +176,8 @@ function DelegateCredit({
       setShowModal(true)
       updateStepStatus("Undelegate gUSDC", "In Progress")
       const hash = await writeContract(wagmiConfig, {
-        ...creditContract,
+        address: contractsList?.creditAddress,
+        abi: CreditABI,
         functionName: "undelegate",
         args: [address, amount],
       })
@@ -227,7 +233,7 @@ function DelegateCredit({
       enableSorting: true,
       cell: (info) => (
         <p className="text-sm font-bold text-gray-600 dark:text-gray-200">
-          {formatDecimal(Number(formatUnits(info.getValue(), 18)), 2)}
+          {toLocaleString(formatDecimal(Number(formatUnits(info.getValue(), 18)), 2))}
         </p>
       ),
     }),
@@ -375,8 +381,13 @@ function DelegateCredit({
               </p>
             </div>
           ) : delegatees.length === 0 ? (
-            <div className="my-4 flex items-center justify-center text-gray-500 dark:text-gray-100">
-              <p>You haven't delegated any gUSDC yet</p>
+            <div className="my-4 flex-col items-center justify-center opacity-40">
+              <div className="flex justify-center">
+                <MdOutlineAccountBalance className="h-10 w-10" />
+              </div>
+              <div className="mt-2 flex justify-center">
+                <p>You haven't delegated any gUSDC yet</p>
+              </div>
             </div>
           ) : (
             <table className="mt-4 w-full">

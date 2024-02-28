@@ -11,7 +11,7 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table"
-import { auctionHouseContract, creditContract } from "lib/contracts"
+import { AuctionHouseABI, CreditABI } from "lib/contracts"
 import { waitForTransactionReceipt, writeContract, readContract } from "@wagmi/core"
 import { formatDecimal, toLocaleString } from "utils/numbers"
 import { FaSort, FaSortDown, FaSortUp } from "react-icons/fa"
@@ -43,6 +43,7 @@ export default function AuctionsTable({
   setOpen: (arg: boolean) => void
   setReload: (arg: boolean) => void
 }) {
+  const { contractsList } = useAppStore()
   const { isConnected } = useAccount()
   const columnHelper = createColumnHelper<Auction>()
   const [showModal, setShowModal] = useState(false)
@@ -147,7 +148,8 @@ export default function AuctionsTable({
 
     //get auction details
     const auctionDetails = await readContract(wagmiConfig, {
-      ...auctionHouseContract,
+      address: contractsList?.auctionHouseAddress,
+      abi: AuctionHouseABI,
       functionName: "getAuction",
       args: [loanId],
     })
@@ -165,7 +167,8 @@ export default function AuctionsTable({
       updateStepStatus(`Approve gUSDC`, "In Progress")
 
       const hash = await writeContract(wagmiConfig, {
-        ...creditContract,
+        address: contractsList?.creditAddress,
+        abi: CreditABI,
         functionName: "approve",
         args: [auctionDetails.lendingTerm, auctionDetails.callDebt],
       })
@@ -187,7 +190,8 @@ export default function AuctionsTable({
     try {
       updateStepStatus("Bid for loan " + shortenUint(loanId), "In Progress")
       const hash = await writeContract(wagmiConfig, {
-        ...auctionHouseContract,
+        address: contractsList?.auctionHouseAddress,
+        abi: AuctionHouseABI,
         functionName: "bid",
         args: [loanId],
       })
@@ -224,7 +228,8 @@ export default function AuctionsTable({
       setShowModal(true)
       updateStepStatus("Forgive for loan  " + shortenUint(loanId), "In Progress")
       const hash = await writeContract(wagmiConfig, {
-        ...auctionHouseContract,
+        address: contractsList?.auctionHouseAddress,
+        abi: AuctionHouseABI,
         functionName: "forgive",
         args: [loanId],
       })

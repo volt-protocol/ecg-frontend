@@ -7,17 +7,18 @@ import { yupResolver } from "@hookform/resolvers/yup"
 import * as yup from "yup"
 import { ErrorMessage } from "components/message/ErrorMessage"
 import clsx from "clsx"
-import { waitForTransactionReceipt, writeContract, readContract } from "@wagmi/core"
-import { auctionHouseContract, lendingTermFactoryContract, lendingTermV1ImplementationContract, onboardGovernorGuildContract } from "lib/contracts"
+import { waitForTransactionReceipt, writeContract } from "@wagmi/core"
+import { LendingTermFactoryABI } from "lib/contracts"
 import { toastError } from "components/toast"
 import { Step } from "components/stepLoader/stepType"
 import { Address, parseEther } from "viem"
 import { SECONDS_IN_YEAR } from "utils/constants"
-import { MdCabin, MdCheck, MdCheckCircle, MdClose } from "react-icons/md"
+import { MdCheckCircle, MdClose } from "react-icons/md"
 import { formatNumberDecimal } from "utils/numbers"
 import getToken from "lib/getToken"
 import ComboSelect from "components/select/ComboSelect"
 import { wagmiConfig } from "contexts/Web3Provider"
+import { useAppStore } from "store"
 
 //Define form schema
 const schema = yup
@@ -39,6 +40,7 @@ export interface CreateTermForm {
 }
 
 export default function Create() {
+  const { contractsList } = useAppStore()
   const [showModal, setShowModal] = useState<boolean>(false)
   const [selectedPeriod, setSelectedPeriod] = useState<string>("None")
   const { register, handleSubmit, watch, reset, formState } = useForm({
@@ -52,7 +54,7 @@ export default function Create() {
     address: Address
     decimals: number
   }>({})
-   const [query, setQuery] = useState("")
+  const [query, setQuery] = useState("")
 
   const createSteps = (): Step[] => {
     return [{ name: "Propose Offboarding", status: "Not Started" }]
@@ -61,11 +63,7 @@ export default function Create() {
   const [steps, setSteps] = useState<Step[]>(createSteps())
 
   useEffect(() => {
-    if (
-      query &&
-      query.length == 42 &&
-      query.match(/^0x[A-Fa-f0-9]+$/i)
-    ) {
+    if (query && query.length == 42 && query.match(/^0x[A-Fa-f0-9]+$/i)) {
       getTokenDetails(query as Address)
       setQuery("")
     }
@@ -152,14 +150,15 @@ export default function Create() {
       updateStepStatus("Create New Term", "In Progress")
 
       const hash = await writeContract(wagmiConfig, {
-        ...lendingTermFactoryContract,
+        address: contractsList.lendingTermFactoryAddress,
+        abi: LendingTermFactoryABI,
         functionName: "createTerm",
         args: [
           1, //gauge type
-          lendingTermV1ImplementationContract.address, //implementation
-          auctionHouseContract.address, //auction house
-          args
-        ]
+          contractsList.lendingTermV1ImplementationAddress, //implementation
+          contractsList.auctionHouseAddress, //auction house
+          args,
+        ],
       })
 
       const tx = await waitForTransactionReceipt(wagmiConfig, {

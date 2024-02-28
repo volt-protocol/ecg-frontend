@@ -2,14 +2,12 @@ import {
   GatewayABI,
   PsmUsdcABI,
   TermABI,
-  creditContract,
-  gatewayContract,
-  psmUsdcContract,
-  uniswapRouterContract,
-  usdcContract,
+  UniswapRouterABI,
+  UsdcABI,
 } from "lib/contracts"
 import { LendingTerms } from "types/lending"
 import { Abi, Address, encodeFunctionData, erc20Abi } from "viem"
+import { ContractsList } from "store/slices/contracts-list"
 
 export const borrowWithLeverage = (
   userAddress: Address,
@@ -20,7 +18,8 @@ export const borrowWithLeverage = (
   amountUSDC: bigint,
   permitDataCollateral: any | undefined,
   permitDatagUSDC: any,
-  deadlineSwap: bigint
+  deadlineSwap: bigint,
+  contractsList: ContractsList
 ) => {
   let calls = []
 
@@ -89,7 +88,7 @@ export const borrowWithLeverage = (
       abi: GatewayABI as Abi,
       functionName: "consumePermit",
       args: [
-        creditContract.address,
+        contractsList.creditAddress,
         debtAmount,
         permitDatagUSDC.deadline,
         permitDatagUSDC.v,
@@ -104,7 +103,7 @@ export const borrowWithLeverage = (
     encodeFunctionData({
       abi: GatewayABI as Abi,
       functionName: "consumeAllowance",
-      args: [creditContract.address, debtAmount],
+      args: [contractsList.creditAddress, debtAmount],
     })
   )
 
@@ -114,11 +113,11 @@ export const borrowWithLeverage = (
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        creditContract.address,
+        contractsList.creditAddress,
         encodeFunctionData({
           abi: erc20Abi as Abi,
           functionName: "approve",
-          args: [psmUsdcContract.address, debtAmount],
+          args: [contractsList.psmUsdcAddress, debtAmount],
         }),
       ],
     })
@@ -130,11 +129,11 @@ export const borrowWithLeverage = (
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        psmUsdcContract.address,
+        contractsList.psmUsdcAddress,
         encodeFunctionData({
           abi: PsmUsdcABI as Abi,
           functionName: "redeem",
-          args: [gatewayContract.address, debtAmount],
+          args: [contractsList.gatewayAddress, debtAmount],
         }),
       ],
     })
@@ -147,31 +146,31 @@ export const borrowWithLeverage = (
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        usdcContract.address,
+        contractsList.usdcAddress,
         encodeFunctionData({
-          abi: usdcContract.abi as Abi,
+          abi: UsdcABI as Abi,
           functionName: "approve",
-          args: [uniswapRouterContract.address, amountUSDC],
+          args: [contractsList.uniswapRouterAddress, amountUSDC],
         }),
       ],
     })
   )
 
-  const path = [usdcContract.address, lendingTerm.collateral.address]
+  const path = [contractsList.usdcAddress, lendingTerm.collateral.address]
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        uniswapRouterContract.address,
+        contractsList.uniswapRouterAddress,
         encodeFunctionData({
-          abi: uniswapRouterContract.abi as Abi,
+          abi: UniswapRouterABI as Abi,
           functionName: "swapTokensForExactTokens",
           args: [
             flashloanAmount,
             amountUSDC,
             path,
-            gatewayContract.address,
+            contractsList.gatewayAddress,
             deadlineSwap,
           ],
         }),
@@ -185,11 +184,11 @@ export const borrowWithLeverage = (
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        usdcContract.address,
+        contractsList.usdcAddress,
         encodeFunctionData({
-          abi: usdcContract.abi as Abi,
+          abi: UsdcABI as Abi,
           functionName: "approve",
-          args: [uniswapRouterContract.address, 0],
+          args: [contractsList.uniswapRouterAddress, 0],
         }),
       ],
     })
@@ -199,7 +198,7 @@ export const borrowWithLeverage = (
     encodeFunctionData({
       abi: GatewayABI as Abi,
       functionName: "sweep",
-      args: [usdcContract.address],
+      args: [contractsList.usdcAddress],
     })
   )
 
@@ -209,7 +208,7 @@ export const borrowWithLeverage = (
 export const getPullCollateralCalls = (
   lendingTerm: LendingTerms,
   collateralAmount: bigint, // eg: sDAI
-  permitDataCollateral: any | undefined,
+  permitDataCollateral: any | undefined
 ) => {
   let calls = []
 
@@ -246,6 +245,7 @@ export const getPullCollateralCalls = (
 export const getAllowBorrowedCreditCall = (
   debtAmount: bigint, //  borrowAmount + flashloanAmount in gUSDC
   permitDatagUSDC: any,
+  contractsList: ContractsList
 ) => {
   let calls = []
 
@@ -254,7 +254,7 @@ export const getAllowBorrowedCreditCall = (
       abi: GatewayABI as Abi,
       functionName: "consumePermit",
       args: [
-        creditContract.address,
+        contractsList.creditAddress,
         debtAmount,
         permitDatagUSDC.deadline,
         permitDatagUSDC.v,
@@ -267,153 +267,153 @@ export const getAllowBorrowedCreditCall = (
   return calls
 }
 
-  // async function borrowGatewayLeverage() {
-  //   setShowModal(true)
-  //   updateStepName("Multicall", "Multicall with Leverage")
-  //   let signatureCollateral: any
-  //   let signatureGUSDC: any
-  //   const debtAmount = borrowAmount + flashLoanBorrowAmount
+// async function borrowGatewayLeverage() {
+//   setShowModal(true)
+//   updateStepName("Multicall", "Multicall with Leverage")
+//   let signatureCollateral: any
+//   let signatureGUSDC: any
+//   const debtAmount = borrowAmount + flashLoanBorrowAmount
 
-  //   /* Set allowance for collateral token */
-  //   if (
-  //     permitConfig.find(
-  //       (item) => item.collateralAddress === lendingTerm.collateral.address
-  //     )?.hasPermit
-  //   ) {
-  //     try {
-  //       updateStepStatus(
-  //         `Sign Permit for ${lendingTerm.collateral.symbol}`,
-  //         "In Progress"
-  //       )
+//   /* Set allowance for collateral token */
+//   if (
+//     permitConfig.find(
+//       (item) => item.collateralAddress === lendingTerm.collateral.address
+//     )?.hasPermit
+//   ) {
+//     try {
+//       updateStepStatus(
+//         `Sign Permit for ${lendingTerm.collateral.symbol}`,
+//         "In Progress"
+//       )
 
-  //       signatureCollateral = await signPermit({
-  //         contractAddress: lendingTerm.collateral.address,
-  //         erc20Name: lendingTerm.collateral.name,
-  //         ownerAddress: address,
-  //         spenderAddress: gatewayContract.address as Address,
-  //         value: parseUnits(collateralAmount, lendingTerm.collateral.decimals),
-  //         deadline: BigInt(Number(moment().add(10, "seconds"))),
-  //         nonce: data?.collateralNonces,
-  //         chainId: wagmiConfig.chains[0].id,
-  //         permitVersion: "1",
-  //       })
+//       signatureCollateral = await signPermit({
+//         contractAddress: lendingTerm.collateral.address,
+//         erc20Name: lendingTerm.collateral.name,
+//         ownerAddress: address,
+//         spenderAddress: contractsList.gatewayAddress as Address,
+//         value: parseUnits(collateralAmount, lendingTerm.collateral.decimals),
+//         deadline: BigInt(Number(moment().add(10, "seconds"))),
+//         nonce: data?.collateralNonces,
+//         chainId: wagmiConfig.chains[0].id,
+//         permitVersion: "1",
+//       })
 
-  //       if (!signatureCollateral) {
-  //         updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Error")
-  //         return
-  //       }
-  //       updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Success")
-  //     } catch (e) {
-  //       console.log(e)
-  //       updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Error")
-  //       return
-  //     }
-  //   } else {
-  //     try {
-  //       updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "In Progress")
+//       if (!signatureCollateral) {
+//         updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Error")
+//         return
+//       }
+//       updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Success")
+//     } catch (e) {
+//       console.log(e)
+//       updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Error")
+//       return
+//     }
+//   } else {
+//     try {
+//       updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "In Progress")
 
-  //       const hash = await writeContract(wagmiConfig, {
-  //         address: lendingTerm.collateral.address,
-  //         abi: erc20Abi,
-  //         functionName: "approve",
-  //         args: [
-  //           gatewayContract.address as Address,
-  //           parseUnits(collateralAmount, lendingTerm.collateral.decimals),
-  //         ],
-  //       })
-  //       const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
-  //         hash: hash,
-  //       })
+//       const hash = await writeContract(wagmiConfig, {
+//         address: lendingTerm.collateral.address,
+//         abi: erc20Abi,
+//         functionName: "approve",
+//         args: [
+//           contractsList.gatewayAddress as Address,
+//           parseUnits(collateralAmount, lendingTerm.collateral.decimals),
+//         ],
+//       })
+//       const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
+//         hash: hash,
+//       })
 
-  //       if (checkApprove.status != "success") {
-  //         updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Error")
-  //         return
-  //       }
-  //       updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Success")
-  //     } catch (e) {
-  //       console.log(e)
-  //       updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Error")
-  //       return
-  //     }
-  //   }
+//       if (checkApprove.status != "success") {
+//         updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Error")
+//         return
+//       }
+//       updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Success")
+//     } catch (e) {
+//       console.log(e)
+//       updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Error")
+//       return
+//     }
+//   }
 
-  //   /* Set allowance for gUSDC token */
-  //   try {
-  //     updateStepStatus(`Sign Permit for gUSDC`, "In Progress")
+//   /* Set allowance for gUSDC token */
+//   try {
+//     updateStepStatus(`Sign Permit for gUSDC`, "In Progress")
 
-  //     signatureGUSDC = await signPermit({
-  //       contractAddress: creditContract.address as Address,
-  //       erc20Name: "Ethereum Credit Guild - gUSDC",
-  //       ownerAddress: address,
-  //       spenderAddress: gatewayContract.address as Address,
-  //       value: debtAmount,
-  //       deadline: BigInt(Number(moment().add(10, "seconds"))),
-  //       nonce: gusdcNonces,
-  //       chainId: wagmiConfig.chains[0].id,
-  //       permitVersion: "1",
-  //     })
+//     signatureGUSDC = await signPermit({
+//       contractAddress: contractsList.creditAddress as Address,
+//       erc20Name: "Ethereum Credit Guild - gUSDC",
+//       ownerAddress: address,
+//       spenderAddress: contractsList.gatewayAddress as Address,
+//       value: debtAmount,
+//       deadline: BigInt(Number(moment().add(10, "seconds"))),
+//       nonce: gusdcNonces,
+//       chainId: wagmiConfig.chains[0].id,
+//       permitVersion: "1",
+//     })
 
-  //     if (!signatureGUSDC) {
-  //       updateStepStatus(`Sign Permit for gUSDC`, "Error")
-  //       return
-  //     }
-  //     updateStepStatus(`Sign Permit for gUSDC`, "Success")
-  //   } catch (e) {
-  //     console.log(e)
-  //     updateStepStatus(`Sign Permit for gUSDC`, "Error")
-  //     return
-  //   }
+//     if (!signatureGUSDC) {
+//       updateStepStatus(`Sign Permit for gUSDC`, "Error")
+//       return
+//     }
+//     updateStepStatus(`Sign Permit for gUSDC`, "Success")
+//   } catch (e) {
+//     console.log(e)
+//     updateStepStatus(`Sign Permit for gUSDC`, "Error")
+//     return
+//   }
 
-  //   const amountUSDC = await readContract(wagmiConfig, {
-  //     ...psmUsdcContract,
-  //     functionName: "getRedeemAmountOut",
-  //     args: [debtAmount],
-  //   })
+//   const amountUSDC = await readContract(wagmiConfig, {
+//     ...psmUsdcContract,
+//     functionName: "getRedeemAmountOut",
+//     args: [debtAmount],
+//   })
 
-  //   const deadlineSwap = BigInt(Number(moment().add(3600, "seconds")))
+//   const deadlineSwap = BigInt(Number(moment().add(3600, "seconds")))
 
-  //   /* Call gateway.multicall() */
-  //   try {
-  //     const calls = borrowWithLeverage(
-  //       address,
-  //       lendingTerm,
-  //       debtAmount,
-  //       parseUnits(collateralAmount, lendingTerm.collateral.decimals),
-  //       flashLoanCollateralAmount,
-  //       amountUSDC as bigint,
-  //       signatureCollateral,
-  //       signatureGUSDC,
-  //       deadlineSwap
-  //     )
+//   /* Call gateway.multicall() */
+//   try {
+//     const calls = borrowWithLeverage(
+//       address,
+//       lendingTerm,
+//       debtAmount,
+//       parseUnits(collateralAmount, lendingTerm.collateral.decimals),
+//       flashLoanCollateralAmount,
+//       amountUSDC as bigint,
+//       signatureCollateral,
+//       signatureGUSDC,
+//       deadlineSwap
+//     )
 
-  //     const callsDescription = getMulticallsDecoded(calls, lendingTerm)
-  //     updateStepStatus(`Multicall with Leverage`, "In Progress", callsDescription)
+//     const callsDescription = getMulticallsDecoded(calls, lendingTerm)
+//     updateStepStatus(`Multicall with Leverage`, "In Progress", callsDescription)
 
-  //     const hash = await writeContract(wagmiConfig, {
-  //       ...gatewayContract,
-  //       functionName: "multicallWithBalancerFlashLoan",
-  //       args: [[lendingTerm.collateral.address], [flashLoanCollateralAmount], calls],
-  //     })
+//     const hash = await writeContract(wagmiConfig, {
+//       ...gatewayContract,
+//       functionName: "multicallWithBalancerFlashLoan",
+//       args: [[lendingTerm.collateral.address], [flashLoanCollateralAmount], calls],
+//     })
 
-  //     const checkBorrow = await waitForTransactionReceipt(wagmiConfig, {
-  //       hash: hash,
-  //     })
+//     const checkBorrow = await waitForTransactionReceipt(wagmiConfig, {
+//       hash: hash,
+//     })
 
-  //     if (checkBorrow.status === "success") {
-  //       refetch()
-  //       reload(true)
-  //       setBorrowAmount(BigInt(0))
-  //       setCollateralAmount("")
-  //       updateStepStatus("Multicall with Leverage", "Success")
-  //       return
-  //     } else {
-  //       updateStepStatus("Multicall with Leverage", "Error")
-  //     }
+//     if (checkBorrow.status === "success") {
+//       refetch()
+//       reload(true)
+//       setBorrowAmount(BigInt(0))
+//       setCollateralAmount("")
+//       updateStepStatus("Multicall with Leverage", "Success")
+//       return
+//     } else {
+//       updateStepStatus("Multicall with Leverage", "Error")
+//     }
 
-  //     updateStepStatus(`Multicall with Leverage`, "Success")
-  //   } catch (e) {
-  //     console.log(e)
-  //     updateStepStatus("Multicall with Leverage", "Error")
-  //     return
-  //   }
-  // }
+//     updateStepStatus(`Multicall with Leverage`, "Success")
+//   } catch (e) {
+//     console.log(e)
+//     updateStepStatus("Multicall with Leverage", "Error")
+//     return
+//   }
+// }

@@ -5,11 +5,8 @@ import {
   ERC20PermitABI,
   TermABI,
   UsdcABI,
-  psmUsdcContract,
-  gatewayContract,
-  creditContract,
-  uniswapRouterContract,
-  usdcContract,
+  GatewayABI,
+  UniswapRouterABI,
 } from "lib/contracts"
 import React, { useEffect, useState } from "react"
 import { erc20Abi, Abi, Address, formatUnits, parseUnits } from "viem"
@@ -38,6 +35,7 @@ import {
 } from "./helper/borrowWithLeverage"
 import { CurrencyTypes } from "components/switch/ToggleCredit"
 import { toastError } from "components/toast"
+import { useAppStore } from "store"
 
 function CreateLoan({
   lendingTerm,
@@ -62,6 +60,7 @@ function CreateLoan({
   setReload: React.Dispatch<React.SetStateAction<boolean>>
   currencyType: CurrencyTypes
 }) {
+  const { contractsList } = useAppStore()
   const { address } = useAccount()
   const [borrowAmount, setBorrowAmount] = useState<bigint>(BigInt(0))
   const [collateralAmount, setCollateralAmount] = useState<string>("")
@@ -257,7 +256,7 @@ function CreateLoan({
           contractAddress: lendingTerm.collateral.address,
           erc20Name: lendingTerm.collateral.name,
           ownerAddress: address,
-          spenderAddress: gatewayContract.address as Address,
+          spenderAddress: contractsList.gatewayAddress as Address,
           value: parseUnits(collateralAmount, lendingTerm.collateral.decimals),
           deadline: BigInt(Number(moment().add(10, "seconds"))),
           nonce: data?.collateralNonces,
@@ -284,7 +283,7 @@ function CreateLoan({
           abi: erc20Abi,
           functionName: "approve",
           args: [
-            gatewayContract.address as Address,
+            contractsList.gatewayAddress as Address,
             parseUnits(collateralAmount, lendingTerm.collateral.decimals),
           ],
         })
@@ -309,10 +308,10 @@ function CreateLoan({
       updateStepStatus(`Sign Permit for gUSDC`, "In Progress")
 
       signatureGUSDC = await signPermit({
-        contractAddress: creditContract.address as Address,
+        contractAddress: contractsList.creditAddress as Address,
         erc20Name: "Ethereum Credit Guild - gUSDC",
         ownerAddress: address,
-        spenderAddress: gatewayContract.address as Address,
+        spenderAddress: contractsList.gatewayAddress as Address,
         value: borrowAmount,
         deadline: BigInt(Number(moment().add(10, "seconds"))),
         nonce: gusdcNonces,
@@ -339,14 +338,16 @@ function CreateLoan({
         borrowAmount,
         parseUnits(collateralAmount, lendingTerm.collateral.decimals),
         signatureCollateral,
-        signatureGUSDC
+        signatureGUSDC,
+        contractsList
       )
 
-      const callsDescription = getMulticallsDecoded(calls, lendingTerm)
+      const callsDescription = getMulticallsDecoded(calls, lendingTerm, contractsList)
       updateStepStatus(`Borrow (Multicall)`, "In Progress", callsDescription)
 
       const hash = await writeContract(wagmiConfig, {
-        ...gatewayContract,
+        address: contractsList.gatewayAddress,
+        abi: GatewayABI,
         functionName: "multicall",
         args: [calls],
       })
@@ -413,7 +414,7 @@ function CreateLoan({
           contractAddress: lendingTerm.collateral.address,
           erc20Name: lendingTerm.collateral.name,
           ownerAddress: address,
-          spenderAddress: gatewayContract.address as Address,
+          spenderAddress: contractsList.gatewayAddress as Address,
           value: parseUnits(collateralAmount, lendingTerm.collateral.decimals),
           deadline: BigInt(Number(moment().add(10, "seconds"))),
           nonce: data?.collateralNonces,
@@ -440,7 +441,7 @@ function CreateLoan({
           abi: erc20Abi,
           functionName: "approve",
           args: [
-            gatewayContract.address as Address,
+            contractsList.gatewayAddress as Address,
             parseUnits(collateralAmount, lendingTerm.collateral.decimals),
           ],
         })
@@ -465,10 +466,10 @@ function CreateLoan({
       updateStepStatus(`Sign Permit for gUSDC`, "In Progress")
 
       signatureGUSDC = await signPermit({
-        contractAddress: creditContract.address as Address,
+        contractAddress: contractsList.creditAddress as Address,
         erc20Name: "Ethereum Credit Guild - gUSDC",
         ownerAddress: address,
-        spenderAddress: gatewayContract.address as Address,
+        spenderAddress: contractsList.gatewayAddress as Address,
         value: debtAmount,
         deadline: BigInt(Number(moment().add(10, "seconds"))),
         nonce: gusdcNonces,
@@ -497,12 +498,14 @@ function CreateLoan({
 
       const allowBorrowedCreditCall = getAllowBorrowedCreditCall(
         debtAmount,
-        signatureGUSDC
+        signatureGUSDC,
+        contractsList
       )
 
       const callsDescription = getMulticallsDecoded(
         pullCollateralCalls.concat(allowBorrowedCreditCall),
-        lendingTerm
+        lendingTerm,
+        contractsList
       )
 
       updateStepStatus(
@@ -512,11 +515,12 @@ function CreateLoan({
       )
 
       /*** Calculate maxLoanDebt with 1% slippage ***/
-      const path = [usdcContract.address, lendingTerm.collateral.address]
+      const path = [contractsList.usdcAddress, lendingTerm.collateral.address]
 
       //get min amount of usdc to swap with collateral from uniswap
       const result = await readContract(wagmiConfig, {
-        ...uniswapRouterContract,
+        address: contractsList.uniswapRouterAddress,
+        abi: UniswapRouterABI,
         functionName: "getAmountsIn",
         args: [flashLoanCollateralAmount, path],
       })
@@ -526,14 +530,15 @@ function CreateLoan({
       /*** End Calculate maxLoanDebt ***/
 
       const hash = await writeContract(wagmiConfig, {
-        ...gatewayContract,
+        address: contractsList.gatewayAddress,
+        abi: GatewayABI,
         functionName: "borrowWithBalancerFlashLoan",
         args: [
           lendingTerm.address,
-          psmUsdcContract.address,
-          uniswapRouterContract.address,
+          contractsList.psmUsdcAddress,
+          contractsList.uniswapRouterAddress,
           lendingTerm.collateral.address,
-          usdcContract.address,
+          contractsList.usdcAddress,
           parseUnits(collateralAmount, lendingTerm.collateral.decimals),
           flashLoanCollateralAmount,
           maxLoanDebt,
@@ -553,7 +558,6 @@ function CreateLoan({
         updateStepStatus("Borrow with Leverage (Multicall)", "Success")
         return
       } else {
-        
         updateStepStatus("Borrow with Leverage (Multicall)", "Error")
       }
 

@@ -1,10 +1,9 @@
 import { waitForTransactionReceipt, writeContract } from "@wagmi/core"
 import StepModal from "components/stepLoader"
 import { Step } from "components/stepLoader/stepType"
-import { psmUsdcContract, creditContract, usdcContract } from "lib/contracts"
-
+import { PsmUsdcABI, CreditABI } from "lib/contracts"
 import React, { useEffect, useState } from "react"
-import { Address, parseUnits } from "viem"
+import { Address, erc20Abi, parseUnits } from "viem"
 import { useAccount } from "wagmi"
 import { Switch, Tab } from "@headlessui/react"
 import clsx from "clsx"
@@ -14,6 +13,7 @@ import ButtonPrimary from "components/button/ButtonPrimary"
 import { getTitleDisabled } from "./helper"
 import { AlertMessage } from "components/message/AlertMessage"
 import { wagmiConfig } from "contexts/Web3Provider"
+import { useAppStore } from "store"
 
 function MintOrRedeem({
   reloadMintRedeem,
@@ -30,6 +30,7 @@ function MintOrRedeem({
   usdcAvailableToRedeem: number
   isRebasing: boolean
 }) {
+  const { contractsList } = useAppStore()
   const { address } = useAccount()
   const [showModal, setShowModal] = useState(false)
   const [value, setValue] = useState<string>("")
@@ -68,9 +69,10 @@ function MintOrRedeem({
       updateStepStatus("Approve", "In Progress")
       // approve collateral first
       const hash = await writeContract(wagmiConfig, {
-        ...usdcContract,
+        address: contractsList.usdcAddress,
+        abi: erc20Abi,
         functionName: "approve",
-        args: [psmUsdcContract.address as Address, parseUnits(value.toString(), 6)],
+        args: [contractsList.psmUsdcAddress as Address, parseUnits(value.toString(), 6)],
       })
 
       const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
@@ -90,7 +92,8 @@ function MintOrRedeem({
     try {
       updateStepStatus("Mint", "In Progress")
       const hash = await writeContract(wagmiConfig, {
-        ...psmUsdcContract,
+        address: contractsList.psmUsdcAddress,
+        abi: PsmUsdcABI,
         functionName: "mint",
         args: [address, parseUnits(value.toString(), 6)],
       })
@@ -118,9 +121,10 @@ function MintOrRedeem({
 
       // approve collateral first
       const hash = await writeContract(wagmiConfig, {
-        ...usdcContract,
+        address: contractsList.usdcAddress,
+        abi: erc20Abi,
         functionName: "approve",
-        args: [psmUsdcContract.address as Address, parseUnits(value.toString(), 6)],
+        args: [contractsList.psmUsdcAddress as Address, parseUnits(value.toString(), 6)],
       })
 
       const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
@@ -140,7 +144,8 @@ function MintOrRedeem({
     try {
       updateStepStatus("Mint and Enter Rebase", "In Progress")
       const hash = await writeContract(wagmiConfig, {
-        ...psmUsdcContract,
+        address: contractsList.psmUsdcAddress,
+        abi: PsmUsdcABI,
         functionName: "mintAndEnterRebase",
         args: [parseUnits(value.toString(), 6)],
       })
@@ -168,9 +173,10 @@ function MintOrRedeem({
 
       // approve collateral first
       const hash = await writeContract(wagmiConfig, {
-        ...creditContract,
+        address: contractsList?.creditAddress,
+        abi: CreditABI,
         functionName: "approve",
-        args: [psmUsdcContract.address as Address, parseUnits(value.toString(), 18)],
+        args: [contractsList.psmUsdcAddress as Address, parseUnits(value.toString(), 18)],
       })
 
       const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
@@ -190,7 +196,8 @@ function MintOrRedeem({
     try {
       updateStepStatus("Redeem", "In Progress")
       const hash = await writeContract(wagmiConfig, {
-        ...psmUsdcContract,
+        address: contractsList.psmUsdcAddress,
+        abi: PsmUsdcABI,
         functionName: "redeem",
         args: [address, parseUnits(value.toString(), 18)],
       })
@@ -280,7 +287,8 @@ function MintOrRedeem({
                   rightLabel={
                     <>
                       <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Available: {usdcBalance ? toLocaleString(formatDecimal(usdcBalance, 2)) : 0}
+                        Available:{" "}
+                        {usdcBalance ? toLocaleString(formatDecimal(usdcBalance, 2)) : 0}
                       </p>
                       <button
                         className="text-sm font-medium text-brand-500 hover:text-brand-400"
@@ -331,7 +339,10 @@ function MintOrRedeem({
                       <p>
                         You will receive{" "}
                         <span className="font-bold">
-                          {toLocaleString(formatDecimal(Number(value) / conversionRate, 2))} gUSDC
+                          {toLocaleString(
+                            formatDecimal(Number(value) / conversionRate, 2)
+                          )}{" "}
+                          gUSDC
                         </span>
                       </p>
                     </>
@@ -353,7 +364,10 @@ function MintOrRedeem({
                   rightLabel={
                     <>
                       <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Available: {creditBalance ? toLocaleString(formatDecimal(creditBalance, 2)) : 0}
+                        Available:{" "}
+                        {creditBalance
+                          ? toLocaleString(formatDecimal(creditBalance, 2))
+                          : 0}
                       </p>
                       <button
                         className="text-sm font-medium text-brand-500 hover:text-brand-400"
@@ -385,7 +399,10 @@ function MintOrRedeem({
                       <p>
                         You will receive{" "}
                         <span className="font-bold">
-                          {toLocaleString(formatDecimal(Number(value) * 1 * conversionRate, 2))} USDC
+                          {toLocaleString(
+                            formatDecimal(Number(value) * 1 * conversionRate, 2)
+                          )}{" "}
+                          USDC
                         </span>
                       </p>
                     </>

@@ -5,12 +5,7 @@ import React, { useEffect, useState } from "react"
 import Card from "components/card"
 import { useAccount, useReadContracts } from "wagmi"
 import { toLocaleString } from "utils/numbers"
-import {
-  creditContract,
-  profitManagerContract,
-  psmUsdcContract,
-  usdcContract,
-} from "lib/contracts"
+import { ProfitManagerABI, CreditABI } from "lib/contracts"
 import { waitForTransactionReceipt, writeContract } from "@wagmi/core"
 import { formatDecimal } from "utils/numbers"
 import { toastError } from "components/toast"
@@ -19,10 +14,12 @@ import { Step } from "components/stepLoader/stepType"
 import StepModal from "components/stepLoader"
 import clsx from "clsx"
 import { Switch } from "@headlessui/react"
-import { formatUnits, Address } from "viem"
+import { formatUnits, Address, erc20Abi } from "viem"
 import { wagmiConfig } from "contexts/Web3Provider"
+import { useAppStore } from "store"
 
 function MintAndSaving() {
+  const { contractsList } = useAppStore()
   const { address, isConnected } = useAccount()
   const [reload, setReload] = React.useState<boolean>(false)
   const [showModal, setShowModal] = useState(false)
@@ -38,31 +35,37 @@ function MintAndSaving() {
   const { data, isError, isLoading, refetch } = useReadContracts({
     contracts: [
       {
-        ...usdcContract,
+        address: contractsList.usdcAddress,
+        abi: erc20Abi,
         functionName: "balanceOf",
         args: [address],
       },
       {
-        ...creditContract,
+        address: contractsList?.creditAddress,
+        abi: CreditABI,
         functionName: "balanceOf",
         args: [address],
       },
       {
-        ...profitManagerContract,
+        address: contractsList.profitManagerAddress,
+        abi: ProfitManagerABI,
         functionName: "creditMultiplier",
       },
       {
-        ...usdcContract,
+        address: contractsList.usdcAddress,
+        abi: erc20Abi,
         functionName: "balanceOf",
-        args: [psmUsdcContract.address as Address],
+        args: [contractsList.psmUsdcAddress as Address],
       },
       {
-        ...creditContract,
+        address: contractsList?.creditAddress,
+        abi: CreditABI,
         functionName: "isRebasing",
         args: [address as Address],
       },
       {
-        ...profitManagerContract,
+        address: contractsList.profitManagerAddress,
+        abi: ProfitManagerABI,
         functionName: "getProfitSharingConfig",
       },
     ],
@@ -114,7 +117,8 @@ function MintAndSaving() {
       updateStepStatus("Rebasing", "In Progress")
 
       const hash = await writeContract(wagmiConfig, {
-        ...creditContract,
+        address: contractsList?.creditAddress,
+        abi: CreditABI,
         functionName: rebaseMode,
       })
 

@@ -1,14 +1,13 @@
 import { Abi, decodeFunctionData, erc20Abi } from "viem"
-import {
-  GatewayABI,
-  TermABI,
-  creditContract,
-  psmUsdcContract,
-  uniswapRouterContract,
-  usdcContract,
-} from "lib/contracts"
+import { GatewayABI, TermABI, PsmUsdcABI, UniswapRouterABI } from "lib/contracts"
+import { ContractsList } from "store/slices/contracts-list"
+import { LendingTerms } from "types/lending"
 
-export const getMulticallsDecoded = (calls: any[], lendingTerm) => {
+export const getMulticallsDecoded = (
+  calls: any[],
+  lendingTerm: LendingTerms,
+  contractsList: ContractsList
+) => {
   return calls.map((call) => {
     //describe each call in calls
     const decodedCall = decodeFunctionData({
@@ -20,16 +19,16 @@ export const getMulticallsDecoded = (calls: any[], lendingTerm) => {
       let abiCallExternal
 
       switch (String(decodedCall.args[0]).toLowerCase()) {
-        case usdcContract.address.toLowerCase():
-        case creditContract.address.toLowerCase():
+        case contractsList.usdcAddress.toLowerCase():
+        case contractsList.creditAddress.toLowerCase():
         case lendingTerm.collateral.address.toLowerCase():
           abiCallExternal = erc20Abi
           break
-        case psmUsdcContract.address.toLowerCase():
-          abiCallExternal = psmUsdcContract.abi
+        case contractsList.psmUsdcAddress.toLowerCase():
+          abiCallExternal = PsmUsdcABI
           break
-        case uniswapRouterContract.address.toLowerCase():
-          abiCallExternal = uniswapRouterContract.abi
+        case contractsList.uniswapRouterAddress.toLowerCase():
+          abiCallExternal = UniswapRouterABI
           break
         case lendingTerm.address.toLowerCase():
           abiCallExternal = TermABI

@@ -4,14 +4,15 @@ import React, { useEffect, useState } from "react"
 import { useAccount, useReadContracts } from "wagmi"
 import Card from "components/card"
 import AuctionsTable from "./components/AuctionsTable"
-import { MdOpenInNew } from "react-icons/md"
+import { MdOpenInNew, MdOutlineBalance } from "react-icons/md"
 import { Auction, getAllAuctions } from "lib/logs/auctions"
 import Spinner from "components/spinner"
 import ModalAuctionChart from "./components/ModalAuctionChart"
-import { auctionHouseContract } from "lib/contracts"
+import { AuctionHouseABI } from "lib/contracts"
+import { useAppStore } from "store"
 
 const Auctions = () => {
-  const { isConnected } = useAccount()
+  const { contractsList } = useAppStore()
   const [auctions, setAuctions] = useState<Auction[]>([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState<boolean>(false)
@@ -20,11 +21,13 @@ const Auctions = () => {
   const { data, isError, isLoading } = useReadContracts({
     contracts: [
       {
-        ...auctionHouseContract,
+        address: contractsList?.auctionHouseAddress,
+        abi: AuctionHouseABI,
         functionName: "auctionDuration",
       },
       {
-        ...auctionHouseContract,
+        address: contractsList?.auctionHouseAddress,
+        abi: AuctionHouseABI,
         functionName: "midPoint",
       },
     ],
@@ -41,7 +44,7 @@ const Auctions = () => {
   useEffect(() => {
     const getAuctions = async () => {
       setLoading(true)
-      const auctions = await getAllAuctions()
+      const auctions = await getAllAuctions(contractsList)
       setAuctions(auctions)
       setLoading(false)
       setReload(false)
@@ -75,6 +78,15 @@ const Auctions = () => {
             {loading ? (
               <div className="my-10 flex justify-center">
                 <Spinner />
+              </div>
+            ) : !auctions ? (
+              <div className="my-5 flex-col items-center justify-center opacity-40">
+                <div className="flex justify-center">
+                  <MdOutlineBalance className="h-10 w-10" />
+                </div>
+                <div className="mt-2 flex justify-center">
+                  <p>There are no auctions yet</p>
+                </div>
               </div>
             ) : (
               <AuctionsTable

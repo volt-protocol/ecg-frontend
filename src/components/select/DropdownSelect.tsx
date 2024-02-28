@@ -9,12 +9,14 @@ export default function DropdownSelect<T>({
   onChange,
   getLabel,
   extra,
+  textNoOptionSelected
 }: {
   options: T[]
   selectedOption: T
   onChange: React.Dispatch<React.SetStateAction<T>>
   getLabel: (option: T) => string | JSX.Element
   extra?: string
+  textNoOptionSelected?: string
 }) {
   return (
     <Listbox value={selectedOption} onChange={onChange}>
@@ -27,7 +29,7 @@ export default function DropdownSelect<T>({
                 "sm:text-md relative cursor-default rounded-md bg-white py-1.5 pl-3 pr-10 text-left text-gray-600 shadow-sm ring-1 ring-inset ring-gray-200 hover:cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-400/80 dark:bg-navy-700 dark:text-gray-200 dark:ring-navy-600 sm:leading-6"
               )}
             >
-              <span className="block truncate">{selectedOption ? getLabel(selectedOption) : '-'}</span>
+              <span className="block truncate">{selectedOption ? getLabel(selectedOption) : textNoOptionSelected ?? '-'}</span>
               <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                 <MdUnfoldMore className="h-5 w-5 text-gray-400" aria-hidden="true" />
               </span>

@@ -1,29 +1,20 @@
-import {
-  Address,
-  getPublicClient,
-  writeContract,
-  waitForTransactionReceipt,
-} from "@wagmi/core"
+import { writeContract, waitForTransactionReceipt } from "@wagmi/core"
 import DropdownSelect from "components/select/DropdownSelect"
 import Spinner from "components/spinner"
 import StepModal from "components/stepLoader"
 import { Step } from "components/stepLoader/stepType"
-import { use, useEffect, useState } from "react"
-import Create, { CreateTermForm } from "./Create"
-import { formatEther, formatUnits } from "viem"
-import {
-  formatNumberDecimal,
-} from "utils/numbers"
+import { useEffect, useState } from "react"
+import { Address, formatUnits } from "viem"
+import { formatNumberDecimal } from "utils/numbers"
 import { toastError } from "components/toast"
 import { getProposableTerms } from "./helper"
 import ButtonPrimary from "components/button/ButtonPrimary"
-import { onboardGovernorGuildContract, guildContract } from "lib/contracts"
-import { generateTermName } from "utils/strings"
-import { SECONDS_IN_DAY } from "utils/constants"
-import { MdError, MdOpenInNew, MdWarning } from "react-icons/md"
+import { OnboardGovernorGuildABI, GuildABI } from "lib/contracts"
+import { MdOpenInNew } from "react-icons/md"
 import { useAccount, useReadContracts } from "wagmi"
 import { AlertMessage } from "components/message/AlertMessage"
 import { wagmiConfig } from "contexts/Web3Provider"
+import { useAppStore } from "store"
 
 export type ProposedTerm = {
   termAddress: Address
@@ -39,6 +30,7 @@ export type ProposedTerm = {
 }
 
 export default function Propose() {
+  const { contractsList } = useAppStore()
   const { address } = useAccount()
   const [showModal, setShowModal] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(true)
@@ -49,11 +41,13 @@ export default function Propose() {
   const { data, isError, isLoading } = useReadContracts({
     contracts: [
       {
-        ...onboardGovernorGuildContract,
+        address: contractsList.onboardGovernorGuildAddress,
+        abi: OnboardGovernorGuildABI,
         functionName: "proposalThreshold",
       },
       {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "getVotes",
         args: [address],
       },
@@ -89,7 +83,7 @@ export default function Propose() {
   const fetchProposableTerms = async () => {
     setLoading(true)
 
-    const terms = await getProposableTerms()
+    const terms = await getProposableTerms(contractsList)
 
     setLoading(false)
     setSelectedTerm(terms[0])
@@ -112,7 +106,8 @@ export default function Propose() {
       updateStepStatus("Propose Onboard", "In Progress")
 
       const hash = await writeContract(wagmiConfig, {
-        ...onboardGovernorGuildContract,
+        address: contractsList.onboardGovernorGuildAddress,
+        abi: OnboardGovernorGuildABI,
         functionName: "proposeOnboard",
         args: [selectedTerm?.termAddress],
       })
@@ -248,7 +243,7 @@ export default function Propose() {
                     </div>
                   </dl>
                 </div>
-                <div className="mt-2 flex flex-col w-full gap-2">
+                <div className="mt-2 flex w-full flex-col gap-2">
                   <ButtonPrimary
                     onClick={() => proposeOnboard()}
                     type="button"

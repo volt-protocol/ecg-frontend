@@ -22,9 +22,9 @@ export default function Disconnected() {
           <div>
             <ConnectWeb3Button />
           </div>
-          <a href="#" className="text-sm font-semibold text-gray-900">
+          {/* <a href="#" className="text-sm font-semibold text-gray-900">
             Contact support <span aria-hidden="true">&rarr;</span>
-          </a>
+          </a> */}
         </div>
       </main>
     </>

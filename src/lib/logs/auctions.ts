@@ -1,7 +1,8 @@
 import { getPublicClient, getWalletClient } from "@wagmi/core"
 import { wagmiConfig } from "contexts/Web3Provider"
-import { auctionHouseContract } from "lib/contracts"
+import { AuctionHouseABI } from "lib/contracts"
 import getToken from "lib/getToken"
+import { ContractsList } from "store/slices/contracts-list"
 import { FROM_BLOCK } from "utils/constants"
 import { Address } from "viem"
 
@@ -21,11 +22,11 @@ export interface Auction {
 }
 
 //get all open loans logs from a lending term contract
-export async function getAuctionStartLogs() {
+export async function getAuctionStartLogs(contractsList: ContractsList) {
   const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber()
 
   const openLogs = await getPublicClient(wagmiConfig).getLogs({
-    address: auctionHouseContract.address as Address,
+    address: contractsList.auctionHouseAddress as Address,
     event: {
       type: "event",
       name: "AuctionStart",
@@ -44,17 +45,17 @@ export async function getAuctionStartLogs() {
   return openLogs.map((log) => {
     return {
       ...log.args,
-      txHashStart: log.transactionHash
+      txHashStart: log.transactionHash,
     }
   })
 }
 
 //get all closed loans  logs (fully repaid) from a lending term contract
-export async function getAuctionEndLogs() {
+export async function getAuctionEndLogs(contractsList: ContractsList) {
   const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber()
 
   const closeLogs = await getPublicClient(wagmiConfig).getLogs({
-    address: auctionHouseContract.address as Address,
+    address: contractsList.auctionHouseAddress as Address,
     event: {
       type: "event",
       name: "AuctionEnd",
@@ -73,14 +74,14 @@ export async function getAuctionEndLogs() {
   return closeLogs.map((log) => {
     return {
       ...log.args,
-      txHashEnd: log.transactionHash
+      txHashEnd: log.transactionHash,
     }
   })
 }
 
-export async function getAllAuctions(): Promise<Auction[]> {
-  const startLogs = await getAuctionStartLogs()
-  const endLogs = await getAuctionEndLogs()
+export async function getAllAuctions(contractsList: ContractsList): Promise<Auction[]> {
+  const startLogs = await getAuctionStartLogs(contractsList)
+  const endLogs = await getAuctionEndLogs(contractsList)
 
   const auctions = await Promise.all(
     startLogs.map(async (log) => {

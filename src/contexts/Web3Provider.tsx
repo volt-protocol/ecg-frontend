@@ -28,12 +28,8 @@ const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID
 export const wagmiConfig = createConfig({
   chains,
   transports: {
-    [mainnet.id]: http(
-      `https://eth-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY_MAINNET}`
-    ),
-    [sepolia.id]: http(
-      `https://eth-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY_SEPOLIA}`
-    ),
+    [mainnet.id]: http(process.env.NEXT_PUBLIC_RPC_URL_ETHEREUM),
+    [sepolia.id]: http(process.env.NEXT_PUBLIC_RPC_URL_SEPOLIA),
   },
   connectors: [
     walletConnect({ projectId, metadata, showQrModal: false }),

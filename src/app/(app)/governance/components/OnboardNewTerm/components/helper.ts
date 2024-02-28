@@ -8,21 +8,19 @@ import {
   formatUnits,
   keccak256,
   parseAbiParameters,
-  slice,
-  stringToBytes,
   stringToHex,
-  toBytes,
 } from "viem"
 import { getFunctionSignature } from "utils/crypto"
 import { generateTermName } from "utils/strings"
-import { FROM_BLOCK, SECONDS_IN_DAY } from "utils/constants"
-import { DaoTimelockABI, guildContract, onboardTimelockContract } from "lib/contracts"
+import { SECONDS_IN_DAY } from "utils/constants"
+import { OnboardTimelockABI } from "lib/contracts"
 import { getProposableTermsLogs, getVotableTermsLogs } from "lib/logs/terms"
 import getToken from "lib/getToken"
+import { ContractsList } from "store/slices/contracts-list"
 
 //get the newly created terms using TermCreated event from LendingTermOnboarding contract
-export const getProposableTerms = async () => {
-  const proposableTermsLogs = await getProposableTermsLogs()
+export const getProposableTerms = async (contractsList: ContractsList) => {
+  const proposableTermsLogs = await getProposableTermsLogs(contractsList)
 
   const proposableTerms = await Promise.all(
     proposableTermsLogs.map(async (log) => {
@@ -68,8 +66,8 @@ export const getProposableTerms = async () => {
   return proposableTerms
 }
 
-export const getVotableTerms = async () => {
-  const votableTermsLogs = await getVotableTermsLogs()
+export const getVotableTerms = async (contractsList: ContractsList) => {
+  const votableTermsLogs = await getVotableTermsLogs(contractsList)
 
   const votableTerms = await Promise.all(
     votableTermsLogs.map(async (log) => {
@@ -150,15 +148,15 @@ export const checkVetoVoteValidity = (targets: Address[], datas: string[]): bool
   return true
 }
 
-export const getProposalIdFromActionId = (actionId: string) => {
+export const getProposalIdFromActionId = (contractsList: ContractsList, actionId: string) => {
   return BigInt(
     keccak256(
       encodeAbiParameters(parseAbiParameters("address[], uint256[], bytes[], bytes32"), [
-        [onboardTimelockContract.address as Address],
+        [contractsList.onboardTimelockAddress as Address],
         [BigInt(0)],
         [
           encodeFunctionData({
-            abi: onboardTimelockContract.abi,
+            abi: OnboardTimelockABI,
             functionName: "cancel",
             args: [actionId],
           }),

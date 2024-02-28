@@ -1,6 +1,11 @@
-import { GatewayABI, PsmUsdcABI, TermABI, creditContract, psmUsdcContract, uniswapRouterContract } from "lib/contracts"
+import {
+  GatewayABI,
+  PsmUsdcABI,
+  TermABI
+} from "lib/contracts"
 import { LendingTerms } from "types/lending"
-import { Abi, Address, decodeFunctionData, encodeFunctionData, erc20Abi } from "viem"
+import { Abi, Address, encodeFunctionData, erc20Abi } from "viem"
+import { ContractsList } from "store/slices/contracts-list"
 
 export const simpleBorrow = (
   userAddress: Address,
@@ -8,7 +13,8 @@ export const simpleBorrow = (
   borrowAmount: bigint,
   collateralAmount: bigint,
   permitDataCollateral: any | undefined,
-  permitDatagUSDC: any
+  permitDatagUSDC: any,
+  contractsList: ContractsList
 ) => {
   let calls = []
 
@@ -72,7 +78,7 @@ export const simpleBorrow = (
       abi: GatewayABI as Abi,
       functionName: "consumePermit",
       args: [
-        creditContract.address,
+        contractsList.creditAddress,
         borrowAmount,
         permitDatagUSDC.deadline,
         permitDatagUSDC.v,
@@ -86,7 +92,7 @@ export const simpleBorrow = (
     encodeFunctionData({
       abi: GatewayABI as Abi,
       functionName: "consumeAllowance",
-      args: [creditContract.address, borrowAmount],
+      args: [contractsList.creditAddress, borrowAmount],
     })
   )
 
@@ -95,11 +101,11 @@ export const simpleBorrow = (
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        creditContract.address,
+        contractsList.creditAddress,
         encodeFunctionData({
           abi: erc20Abi as Abi,
           functionName: "approve",
-          args: [psmUsdcContract.address, borrowAmount],
+          args: [contractsList.psmUsdcAddress, borrowAmount],
         }),
       ],
     })
@@ -110,9 +116,9 @@ export const simpleBorrow = (
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        psmUsdcContract.address,
+        contractsList.psmUsdcAddress,
         encodeFunctionData({
-          abi: psmUsdcContract.abi as Abi,
+          abi: PsmUsdcABI as Abi,
           functionName: "redeem",
           args: [userAddress, borrowAmount],
         }),

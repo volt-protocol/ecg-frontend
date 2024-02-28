@@ -1,16 +1,17 @@
 import { getPublicClient, readContract } from "@wagmi/core"
 import { wagmiConfig } from "contexts/Web3Provider"
-import { TermABI, guildContract, lendingTermFactoryContract } from "lib/contracts"
+import { TermABI, GuildABI } from "lib/contracts"
+import { ContractsList } from "store/slices/contracts-list"
 import { FROM_BLOCK } from "utils/constants"
 import { extractTermAddress } from "utils/strings"
 import { Abi, Address } from "viem"
 
 //get all created terms
-export const getTermsCreatedLogs = async () => {
+export const getTermsCreatedLogs = async (contractsList: ContractsList) => {
   const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber()
 
   const logs = await getPublicClient(wagmiConfig).getLogs({
-    address: lendingTermFactoryContract.address as Address,
+    address: contractsList.lendingTermFactoryAddress as Address,
     event: {
       type: "event",
       name: "TermCreated",
@@ -54,11 +55,11 @@ export const getTermsCreatedLogs = async () => {
 }
 
 //get proposed terms
-export const getTermsProposedLogs = async () => {
+export const getTermsProposedLogs = async (contractsList: ContractsList) => {
   const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber()
 
   const logs = await getPublicClient(wagmiConfig).getLogs({
-    address: process.env.NEXT_PUBLIC_ONBOARD_GOVERNOR_GUILD_ADDRESS as Address,
+    address: contractsList.onboardGovernorGuildAddress as Address,
     event: {
       type: "event",
       name: "ProposalCreated",
@@ -118,18 +119,24 @@ export const getTermsProposedLogs = async () => {
 }
 
 //get a list of active terms addresses
-export const getLiveTermsAddresses = async (): Promise<Address[]> => {
+export const getLiveTermsAddresses = async (
+  contractsList: ContractsList
+): Promise<Address[]> => {
   const result = await readContract(wagmiConfig, {
-    ...guildContract,
+    address: contractsList.guildAddress,
+    abi: GuildABI as Abi,
     functionName: "liveGauges",
   })
   return result as Address[]
 }
 
 //get a list of deprecated terms addresses
-export const getDeprecatedTermAddresses = async (): Promise<Address[]> => {
+export const getDeprecatedTermAddresses = async (
+  contractsList: ContractsList
+): Promise<Address[]> => {
   const result = await readContract(wagmiConfig, {
-    ...guildContract,
+    address: contractsList.guildAddress,
+    abi: GuildABI as Abi,
     functionName: "deprecatedGauges",
   })
 
@@ -137,10 +144,10 @@ export const getDeprecatedTermAddresses = async (): Promise<Address[]> => {
 }
 
 //get propasable terms
-export const getProposableTermsLogs = async () => {
-  const termsCreatedLogs = await getTermsCreatedLogs()
-  const termsProposedLogs = await getTermsProposedLogs()
-  const liveTermsAddresses = await getLiveTermsAddresses()
+export const getProposableTermsLogs = async (contractsList: ContractsList) => {
+  const termsCreatedLogs = await getTermsCreatedLogs(contractsList)
+  const termsProposedLogs = await getTermsProposedLogs(contractsList)
+  const liveTermsAddresses = await getLiveTermsAddresses(contractsList)
 
   return termsCreatedLogs
     .filter((log) => !liveTermsAddresses.includes(log.term))
@@ -154,25 +161,24 @@ export const getProposableTermsLogs = async () => {
     })
 }
 
-export const getVotableTermsLogs = async () => {
-  const termsCreatedLogs = await getTermsCreatedLogs()
-  const termsProposedLogs = await getTermsProposedLogs()
+export const getVotableTermsLogs = async (contractsList: ContractsList) => {
+  const termsCreatedLogs = await getTermsCreatedLogs(contractsList)
+  const termsProposedLogs = await getTermsProposedLogs(contractsList)
 
-  return termsCreatedLogs
-    .filter((log) => {
-      const isProposed = termsProposedLogs.find(
-        (item) =>
-          extractTermAddress(item.description).toLowerCase() === log.term.toLowerCase()
-      )
+  return termsCreatedLogs.filter((log) => {
+    const isProposed = termsProposedLogs.find(
+      (item) =>
+        extractTermAddress(item.description).toLowerCase() === log.term.toLowerCase()
+    )
 
-      return isProposed ? true : false
-    })
+    return isProposed ? true : false
+  })
 }
 
-export const getTermsLogs = async () => {
+export const getTermsLogs = async (contractsList: ContractsList) => {
   const terms = []
-  const liveTermsAddresses = await getLiveTermsAddresses()
-  const deprecatedTerms = await getDeprecatedTermAddresses()
+  const liveTermsAddresses = await getLiveTermsAddresses(contractsList)
+  const deprecatedTerms = await getDeprecatedTermAddresses(contractsList)
 
   const allTermsAddresses = [...liveTermsAddresses, ...deprecatedTerms]
 

@@ -1,6 +1,6 @@
 import React, { Dispatch, SetStateAction, useEffect, useState } from "react"
 import { readContract, waitForTransactionReceipt, writeContract } from "@wagmi/core"
-import { TermABI, guildContract } from "lib/contracts"
+import { TermABI, GuildABI } from "lib/contracts"
 import { toastError } from "components/toast"
 import { useAccount } from "wagmi"
 import { Step } from "components/stepLoader/stepType"
@@ -19,6 +19,7 @@ import { getTitleDisabledStake, getTitleDisabledUnstake } from "./helper"
 import { AlertMessage } from "components/message/AlertMessage"
 import { LendingTerms } from "types/lending"
 import { wagmiConfig } from "contexts/Web3Provider"
+import { useAppStore } from "store"
 
 function StakeGuild({
   debtCeiling,
@@ -39,6 +40,7 @@ function StakeGuild({
   guildUserWeight: bigint
   reload: Dispatch<SetStateAction<boolean>>
 }) {
+  const { contractsList } = useAppStore()
   const [value, setValue] = useState<string>("")
   const { isConnected } = useAccount()
   const [showModal, setShowModal] = useState(false)
@@ -94,7 +96,8 @@ function StakeGuild({
           setShowModal(true)
           updateStepStatus("Stake", "In Progress")
           const hash = await writeContract(wagmiConfig, {
-            ...guildContract,
+            address: contractsList.guildAddress,
+            abi: GuildABI,
             functionName: "incrementGauge",
             args: [smartContractAddress, parseEther(value.toString())],
           })
@@ -132,7 +135,8 @@ function StakeGuild({
         updateStepStatus("Unstake", "In Progress")
         try {
           const hash = await writeContract(wagmiConfig, {
-            ...guildContract,
+            address: contractsList.guildAddress,
+            abi: GuildABI,
             functionName: "decrementGauge",
             args: [smartContractAddress, parseEther(value.toString())],
           })

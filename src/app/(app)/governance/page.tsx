@@ -2,12 +2,13 @@
 import Disconnected from "components/error/disconnected"
 import React, { useEffect } from "react"
 import Card from "components/card"
-import { guildContract, creditContract } from "lib/contracts"
+import { GuildABI, CreditABI } from "lib/contracts"
 import { useAccount, useReadContracts } from "wagmi"
 import DelegateGuild from "./components/DelegateGuild"
 import DelegateCredit from "./components/DelegateCredit"
 import OffboardTerm from "./components/OffboardTerm"
 import OnboardNewterm from "./components/OnboardNewTerm"
+import { useAppStore } from "store"
 
 export type Delegatee = {
   address: string
@@ -15,6 +16,7 @@ export type Delegatee = {
 }
 
 function Governance() {
+  const { contractsList } = useAppStore()
   const { address, isConnected, isDisconnected } = useAccount()
   const [reloadGuild, setReloadGuild] = React.useState<boolean>(false)
   const [reloadCredit, setReloadCredit] = React.useState<boolean>(false)
@@ -23,37 +25,44 @@ function Governance() {
   const { data, isError, isLoading, refetch } = useReadContracts({
     contracts: [
       {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "balanceOf",
         args: [address],
       },
       {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "freeVotes",
         args: [address],
       },
       {
-        ...guildContract,
+        address: contractsList.guildAddress,
+        abi: GuildABI,
         functionName: "getVotes",
         args: [address],
       },
       {
-        ...creditContract,
+        address: contractsList.creditAddress,
+        abi: CreditABI,
         functionName: "balanceOf",
         args: [address],
       },
       {
-        ...creditContract,
+        address: contractsList.creditAddress,
+        abi: CreditABI,
         functionName: "freeVotes",
         args: [address],
       },
       {
-        ...creditContract,
+        address: contractsList.creditAddress,
+        abi: CreditABI,
         functionName: "getVotes",
         args: [address],
       },
       {
-        ...creditContract,
+        address: contractsList.creditAddress,
+        abi: CreditABI,
         functionName: "delegateLockupPeriod",
       }
     ],

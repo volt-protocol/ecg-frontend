@@ -23,7 +23,7 @@ import { formatCurrencyValue, formatDecimal } from "utils/numbers"
 import { useBlockNumber } from "wagmi"
 import { getAllMintRedeemLogs } from "lib/logs/mint-redeem"
 import { getAllVotes } from "lib/logs/votes"
-import { BLOCK_PER_WEEK } from "utils/constants"
+import { BLOCK_PER_WEEK, BLOCK_PER_DAY } from "utils/constants"
 import { wagmiConfig } from "contexts/Web3Provider"
 import { generateTermName } from "utils/strings"
 import { GlobalStatCarts } from "./components/GlobalStatCarts"
@@ -46,7 +46,7 @@ const GlobalDashboard = () => {
         address: contractsList.guildAddress,
         abi: GuildABI,
         functionName: "totalTypeWeight",
-        args: [1],
+        args: ["1"],
       },
       {
         address: contractsList?.profitManagerAddress,
@@ -73,14 +73,8 @@ const GlobalDashboard = () => {
 
   useEffect(() => {
     const asyncFunc = async () => {
-      await getTotalActiveLoans()
-    }
-
-    asyncFunc()
-  }, [])
-
-  useEffect(() => {
-    const asyncFunc = async () => {
+      const total = await getTotalActiveLoans()
+      setTotalActiveLoans(total)
       const ceilingData = await getDebtCeilingData()
       setDebtCeilingData(ceilingData)
       const collateralData = await getCollateralData()
@@ -91,18 +85,17 @@ const GlobalDashboard = () => {
       setLastActivites(lastActivities)
     }
 
-    data?.creditMultiplier && asyncFunc()
+    !isLoading && data?.creditTotalSupply && asyncFunc()
   }, [data])
 
   /**** Get Dashboard data ****/
   const getTotalActiveLoans = async () => {
-    let total = 0
-    for (const term of lendingTerms) {
-      const activeLoans = await getActiveLoanLogs(term.address as Address)
-      total += activeLoans.length
-    }
-
-    setTotalActiveLoans(total)
+    const promises = lendingTerms.map((term) =>
+      getActiveLoanLogs(term.address as Address)
+    )
+    const results = await Promise.all(promises)
+    const total = results.reduce((acc, activeLoans) => acc + activeLoans.length, 0)
+    return total
   }
 
   const getCollateralData = async () => {
@@ -199,21 +192,29 @@ const GlobalDashboard = () => {
     //last loan opening
     let allOpenLoans = []
     for (const term of lendingTerms) {
-      const openLoans = await getOpenLoanLogs(term.address as Address)
-      const closeLoans = await getCloseLoanLogs(term.address as Address)
+      const openLoans = await getOpenLoanLogs(
+        term.address as Address,
+        undefined,
+        BLOCK_PER_WEEK
+      )
+      const closeLoans = await getCloseLoanLogs(term.address as Address, BLOCK_PER_WEEK)
       allOpenLoans.push(...openLoans, ...closeLoans)
     }
 
     // last loan closing
-    const lastMintRedeem = await getAllMintRedeemLogs(contractsList, undefined, BLOCK_PER_WEEK * 4)
-    const lastVotes = await getAllVotes(contractsList, undefined, BLOCK_PER_WEEK * 4)
+    const lastMintRedeem = await getAllMintRedeemLogs(
+      contractsList,
+      undefined,
+      BLOCK_PER_WEEK
+    )
+    const lastVotes = await getAllVotes(contractsList, undefined, BLOCK_PER_WEEK)
 
     return [...lastMintRedeem, ...lastVotes, ...allOpenLoans]
   }
 
   /***** End get dashboard data *****/
 
-  if (isLoading || !historicalData) return <Spinner />
+  if (isLoading) return <Spinner />
 
   return (
     <div>
@@ -246,8 +247,13 @@ const GlobalDashboard = () => {
             />
           )}
         </Card>
-
-        <TVLChart tvl={historicalData.tvl} />
+        {!historicalData ? (
+          <div className="flex h-96 items-center justify-center">
+            <Spinner />
+          </div>
+        ) : (
+          <TVLChart tvl={historicalData.tvl} />
+        )}
         {/* <Card
           title="Loan Success Rate"
           extra="w-full min-h-[300px] md:col-span-2 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4 opacity-40"
@@ -346,7 +352,7 @@ const GlobalDashboard = () => {
 
       <div className="mb-10 mt-3 flex">
         <Card
-          title="Last Month Activities"
+          title="Last Week Activities"
           extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
         >
           {lastActivities.length == 0 ? (

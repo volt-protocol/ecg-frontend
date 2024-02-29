@@ -30,12 +30,12 @@ export type ContractsList = {
 
 export interface ContractsListSlice {
   contractsList: ContractsList
-  fetchContractsList: (chainId: number) => void
+  fetchContractsList: (chainId: number) => Promise<ContractsList>
 }
 
 export const createContractsListSlice: StateCreator<ContractsListSlice> = (set, get) => ({
   contractsList: null,
-  fetchContractsList: async (chainId: number) => {
+  fetchContractsList: async (chainId: number): Promise<ContractsList> => {
     try {
       if(!chainsConfig.find((chain) => chain.id == chainId)) {
         console.log("Chain not found")
@@ -101,8 +101,8 @@ export const createContractsListSlice: StateCreator<ContractsListSlice> = (set, 
           (contract) => contract.name === "AUCTION_HOUSE"
         ).addr,
       }
-
       set({ contractsList: list })
+      return list
     } catch (error) {
       console.error("Error fetching contracts list", error)
     }

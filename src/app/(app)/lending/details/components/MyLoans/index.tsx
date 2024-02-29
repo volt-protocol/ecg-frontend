@@ -13,7 +13,7 @@ import { secondsToAppropriateUnit } from "utils/date"
 import { LendingTerms, loanObj } from "types/lending"
 import { useAccount, useReadContracts } from "wagmi"
 import { Step } from "components/stepLoader/stepType"
-import { MdHandshake, MdOutlineError, MdOutlineHandshake, MdRealEstateAgent } from "react-icons/md"
+import { MdOutlineError, MdOutlineHandshake } from "react-icons/md"
 import { formatDecimal, gUsdcToUsdc, usdcToGUsdc, toLocaleString } from "utils/numbers"
 import { Abi, Address, erc20Abi, formatUnits, parseUnits } from "viem"
 import clsx from "clsx"
@@ -127,27 +127,41 @@ function Myloans({
   }, [reload])
 
   useEffect(() => {
-    const fetchLoanDebts = async () => {
-      const debts = await Promise.all(tableData.map((loan) => getLoanDebt(loan.id)))
+    const fetchData = async () => {
+      const debtPromises = tableData.map((loan) => getLoanDebt(loan.id))
+      const repayPromises = tableData.map((loan) => getLoan(loan.id))
+
+      const debts = await Promise.all(debtPromises)
+      const repays = await Promise.all(repayPromises)
+
       const newTableData = tableData.map((loan, index) => ({
         ...loan,
         loanDebt: debts[index],
       }))
-      setTableDataWithDebts(newTableData)
-    }
 
-    const fetchRepays = async () => {
-      const newRepays: Record<string, number> = {}
-      for (let loan of tableData) {
-        const loanDetails = await getLoan(loan.id)
-        newRepays[loan.id] = loanDetails.lastPartialRepay
-      }
+      const newRepays = repays.reduce((acc, repay, index) => {
+        acc[tableData[index].id] = repay.lastPartialRepay
+        return acc
+      }, {})
+
+      setTableDataWithDebts(newTableData)
       setRepays(newRepays)
     }
 
-    fetchRepays()
-    fetchLoanDebts()
+    fetchData()
   }, [tableData, reload])
+
+  useEffect(() => {
+    setData(
+      tableDataWithDebts.filter(
+        (loan) =>
+          // loan.status !== "closed" &&
+          loan.callTime === 0 &&
+          loan.borrowAmount + loan.loanDebt !== BigInt(0) &&
+          loan.borrower === address
+      )
+    )
+  }, [tableDataWithDebts])
 
   async function getLoanDebt(loanId: string): Promise<bigint> {
     const result = await readContract(wagmiConfig, {
@@ -169,18 +183,6 @@ function Myloans({
     })
     return response
   }
-
-  useEffect(() => {
-    setData(
-      tableDataWithDebts.filter(
-        (loan) =>
-          // loan.status !== "closed" &&
-          loan.callTime === 0 &&
-          loan.borrowAmount + loan.loanDebt !== BigInt(0) &&
-          loan.borrower === address
-      )
-    )
-  }, [tableDataWithDebts])
 
   /* Smart contract writes */
   async function partialRepay(loanId: string, value: string) {
@@ -1128,13 +1130,11 @@ function Myloans({
           <Spinner />
         </div>
       ) : data && !isLoadingEventLoans && data.length == 0 ? (
-        <div className="flex-col items-center justify-center opacity-40 mt-20">
+        <div className="mt-20 flex-col items-center justify-center opacity-40">
           <div className="flex justify-center">
-           <MdOutlineHandshake className="w-10 h-10" />
+            <MdOutlineHandshake className="h-10 w-10" />
           </div>
-          <div className="mt-4 flex justify-center">
-            You do not have any active loans
-          </div>
+          <div className="mt-4 flex justify-center">You do not have any active loans</div>
         </div>
       ) : (
         <CustomTable withNav={true} table={table} />

@@ -11,7 +11,8 @@ import { formatDecimal, toLocaleString } from "utils/numbers"
 import { MdOpenInNew } from "react-icons/md"
 import clsx from "clsx"
 import Link from "next/link"
-import { Address, useAccount } from "wagmi"
+import { useAccount } from "wagmi"
+import { Address } from "viem"
 
 export default function UserLoan({
   userAddress,

@@ -7,7 +7,11 @@ import { FROM_BLOCK } from "utils/constants"
 import { Address } from "viem"
 
 //get all open loans logs from a lending term contract
-export async function getOpenLoanLogs(address: Address, borrower?: Address) {
+export async function getOpenLoanLogs(
+  address: Address,
+  borrower?: Address,
+  duration?: number
+) {
   const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber()
 
   const openLogs = await getPublicClient(wagmiConfig).getLogs({
@@ -26,7 +30,7 @@ export async function getOpenLoanLogs(address: Address, borrower?: Address) {
     args: {
       borrower: borrower,
     },
-    fromBlock: BigInt(FROM_BLOCK),
+    fromBlock: duration ? currentBlock - BigInt(duration) : BigInt(FROM_BLOCK),
     toBlock: currentBlock,
   })
 
@@ -36,8 +40,8 @@ export async function getOpenLoanLogs(address: Address, borrower?: Address) {
       ...log.args,
       block: log.blockNumber,
       userAddress: log.args.borrower,
-      category: 'loan',
-      type: 'opening',
+      category: "loan",
+      type: "opening",
       txHash: log.transactionHash,
       txHashOpen: log.transactionHash,
     }
@@ -45,7 +49,7 @@ export async function getOpenLoanLogs(address: Address, borrower?: Address) {
 }
 
 //get all closed loans  logs (fully repaid) from a lending term contract
-export async function getCloseLoanLogs(address: Address) {
+export async function getCloseLoanLogs(address: Address, duration?: number) {
   const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber()
 
   const closeLogs = await getPublicClient(wagmiConfig).getLogs({
@@ -60,18 +64,18 @@ export async function getCloseLoanLogs(address: Address) {
         { type: "uint256", indexed: false, name: "debtRepaid" },
       ],
     },
-    fromBlock: BigInt(FROM_BLOCK),
+    fromBlock: duration ? currentBlock - BigInt(duration) : BigInt(FROM_BLOCK),
     toBlock: currentBlock,
   })
-  
+
   return closeLogs.map((log) => {
     return {
       termAddress: address,
       ...log.args,
       block: log.blockNumber,
       userAddress: log.address,
-      category: 'loan',
-      type: 'closing',
+      category: "loan",
+      type: "closing",
       txHash: log.transactionHash,
       txHashClose: log.transactionHash,
     }
@@ -106,7 +110,8 @@ export async function getCloseLoanLogsbyUser(address: Address, borrower: Address
   return closeLoansbyUser.map((log) => {
     return {
       ...log,
-      txHashClose: closeLogs.find((closeLog) => closeLog.loanId === log.loanId).txHashClose
+      txHashClose: closeLogs.find((closeLog) => closeLog.loanId === log.loanId)
+        .txHashClose,
     }
   })
 }

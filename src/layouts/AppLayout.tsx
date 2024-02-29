@@ -11,7 +11,6 @@ import { useAccount, useSwitchChain } from "wagmi"
 import { ToastContainer } from "react-toastify"
 import TermsConditionsModal from "components/modals/TermsConditionsModal"
 import { useAppStore } from "store"
-import { AlertMessage } from "components/message/AlertMessage"
 import { MdError } from "react-icons/md"
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

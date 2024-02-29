@@ -9,12 +9,12 @@ import {
 import CustomTable from "components/table/CustomTable"
 import moment from "moment"
 import { formatDecimal, toLocaleString } from "utils/numbers"
-import { MdArrowDownward, MdArrowUpward, MdOpenInNew } from "react-icons/md"
+import { MdArrowDownward, MdArrowUpward } from "react-icons/md"
 import { fromNow } from "utils/date"
 import { BLOCK_LENGTH_MILLISECONDS } from "utils/constants"
 import { MintRedeemLogs } from "lib/logs/mint-redeem"
 import { VoteLogs } from "lib/logs/votes"
-import { addSlash, camelCasetoString, shortenAddress, shortenUint } from "utils/strings"
+import { addSlash, camelCasetoString, shortenUint } from "utils/strings"
 import { getLastVoteEventDescription } from "../profile/helper"
 import { AddressBadge } from "components/badge/AddressBadge"
 import { Address } from "viem"
@@ -28,7 +28,7 @@ export const LastProtocolActivity = ({
   data,
   currentBlock,
 }: {
-  data: number[]
+  data: LastActivitiesLogs[]
   currentBlock: bigint
 }) => {
   const getDescription = (event: LastActivitiesLogs): any => {

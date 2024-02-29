@@ -2,20 +2,20 @@ import { Address } from "viem"
 
 export type LoansObj = {
   id: string
-  bidTime: number
-  borrowerAddress: string
+  borrower: Address
+  borrowRatio: number
   borrowAmount: number
-  callerAddress: string
+  borrowTime: number
+  collateral: string
+  borrowCreditMultiplier: number
+  callDebt: number
   callTime: number
   closeTime: number
   collateralAmount: number
-  debtWhenSeized?: number
-  lendingTermAddress: string
-  collateralAddress: string
-  status: string
-  originationTime: number
-  ltv: number
-  loanDebt?: bigint
+  interestRate: number
+  txHashOpen: string
+  txHashClose: string
+  termAddress: Address
 }
 
 export type loanObjCall = {
@@ -49,7 +49,7 @@ export type ProposedTerm = {
 
 export type LendingTerms = {
   address: Address
-  collateral : {
+  collateral: {
     symbol: string
     address: Address
     name: string
@@ -64,7 +64,7 @@ export type LendingTerms = {
   maxDebtPerCollateralToken: number
   minPartialRepayPercent: number
   maxDelayBetweenPartialRepay: number
-  status: 'deprecated' | 'live'
+  status: "deprecated" | "live"
   label: string
 }
 

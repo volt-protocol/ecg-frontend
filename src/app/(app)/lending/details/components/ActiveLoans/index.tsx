@@ -102,10 +102,11 @@ function ActiveLoans({
     }
 
     const fetchRepays = async () => {
-      const newRepays: Record<string, number> = {}
-      for (let loan of activeLoans) {
-        newRepays[loan.id] = await lastPartialRepay(loan.id)
-      }
+      const repaysPromises = activeLoans.map((loan) =>
+        lastPartialRepay(loan.id).then((partialRepay) => [loan.id, partialRepay])
+      )
+      const repaysResults = await Promise.all(repaysPromises)
+      const newRepays = Object.fromEntries(repaysResults)
       setRepays(newRepays)
     }
 
@@ -203,7 +204,7 @@ function ActiveLoans({
   }
 
   /* Smart Contract write functions */
-  async function call(loandId: string, collateralAmount: number) {
+  async function call(loandId: string) {
     const createSteps = (): Step[] => {
       const baseSteps = [{ name: "Call", status: "Not Started" }]
 

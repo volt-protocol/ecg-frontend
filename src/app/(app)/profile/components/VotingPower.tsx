@@ -117,7 +117,7 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
       for (const delegatee of data.creditDelegatees) {
         const result = await readContract(wagmiConfig, {
           address: contractsList.creditAddress,
-        abi: CreditABI,
+          abi: CreditABI,
           functionName: "delegatesVotesCount",
           args: [userAddress, delegatee],
         })
@@ -176,6 +176,15 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
               },
             },
           ],
+          colors: [
+            "#50bdae",
+            "#f7b924",
+            "#9966CC",
+            "#80BF80",
+            "#F28073",
+            "#B2CCE6",
+            "#800021",
+          ],
         },
       }
 
@@ -217,6 +226,15 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
                 },
               },
             },
+          ],
+          colors: [
+            "#50bdae",
+            "#f7b924",
+            "#9966CC",
+            "#80BF80",
+            "#F28073",
+            "#B2CCE6",
+            "#800021",
           ],
         },
       }

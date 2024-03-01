@@ -88,7 +88,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
 
     //logs are returned from oldest to newest
     const logs = await getPublicClient(wagmiConfig).getLogs({
-      address: process.env.NEXT_PUBLIC_OFFBOARD_GOVERNOR_GUILD_ADDRESS as Address,
+      address: contractsList.lendingTermOffboardingAddress as Address,
       event: {
         type: "event",
         name: "OffboardSupport",

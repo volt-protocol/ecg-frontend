@@ -22,6 +22,8 @@ export type ContractsList = {
   guildAddress: Address
   creditAddress: Address
   usdcAddress: Address
+  sdaiAddress: Address
+  wbtcAddress: Address
   profitManagerAddress: Address
   psmUsdcAddress: Address
   surplusGuildMinterAddress: Address
@@ -37,12 +39,10 @@ export const createContractsListSlice: StateCreator<ContractsListSlice> = (set, 
   contractsList: null,
   fetchContractsList: async (chainId: number): Promise<ContractsList> => {
     try {
-      if(!chainsConfig.find((chain) => chain.id == chainId)) {
+      if (!chainsConfig.find((chain) => chain.id == chainId)) {
         console.log("Chain not found")
-        return 
+        return
       }
-
-      console.log('feching contracts from', chainsConfig.find((chain) => chain.id == chainId).jsonUrl)
 
       const res: AxiosResponse<any, any> = await axios.get(
         chainsConfig.find((chain) => chain.id == chainId).jsonUrl
@@ -90,6 +90,8 @@ export const createContractsListSlice: StateCreator<ContractsListSlice> = (set, 
         guildAddress: res.data.find((contract) => contract.name === "ERC20_GUILD").addr,
         creditAddress: res.data.find((contract) => contract.name === "ERC20_GUSDC").addr,
         usdcAddress: res.data.find((contract) => contract.name === "ERC20_USDC").addr,
+        sdaiAddress: res.data.find((contract) => contract.name === "ERC20_SDAI").addr,
+        wbtcAddress: res.data.find((contract) => contract.name === "ERC20_WBTC").addr,
         profitManagerAddress: res.data.find(
           (contract) => contract.name === "PROFIT_MANAGER"
         ).addr,

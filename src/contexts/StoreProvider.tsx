@@ -7,7 +7,7 @@ import { useAppStore } from "store"
 const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   const {
     fetchLendingTerms,
-    fetchPrices,
+    fetchCoins,
     fetchHistoricalData,
     fetchContractsList,
     appChainId,
@@ -17,8 +17,8 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
 
   //Note: when several chains will be supported, reload the data when the appChainId changes
   useEffect(() => {
-    //fetch collateral prices
-    fetchPrices()
+    //fetch supported collateral coins prices and data
+    fetchCoins()
     //fetch historical data
     fetchHistoricalData()
 
@@ -33,7 +33,8 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
     asyncCall()
   }, [])
 
-  if (!contractsList || !lendingTerms) {
+  //make sure we have the contracts list before rendering the children
+  if (!contractsList) {
     return (
       <div className="absolute bottom-1/2 right-1/2 translate-x-1/2 translate-y-1/2 transform">
         <Spinner />

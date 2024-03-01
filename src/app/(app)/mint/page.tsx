@@ -17,6 +17,7 @@ import { Switch } from "@headlessui/react"
 import { formatUnits, Address, erc20Abi } from "viem"
 import { wagmiConfig } from "contexts/Web3Provider"
 import { useAppStore } from "store"
+import Spinner from "components/spinner"
 
 function MintAndSaving() {
   const { contractsList } = useAppStore()
@@ -140,6 +141,8 @@ function MintAndSaving() {
   if (!isConnected) {
     return <Disconnected />
   }
+
+  if (isLoading) return <Spinner />
 
   if (data) {
     return (

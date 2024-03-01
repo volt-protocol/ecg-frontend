@@ -73,7 +73,7 @@ function Veto({
 
     //logs are returned from oldest to newest
     const logs = await getPublicClient(wagmiConfig).getLogs({
-      address: process.env.NEXT_PUBLIC_ONBOARD_TIMELOCK_ADDRESS as Address,
+      address: contractsList.onboardTimelockAddress as Address,
       event: {
         type: "event",
         name: "CallScheduled",

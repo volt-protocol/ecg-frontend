@@ -226,17 +226,17 @@ export default function Create() {
                 options={[
                   {
                     symbol: "USDC",
-                    address: process.env.NEXT_PUBLIC_ERC20_USDC_ADDRESS as Address,
+                    address: contractsList.usdcAddress as Address,
                     decimals: 6,
                   },
                   {
                     symbol: "sDAI",
-                    address: process.env.NEXT_PUBLIC_ERC20_SDAI_ADDRESS as Address,
+                    address: contractsList.sdaiAddress as Address,
                     decimals: 18,
                   },
                   {
                     symbol: "WBTC",
-                    address: process.env.NEXT_PUBLIC_ERC20_WBTC_ADDRESS as Address,
+                    address: contractsList.wbtcAddress as Address,
                     decimals: 8,
                   },
                 ]}

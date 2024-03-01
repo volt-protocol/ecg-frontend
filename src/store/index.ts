@@ -4,9 +4,9 @@ import {
   createLendingTermsSlice,
 } from "./slices/lending-terms"
 import {
-  PairPricesSlice,
-  createPairPricesSlice,
-} from "./slices/pair-prices"
+  CoinDetailsSlice,
+  createCoinDetailsSlice,
+} from "./slices/coin-details"
 import {
   ContractsListSlice,
   createContractsListSlice,
@@ -21,13 +21,13 @@ import {
 } from "./slices/dashboard"
 import { persist } from "zustand/middleware"
 
-type StoreState = LendingTermsSlice & PairPricesSlice & AppSettingsSlice & DashboardSlice & ContractsListSlice
+type StoreState = LendingTermsSlice & CoinDetailsSlice & AppSettingsSlice & DashboardSlice & ContractsListSlice
 
 export const useAppStore = create<StoreState, any>(
   persist(
     (...a) => ({
       ...createLendingTermsSlice(...a),
-      ...createPairPricesSlice(...a),
+      ...createCoinDetailsSlice(...a),
       ...createAppSettingsSlice(...a),
       ...createDashboardSlice(...a),
       ...createContractsListSlice(...a),

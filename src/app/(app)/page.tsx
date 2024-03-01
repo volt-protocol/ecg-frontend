@@ -4,7 +4,7 @@ import { readContract } from "@wagmi/core"
 import { useReadContracts } from "wagmi"
 import { useAppStore } from "store"
 import { Abi, Address, formatUnits, erc20Abi } from "viem"
-import { coinsList } from "store/slices/pair-prices"
+import { coinsList } from "config"
 import { ProfitManagerABI, GuildABI, CreditABI, TermABI } from "lib/contracts"
 import { useEffect, useState } from "react"
 import { getActiveLoanLogs, getCloseLoanLogs, getOpenLoanLogs } from "lib/logs/loans"
@@ -85,8 +85,8 @@ const GlobalDashboard = () => {
       setLastActivites(lastActivities)
     }
 
-    !isLoading && data?.creditTotalSupply && asyncFunc()
-  }, [data])
+    !isLoading && data?.creditMultiplier && lendingTerms.length && asyncFunc()
+  }, [data, isLoading, lendingTerms])
 
   /**** Get Dashboard data ****/
   const getTotalActiveLoans = async () => {
@@ -263,10 +263,16 @@ const GlobalDashboard = () => {
       </div>
 
       <div className="my-3 grid grid-cols-1 gap-5 md:grid-cols-3">
-        <CreditTotalSupply
-          creditTotalIssuance={historicalData.creditTotalIssuance}
-          creditSupply={historicalData.creditSupply}
-        />
+        {!historicalData ? (
+          <div className="flex h-96 items-center justify-center">
+            <Spinner />
+          </div>
+        ) : (
+          <CreditTotalSupply
+            creditTotalIssuance={historicalData.creditTotalIssuance}
+            creditSupply={historicalData.creditSupply}
+          />
+        )}
         <Card
           title="Debt Ceiling"
           extra="w-full min-h-[300px] md:col-span-1 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
@@ -346,8 +352,13 @@ const GlobalDashboard = () => {
             />
           )}
         </Card>
-
-        <AverageInterestRate averageInterestRate={historicalData.averageInterestRate} />
+        {!historicalData ? (
+          <div className="flex h-96 items-center justify-center">
+            <Spinner />
+          </div>
+        ) : (
+          <AverageInterestRate averageInterestRate={historicalData.averageInterestRate} />
+        )}
       </div>
 
       <div className="mb-10 mt-3 flex">

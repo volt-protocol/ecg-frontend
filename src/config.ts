@@ -80,3 +80,37 @@ export const chainsConfig = [
     jsonUrl: "https://raw.githubusercontent.com/volt-protocol/ethereum-credit-guild/main/protocol-configuration/addresses.sepolia.json",
   }
 ]
+
+
+export type CoinProperties = {
+  nameECG: string
+  nameCG: string
+  logo: string
+  address: Address
+}
+
+export const coinsList: CoinProperties[] = [
+  // {
+  //   nameECG: "gUSDC",
+  //   nameCG: "geist-usdc",
+  //   logo: "/img/crypto-logos/usdc.png",
+  // },
+  {
+    nameECG: "USDC",
+    nameCG: "usd-coin",
+    logo: "/img/crypto-logos/usdc.png",
+    address: "0x7b8b4418990e4daf35f5c7f0165dc487b1963641",
+  },
+  {
+    nameECG: "sDAI",
+    nameCG: "savings-dai",
+    logo: "/img/crypto-logos/dai.png",
+    address: "0x9f07498d9f4903b10db57a3bd1d91b6b64aed61e",
+  },
+  {
+    nameECG: "WBTC",
+    nameCG: "bitcoin",
+    logo: "/img/crypto-logos/btc.png",
+    address: "0x1ced1eb530b5e71e6db9221a22c725e862fc0e60",
+  }
+]

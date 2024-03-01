@@ -12,7 +12,7 @@ import { AuctionHouseABI } from "lib/contracts"
 import { useAppStore } from "store"
 
 const Auctions = () => {
-  const { contractsList } = useAppStore()
+  const { contractsList, coinDetails } = useAppStore()
   const [auctions, setAuctions] = useState<Auction[]>([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState<boolean>(false)
@@ -44,13 +44,13 @@ const Auctions = () => {
   useEffect(() => {
     const getAuctions = async () => {
       setLoading(true)
-      const auctions = await getAllAuctions(contractsList)
+      const auctions = await getAllAuctions(contractsList, coinDetails)
       setAuctions(auctions)
       setLoading(false)
       setReload(false)
     }
-    reload && getAuctions()
-  }, [reload])
+    reload && contractsList && getAuctions()
+  }, [reload, contractsList])
 
   return (
     <>

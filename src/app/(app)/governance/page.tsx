@@ -9,6 +9,7 @@ import DelegateCredit from "./components/DelegateCredit"
 import OffboardTerm from "./components/OffboardTerm"
 import OnboardNewterm from "./components/OnboardNewTerm"
 import { useAppStore } from "store"
+import Spinner from "components/spinner"
 
 export type Delegatee = {
   address: string
@@ -93,6 +94,8 @@ function Governance() {
   if (!isConnected) {
     return <Disconnected />
   }
+
+  if (isLoading) return <Spinner />
 
   if (data) {
     return (

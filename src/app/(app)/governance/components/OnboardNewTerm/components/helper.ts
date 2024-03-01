@@ -113,7 +113,7 @@ export const getVotableTerms = async (contractsList: ContractsList) => {
   return votableTerms
 }
 
-export const checkVetoVoteValidity = (targets: Address[], datas: string[]): boolean => {
+export const checkVetoVoteValidity = (targets: Address[], datas: string[], contractsList: ContractsList): boolean => {
   //check if there are 3 calls scheduled
 
   if (targets.length != 4) {
@@ -122,13 +122,13 @@ export const checkVetoVoteValidity = (targets: Address[], datas: string[]): bool
 
   //check the targets
   if (
-    targets[0].toLowerCase() != process.env.NEXT_PUBLIC_ERC20_GUILD_ADDRESS.toLowerCase()
+    targets[0].toLowerCase() != contractsList.guildAddress.toLowerCase()
   ) {
     return false
   }
   if (
-    targets[1].toLowerCase() != process.env.NEXT_PUBLIC_CORE_ADDRESS.toLowerCase() &&
-    targets[2].toLowerCase() != process.env.NEXT_PUBLIC_CORE_ADDRESS.toLowerCase()
+    targets[1].toLowerCase() != contractsList.coreAddress.toLowerCase() &&
+    targets[2].toLowerCase() != contractsList.coreAddress.toLowerCase()
   ) {
     return false
   }

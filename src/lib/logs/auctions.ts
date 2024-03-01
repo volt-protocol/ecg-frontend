@@ -2,6 +2,7 @@ import { getPublicClient, getWalletClient } from "@wagmi/core"
 import { wagmiConfig } from "contexts/Web3Provider"
 import { AuctionHouseABI } from "lib/contracts"
 import getToken from "lib/getToken"
+import { CoinSettings } from "store/slices/coin-details"
 import { ContractsList } from "store/slices/contracts-list"
 import { FROM_BLOCK } from "utils/constants"
 import { Address } from "viem"
@@ -79,21 +80,26 @@ export async function getAuctionEndLogs(contractsList: ContractsList) {
   })
 }
 
-export async function getAllAuctions(contractsList: ContractsList): Promise<Auction[]> {
+export async function getAllAuctions(
+  contractsList: ContractsList,
+  coinDetails: CoinSettings[]
+): Promise<Auction[]> {
   const startLogs = await getAuctionStartLogs(contractsList)
   const endLogs = await getAuctionEndLogs(contractsList)
 
   const auctions = await Promise.all(
     startLogs.map(async (log) => {
-      const collateralTokenDetails = await getToken(log.collateralToken as Address)
+      const collateralTokenDetails = coinDetails.find(
+        (coin) => coin.address.toLowerCase() === log.collateralToken.toLowerCase()
+      )
 
       const auctionEndLog = endLogs.find((endLog) => endLog.loanId === log.loanId)
 
       return {
         ...log,
         txHashEnd: auctionEndLog ? auctionEndLog.txHashEnd : "",
-        collateralTokenDecimals: collateralTokenDetails[0].result,
-        collateralTokenSymbol: collateralTokenDetails[1].result,
+        collateralTokenDecimals: collateralTokenDetails.decimals,
+        collateralTokenSymbol: collateralTokenDetails.symbol,
         collateralSold: auctionEndLog ? auctionEndLog.collateralSold : BigInt(0),
         debtRecovered: auctionEndLog ? auctionEndLog.debtRecovered : BigInt(0),
         closed: auctionEndLog ? true : false,

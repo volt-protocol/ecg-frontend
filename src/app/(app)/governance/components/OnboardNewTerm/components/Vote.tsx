@@ -69,7 +69,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
 
     //logs are returned from oldest to newest
     const logs = await getPublicClient(wagmiConfig).getLogs({
-      address: process.env.NEXT_PUBLIC_ONBOARD_GOVERNOR_GUILD_ADDRESS as Address,
+      address: contractsList.onboardGovernorGuildAddress as Address,
       event: {
         type: "event",
         name: "ProposalCreated",
@@ -128,6 +128,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
     const activeVotes = await Promise.all(
       logs.map(async (log) => {
         //Get term name
+        console.log(log.args)
         const term = termsCreated.find(
           (term) =>
             term.termAddress.toLowerCase() ===

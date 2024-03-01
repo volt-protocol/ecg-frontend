@@ -113,7 +113,11 @@ export const getVotableTerms = async (contractsList: ContractsList) => {
   return votableTerms
 }
 
-export const checkVetoVoteValidity = (targets: Address[], datas: string[], contractsList: ContractsList): boolean => {
+export const checkVetoVoteValidity = (
+  contractsList: ContractsList,
+  targets: Address[],
+  datas: string[]
+): boolean => {
   //check if there are 3 calls scheduled
 
   if (targets.length != 4) {
@@ -121,9 +125,7 @@ export const checkVetoVoteValidity = (targets: Address[], datas: string[], contr
   }
 
   //check the targets
-  if (
-    targets[0].toLowerCase() != contractsList.guildAddress.toLowerCase()
-  ) {
+  if (targets[0].toLowerCase() != contractsList.guildAddress.toLowerCase()) {
     return false
   }
   if (
@@ -148,7 +150,10 @@ export const checkVetoVoteValidity = (targets: Address[], datas: string[], contr
   return true
 }
 
-export const getProposalIdFromActionId = (contractsList: ContractsList, actionId: string) => {
+export const getProposalIdFromActionId = (
+  contractsList: ContractsList,
+  actionId: string
+) => {
   return BigInt(
     keccak256(
       encodeAbiParameters(parseAbiParameters("address[], uint256[], bytes[], bytes32"), [

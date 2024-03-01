@@ -8,12 +8,8 @@ import {
   MdOutlineAnalytics,
   MdOutlineBalance,
   MdOutlineHandshake,
-  MdOutlineMonitor,
   MdOutlineSavings,
-  MdOutlineShowChart,
-  MdPerson,
   MdPersonOutline,
-  MdShowChart,
 } from "react-icons/md"
 
 const routes = [

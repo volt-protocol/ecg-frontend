@@ -119,7 +119,7 @@ function Veto({
           }
           return acc
         }, [] as { timelockId: string; targets: Address[]; datas: string[]; timestamp: number; onboardIn: number }[])
-        .filter((item) => checkVetoVoteValidity(item.targets, item.datas))
+        .filter((item) => checkVetoVoteValidity(contractsList, item.targets, item.datas))
         .map((item) => {
           //TODO : get term name decoding data[0]
           const { functionName, args } = decodeFunctionData({

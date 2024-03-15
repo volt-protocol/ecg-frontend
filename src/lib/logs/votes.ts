@@ -101,7 +101,7 @@ export async function getVotesGovernor(
         type: type,
         block: Number(log.blockNumber),
         vote:
-          log.args.support === 1 ? "against" : log.args.support === 1 ? "for" : "abstain",
+          log.args.support === 0 ? "against" : log.args.support === 1 ? "for" : "abstain",
         txHash: log.transactionHash as string,
       }
     })

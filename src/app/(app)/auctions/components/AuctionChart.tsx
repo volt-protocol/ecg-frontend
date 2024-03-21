@@ -6,7 +6,7 @@ export const AuctionChart = () => {
   const state = {
     series: [
       {
-        name: "Debit Asked",
+        name: "Debt Asked",
         data: [100, 100, 100, 100, 0, 0, 0],
       },
       {
@@ -38,7 +38,7 @@ export const AuctionChart = () => {
 
           return (
             "<ul class='custom-apex-tooltip'>" +
-            "<li><b>Debit Asked</b>: " +
+            "<li><b>Debt Asked</b>: " +
             dataDebit +
             "%" +
             "</li>" +

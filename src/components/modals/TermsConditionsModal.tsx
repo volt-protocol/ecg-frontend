@@ -76,7 +76,7 @@ export default function TermsConditionsModal() {
                           <a href="/risk-statement" target="_blank" className="font-medium text-brand-500">
                             Risk and Security agreement
                           </a>{" "}
-                          of Volt Protocol.
+                          of the Ethereum Credit Guild.
                         </label>
                       </div>
                     </div>
@@ -97,7 +97,7 @@ export default function TermsConditionsModal() {
                           <a href="/terms-conditions" target="_blank"  className="font-medium text-brand-500">
                             Terms and Conditions
                           </a>{" "}
-                          of Volt Protocol.
+                          of the Ethereum Credit Guild.
                         </label>
                       </div>
                     </div>

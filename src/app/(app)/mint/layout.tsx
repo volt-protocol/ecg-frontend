@@ -2,8 +2,8 @@ import React, { ReactNode } from 'react';
 import type { Metadata } from 'next'
  
 export const metadata: Metadata = {
-  title: 'Mint & Save | Volt Protocol',
-  description: '...',
+  title: 'Mint & Save | Ethereum Credit Guild',
+  description: 'Unlocking the Future of Finance',
 }
  
 

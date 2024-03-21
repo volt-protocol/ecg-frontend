@@ -2,8 +2,8 @@ import React, { ReactNode } from 'react';
 import type { Metadata } from 'next'
  
 export const metadata: Metadata = {
-  title: 'Terms & Conditions | Volt Protocol',
-  description: '...',
+  title: 'Terms & Conditions | Ethereum Credit Guild',
+  description: 'Unlocking the Future of Finance',
 }
  
 

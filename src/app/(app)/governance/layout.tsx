@@ -1,9 +1,10 @@
 import React, { ReactNode } from 'react';
 import type { Metadata } from 'next'
+import { TAB_DESCRIPTION, TAB_TITLE } from 'utils/constants';
  
 export const metadata: Metadata = {
-  title: 'Governance | Ethereum Credit Guild',
-  description: 'Unlocking the Future of Finance',
+  title: `Governance | ${TAB_TITLE}`,
+  description: TAB_DESCRIPTION,
 }
 
 export default function Layout({ children }: { children: ReactNode }) {

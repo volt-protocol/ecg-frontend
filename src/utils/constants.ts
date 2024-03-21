@@ -9,3 +9,6 @@ export const BLOCK_PER_WEEK = 50400 //average blocks per week
 export const BLOCK_PER_DAY = 7200 //average blocks per day
 export const BLOCK_PER_HOUR = 300 //average blocks per hour
 export const BLOCK_PER_MINUTE = 300 //average blocks per hour
+
+export const TAB_DESCRIPTION = 'Trust-minimized savings and credit system';
+export const TAB_TITLE = 'Ethereum Credit Guild';

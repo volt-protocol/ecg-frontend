@@ -31,6 +31,7 @@ import { CurrencyTypes } from "components/switch/ToggleCredit"
 import CustomTable from "components/table/CustomTable"
 import clsx from "clsx"
 import { useReadContracts } from "wagmi"
+import { eq } from "utils/strings"
 
 const columnHelper = createColumnHelper<loanObj>()
 
@@ -47,7 +48,7 @@ function ActiveLoans({
   reload: React.Dispatch<React.SetStateAction<boolean>>
   currencyType: CurrencyTypes
 }) {
-  const { prices, contractsList } = useAppStore()
+  const { coinDetails, contractsList } = useAppStore()
   const [collateralPrice, setCollateralPrice] = useState(0)
   const [pegPrice, setPegPrice] = useState(0)
   const [repays, setRepays] = useState<Record<string, number>>({})
@@ -118,16 +119,12 @@ function ActiveLoans({
 
   useEffect(() => {
     async function getCollateralPrice() {
-      const nameCG = coinsList.find(
-        (name) => name.nameECG === lendingTerm.collateral.symbol
-      )?.nameCG
-      const price = prices[nameCG].usd
+      const price = coinDetails.find(_ => eq(_.address,  lendingTerm.collateral.address)).price;
       setCollateralPrice(price)
     }
 
     async function getPegPrice() {
-      const nameCG = "usd-coin"
-      const price = prices[nameCG].usd
+      const price = coinDetails.find(_ => eq(_.address, contractsList.marketContracts[999999999].pegTokenAddress)).price;
       setPegPrice(price)
     }
 

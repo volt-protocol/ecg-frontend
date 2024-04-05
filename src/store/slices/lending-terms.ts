@@ -24,6 +24,9 @@ export const createLendingTermsSlice: StateCreator<LendingTermsSlice> = (set, ge
   fetchLendingTerms: async (contractsList: ContractsList) => {
     const apiUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL + `/markets/${999999999}/terms`
     const lendingTermsApiResponse = await HttpGet<LendingTermsResponse>(apiUrl);
-    set({ lendingTerms: lendingTermsApiResponse.terms, lastUpdatedTerms: lendingTermsApiResponse.updated })
+    set({
+          lendingTerms: lendingTermsApiResponse.terms, 
+          lastUpdatedTerms: lendingTermsApiResponse.updated 
+        })
   },
 })

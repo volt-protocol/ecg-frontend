@@ -30,7 +30,7 @@ import { GlobalStatCarts } from "./components/GlobalStatCarts"
 import { TVLChart } from "./components/TVLChart"
 
 const GlobalDashboard = () => {
-  const { lendingTerms, prices, historicalData, contractsList } = useAppStore()
+  const { lendingTerms, coinDetails, historicalData, contractsList } = useAppStore()
   const [totalActiveLoans, setTotalActiveLoans] = useState<number>()
   const [debtCeilingData, setDebtCeilingData] = useState([])
   const [collateralData, setCollateralData] = useState([])
@@ -49,7 +49,7 @@ const GlobalDashboard = () => {
         args: ["1"],
       },
       {
-        address: contractsList?.profitManagerAddress,
+        address: contractsList.marketContracts[999999999].profitManagerAddress,
         abi: ProfitManagerABI as Abi,
         functionName: "creditMultiplier",
       },
@@ -110,11 +110,7 @@ const GlobalDashboard = () => {
             args: [term.address],
           })
 
-          //get coin gecko name
-          const nameCG = coinsList.find(
-            (x) => x.nameECG === term.collateral.symbol
-          ).nameCG
-          const exchangeRate = prices[nameCG].usd
+          const exchangeRate = coinDetails.find(_ => _.address == term.collateral.address).price
 
           return {
             collateral: generateTermName(
@@ -156,7 +152,7 @@ const GlobalDashboard = () => {
 
   const getFirstLossCapital = async () => {
     const globalSurplusBuffer = await readContract(wagmiConfig, {
-      address: contractsList?.profitManagerAddress,
+      address: contractsList.marketContracts[999999999].profitManagerAddress,
       abi: ProfitManagerABI as Abi,
       functionName: "surplusBuffer",
     })
@@ -166,7 +162,7 @@ const GlobalDashboard = () => {
         .filter((term) => term.status == "live")
         .map(async (term) => {
           const termSurplusBuffer = await readContract(wagmiConfig, {
-            address: contractsList?.profitManagerAddress,
+            address: contractsList.marketContracts[999999999].profitManagerAddress,
             abi: ProfitManagerABI as Abi,
             functionName: "termSurplusBuffer",
             args: [term.address],

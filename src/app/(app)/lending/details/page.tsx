@@ -28,7 +28,7 @@ import { useAppStore } from "store"
 import { Tab } from "@headlessui/react"
 import clsx from "clsx"
 import { Abi, formatUnits, erc20Abi, Address } from "viem"
-import { generateTermName } from "utils/strings"
+import { eq, generateTermName } from "utils/strings"
 import { formatDecimal, toLocaleString } from "utils/numbers"
 import { coinsList } from "config"
 import { wagmiConfig } from "contexts/Web3Provider"
@@ -37,7 +37,7 @@ import { ToggleCredit } from "components/switch/ToggleCredit"
 
 const LendingDetails = () => {
   const { address, isConnected } = useAccount()
-  const { prices, lendingTerms, contractsList } = useAppStore()
+  const { coinDetails, lendingTerms, contractsList } = useAppStore()
   const searchParams = useSearchParams()
   const termAddress = searchParams.get("term")
   const [lendingTermData, setLendingTermData] = useState<LendingTerms>()
@@ -198,8 +198,10 @@ const LendingDetails = () => {
   //Coin gecko price fetching
   useEffect(() => {
     function getPegPrice() {
-      const nameCG = "usd-coin"
-      const price = prices[nameCG].usd
+      console.log(coinDetails);
+      console.log(contractsList);
+      const coin = coinDetails.find(_ => eq(_.address, contractsList.marketContracts[999999999].pegTokenAddress));
+      const price = coinDetails.find(_ => eq(_.address, contractsList.marketContracts[999999999].pegTokenAddress)).price;
       setPegPrice(price)
     }
 
@@ -207,7 +209,7 @@ const LendingDetails = () => {
       const nameCG = coinsList.find(
         (name) => name.nameECG === lendingTermData.collateral.symbol
       )?.nameCG
-      const price = prices[nameCG].usd
+      const price = coinDetails.find(_ => eq(_.address, lendingTermData.collateral.address)).price;
       setCollateralPrice(price)
     }
 

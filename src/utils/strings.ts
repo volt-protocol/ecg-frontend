@@ -11,6 +11,10 @@ export const generateTermName = (
   )}`
 }
 
+export function eq(str1: string, str2: string) {
+  return str1.toLowerCase() == str2.toLowerCase();
+}
+
 export const shortenUint = (string: string) => {
   return `${string.slice(0, 10)}...`
 }

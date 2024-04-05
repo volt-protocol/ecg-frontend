@@ -1,5 +1,5 @@
 // Libraries
-import { LendingTerms } from "types/lending"
+import { LendingTerms, LendingTermsResponse } from "types/lending"
 import { StateCreator } from "zustand"
 import { getTermsLogs } from "lib/logs/terms"
 import { Abi, Address, formatUnits } from "viem"
@@ -10,6 +10,7 @@ import { readContracts } from "@wagmi/core"
 import { coinsList } from "config"
 import { wagmiConfig } from "contexts/Web3Provider"
 import { ContractsList } from "./contracts-list"
+import { HttpGet } from "utils/HttpHelper"
 
 export interface LendingTermsSlice {
   lendingTerms: LendingTerms[]
@@ -21,66 +22,8 @@ export const createLendingTermsSlice: StateCreator<LendingTermsSlice> = (set, ge
   lendingTerms: [],
   lastUpdatedTerms: null,
   fetchLendingTerms: async (contractsList: ContractsList) => {
-    const termLogs = await getTermsLogs(contractsList)
-
-    const activeTermLogs = await Promise.all(
-      termLogs.map(async (log) => {
-        const collateralTokenDetails = await getToken(log.collateralToken as Address)
-
-        const data = await readContracts(wagmiConfig, {
-          contracts: [
-            {
-              address: log.term as Address,
-              abi: TermABI as Abi,
-              functionName: "issuance",
-            },
-            {
-              address: log.term as Address,
-              abi: TermABI as Abi,
-              functionName: "debtCeiling",
-            },
-          ],
-        })
-
-        //calcultaed borrow ratio without precision loss and taken into account collateral token decimals
-        const calculatedBorrowRatio: bigint =
-          BigInt(log.maxDebtPerCollateralToken) /
-          BigInt(10 ** (18 - Number(collateralTokenDetails[0].result)))
-
-        //calculate interest rate
-        const calculatedInterestRate = Number(
-          formatDecimal(Number(formatUnits(log.interestRate, 18)), 3)
-        )
-
-        return {
-          address: log.term,
-          collateral: {
-            address: log.collateralToken as Address,
-            name: collateralTokenDetails[2].result,
-            symbol: collateralTokenDetails[1].result,
-            logo: coinsList.find(
-              (item) => item.nameECG === collateralTokenDetails[1].result
-            )?.logo,
-            decimals: collateralTokenDetails[0].result,
-          },
-          interestRate: calculatedInterestRate,
-          borrowRatio: Number(formatUnits(calculatedBorrowRatio, 18)),
-          debtCeiling: Number(formatUnits(data[1].result as bigint, 18)),
-          currentDebt: Number(formatUnits(data[0].result as bigint, 18)),
-          openingFee: Number(formatUnits(log.openingFee, 18)),
-          maxDebtPerCollateralToken: Number(
-            formatUnits(log.maxDebtPerCollateralToken, 18)
-          ),
-          maxDelayBetweenPartialRepay: Number(log.maxDelayBetweenPartialRepay),
-          minPartialRepayPercent: formatDecimal(
-            Number(formatUnits(log.minPartialRepayPercent, 18)) * 100,
-            4
-          ),
-          status: log.status,
-        }
-      })
-    )
-
-    set({ lendingTerms: activeTermLogs, lastUpdatedTerms: Date.now() })
+    const apiUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL + `/markets/${999999999}/terms`
+    const lendingTermsApiResponse = await HttpGet<LendingTermsResponse>(apiUrl);
+    set({ lendingTerms: lendingTermsApiResponse.terms, lastUpdatedTerms: lendingTermsApiResponse.updated })
   },
 })

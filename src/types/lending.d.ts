@@ -69,10 +69,9 @@ export type LendingTerms = {
 }
 
 export interface LendingTermsResponse {
-  _id: string
-  key: string
-  lastUpdateTimestamp: number
-  lendingTerms: LendingTerms[]
+  updated: number,
+  updatedHuman: string,
+  terms: LendingTerms[]
 }
 
 export type userData = {

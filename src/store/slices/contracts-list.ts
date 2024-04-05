@@ -34,6 +34,7 @@ export type MarketContractList = {
   surplusGuildMinterAddress: Address
   daoVetoCreditAddress: Address
   onboardVetoCreditAddress: Address
+  lendingTerms: Address[]
 }
 
 export interface ContractsListSlice {
@@ -118,6 +119,7 @@ export const createContractsListSlice: StateCreator<ContractsListSlice> = (set, 
           onboardVetoCreditAddress: contractJsonFile.find((contract) => contract.name === `${marketId}_ONBOARD_VETO_CREDIT`).addr,
           profitManagerAddress: contractJsonFile.find((contract) => contract.name === `${marketId}_PROFIT_MANAGER`).addr,
           surplusGuildMinterAddress: contractJsonFile.find((contract) => contract.name === `${marketId}_SGM`).addr,
+          lendingTerms: contractJsonFile.filter((contract) => contract.name.startsWith(`${marketId}_TERM_`)).map(_ => _.addr),
         }
       }
 

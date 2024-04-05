@@ -131,5 +131,11 @@ export const coinsList: CoinProperties[] = [
     nameCG: "bitcoin",
     logo: "/img/crypto-logos/btc.png",
     address: "0x1ced1eb530b5e71e6db9221a22c725e862fc0e60",
+  },
+  {
+    nameECG: "WETH",
+    nameCG: "ethereum",
+    logo: "/img/crypto-logos/weth.png",
+    address: "0x1ced1eb530b5e71e6db9221a22c725e862fc0e60",
   }
 ]

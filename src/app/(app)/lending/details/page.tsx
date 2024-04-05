@@ -37,7 +37,7 @@ import { ToggleCredit } from "components/switch/ToggleCredit"
 
 const LendingDetails = () => {
   const { address, isConnected } = useAccount()
-  const { coinDetails, lendingTerms, contractsList } = useAppStore()
+  const { appMarketId, coinDetails, lendingTerms, contractsList } = useAppStore()
   const searchParams = useSearchParams()
   const termAddress = searchParams.get("term")
   const [lendingTermData, setLendingTermData] = useState<LendingTerms>()
@@ -198,17 +198,11 @@ const LendingDetails = () => {
   //Coin gecko price fetching
   useEffect(() => {
     function getPegPrice() {
-      console.log(coinDetails);
-      console.log(contractsList);
-      const coin = coinDetails.find(_ => eq(_.address, contractsList.marketContracts[999999999].pegTokenAddress));
-      const price = coinDetails.find(_ => eq(_.address, contractsList.marketContracts[999999999].pegTokenAddress)).price;
+      const price = coinDetails.find(_ => eq(_.address, contractsList.marketContracts[appMarketId].pegTokenAddress)).price;
       setPegPrice(price)
     }
 
     function getCollateralPrice() {
-      const nameCG = coinsList.find(
-        (name) => name.nameECG === lendingTermData.collateral.symbol
-      )?.nameCG
       const price = coinDetails.find(_ => eq(_.address, lendingTermData.collateral.address)).price;
       setCollateralPrice(price)
     }

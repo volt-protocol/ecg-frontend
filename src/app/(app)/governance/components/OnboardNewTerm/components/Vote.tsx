@@ -37,7 +37,7 @@ import { extractTermAddress } from "utils/strings"
 import { wagmiConfig } from "contexts/Web3Provider"
 
 function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
-  const { contractsList } = useAppStore()
+  const { appMarketId, contractsList } = useAppStore()
   const { address } = useAccount()
   const { fetchLendingTerms } = useAppStore()
   const [showModal, setShowModal] = useState(false)
@@ -380,7 +380,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
       )
       await fetchActiveOnboardingVotes()
       //fetch lending terms globally
-      await fetchLendingTerms(contractsList)
+      await fetchLendingTerms(appMarketId)
     } catch (e: any) {
       console.log(e)
       updateStepStatus(

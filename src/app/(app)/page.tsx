@@ -30,7 +30,7 @@ import { GlobalStatCarts } from "./components/GlobalStatCarts"
 import { TVLChart } from "./components/TVLChart"
 
 const GlobalDashboard = () => {
-  const { lendingTerms, coinDetails, historicalData, contractsList } = useAppStore()
+  const { appMarketId, lendingTerms, coinDetails, historicalData, contractsList } = useAppStore()
   const [totalActiveLoans, setTotalActiveLoans] = useState<number>()
   const [debtCeilingData, setDebtCeilingData] = useState([])
   const [collateralData, setCollateralData] = useState([])
@@ -49,7 +49,7 @@ const GlobalDashboard = () => {
         args: ["1"],
       },
       {
-        address: contractsList.marketContracts[999999999].profitManagerAddress,
+        address: contractsList.marketContracts[appMarketId].profitManagerAddress,
         abi: ProfitManagerABI as Abi,
         functionName: "creditMultiplier",
       },
@@ -152,7 +152,7 @@ const GlobalDashboard = () => {
 
   const getFirstLossCapital = async () => {
     const globalSurplusBuffer = await readContract(wagmiConfig, {
-      address: contractsList.marketContracts[999999999].profitManagerAddress,
+      address: contractsList.marketContracts[appMarketId].profitManagerAddress,
       abi: ProfitManagerABI as Abi,
       functionName: "surplusBuffer",
     })
@@ -162,7 +162,7 @@ const GlobalDashboard = () => {
         .filter((term) => term.status == "live")
         .map(async (term) => {
           const termSurplusBuffer = await readContract(wagmiConfig, {
-            address: contractsList.marketContracts[999999999].profitManagerAddress,
+            address: contractsList.marketContracts[appMarketId].profitManagerAddress,
             abi: ProfitManagerABI as Abi,
             functionName: "termSurplusBuffer",
             args: [term.address],

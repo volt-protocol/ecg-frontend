@@ -3,6 +3,7 @@ import { Address } from "viem"
 import { StateCreator } from "zustand"
 
 export interface AppSettingsSlice {
+  appMarketId: number
   appMarket: SupportedMarket
   appChainId: number
   searchFocused: boolean
@@ -17,13 +18,16 @@ export interface AppSettingsSlice {
 }
 
 export const createAppSettingsSlice: StateCreator<AppSettingsSlice> = (set, get) => ({
+  appMarketId: marketsConfig[0].marketId,
   appMarket: marketsConfig[0],
   appChainId: process.env.NEXT_PUBLIC_APP_ENV === "arbitrum" ? 42161 : process.env.NEXT_PUBLIC_APP_ENV === "production" ? 1 : 11155111,
   searchFocused: false,
   termsAccepted: false,
   searchHistory: [],
   setAppMarket: (market: SupportedMarket) => {
+    console.log(`SET APP MARKET ${market.marketId}`);
     set({ appMarket: market })
+    set({ appMarketId: market.marketId })
   },
   setAppChainId: (chainId: number) => {
     set({ appChainId: chainId })

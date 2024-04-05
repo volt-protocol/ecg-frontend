@@ -48,7 +48,7 @@ function ActiveLoans({
   reload: React.Dispatch<React.SetStateAction<boolean>>
   currencyType: CurrencyTypes
 }) {
-  const { coinDetails, contractsList } = useAppStore()
+  const { appMarketId, coinDetails, contractsList } = useAppStore()
   const [collateralPrice, setCollateralPrice] = useState(0)
   const [pegPrice, setPegPrice] = useState(0)
   const [repays, setRepays] = useState<Record<string, number>>({})
@@ -124,7 +124,7 @@ function ActiveLoans({
     }
 
     async function getPegPrice() {
-      const price = coinDetails.find(_ => eq(_.address, contractsList.marketContracts[999999999].pegTokenAddress)).price;
+      const price = coinDetails.find(_ => eq(_.address, contractsList.marketContracts[appMarketId].pegTokenAddress)).price;
       setPegPrice(price)
     }
 

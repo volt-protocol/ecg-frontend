@@ -64,8 +64,8 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
         <div className="mt-2 px-1">
           <DropdownSelect
             options={marketsConfig}
-            selectedOption={marketsConfig.find((market) => market.key === appMarket)}
-            onChange={(option) => setAppMarket(option.key)}
+            selectedOption={marketsConfig.find((market) => market.key === appMarket.key)}
+            onChange={(option) => setAppMarket(option)}
             getLabel={(option) => (
               <div className="flex items-center gap-1 text-sm">
                 <Image src={option.logo} width={25} height={25} alt={option.name} />

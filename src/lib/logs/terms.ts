@@ -118,19 +118,6 @@ export const getTermsProposedLogs = async (contractsList: ContractsList) => {
   return logs.map((log) => log.args)
 }
 
-//get a list of active terms addresses
-export const getLiveTermsAddresses = async (
-  contractsList: ContractsList
-): Promise<Address[]> => {
-  const apiUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL + `/markets/${999999999}/infos`
-  // const result = await readContract(wagmiConfig, {
-  //   address: contractsList.guildAddress,
-  //   abi: GuildABI as Abi,
-  //   functionName: "liveGauges",
-  // })
-  return result as Address[]
-}
-
 //get a list of deprecated terms addresses
 export const getDeprecatedTermAddresses = async (
   contractsList: ContractsList

@@ -1,7 +1,7 @@
 import { StateCreator } from "zustand"
-import axios, { AxiosResponse } from "axios"
 import { chainsConfig } from "config"
 import { Address } from "viem"
+import { HttpGet } from "utils/HttpHelper"
 
 // This is the type of the app contracts list
 export type ContractsList = {
@@ -9,30 +9,41 @@ export type ContractsList = {
   coreAddress: Address
   gatewayAddress: Address
   daoGovernorGuildAddress: Address
-  daoVetoCreditAddress: Address
   daoVetoGuildAddress: Address
   daoTimelockAddress: Address
   onboardGovernorGuildAddress: Address
-  onboardVetoCreditAddress: Address
   onboardVetoGuildAddress: Address
   onboardTimelockAddress: Address
   lendingTermOffboardingAddress: Address
   lendingTermV1ImplementationAddress: Address
   lendingTermFactoryAddress: Address
   guildAddress: Address
+  auctionHouseAddress: Address,
+  marketContracts: {[marketId: number]: MarketContractList}
+
+  // TODO, USE THEM
+  auctionHouseAddresses: Address[],
+  lendingTermImplementationAddresses: Address[]
+}
+
+export type MarketContractList = {
   creditAddress: Address
-  usdcAddress: Address
-  sdaiAddress: Address
-  wbtcAddress: Address
+  psmAddress: Address
   profitManagerAddress: Address
-  psmUsdcAddress: Address
+  pegTokenAddress: Address
   surplusGuildMinterAddress: Address
-  auctionHouseAddress: Address
+  daoVetoCreditAddress: Address
+  onboardVetoCreditAddress: Address
 }
 
 export interface ContractsListSlice {
   contractsList: ContractsList
   fetchContractsList: (chainId: number) => Promise<ContractsList>
+}
+
+interface ContractListJsonItem {
+  addr: Address,
+  name: string
 }
 
 export const createContractsListSlice: StateCreator<ContractsListSlice> = (set, get) => ({
@@ -44,66 +55,75 @@ export const createContractsListSlice: StateCreator<ContractsListSlice> = (set, 
         return
       }
 
-      const res: AxiosResponse<any, any> = await axios.get(
-        chainsConfig.find((chain) => chain.id == chainId).jsonUrl
-      )
+      const jsonUrl =  chainsConfig.find((chain) => chain.id == chainId).jsonUrl;
+      const contractJsonFile = await HttpGet<ContractListJsonItem[]>(jsonUrl);
 
       //map the json response to the contractsList
-      const list = {
-        uniswapRouterAddress: res.data.find(
+      const list: ContractsList = {
+        uniswapRouterAddress: contractJsonFile.find(
           (contract) => contract.name === "UNISWAP_ROUTER"
         ).addr,
-        coreAddress: res.data.find((contract) => contract.name === "CORE").addr,
-        gatewayAddress: res.data.find((contract) => contract.name === "GATEWAY").addr,
-        daoGovernorGuildAddress: res.data.find(
+        coreAddress: contractJsonFile.find((contract) => contract.name === "CORE").addr,
+        gatewayAddress: contractJsonFile.find((contract) => contract.name === "GATEWAY").addr,
+        daoGovernorGuildAddress: contractJsonFile.find(
           (contract) => contract.name === "DAO_GOVERNOR_GUILD"
         ).addr,
-        daoVetoCreditAddress: res.data.find(
-          (contract) => contract.name === "DAO_VETO_CREDIT"
-        ).addr,
-        daoVetoGuildAddress: res.data.find(
+        daoVetoGuildAddress: contractJsonFile.find(
           (contract) => contract.name === "DAO_VETO_GUILD"
         ).addr,
-        daoTimelockAddress: res.data.find((contract) => contract.name === "DAO_TIMELOCK")
+        daoTimelockAddress: contractJsonFile.find((contract) => contract.name === "DAO_TIMELOCK")
           .addr,
-        onboardGovernorGuildAddress: res.data.find(
+        onboardGovernorGuildAddress: contractJsonFile.find(
           (contract) => contract.name === "ONBOARD_GOVERNOR_GUILD"
         ).addr,
-        onboardVetoCreditAddress: res.data.find(
-          (contract) => contract.name === "ONBOARD_VETO_CREDIT"
-        ).addr,
-        onboardVetoGuildAddress: res.data.find(
+        onboardVetoGuildAddress: contractJsonFile.find(
           (contract) => contract.name === "ONBOARD_VETO_GUILD"
         ).addr,
-        onboardTimelockAddress: res.data.find(
+        onboardTimelockAddress: contractJsonFile.find(
           (contract) => contract.name === "ONBOARD_TIMELOCK"
         ).addr,
-        lendingTermOffboardingAddress: res.data.find(
+        lendingTermOffboardingAddress: contractJsonFile.find(
           (contract) => contract.name === "OFFBOARD_GOVERNOR_GUILD"
         ).addr,
-        lendingTermV1ImplementationAddress: res.data.find(
+        lendingTermV1ImplementationAddress: contractJsonFile.find(
           (contract) => contract.name === "LENDING_TERM_V1"
         ).addr,
-        lendingTermFactoryAddress: res.data.find(
+        lendingTermFactoryAddress: contractJsonFile.find(
           (contract) => contract.name === "LENDING_TERM_FACTORY"
         ).addr,
-        guildAddress: res.data.find((contract) => contract.name === "ERC20_GUILD").addr,
-        creditAddress: res.data.find((contract) => contract.name === "ERC20_GUSDC").addr,
-        usdcAddress: res.data.find((contract) => contract.name === "ERC20_USDC").addr,
-        sdaiAddress: res.data.find((contract) => contract.name === "ERC20_SDAI").addr,
-        wbtcAddress: res.data.find((contract) => contract.name === "ERC20_WBTC").addr,
-        profitManagerAddress: res.data.find(
-          (contract) => contract.name === "PROFIT_MANAGER"
+        guildAddress: contractJsonFile.find((contract) => contract.name === "ERC20_GUILD").addr,
+        auctionHouseAddress: contractJsonFile.find(
+          (contract) => contract.name === "AUCTION_HOUSE_12H"
         ).addr,
-        psmUsdcAddress: res.data.find((contract) => contract.name === "PSM_USDC").addr,
-        surplusGuildMinterAddress: res.data.find(
-          (contract) => contract.name === "SURPLUS_GUILD_MINTER"
-        ).addr,
-        auctionHouseAddress: res.data.find(
-          (contract) => contract.name === "AUCTION_HOUSE"
-        ).addr,
+        auctionHouseAddresses: contractJsonFile.filter(
+          (contract) => contract.name.startsWith("AUCTION_HOUSE_")).map(_ => _.addr),
+        lendingTermImplementationAddresses: contractJsonFile.filter(
+          (contract) => contract.name.startsWith("LENDING_TERM_")).map(_ => _.addr),
+          marketContracts: {}
       }
+
+
+      const creditRegex = /^[0-9]+_CREDIT$/gm
+      // extract all markets id from the "xxxxxxxxxxx_CREDIT" contracts
+      // example 999999999_CREDIT returns 999999999
+      const marketIds: number[]= contractJsonFile.filter(
+        (contract) => contract.name.match(creditRegex)).map(_ => Number(_.name.replace("_CREDIT", "")));
+
+      for(const marketId of marketIds) {
+        list.marketContracts[marketId] = {
+          creditAddress: contractJsonFile.find((contract) => contract.name === `${marketId}_CREDIT`).addr,
+          psmAddress: contractJsonFile.find((contract) => contract.name === `${marketId}_PSM`).addr,
+          pegTokenAddress: contractJsonFile.find((contract) => contract.name === `${marketId}_PEG_TOKEN`).addr,
+          daoVetoCreditAddress: contractJsonFile.find((contract) => contract.name === `${marketId}_DAO_VETO_CREDIT`).addr,
+          onboardVetoCreditAddress: contractJsonFile.find((contract) => contract.name === `${marketId}_ONBOARD_VETO_CREDIT`).addr,
+          profitManagerAddress: contractJsonFile.find((contract) => contract.name === `${marketId}_PROFIT_MANAGER`).addr,
+          surplusGuildMinterAddress: contractJsonFile.find((contract) => contract.name === `${marketId}_SGM`).addr,
+        }
+      }
+
       set({ contractsList: list })
+
+      console.log('fetchContractsList', JSON.stringify(list, null, 2));
       return list
     } catch (error) {
       console.error("Error fetching contracts list", error)

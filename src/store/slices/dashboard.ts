@@ -7,7 +7,7 @@ import { StateCreator } from "zustand"
 
 const getCreditSupply = async () => {
   const res: AxiosResponse<any, any> = await axios.get(
-    process.env.NEXT_PUBLIC_BACKEND_API_URL + `/history/CreditSupply`
+    process.env.NEXT_PUBLIC_BACKEND_API_URL + `/history/CreditSupply?marketId=999999999`
   )
   const formattedValues = res.data.values.map((item) => {
     return formatDecimal(Number(item), 0)
@@ -25,7 +25,7 @@ const getCreditSupply = async () => {
 
 const getCreditTotalIssuance = async () => {
   const res: AxiosResponse<any, any> = await axios.get(
-    process.env.NEXT_PUBLIC_BACKEND_API_URL + `/history/CreditTotalIssuance`
+    process.env.NEXT_PUBLIC_BACKEND_API_URL + `/history/CreditTotalIssuance?marketId=999999999`
   )
 
   const formattedValues = res.data.values.map((item) => {
@@ -44,7 +44,7 @@ const getCreditTotalIssuance = async () => {
 
 const getAverageInterestRate = async () => {
   const res: AxiosResponse<any, any> = await axios.get(
-    process.env.NEXT_PUBLIC_BACKEND_API_URL + `/history/AverageInterestRate`
+    process.env.NEXT_PUBLIC_BACKEND_API_URL + `/history/AverageInterestRate?marketId=999999999`
   )
 
   const formattedValues = res.data.values.map((item) => {
@@ -63,7 +63,7 @@ const getAverageInterestRate = async () => {
 
 const getTVL = async () => {
   const res: AxiosResponse<any, any> = await axios.get(
-    process.env.NEXT_PUBLIC_BACKEND_API_URL + `/history/TVL`
+    process.env.NEXT_PUBLIC_BACKEND_API_URL + `/history/TVL?marketId=999999999`
   )
 
   const formattedValues = res.data.values.map((item) => {

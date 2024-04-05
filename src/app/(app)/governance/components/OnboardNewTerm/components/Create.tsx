@@ -224,21 +224,21 @@ export default function Create() {
               /> */}
               <ComboSelect
                 options={[
-                  {
-                    symbol: "USDC",
-                    address: contractsList.usdcAddress as Address,
-                    decimals: 6,
-                  },
-                  {
-                    symbol: "sDAI",
-                    address: contractsList.sdaiAddress as Address,
-                    decimals: 18,
-                  },
-                  {
-                    symbol: "WBTC",
-                    address: contractsList.wbtcAddress as Address,
-                    decimals: 8,
-                  },
+                  // {
+                  //   symbol: "USDC",
+                  //   address: contractsList.usdcAddress as Address,
+                  //   decimals: 6,
+                  // },
+                  // {
+                  //   symbol: "sDAI",
+                  //   address: contractsList.sdaiAddress as Address,
+                  //   decimals: 18,
+                  // },
+                  // {
+                  //   symbol: "WBTC",
+                  //   address: contractsList.wbtcAddress as Address,
+                  //   decimals: 8,
+                  // },
                 ]}
                 selectedOption={collateralToken}
                 onChangeSelect={setCollateralToken}

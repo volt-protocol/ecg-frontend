@@ -52,25 +52,44 @@ export const permitConfig: PermitConfig[] = [
   },
 ]
 
+export type SupportedMarket = {
+  key: string,
+  name: string,
+  logo: string,
+  pegToken: string,
+  marketId: number,
+  networkId: number,
+}
+
 // set the available markets here
-export const marketsConfig = [
+export const marketsConfig: SupportedMarket[] = [
   {
-    key: "usdc",
-    name: "USDC",
+    key: "usdc-test",
+    pegToken: "USDC",
+    name: "USDC-test",
+    marketId: 999999999,
+    networkId: 42161,
     logo: "/img/crypto-logos/usdc.png",
   },
   {
-    key: "usdt",
-    name: "USDT",
-    logo: "/img/crypto-logos/usdt.png",
+    key: "weth-test",
+    pegToken: "WETH",
+    name: "WETH-test",
+    marketId: 999999998,
+    networkId: 42161,
+    logo: "/img/crypto-logos/weth.png",
   },
 ]
 
 // set the available contracts for each chain here
 /*
- * Note : Don't forget to add supported chains in app/contexts/Web3Provider.tsx
+ * Note : Don't forget to add supported chains in src/contexts/Web3Provider.tsx
  */
 export const chainsConfig = [
+  {
+    id: arbitrum.id,
+    jsonUrl: "https://raw.githubusercontent.com/volt-protocol/ethereum-credit-guild/feat/arbitrum-deployment/protocol-configuration/addresses.arbitrum.json",
+  },
   {
     id: mainnet.id,
     jsonUrl: "https://raw.githubusercontent.com/volt-protocol/ethereum-credit-guild/main/protocol-configuration/addresses.sepolia.json",

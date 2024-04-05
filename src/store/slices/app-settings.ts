@@ -1,7 +1,6 @@
+import { SupportedMarket, marketsConfig } from "config"
 import { Address } from "viem"
 import { StateCreator } from "zustand"
-
-export type SupportedMarket = "usdc" | "usdt"
 
 export interface AppSettingsSlice {
   appMarket: SupportedMarket
@@ -18,8 +17,8 @@ export interface AppSettingsSlice {
 }
 
 export const createAppSettingsSlice: StateCreator<AppSettingsSlice> = (set, get) => ({
-  appMarket: "usdc",
-  appChainId: process.env.NEXT_PUBLIC_APP_ENV === "production" ? 1 : 11155111,
+  appMarket: marketsConfig[0],
+  appChainId: process.env.NEXT_PUBLIC_APP_ENV === "arbitrum" ? 42161 : process.env.NEXT_PUBLIC_APP_ENV === "production" ? 1 : 11155111,
   searchFocused: false,
   termsAccepted: false,
   searchHistory: [],

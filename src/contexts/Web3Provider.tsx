@@ -18,9 +18,10 @@ const metadata = {
 
 //Add available chains here
 const chains =
-  process.env.NEXT_PUBLIC_APP_ENV === "production"
+  process.env.NEXT_PUBLIC_APP_ENV === "arbitrum" ? ([arbitrum] as const) 
+  : process.env.NEXT_PUBLIC_APP_ENV === "production"
     ? ([mainnet] as const)
-    : ([sepolia, arbitrumSepolia, optimismSepolia, polygonMumbai] as const)
+    : ([sepolia] as const)
     
 const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID
 
@@ -28,6 +29,7 @@ const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID
 export const wagmiConfig = createConfig({
   chains,
   transports: {
+    [arbitrum.id]: http(process.env.NEXT_PUBLIC_RPC_URL_ARBITRUM),
     [mainnet.id]: http(process.env.NEXT_PUBLIC_RPC_URL_ETHEREUM),
     [sepolia.id]: http(process.env.NEXT_PUBLIC_RPC_URL_SEPOLIA),
   },

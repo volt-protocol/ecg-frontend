@@ -19,10 +19,10 @@ export const formatDecimal = (value: number, decimals: number): string => {
 }
 
 export const formatCurrencyValue = (value: number): string => {
-  if (value === undefined) {
+  if (isNaN(value)) {
     // Gérez l'erreur ou retournez une valeur par défaut
-    console.error("La valeur est undefined")
-    return ""
+    //console.error("La valeur est undefined")
+    return ''
   }
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
   if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`

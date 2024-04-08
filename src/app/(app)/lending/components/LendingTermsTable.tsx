@@ -27,7 +27,7 @@ import { wagmiConfig } from "contexts/Web3Provider"
 import { useAppStore } from "store"
 
 export default function LendingTermsTable(props: { tableData: LendingTerms[] }) {
-  const { contractsList } = useAppStore()
+  const { appMarketId, contractsList, coinDetails } = useAppStore()
   const { tableData } = props
   const [sorting, setSorting] = React.useState<SortingState>([])
   const columnHelper = createColumnHelper<LendingTerms>()
@@ -48,13 +48,13 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
   } = useReadContracts({
     contracts: [
       {
-        address: contractsList.creditAddress,
+        address: contractsList?.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: "totalSupply",
         args: [],
       },
       {
-        address: contractsList?.profitManagerAddress,
+        address: contractsList?.marketContracts[appMarketId].profitManagerAddress,
         abi: ProfitManagerABI as Abi,
         functionName: "creditMultiplier",
       },
@@ -69,6 +69,8 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
     },
   })
   /* End Smart contract reads */
+
+  const pegTokenSymbol = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase())?.symbol;
 
   useEffect(() => {
     async function fetchDataForTerms() {
@@ -104,7 +106,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
           address: contractsList.guildAddress,
           abi: GuildABI,
           functionName: "totalTypeWeight",
-          args: [1],
+          args: [appMarketId],
         },
         {
           address: term.address as Address,
@@ -185,9 +187,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
       cell: (info: any) => (
         <div className="ml-3 text-center">
           <p className="text-sm font-bold text-gray-700 dark:text-white">
-            {toLocaleString(
-              formatDecimal(info.getValue() / contractData?.creditMultiplier, 2)
-            )}
+            {formatCurrencyValue(info.getValue() / contractData?.creditMultiplier)}
           </p>
         </div>
       ),
@@ -211,14 +211,22 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
                   <p>
                     Debt Ceiling:{" "}
                     <span className="font-semibold">
-                      {formatCurrencyValue(debtCeilling)}
+                      {formatCurrencyValue(debtCeilling * contractData?.creditMultiplier)}
+                    </span>
+                    {" "}
+                    <span className="text-sm font-medium text-gray-600 dark:text-white">
+                      {pegTokenSymbol}
                     </span>
                   </p>
                   <p>
                     Current Debt:{" "}
                     <span className="font-semibold">
                       {" "}
-                      {formatCurrencyValue(info.row.original.currentDebt)}
+                      {formatCurrencyValue(info.row.original.currentDebt * contractData?.creditMultiplier)}
+                    </span>
+                    {" "}
+                    <span className="text-sm font-medium text-gray-600 dark:text-white">
+                      {pegTokenSymbol}
                     </span>
                   </p>
                   <p>
@@ -227,9 +235,13 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
                       {" "}
                       {formatCurrencyValue(
                         debtCeilling - info.row.original.currentDebt > 0
-                          ? debtCeilling - info.row.original.currentDebt
+                          ? (debtCeilling - info.row.original.currentDebt) * contractData?.creditMultiplier
                           : 0
                       )}
+                    </span>
+                    {" "}
+                    <span className="text-sm font-medium text-gray-600 dark:text-white">
+                      {pegTokenSymbol}
                     </span>
                   </p>
                 </div>
@@ -274,9 +286,11 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
       cell: (info) => (
         <div className="flex items-center justify-center gap-1">
           <p className="ml-3 text-center text-sm font-bold text-gray-600 dark:text-white">
-            {toLocaleString(formatDecimal(info.getValue(), 2))}
+            {formatCurrencyValue(info.getValue() * contractData?.creditMultiplier)}
           </p>
-          <span className="text-sm font-medium text-gray-600 dark:text-white">gUSDC</span>
+          <span className="text-sm font-medium text-gray-600 dark:text-white">
+            {pegTokenSymbol}
+          </span>
         </div>
       ),
     }),
@@ -313,7 +327,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
         </div>
       ),
       cell: (info) => (
-        <p className="ml-3 text-center text-sm font-bold text-gray-600 dark:text-white">
+        <div className="ml-3 text-center text-sm font-bold text-gray-600 dark:text-white">
           {info.getValue() != 0 ? (
             <div className="flex items-center justify-center gap-1">
               Yes{" "}
@@ -355,7 +369,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
           ) : (
             "No"
           )}
-        </p>
+        </div>
       ),
     }),
     {
@@ -363,7 +377,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
       header: () => <></>,
       enableSorting: false,
       cell: (info) => (
-        <p className="text-center font-medium text-gray-600 dark:text-white">
+        <div className="text-center font-medium text-gray-600 dark:text-white">
           <Link href={`/lending/details?term=${info.row.original.address}`}>
             <button
               type="button"
@@ -372,7 +386,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
               Details
             </button>
           </Link>
-        </p>
+        </div>
       ),
     },
   ]

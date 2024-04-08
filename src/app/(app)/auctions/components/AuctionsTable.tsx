@@ -43,7 +43,7 @@ export default function AuctionsTable({
   setOpen: (arg: boolean) => void
   setReload: (arg: boolean) => void
 }) {
-  const { contractsList } = useAppStore()
+  const { contractsList, appMarketId } = useAppStore()
   const { isConnected } = useAccount()
   const columnHelper = createColumnHelper<Auction>()
   const [showModal, setShowModal] = useState(false)
@@ -167,7 +167,7 @@ export default function AuctionsTable({
       updateStepStatus(`Approve gUSDC`, "In Progress")
 
       const hash = await writeContract(wagmiConfig, {
-        address: contractsList?.creditAddress,
+        address: contractsList?.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: "approve",
         args: [auctionDetails.lendingTerm, auctionDetails.callDebt],

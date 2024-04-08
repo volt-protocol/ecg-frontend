@@ -71,13 +71,13 @@ const LendingDetails = () => {
         args: [address],
       },
       {
-        address: contractsList.creditAddress,
+        address: contractsList.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: "balanceOf",
         args: [address],
       },
       {
-        address: contractsList.creditAddress,
+        address: contractsList.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: "nonces",
         args: [address],
@@ -135,7 +135,7 @@ const LendingDetails = () => {
         args: [1],
       },
       {
-        address: contractsList.creditAddress,
+        address: contractsList.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: "totalSupply",
         args: [],

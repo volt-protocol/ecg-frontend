@@ -44,25 +44,25 @@ function Governance() {
         args: [address],
       },
       {
-        address: contractsList.creditAddress,
+        address: contractsList.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: "balanceOf",
         args: [address],
       },
       {
-        address: contractsList.creditAddress,
+        address: contractsList.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: "freeVotes",
         args: [address],
       },
       {
-        address: contractsList.creditAddress,
+        address: contractsList.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: "getVotes",
         args: [address],
       },
       {
-        address: contractsList.creditAddress,
+        address: contractsList.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: "delegateLockupPeriod",
       }

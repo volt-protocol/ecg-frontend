@@ -19,7 +19,8 @@ export const borrowWithLeverage = (
   permitDataCollateral: any | undefined,
   permitDatagUSDC: any,
   deadlineSwap: bigint,
-  contractsList: ContractsList
+  contractsList: ContractsList,
+  appMarketId: number,
 ) => {
   let calls = []
 
@@ -88,7 +89,7 @@ export const borrowWithLeverage = (
       abi: GatewayABI as Abi,
       functionName: "consumePermit",
       args: [
-        contractsList.creditAddress,
+        contractsList.marketContracts[appMarketId].creditAddress,
         debtAmount,
         permitDatagUSDC.deadline,
         permitDatagUSDC.v,
@@ -103,7 +104,7 @@ export const borrowWithLeverage = (
     encodeFunctionData({
       abi: GatewayABI as Abi,
       functionName: "consumeAllowance",
-      args: [contractsList.creditAddress, debtAmount],
+      args: [contractsList.marketContracts[appMarketId].creditAddress, debtAmount],
     })
   )
 
@@ -113,11 +114,11 @@ export const borrowWithLeverage = (
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        contractsList.creditAddress,
+        contractsList.marketContracts[appMarketId].creditAddress,
         encodeFunctionData({
           abi: erc20Abi as Abi,
           functionName: "approve",
-          args: [contractsList.psmUsdcAddress, debtAmount],
+          args: [contractsList.marketContracts[appMarketId].psmAddress, debtAmount],
         }),
       ],
     })
@@ -129,7 +130,7 @@ export const borrowWithLeverage = (
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        contractsList.psmUsdcAddress,
+        contractsList.marketContracts[appMarketId].psmAddress,
         encodeFunctionData({
           abi: PsmUsdcABI as Abi,
           functionName: "redeem",
@@ -146,7 +147,7 @@ export const borrowWithLeverage = (
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        contractsList.usdcAddress,
+        contractsList.marketContracts[appMarketId].pegTokenAddress,
         encodeFunctionData({
           abi: UsdcABI as Abi,
           functionName: "approve",
@@ -156,7 +157,7 @@ export const borrowWithLeverage = (
     })
   )
 
-  const path = [contractsList.usdcAddress, lendingTerm.collateral.address]
+  const path = [contractsList.marketContracts[appMarketId].pegTokenAddress, lendingTerm.collateral.address]
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
@@ -184,7 +185,7 @@ export const borrowWithLeverage = (
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        contractsList.usdcAddress,
+        contractsList.marketContracts[appMarketId].pegTokenAddress,
         encodeFunctionData({
           abi: UsdcABI as Abi,
           functionName: "approve",
@@ -198,7 +199,7 @@ export const borrowWithLeverage = (
     encodeFunctionData({
       abi: GatewayABI as Abi,
       functionName: "sweep",
-      args: [contractsList.usdcAddress],
+      args: [contractsList.marketContracts[appMarketId].pegTokenAddress],
     })
   )
 
@@ -245,7 +246,8 @@ export const getPullCollateralCalls = (
 export const getAllowBorrowedCreditCall = (
   debtAmount: bigint, //  borrowAmount + flashloanAmount in gUSDC
   permitDatagUSDC: any,
-  contractsList: ContractsList
+  contractsList: ContractsList,
+  appMarketId: number
 ) => {
   let calls = []
 
@@ -254,7 +256,7 @@ export const getAllowBorrowedCreditCall = (
       abi: GatewayABI as Abi,
       functionName: "consumePermit",
       args: [
-        contractsList.creditAddress,
+        contractsList.marketContracts[appMarketId].creditAddress,
         debtAmount,
         permitDatagUSDC.deadline,
         permitDatagUSDC.v,
@@ -342,7 +344,7 @@ export const getAllowBorrowedCreditCall = (
 //     updateStepStatus(`Sign Permit for gUSDC`, "In Progress")
 
 //     signatureGUSDC = await signPermit({
-//       contractAddress: contractsList.creditAddress as Address,
+//       contractAddress: contractsList.marketContracts[appMarketId].creditAddress as Address,
 //       erc20Name: "Ethereum Credit Guild - gUSDC",
 //       ownerAddress: address,
 //       spenderAddress: contractsList.gatewayAddress as Address,

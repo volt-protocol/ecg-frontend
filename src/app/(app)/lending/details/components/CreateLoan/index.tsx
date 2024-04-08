@@ -60,7 +60,7 @@ function CreateLoan({
   setReload: React.Dispatch<React.SetStateAction<boolean>>
   currencyType: CurrencyTypes
 }) {
-  const { contractsList } = useAppStore()
+  const { contractsList, appMarketId } = useAppStore()
   const { address } = useAccount()
   const [borrowAmount, setBorrowAmount] = useState<bigint>(BigInt(0))
   const [collateralAmount, setCollateralAmount] = useState<string>("")
@@ -499,7 +499,8 @@ function CreateLoan({
       const allowBorrowedCreditCall = getAllowBorrowedCreditCall(
         debtAmount,
         signatureGUSDC,
-        contractsList
+        contractsList,
+        appMarketId
       )
 
       const callsDescription = getMulticallsDecoded(

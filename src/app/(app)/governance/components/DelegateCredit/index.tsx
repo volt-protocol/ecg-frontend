@@ -48,7 +48,7 @@ function DelegateCredit({
   isConnected: boolean
   delegateLockupPeriod: bigint
 }) {
-  const { contractsList } = useAppStore()
+  const { contractsList, appMarketId } = useAppStore()
   const { address } = useAccount()
   const [value, setValue] = useState<string>("")
   const [showModal, setShowModal] = useState(false)
@@ -76,7 +76,7 @@ function DelegateCredit({
 
   async function getDelegatee(): Promise<string[]> {
     const result = await readContract(wagmiConfig, {
-      address: contractsList?.creditAddress,
+      address: contractsList.marketContracts[appMarketId].creditAddress,
       abi: CreditABI,
       functionName: "delegates",
       args: [userAddress],
@@ -88,7 +88,7 @@ function DelegateCredit({
     const tempDelegatees: Delegatee[] = []
     async function getDelegateeAndVotes(delegatee: string): Promise<void> {
       const result = await readContract(wagmiConfig, {
-        address: contractsList?.creditAddress,
+        address: contractsList.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: "delegatesVotesCount",
         args: [userAddress, delegatee],
@@ -137,7 +137,7 @@ function DelegateCredit({
       setShowModal(true)
       updateStepStatus("Delegate gUSDC", "In Progress")
       const hash = await writeContract(wagmiConfig, {
-        address: contractsList?.creditAddress,
+        address: contractsList.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: "incrementDelegation",
         args: [addressValue, parseEther(value.toString())],
@@ -176,7 +176,7 @@ function DelegateCredit({
       setShowModal(true)
       updateStepStatus("Undelegate gUSDC", "In Progress")
       const hash = await writeContract(wagmiConfig, {
-        address: contractsList?.creditAddress,
+        address: contractsList.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: "undelegate",
         args: [address, amount],

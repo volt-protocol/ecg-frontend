@@ -20,7 +20,7 @@ export const createCoinDetailsSlice: StateCreator<CoinDetailsSlice> = (set, get)
     const apiUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL + `/markets/${marketId}/tokens`
     const tokensReponse = await HttpGet<CoinSettings[]>(apiUrl);
 
-    console.log('tokensResponse', JSON.stringify(tokensReponse, null, 2));
+    // console.log('tokensResponse', JSON.stringify(tokensReponse, null, 2));
     set({ coinDetails: tokensReponse })
   },
 })

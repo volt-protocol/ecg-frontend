@@ -39,26 +39,30 @@ const GlobalDashboard = () => {
 
   const { data: currentBlock } = useBlockNumber()
 
+  const guildAddress = contractsList.guildAddress;
+  const profitManagerAddress = contractsList?.marketContracts[appMarketId].profitManagerAddress;
+  const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
   /* Read contracts */
   const { data, isError, isLoading } = useReadContracts({
     contracts: [
       {
-        address: contractsList.guildAddress,
+        address: guildAddress,
         abi: GuildABI,
         functionName: "totalTypeWeight",
-        args: ["1"],
+        args: [appMarketId],
       },
       {
-        address: contractsList.marketContracts[appMarketId].profitManagerAddress,
+        address: profitManagerAddress,
         abi: ProfitManagerABI as Abi,
         functionName: "creditMultiplier",
       },
       {
-        address: contractsList.creditAddress,
+        address: creditAddress,
         abi: CreditABI,
         functionName: "totalSupply",
       },
     ],
+    allowFailure: true,
     query: {
       select: (data) => {
         return {
@@ -69,6 +73,10 @@ const GlobalDashboard = () => {
       },
     },
   })
+
+  console.log({isLoading});
+  console.log('data 2', JSON.stringify(data, null, 2));
+
   /* End Read Contract data  */
 
   useEffect(() => {
@@ -83,9 +91,11 @@ const GlobalDashboard = () => {
       setFirstLossData(firstLossData)
       const lastActivities = await getLastActivities()
       setLastActivites(lastActivities)
+      console.log('hey')
     }
 
     !isLoading && data?.creditMultiplier && lendingTerms.length && asyncFunc()
+
   }, [data, isLoading, lendingTerms])
 
   /**** Get Dashboard data ****/

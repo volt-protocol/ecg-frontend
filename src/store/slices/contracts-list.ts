@@ -125,7 +125,7 @@ export const createContractsListSlice: StateCreator<ContractsListSlice> = (set, 
 
       set({ contractsList: list })
 
-      console.log('fetchContractsList', JSON.stringify(list, null, 2));
+      // console.log('fetchContractsList', JSON.stringify(list, null, 2));
       return list
     } catch (error) {
       console.error("Error fetching contracts list", error)

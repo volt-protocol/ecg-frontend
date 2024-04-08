@@ -17,7 +17,7 @@ import Progress from "components/progress"
 import { TooltipHorizon, QuestionMarkIcon } from "components/tooltip"
 import { CreditABI, GuildABI, ProfitManagerABI, TermABI } from "lib/contracts"
 import { readContracts } from "@wagmi/core"
-import { formatDecimal, formatNumberDecimal, formatCurrencyValue } from "utils/numbers"
+import { formatDecimal, formatCurrencyValue } from "utils/numbers"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { FaSort, FaSortDown, FaSortUp } from "react-icons/fa"
@@ -70,7 +70,8 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
   })
   /* End Smart contract reads */
 
-  const pegTokenSymbol = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase())?.symbol;
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const pegTokenSymbol = pegToken?.symbol;
 
   useEffect(() => {
     async function fetchDataForTerms() {
@@ -184,13 +185,66 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
           </a>
         </div>
       ),
-      cell: (info: any) => (
-        <div className="ml-3 text-center">
-          <p className="text-sm font-bold text-gray-700 dark:text-white">
-            {formatCurrencyValue(info.getValue() / contractData?.creditMultiplier)}
-          </p>
-        </div>
-      ),
+      cell: (info: any) => {
+        const collateralAddress = info.row.original.collateral.address.toLowerCase();
+        const collateralToken = coinDetails.find((item) => item.address.toLowerCase() === collateralAddress);
+        const priceRatio = pegToken.price / collateralToken.price;
+        const decimalsToDisplay = Math.max(Math.ceil(Math.log10(priceRatio * 100)), 0);
+        const ltv = info.row.original.borrowRatio * pegToken.price / collateralToken.price;
+
+        return (
+          <div>
+            <TooltipHorizon
+              extra=""
+              content={
+                <div className="text-gray-700 dark:text-white">
+                  <p>
+                    LTV (Loan-to-Value):{" "}
+                    <span className="font-semibold">
+                      {formatDecimal(100 * ltv, 1)}{"%"}
+                    </span>
+                  </p>
+                  <p>
+                    <br />
+                    Current {collateralToken.symbol} price:{" $"}
+                    <span className="font-semibold">
+                      {collateralToken.price}
+                    </span>
+                    <i>&nbsp;(DefiLlama)</i>
+                  </p>
+                  <p>
+                    Current {pegToken.symbol} price:{" $"}
+                    <span className="font-semibold">
+                      {pegToken.price}
+                    </span>
+                    <i>&nbsp;(DefiLlama)</i>
+                  </p>
+                  <p>
+                    <br />
+                    <i>
+                      Price info & LTV provided on this front-end for information only.<br />
+                      The set of lending terms and liquidation thresholds are not based<br />
+                      on real-time price feeds in the Ethereum Credit Guild.
+                    </i>
+                    <br />
+                    <i>
+                      LTV detail : {formatDecimal(info.getValue() / contractData?.creditMultiplier, decimalsToDisplay)} * {pegToken.price} / {collateralToken.price} = {formatDecimal(ltv, 3)}
+                    </i>
+                  </p>
+                </div>
+              }
+              trigger={
+                <div className="ml-3 text-center">
+                <p className="text-sm font-bold text-gray-700 dark:text-white">
+                  {formatDecimal(info.getValue() / contractData?.creditMultiplier, decimalsToDisplay)}
+                </p>
+              </div>
+              }
+              placement="top"
+            />
+          </div>
+        )
+      },
     }),
     {
       id: "usage",
@@ -309,7 +363,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
       ),
       cell: (info) => (
         <p className="ml-3 text-center text-sm font-bold text-gray-600 dark:text-white">
-          {formatNumberDecimal(info.getValue() * 100)}%
+          {formatDecimal(info.getValue() * 100, 2)}%
         </p>
       ),
     }),

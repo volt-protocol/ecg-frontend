@@ -135,7 +135,7 @@ export const getLiveTermsAddresses = async (contractsList: ContractsList): Promi
   const result = await readContract(wagmiConfig, {
     address: contractsList.guildAddress,
     abi: GuildABI as Abi,
-    functionName: "deprecatedGauges",
+    functionName: "gauges",
   })
 
   return result as Address[]

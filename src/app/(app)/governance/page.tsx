@@ -17,7 +17,7 @@ export type Delegatee = {
 }
 
 function Governance() {
-  const { contractsList } = useAppStore()
+  const { appMarketId, contractsList } = useAppStore()
   const { address, isConnected, isDisconnected } = useAccount()
   const [reloadGuild, setReloadGuild] = React.useState<boolean>(false)
   const [reloadCredit, setReloadCredit] = React.useState<boolean>(false)

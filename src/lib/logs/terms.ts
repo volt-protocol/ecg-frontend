@@ -131,6 +131,16 @@ export const getDeprecatedTermAddresses = async (
   return result as Address[]
 }
 
+export const getLiveTermsAddresses = async (contractsList: ContractsList): Promise<Address[]> => {
+  const result = await readContract(wagmiConfig, {
+    address: contractsList.guildAddress,
+    abi: GuildABI as Abi,
+    functionName: "deprecatedGauges",
+  })
+
+  return result as Address[]
+}
+
 //get propasable terms
 export const getProposableTermsLogs = async (contractsList: ContractsList) => {
   const termsCreatedLogs = await getTermsCreatedLogs(contractsList)

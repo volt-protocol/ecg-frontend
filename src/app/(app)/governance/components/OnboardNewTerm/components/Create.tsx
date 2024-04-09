@@ -1,8 +1,8 @@
 import DropdownSelect from "components/select/DropdownSelect"
 import StepModal from "components/stepLoader"
-import { use, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import ButtonPrimary from "components/button/ButtonPrimary"
-import { useForm, SubmitHandler, set } from "react-hook-form"
+import { useForm, SubmitHandler } from "react-hook-form"
 import { yupResolver } from "@hookform/resolvers/yup"
 import * as yup from "yup"
 import { ErrorMessage } from "components/message/ErrorMessage"
@@ -16,14 +16,12 @@ import { SECONDS_IN_YEAR } from "utils/constants"
 import { MdCheckCircle, MdClose } from "react-icons/md"
 import { formatNumberDecimal } from "utils/numbers"
 import getToken from "lib/getToken"
-import ComboSelect from "components/select/ComboSelect"
 import { wagmiConfig } from "contexts/Web3Provider"
 import { useAppStore } from "store"
 
 //Define form schema
 const schema = yup
   .object({
-    collateralToken: yup.string().length(42).matches(/^0x[A-Fa-f0-9]+$/i).required(),
     openingFee: yup.number().integer().max(10).required(),
     interestRate: yup.number().positive().max(100).required(),
     borrowRatio: yup.number().positive().required(),
@@ -57,7 +55,6 @@ export default function Create() {
     address: Address
     decimals: number
   }>({})
-  const [query, setQuery] = useState("")
 
   const createSteps = (): Step[] => {
     return [{ name: "Propose Offboarding", status: "Not Started" }]
@@ -224,10 +221,6 @@ export default function Create() {
             <div className="mt-2 sm:col-span-2 sm:mt-0">
               <div className="relative">
                 <input
-                  {...register("collateralToken", {
-                    required: true,
-                    pattern: /^0x[A-Fa-f0-9]+$/i,
-                  })}
                   value={collateralTokenAddressInput}
                   onChange={(e) => setCollateralTokenAddressInput(e.target.value)}
                   disabled={collateralTokenInputDisabled}
@@ -236,9 +229,7 @@ export default function Create() {
                   id="collateralToken"
                   placeholder="0xe44...7EeB"
                   className={clsx(
-                    collateralTokenInputDisabled ? 'pl-2 bg-gray-200 text-black-400 text-center cursor-not-allowed border border-gray-300 placeholder:text-gray-500' : formState.errors.collateralToken
-                      ? "ring-red-500"
-                      : "focus:ring-brand-400/80",
+                    collateralTokenInputDisabled ? 'pl-2 bg-gray-200 text-black-400 text-center cursor-not-allowed border border-gray-300 placeholder:text-gray-500' : "focus:ring-brand-400/80",
                     "sm:text-md block w-full rounded-md border-0 pr-8 pl-2 py-1.5 ring-1 ring-inset ring-gray-300 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:leading-6"
                   )}
                 />
@@ -253,60 +244,6 @@ export default function Create() {
                   </div>
                 )}
               </div>
-              {/* <ComboSelect
-                options={[
-                  // {
-                  //   symbol: "USDC",
-                  //   address: contractsList.usdcAddress as Address,
-                  //   decimals: 6,
-                  // },
-                  // {
-                  //   symbol: "sDAI",
-                  //   address: contractsList.sdaiAddress as Address,
-                  //   decimals: 18,
-                  // },
-                  // {
-                  //   symbol: "WBTC",
-                  //   address: contractsList.wbtcAddress as Address,
-                  //   decimals: 8,
-                  // },
-                ]}
-                selectedOption={collateralToken}
-                onChangeSelect={setCollateralToken}
-                onChangeQuery={setQuery}
-                query={query}
-                getLabel={(item) => {
-                  return `${item.symbol} - ${item.address}`
-                }}
-                extra={"w-full"}
-                placeholder="Select or type collateral token address"
-              /> */}
-              {/* <DropdownSelect
-                {...register("collateralToken")}
-                options={[
-                  {
-                    symbol: "USDC",
-                    address: "0xe9248437489bc542c68ac90e178f6ca3699c3f6b",
-                    decimals: 6,
-                  },
-                  {
-                    symbol: "sDAI",
-                    address: "0xeef0ab67262046d5bed00ce9c447e08d92b8da61",
-                    decimals: 18,
-                  },
-                  {
-                    symbol: "WBTC",
-                    address: "0xcffba3a25c3cc99a05443163c63209972bffd1c1",
-                    decimals: 8,
-                  },
-                ]}
-                selectedOption={collateralToken}
-                onChange={setCollateralToken}
-                getLabel={(item) => {
-                  return `${item.symbol} - ${item.address}`
-                }}
-                extra={"w-full"}
-              /> */}
             </div>
           </div>
           <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">

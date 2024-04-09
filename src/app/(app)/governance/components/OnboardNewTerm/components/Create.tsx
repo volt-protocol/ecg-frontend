@@ -2,7 +2,7 @@ import DropdownSelect from "components/select/DropdownSelect"
 import StepModal from "components/stepLoader"
 import { use, useEffect, useState } from "react"
 import ButtonPrimary from "components/button/ButtonPrimary"
-import { useForm, SubmitHandler } from "react-hook-form"
+import { useForm, SubmitHandler, set } from "react-hook-form"
 import { yupResolver } from "@hookform/resolvers/yup"
 import * as yup from "yup"
 import { ErrorMessage } from "components/message/ErrorMessage"
@@ -23,6 +23,7 @@ import { useAppStore } from "store"
 //Define form schema
 const schema = yup
   .object({
+    collateralToken: yup.string().length(42).matches(/^0x[A-Fa-f0-9]+$/i).required(),
     openingFee: yup.number().integer().max(10).required(),
     interestRate: yup.number().positive().max(100).required(),
     borrowRatio: yup.number().positive().required(),
@@ -49,6 +50,8 @@ export default function Create() {
   })
   const watchBorrowRatio = watch("borrowRatio")
   const watchInterestRate = watch("interestRate")
+  const [collateralTokenAddressInput, setCollateralTokenAddressInput] = useState<string>("");
+  const [collateralTokenInputDisabled, setCollateralTokenInputDisabled] = useState<boolean>(false);
   const [collateralToken, setCollateralToken] = useState<{
     symbol: string
     address: Address
@@ -62,12 +65,44 @@ export default function Create() {
 
   const [steps, setSteps] = useState<Step[]>(createSteps())
 
-  useEffect(() => {
-    if (query && query.length == 42 && query.match(/^0x[A-Fa-f0-9]+$/i)) {
-      getTokenDetails(query as Address)
-      setQuery("")
+  async function getTokenDetails(tokenAddress: Address): Promise<void> {
+    try {
+      const result = await getToken(tokenAddress)
+
+      if (result[0].status == "failure" || result[1].status == "failure") {
+        toastError("Collateral address is not a valid ERC20 token")
+        setCollateralToken({})
+        return
+      }
+
+      setCollateralToken({
+        symbol: result[1].result,
+        address: tokenAddress,
+        decimals: result[0].result,
+      })
+      setCollateralTokenAddressInput(result[1].result)
+      setCollateralTokenInputDisabled(true);
+      return result[1].result
+    } catch (e: any) {
+      setCollateralToken({})
+      toastError("Collateral address is not a valid ERC20 token")
     }
-  }, [query])
+  }
+
+  useEffect(() => {
+    async function checkCollateralToken() {
+      if (collateralTokenAddressInput.length == 42 && collateralTokenAddressInput.match(/^0x[A-Fa-f0-9]+$/i)) {
+        getTokenDetails(collateralTokenAddressInput as Address);
+      }
+    }
+    checkCollateralToken();
+  }, [collateralTokenAddressInput])
+
+  function enableCollateralTokenInput() {
+    setCollateralTokenInputDisabled(false)
+    setCollateralTokenAddressInput("")
+    setCollateralToken({})
+  }
 
   /* Form Validation */
   const onSubmit: SubmitHandler<any> = async (data) => {
@@ -114,26 +149,7 @@ export default function Create() {
   }
 
   /* Smart contract Write & Read */
-  const getTokenDetails = async (tokenAddress: Address): Promise<void> => {
-    try {
-      const result = await getToken(tokenAddress)
 
-      if (result[0].status == "failure" || result[1].status == "failure") {
-        toastError("Collateral address is not a valid ERC20 token")
-        setCollateralToken({})
-        return
-      }
-
-      setCollateralToken({
-        symbol: result[1].result,
-        address: tokenAddress,
-        decimals: result[0].result,
-      })
-    } catch (e: any) {
-      setCollateralToken({})
-      toastError("Collateral address is not a valid ERC20 token")
-    }
-  }
 
   const createTerm = async (args: any): Promise<void> => {
     //Init Steps
@@ -206,23 +222,38 @@ export default function Create() {
               )}
             </label>
             <div className="mt-2 sm:col-span-2 sm:mt-0">
-              {/* <input
-                {...register("collateralToken", {
-                  required: true,
-                  pattern: /^0x[A-Fa-f0-9]+$/i,
-                })}
-                type="text"
-                name="collateralToken"
-                id="collateralToken"
-                placeholder="0xe44...7EeB"
-                className={clsx(
-                  formState.errors.collateralToken
-                    ? "ring-red-500"
-                    : "focus:ring-brand-400/80",
-                  "sm:text-md block w-full rounded-md border-0 px-2 py-1.5 ring-1 ring-inset ring-gray-300 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:ring-2 focus:ring-inset  sm:leading-6"
+              <div className="relative">
+                <input
+                  {...register("collateralToken", {
+                    required: true,
+                    pattern: /^0x[A-Fa-f0-9]+$/i,
+                  })}
+                  value={collateralTokenAddressInput}
+                  onChange={(e) => setCollateralTokenAddressInput(e.target.value)}
+                  disabled={collateralTokenInputDisabled}
+                  type="text"
+                  name="collateralToken"
+                  id="collateralToken"
+                  placeholder="0xe44...7EeB"
+                  className={clsx(
+                    collateralTokenInputDisabled ? 'pl-2 bg-gray-200 text-black-400 text-center cursor-not-allowed border border-gray-300 placeholder:text-gray-500' : formState.errors.collateralToken
+                      ? "ring-red-500"
+                      : "focus:ring-brand-400/80",
+                    "sm:text-md block w-full rounded-md border-0 pr-8 pl-2 py-1.5 ring-1 ring-inset ring-gray-300 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:leading-6"
+                  )}
+                />
+                {collateralTokenInputDisabled && (
+                  <div
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+                    onClick={() => enableCollateralTokenInput()}
+                  >
+                    <svg className="h-4 w-4 text-red-500 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
                 )}
-              /> */}
-              <ComboSelect
+              </div>
+              {/* <ComboSelect
                 options={[
                   // {
                   //   symbol: "USDC",
@@ -249,7 +280,7 @@ export default function Create() {
                 }}
                 extra={"w-full"}
                 placeholder="Select or type collateral token address"
-              />
+              /> */}
               {/* <DropdownSelect
                 {...register("collateralToken")}
                 options={[
@@ -405,9 +436,8 @@ export default function Create() {
           <div className="mt-6 block w-full">
             <ButtonPrimary
               type="submit"
-              title={`Create New Term ${collateralToken.symbol}-${
-                watchInterestRate ? formatNumberDecimal(watchInterestRate) + "%" : "0.00"
-              }-${formatNumberDecimal(watchBorrowRatio)}`}
+              title={`Create New Term ${collateralToken.symbol ?? ''}${watchInterestRate ? '-' + formatNumberDecimal(watchInterestRate) + "%" : ""
+                }${watchBorrowRatio ? '-' + formatNumberDecimal(watchBorrowRatio) : ''}`}
               extra="w-full"
               disabled={!collateralToken.decimals || !formState.isValid}
             />

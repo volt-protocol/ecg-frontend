@@ -2,6 +2,7 @@ import { getPublicClient, readContract } from "@wagmi/core"
 import { wagmiConfig } from "contexts/Web3Provider"
 import { TermABI, GuildABI } from "lib/contracts"
 import { ContractsList } from "store/slices/contracts-list"
+import { LendingTerms } from "types/lending"
 import { FROM_BLOCK } from "utils/constants"
 import { extractTermAddress } from "utils/strings"
 import { Abi, Address } from "viem"
@@ -131,21 +132,11 @@ export const getDeprecatedTermAddresses = async (
   return result as Address[]
 }
 
-export const getLiveTermsAddresses = async (contractsList: ContractsList): Promise<Address[]> => {
-  const result = await readContract(wagmiConfig, {
-    address: contractsList.guildAddress,
-    abi: GuildABI as Abi,
-    functionName: "gauges",
-  })
-
-  return result as Address[]
-}
-
-//get propasable terms
-export const getProposableTermsLogs = async (contractsList: ContractsList) => {
+//get proposable terms
+export const getProposableTermsLogs = async (contractsList: ContractsList, lendingTerms: LendingTerms[]) => {
   const termsCreatedLogs = await getTermsCreatedLogs(contractsList)
   const termsProposedLogs = await getTermsProposedLogs(contractsList)
-  const liveTermsAddresses = await getLiveTermsAddresses(contractsList)
+  const liveTermsAddresses = lendingTerms.filter((_) => _.status === "live").map((_) => _.address)
 
   return termsCreatedLogs
     .filter((log) => !liveTermsAddresses.includes(log.term))
@@ -173,9 +164,9 @@ export const getVotableTermsLogs = async (contractsList: ContractsList) => {
   })
 }
 
-export const getTermsLogs = async (contractsList: ContractsList) => {
+export const getTermsLogs = async (contractsList: ContractsList, marketId: number) => {
   const terms = []
-  const liveTermsAddresses = await getLiveTermsAddresses(contractsList)
+  const liveTermsAddresses = contractsList.marketContracts[marketId].lendingTerms
   const deprecatedTerms = await getDeprecatedTermAddresses(contractsList)
 
   const allTermsAddresses = [...liveTermsAddresses, ...deprecatedTerms]

@@ -1,5 +1,7 @@
 import { Address, isAddress } from "viem"
 import { formatNumberDecimal } from "./numbers"
+import { ContractsList } from "store/slices/contracts-list";
+import { CoinSettings } from "store/slices/coin-details";
 
 export const generateTermName = (
   collateral: string,
@@ -9,6 +11,12 @@ export const generateTermName = (
   return `${collateral}-${(interestRate * 100).toFixed(1)}%-${formatNumberDecimal(
     borrowRatio
   )}`
+}
+
+export function getCreditTokenSymbol(coinDetails: CoinSettings[], appMarketId: number, contractsList: ContractsList) {
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  return creditTokenSymbol;
 }
 
 export function eq(str1: string, str2: string) {

@@ -209,7 +209,9 @@ const GlobalDashboard = () => {
 
     // last loan closing
     const lastMintRedeem = await getAllMintRedeemLogs(
+      appMarketId,
       contractsList,
+      coinDetails,
       undefined,
       BLOCK_PER_WEEK
     )

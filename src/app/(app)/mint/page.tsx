@@ -20,7 +20,7 @@ import { useAppStore } from "store"
 import Spinner from "components/spinner"
 
 function MintAndSaving() {
-  const { contractsList } = useAppStore()
+  const { appMarketId, contractsList } = useAppStore()
   const { address, isConnected } = useAccount()
   const [reload, setReload] = React.useState<boolean>(false)
   const [showModal, setShowModal] = useState(false)
@@ -32,40 +32,45 @@ function MintAndSaving() {
 
   const [steps, setSteps] = useState<Step[]>(createSteps())
 
+  const profitManagerAddress = contractsList?.marketContracts[appMarketId].profitManagerAddress;
+  const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
+  const pegTokenAddress = contractsList?.marketContracts[appMarketId].pegTokenAddress;
+  const psmAddress = contractsList?.marketContracts[appMarketId].psmAddress;
+
   /* Smart contract reads */
   const { data, isError, isLoading, refetch } = useReadContracts({
     contracts: [
       {
-        address: contractsList.usdcAddress,
+        address: pegTokenAddress,
         abi: erc20Abi,
         functionName: "balanceOf",
         args: [address],
       },
       {
-        address: contractsList?.creditAddress,
+        address: creditAddress,
         abi: CreditABI,
         functionName: "balanceOf",
         args: [address],
       },
       {
-        address: contractsList.profitManagerAddress,
+        address: profitManagerAddress,
         abi: ProfitManagerABI,
         functionName: "creditMultiplier",
       },
       {
-        address: contractsList.usdcAddress,
+        address: pegTokenAddress,
         abi: erc20Abi,
         functionName: "balanceOf",
-        args: [contractsList.psmUsdcAddress as Address],
+        args: [ psmAddress ],
       },
       {
-        address: contractsList?.creditAddress,
+        address: creditAddress,
         abi: CreditABI,
         functionName: "isRebasing",
         args: [address as Address],
       },
       {
-        address: contractsList.profitManagerAddress,
+        address: profitManagerAddress,
         abi: ProfitManagerABI,
         functionName: "getProfitSharingConfig",
       },
@@ -118,7 +123,7 @@ function MintAndSaving() {
       updateStepStatus("Rebasing", "In Progress")
 
       const hash = await writeContract(wagmiConfig, {
-        address: contractsList?.creditAddress,
+        address: contractsList?.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: rebaseMode,
       })

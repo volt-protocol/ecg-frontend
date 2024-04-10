@@ -29,6 +29,8 @@ const UserDashboard = () => {
   const searchParams = useSearchParams()
   const { address, isConnected } = useAccount()
   const {
+    appMarketId,
+    coinDetails,
     lendingTerms,
     addUserLoans,
     userData,
@@ -128,7 +130,7 @@ const UserDashboard = () => {
       addLastVotes(userAddress, lastVotes)
 
       //get last mints
-      lastMints = await getAllMintRedeemLogs(contractsList, userAddress)
+      lastMints = await getAllMintRedeemLogs(appMarketId, contractsList, coinDetails, userAddress)
       addLastMints(userAddress, lastMints)
     }
 

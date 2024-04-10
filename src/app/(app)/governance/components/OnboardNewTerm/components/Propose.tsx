@@ -30,7 +30,7 @@ export type ProposedTerm = {
 }
 
 export default function Propose() {
-  const { contractsList } = useAppStore()
+  const { contractsList, lendingTerms } = useAppStore()
   const { address } = useAccount()
   const [showModal, setShowModal] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(true)
@@ -83,7 +83,7 @@ export default function Propose() {
   const fetchProposableTerms = async () => {
     setLoading(true)
 
-    const terms = await getProposableTerms(contractsList)
+    const terms = await getProposableTerms(contractsList, lendingTerms)
 
     setLoading(false)
     setSelectedTerm(terms[0])

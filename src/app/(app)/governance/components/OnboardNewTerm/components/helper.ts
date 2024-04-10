@@ -1,5 +1,4 @@
-import { erc20Abi, Address } from "viem"
-import { getPublicClient, readContract } from "@wagmi/core"
+import { Address } from "viem"
 import { formatCurrencyValue, formatDecimal, formatNumberDecimal } from "utils/numbers"
 import {
   encodeAbiParameters,
@@ -17,10 +16,11 @@ import { OnboardTimelockABI } from "lib/contracts"
 import { getProposableTermsLogs, getVotableTermsLogs } from "lib/logs/terms"
 import getToken from "lib/getToken"
 import { ContractsList } from "store/slices/contracts-list"
+import { LendingTerms } from "types/lending"
 
 //get the newly created terms using TermCreated event from LendingTermOnboarding contract
-export const getProposableTerms = async (contractsList: ContractsList) => {
-  const proposableTermsLogs = await getProposableTermsLogs(contractsList)
+export const getProposableTerms = async (contractsList: ContractsList, lendingTerms: LendingTerms[]) => {
+  const proposableTermsLogs = await getProposableTermsLogs(contractsList, lendingTerms)
 
   const proposableTerms = await Promise.all(
     proposableTermsLogs.map(async (log) => {

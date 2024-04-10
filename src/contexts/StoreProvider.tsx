@@ -1,10 +1,11 @@
 "use client"
 
 import Spinner from "components/spinner"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useAppStore } from "store"
 
 const StoreProvider = ({ children }: { children: React.ReactNode }) => {
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const {
     fetchLendingTerms,
     fetchCoins,
@@ -17,17 +18,23 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
 
   //Note: when several chains will be supported, reload the data when the appChainId changes
   useEffect(() => {
-    //fetch supported collateral coins prices and data
-    fetchCoins(appMarketId)
-    //fetch historical data
-    fetchHistoricalData(appMarketId)
-    fetchContractsList(appChainId)
-    fetchLendingTerms(appMarketId)
+    const asyncFunc = async () => {
+      setIsLoading(true);
+      await Promise.all([
+        fetchCoins(appMarketId),
+        fetchHistoricalData(appMarketId),
+        fetchContractsList(appChainId),
+        fetchLendingTerms(appMarketId)
+      ]);
+      setIsLoading(false);
+    }
+
+    asyncFunc();
     
   }, [appMarketId, appChainId])
 
   //make sure we have the contracts list before rendering the children
-  if (!contractsList) {
+  if (isLoading) {
     return (
       <div className="absolute bottom-1/2 right-1/2 translate-x-1/2 translate-y-1/2 transform">
         <Spinner />

@@ -17,7 +17,7 @@ import Progress from "components/progress"
 import { TooltipHorizon, QuestionMarkIcon } from "components/tooltip"
 import { CreditABI, GuildABI, ProfitManagerABI, TermABI } from "lib/contracts"
 import { readContracts } from "@wagmi/core"
-import { formatDecimal, formatCurrencyValue } from "utils/numbers"
+import { formatDecimal } from "utils/numbers"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { FaSort, FaSortDown, FaSortUp } from "react-icons/fa"
@@ -72,6 +72,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
 
   const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
   const pegTokenSymbol = pegToken?.symbol;
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
 
   useEffect(() => {
     async function fetchDataForTerms() {
@@ -265,7 +266,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
                   <p>
                     Debt Ceiling:{" "}
                     <span className="font-semibold">
-                      {formatCurrencyValue(debtCeilling * contractData?.creditMultiplier)}
+                      {formatDecimal(debtCeilling * contractData?.creditMultiplier, pegTokenDecimalsToDisplay)}
                     </span>
                     {" "}
                     <span className="text-sm font-medium text-gray-600 dark:text-white">
@@ -276,7 +277,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
                     Current Debt:{" "}
                     <span className="font-semibold">
                       {" "}
-                      {formatCurrencyValue(info.row.original.currentDebt * contractData?.creditMultiplier)}
+                      {formatDecimal(info.row.original.currentDebt * contractData?.creditMultiplier, pegTokenDecimalsToDisplay)}
                     </span>
                     {" "}
                     <span className="text-sm font-medium text-gray-600 dark:text-white">
@@ -287,10 +288,11 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
                     Available Debt:{" "}
                     <span className="font-semibold">
                       {" "}
-                      {formatCurrencyValue(
+                      {formatDecimal(
                         debtCeilling - info.row.original.currentDebt > 0
                           ? (debtCeilling - info.row.original.currentDebt) * contractData?.creditMultiplier
-                          : 0
+                          : 0,
+                        pegTokenDecimalsToDisplay
                       )}
                     </span>
                     {" "}
@@ -312,6 +314,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
                           : (info.row.original.currentDebt / debtCeilling) * 100
                         : 0
                     }
+                    max={debtCeilling}
                   />
                   <div className="ml-1">
                     <QuestionMarkIcon />
@@ -340,7 +343,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
       cell: (info) => (
         <div className="flex items-center justify-center gap-1">
           <p className="ml-3 text-center text-sm font-bold text-gray-600 dark:text-white">
-            {formatCurrencyValue(info.getValue() * contractData?.creditMultiplier)}
+            {formatDecimal(info.getValue() * contractData?.creditMultiplier, pegTokenDecimalsToDisplay)}
           </p>
           <span className="text-sm font-medium text-gray-600 dark:text-white">
             {pegTokenSymbol}

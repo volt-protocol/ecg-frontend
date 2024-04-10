@@ -36,14 +36,17 @@ import {
 import { CurrencyTypes } from "components/switch/ToggleCredit"
 import { toastError } from "components/toast"
 import { useAppStore } from "store"
+import { marketsConfig } from "config"
+import { secondsToAppropriateUnit } from "utils/date"
+import { QuestionMarkIcon, TooltipHorizon } from "components/tooltip"
 
 function CreateLoan({
   lendingTerm,
   availableDebt,
   creditMultiplier,
   creditBalance,
-  usdcBalance,
-  gusdcNonces,
+  pegTokenBalance,
+  creditTokenNonces,
   minBorrow,
   setReload,
   reload,
@@ -53,14 +56,14 @@ function CreateLoan({
   availableDebt: number
   creditMultiplier: bigint
   creditBalance: bigint
-  usdcBalance: bigint
-  gusdcNonces: bigint
+  pegTokenBalance: bigint
+  creditTokenNonces: bigint
   minBorrow: number
   reload: boolean
   setReload: React.Dispatch<React.SetStateAction<boolean>>
   currencyType: CurrencyTypes
 }) {
-  const { contractsList, appMarketId } = useAppStore()
+  const { contractsList, coinDetails, appMarketId } = useAppStore()
   const { address } = useAccount()
   const [borrowAmount, setBorrowAmount] = useState<bigint>(BigInt(0))
   const [collateralAmount, setCollateralAmount] = useState<string>("")
@@ -204,7 +207,9 @@ function CreateLoan({
       })
 
       if (checkBorrow.status === "success") {
-        setReload(true)
+        setTimeout(function() {
+          setReload(true);
+        }, 5000);
         setBorrowAmount(BigInt(0))
         setCollateralAmount("")
         updateStepStatus("Borrow", "Success")
@@ -314,7 +319,7 @@ function CreateLoan({
         spenderAddress: contractsList.gatewayAddress as Address,
         value: borrowAmount,
         deadline: BigInt(Number(moment().add(10, "seconds"))),
-        nonce: gusdcNonces,
+        nonce: creditTokenNonces,
         chainId: wagmiConfig.chains[0].id,
         permitVersion: "1",
       })
@@ -357,7 +362,9 @@ function CreateLoan({
       })
 
       if (checkBorrow.status === "success") {
-        setReload(true)
+        setTimeout(function() {
+          setReload(true);
+        }, 5000);
         setBorrowAmount(BigInt(0))
         setCollateralAmount("")
         updateStepStatus("Borrow (Multicall)", "Success")
@@ -472,7 +479,7 @@ function CreateLoan({
         spenderAddress: contractsList.gatewayAddress as Address,
         value: debtAmount,
         deadline: BigInt(Number(moment().add(10, "seconds"))),
-        nonce: gusdcNonces,
+        nonce: creditTokenNonces,
         chainId: wagmiConfig.chains[0].id,
         permitVersion: "1",
       })
@@ -553,7 +560,9 @@ function CreateLoan({
       })
 
       if (checkBorrow.status === "success") {
-        setReload(true)
+        setTimeout(function() {
+          setReload(true);
+        }, 5000);
         setBorrowAmount(BigInt(0))
         setCollateralAmount("")
         updateStepStatus("Borrow with Leverage (Multicall)", "Success")
@@ -600,18 +609,22 @@ function CreateLoan({
 
   const setMax = () => {
     //max borrow of gUSDC given the collateral amount in wallet
-    const maxBorrow =
+    /*const maxBorrow =
       (Number(data?.collateralBalance) * lendingTerm.borrowRatio) /
       Number(formatUnits(creditMultiplier, 18))
 
-    setCollateralAmount(
+    console.log('maxBorrow', maxBorrow);*/
+
+    setCollateralAmount(data?.collateralBalance.toString());
+
+    /*setCollateralAmount(
       maxBorrow < availableDebt
         ? data?.collateralBalance.toString()
         : (
             (availableDebt / lendingTerm.borrowRatio) *
             Number(formatUnits(creditMultiplier, 18))
           ).toString()
-    )
+    )*/
   }
 
   async function getMinToRepay() {
@@ -624,13 +637,21 @@ function CreateLoan({
   }
 
   const getBorrowFunction = () => {
-    currencyType == "USDC"
+    currencyType == "pegToken"
       ? withLeverage && leverageValue > 0
         ? borrowGatewayLeverage()
         : borrowGateway()
       : borrow()
   }
   /* End Handlers and getters */
+
+  const collateralToken = coinDetails.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase());
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+  console.log('pegTokenDecimalsToDisplay', pegTokenDecimalsToDisplay);
+  const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
 
   return (
     <>
@@ -649,55 +670,63 @@ function CreateLoan({
             inputSize="text-2xl xl:text-3xl"
             value={collateralAmount}
             onChange={handleCollateralChange}
+            leftLabel={
+              <span className="text-sm font-medium text-gray-400 dark:text-gray-700">
+                ≈ ${formatDecimal(collateralToken.price * Number(collateralAmount), 2)}
+              </span>
+            }
             rightLabel={
-              <>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <span style={{'whiteSpace':'nowrap'}}>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Available:{" "}
-                  {toLocaleString(formatDecimal(Number(data?.collateralBalance), 2))}
-                </p>
+                  {formatDecimal(Number(data?.collateralBalance), pegTokenDecimalsToDisplay)}
+                </span>
+                {" "}
                 <button
                   className="text-sm font-medium text-brand-500 hover:text-brand-400"
                   onClick={(e) => setMax()}
                 >
                   Max
                 </button>
-              </>
+              </span>
             }
           />
 
           <DefiInputBox
             disabled={true}
-            topLabel={`Amount of ${currencyType} to borrow`}
-            currencyLogo={
-              currencyType == "USDC"
-                ? "/img/crypto-logos/usdc.png"
-                : "/img/crypto-logos/credit.png"
-            }
-            currencySymbol={currencyType}
+            topLabel={`Amount of ${currencyType == 'pegToken' ? pegToken.symbol : creditTokenSymbol} to borrow`}
+            currencyLogo={pegTokenLogo}
+            currencyLogoStyle={currencyType == 'pegToken' ? {} : {'borderRadius':'50%','border':'3px solid #3e6b7d'}}
+            currencySymbol={currencyType == 'pegToken' ? pegToken.symbol : creditTokenSymbol}
             placeholder="0"
             pattern="[0-9]*\.[0-9]"
             inputSize="text-2xl xl:text-3xl"
             // value={formatUnits(borrowAmount * creditMultiplier, 18)} //display amount borrowed in USDC
             value={
-              currencyType == "USDC"
+              currencyType == "pegToken"
                 ? formatDecimal(
                     Number(formatUnits(borrowAmount + flashLoanBorrowAmount, 18)) *
                       Number(formatUnits(creditMultiplier, 18)),
-                    2
+                      creditTokenDecimalsToDisplay
                   )
-                : formatDecimal(Number(formatUnits(borrowAmount, 18)), 2)
+                : formatDecimal(Number(formatUnits(borrowAmount, 18)), creditTokenDecimalsToDisplay)
+            }
+            leftLabel={
+              currencyType == "pegToken"
+                ? <span className="text-sm font-medium text-gray-400 dark:text-gray-700">
+                  ≈ ${formatDecimal(pegToken.price * Number(formatUnits(borrowAmount + flashLoanBorrowAmount, 18)) *
+                      Number(formatUnits(creditMultiplier, 18)), 2)}
+                </span> : <span className="text-sm font-medium text-gray-400 dark:text-gray-700">
+                  ≈ ${formatDecimal(pegToken.price * Number(formatUnits(borrowAmount, 18)) * Number(formatUnits(creditMultiplier, 18)), 2)}
+                </span>
             }
             rightLabel={
               <>
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Balance:{" "}
-                  {currencyType == "USDC"
-                    ? toLocaleString(
-                        formatDecimal(Number(formatUnits(usdcBalance, 6)), 2)
-                      )
-                    : toLocaleString(
-                        formatDecimal(Number(formatUnits(creditBalance, 18)), 2)
-                      )}
+                  {currencyType == "pegToken"
+                    ? formatDecimal(Number(formatUnits(pegTokenBalance, pegToken.decimals)), creditTokenDecimalsToDisplay)
+                    : formatDecimal(Number(formatUnits(creditBalance, 18)), creditTokenDecimalsToDisplay)}
                 </p>
               </>
             }
@@ -721,11 +750,49 @@ function CreateLoan({
                   setLeverageValue(1)
                 }}
               />
+              { overCollateralizationValue == 0 ? <AlertMessage
+                type="warning"
+                message={
+                  <span>
+                    Your loan might be called instantly
+                  </span>
+                }
+              /> : <div className="mt-4">
+                <AlertMessage
+                  type="info"
+                  message={
+                    <TooltipHorizon
+                      extra=""
+                      content={
+                        <div className="w-[20rem] p-2">
+                          <p>
+                            With interests accruing at {formatDecimal(100 * lendingTerm.interestRate, 2)} % APR, and an overcollateralization of {overCollateralizationValue}%, the interests will make your position go above the max borrow ratio after {secondsToAppropriateUnit(Math.floor((overCollateralizationValue/100 - 1) / lendingTerm.interestRate * 365.25 * 3600 * 24))}.
+                          </p>
+                          <p className="mt-3">
+                            When your loan is above the max borrow ratio, it might be called at any time.
+                          </p>
+                          <p className="mt-3">
+                            You can add collateral or do a partial repay at any time to improve your borrow ratio.
+                          </p>
+                        </div>
+                      }
+                      trigger={
+                        <span>
+                          Runway before call : <strong>
+                            {secondsToAppropriateUnit(Math.floor((overCollateralizationValue/100 - 1) / lendingTerm.interestRate * 365.25 * 3600 * 24))}
+                          </strong>
+                        </span>
+                      }
+                      placement="top"
+                    />
+                  }
+                />
+              </div> }
             </div>
 
             {lendingTermConfig.find((item) => item.termAddress === lendingTerm.address)
               ?.hasLeverage &&
-              currencyType == "USDC" && (
+              currencyType == "pegToken" && (
                 <div className="mt w-full px-5">
                   <RangeSlider
                     withSwitch={true}
@@ -783,13 +850,13 @@ function CreateLoan({
                 <p className="">
                   Minimum borrow is{" "}
                   <strong>
-                    {currencyType == "USDC"
-                      ? formatCurrencyValue(
+                    {currencyType == "pegToken"
+                      ? formatDecimal((
                           minBorrow * Number(formatUnits(creditMultiplier, 18))
-                        )
-                      : formatCurrencyValue(minBorrow)}
+                        ), pegTokenDecimalsToDisplay)
+                      : formatDecimal(minBorrow, pegTokenDecimalsToDisplay)}
                   </strong>{" "}
-                  {currencyType}
+                  {currencyType == 'pegToken' ? pegToken.symbol : creditTokenSymbol}
                 </p>
               }
             />
@@ -809,7 +876,7 @@ function CreateLoan({
                           2
                         )
                       )}{" "}
-                      gUSDC{" "}
+                      {creditTokenSymbol}{" "}
                     </span>{" "}
                     of interest will accrue instantly after opening the loan.
                   </p>
@@ -823,7 +890,7 @@ function CreateLoan({
                 message={
                   <p className="">
                     You will have to repay{" "}
-                    <strong>{formatDecimal(Number(minToRepay), 2)}</strong> gUSDC by{" "}
+                    <strong>{formatDecimal(Number(minToRepay), 2)}</strong> {creditTokenSymbol} by{" "}
                     <strong>
                       {moment()
                         .add(lendingTerm.maxDelayBetweenPartialRepay, "seconds")

@@ -34,6 +34,8 @@ import { coinsList } from "config"
 import { wagmiConfig } from "contexts/Web3Provider"
 import { lendingTermConfig } from "config"
 import { ToggleCredit } from "components/switch/ToggleCredit"
+import { marketsConfig } from "config"
+import Image from "next/image"
 
 const LendingDetails = () => {
   const { address, isConnected } = useAccount()
@@ -41,14 +43,12 @@ const LendingDetails = () => {
   const searchParams = useSearchParams()
   const termAddress = searchParams.get("term")
   const [lendingTermData, setLendingTermData] = useState<LendingTerms>()
-  const [collateralPrice, setCollateralPrice] = useState(0)
-  const [pegPrice, setPegPrice] = useState(0)
   const [termTotalCollateral, setTermTotalCollateral] = useState(0)
   const [isLoadingEventLoans, setIsLoadingEventLoans] = useState<boolean>(true)
   const [reload, setReload] = useState<boolean>(false)
   const [utilization, setUtilization] = useState<string>("")
   const [eventLoans, setEventLoans] = useState<loanObj[]>([])
-  const [currencyType, setCurrencyType] = useState<"gUSDC" | "USDC">("gUSDC")
+  const [currencyType, setCurrencyType] = useState<"creditToken" | "pegToken">("creditToken")
 
   useEffect(() => {
     if (lendingTerms && termAddress) {
@@ -56,63 +56,72 @@ const LendingDetails = () => {
     }
   }, [lendingTerms])
 
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const guildAddress = contractsList?.guildAddress;
+  const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
+  const profitManagerAddress = contractsList?.marketContracts[appMarketId].profitManagerAddress;
+  const surplusGuildMinterAddress = contractsList?.marketContracts[appMarketId].surplusGuildMinterAddress;
+
+  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+
   /* Smart contract reads */
   const { data, isError, isLoading, refetch } = useReadContracts({
     contracts: [
       {
-        address: contractsList.profitManagerAddress,
+        address: profitManagerAddress,
         abi: ProfitManagerABI,
         functionName: "creditMultiplier",
       },
       {
-        address: contractsList.usdcAddress,
+        address: pegToken.address,
         abi: erc20Abi,
         functionName: "balanceOf",
         args: [address],
       },
       {
-        address: contractsList.marketContracts[appMarketId].creditAddress,
+        address: creditAddress,
         abi: CreditABI,
         functionName: "balanceOf",
         args: [address],
       },
       {
-        address: contractsList.marketContracts[appMarketId].creditAddress,
+        address: creditAddress,
         abi: CreditABI,
         functionName: "nonces",
         args: [address],
       },
       {
-        address: contractsList.usdcAddress,
+        address: pegToken.address,
         abi: ERC20PermitABI,
         functionName: "nonces",
         args: [address],
       },
       {
-        address: contractsList.profitManagerAddress,
+        address: profitManagerAddress,
         abi: ProfitManagerABI,
         functionName: "minBorrow",
       },
       {
-        address: contractsList.guildAddress,
+        address: guildAddress,
         abi: GuildABI,
         functionName: "getUserWeight",
         args: [address],
       },
       {
-        address: contractsList.guildAddress,
+        address: guildAddress,
         abi: GuildABI,
         functionName: "balanceOf",
         args: [address],
       },
       {
-        address: contractsList.guildAddress,
+        address: guildAddress,
         abi: GuildABI,
         functionName: "getUserGaugeWeight",
         args: [address, termAddress],
       },
       {
-        address: contractsList.surplusGuildMinterAddress,
+        address: surplusGuildMinterAddress,
         abi: SurplusGuildMinterABI,
         functionName: "getUserStake",
         args: [address, termAddress],
@@ -123,27 +132,32 @@ const LendingDetails = () => {
         functionName: "debtCeiling",
       },
       {
-        address: contractsList.guildAddress,
+        address: guildAddress,
         abi: GuildABI,
         functionName: "getGaugeWeight",
         args: [termAddress],
       },
       {
-        address: contractsList.guildAddress,
+        address: guildAddress,
         abi: GuildABI,
         functionName: "totalTypeWeight",
-        args: [1],
+        args: [appMarketId],
       },
       {
-        address: contractsList.marketContracts[appMarketId].creditAddress,
+        address: creditAddress,
         abi: CreditABI,
         functionName: "totalSupply",
         args: [],
       },
       {
-        address: contractsList.surplusGuildMinterAddress,
+        address: surplusGuildMinterAddress,
         abi: SurplusGuildMinterABI,
         functionName: "mintRatio",
+      },
+      {
+        address: surplusGuildMinterAddress,
+        abi: SurplusGuildMinterABI,
+        functionName: "rewardRatio",
       },
       {
         address: termAddress as Address,
@@ -151,7 +165,7 @@ const LendingDetails = () => {
         functionName: "issuance",
       },
       {
-        address: contractsList.profitManagerAddress,
+        address: profitManagerAddress,
         abi: ProfitManagerABI,
         functionName: "getProfitSharingConfig",
       },
@@ -160,10 +174,10 @@ const LendingDetails = () => {
       select: (data) => {
         return {
           creditMultiplier: data[0].result as bigint,
-          usdcBalance: data[1].result as bigint,
+          pegTokenBalance: data[1].result as bigint,
           creditBalance: data[2].result as bigint,
-          gusdcNonces: data[3].result as bigint,
-          usdcNonces: data[4].result as bigint,
+          creditTokenNonces: data[3].result as bigint,
+          pegTokenNonces: data[4].result as bigint,
           minBorrow: data[5].result as bigint,
           guildUserWeight: data[6].result as bigint,
           guildBalance: data[7].result as bigint,
@@ -173,19 +187,20 @@ const LendingDetails = () => {
           gaugeWeight: Number(formatUnits(data[11].result as bigint, 18)),
           totalWeight: Number(formatUnits(data[12].result as bigint, 18)),
           creditTotalSupply: Number(formatUnits(data[13].result as bigint, 18)),
-          ratioGuildCredit: Number(formatUnits(data[14].result as bigint, 18)),
-          currentDebt: Number(formatUnits(data[15].result as bigint, 18)),
+          sgmMintRatio: Number(formatUnits(data[14].result as bigint, 18)),
+          sgmRewardRatio: Number(formatUnits(data[15].result as bigint, 18)),
+          currentDebt: Number(formatUnits(data[16].result as bigint, 18)),
           profitSharing: {
             creditSplit: formatDecimal(
-              Number(formatUnits(data[16].result[1] as bigint, 18)) * 100,
+              Number(formatUnits(data[17].result[1] as bigint, 18)) * 100,
               2
             ),
             guildSplit: formatDecimal(
-              Number(formatUnits(data[16].result[2] as bigint, 18)) * 100,
+              Number(formatUnits(data[17].result[2] as bigint, 18)) * 100,
               2
             ),
             surplusBufferSplit: formatDecimal(
-              Number(formatUnits(data[16].result[0] as bigint, 18)) * 100,
+              Number(formatUnits(data[17].result[0] as bigint, 18)) * 100,
               2
             ),
           },
@@ -195,18 +210,7 @@ const LendingDetails = () => {
   })
   /* End Smart contract reads */
 
-  //Coin gecko price fetching
   useEffect(() => {
-    function getPegPrice() {
-      const price = coinDetails.find(_ => eq(_.address, contractsList.marketContracts[appMarketId].pegTokenAddress)).price;
-      setPegPrice(price)
-    }
-
-    function getCollateralPrice() {
-      const price = coinDetails.find(_ => eq(_.address, lendingTermData.collateral.address)).price;
-      setCollateralPrice(price)
-    }
-
     async function getTermsTotalCollateral() {
       const result = await readContract(wagmiConfig, {
         address: lendingTermData.collateral.address as Address,
@@ -221,14 +225,10 @@ const LendingDetails = () => {
     }
 
     if (lendingTermData) {
-      getPegPrice()
-      getCollateralPrice()
       getTermsTotalCollateral()
       setUtilization(
         formatDecimal(
-          (data?.currentDebt / data?.creditTotalSupply) *
-            (data?.gaugeWeight / data?.totalWeight) *
-            100,
+          Math.min((data?.currentDebt / data?.debtCeiling) * 100, 100),
           2
         )
       )
@@ -278,29 +278,38 @@ const LendingDetails = () => {
               <MdOutlineOpenInNew />
             </a>
           </div>
-          <div className="flex items-center gap-1">
-            <TooltipHorizon
-              extra="dark:text-gray-200 w-[240px]"
-              content={
-                <p>Use USDC for your borrows and repays when lending term allows it.</p>
-              }
-              trigger={
-                <div>
-                  <QuestionMarkIcon />
-                </div>
-              }
-              placement="left"
-            />
+          { lendingTermConfig.find((item) => item.termAddress == termAddress)
+                  ?.useGateway ? (
+            <div className="flex items-center gap-1">
+              <TooltipHorizon
+                extra="dark:text-gray-200 w-[240px]"
+                content={
+                  <p>Use a Gateway contract instead of interacting with the core protocol directly.<br/>
+                  This enables batch actions such as "borrow g{pegToken.symbol} + redeem g{pegToken.symbol} for {pegToken.symbol}",<br/>
+                  or "mint g{pegToken.symbol} from {pegToken.symbol} + repay debt", or access flashloan/leverage features.<br/>
+                  This feature is tied to the front-end and not to the core protocol, and is only enabled<br/>
+                  for some terms by the provider of this web interface.</p>
+                }
+                trigger={
+                  <div>
+                    <QuestionMarkIcon />
+                  </div>
+                }
+                placement="left"
+              />
 
-            <ToggleCredit
-              selectType={setCurrencyType}
-              type={currencyType}
-              disabled={
-                !lendingTermConfig.find((item) => item.termAddress == termAddress)
-                  ?.useGateway
-              }
-            />
-          </div>
+              <ToggleCredit
+                selectType={setCurrencyType}
+                pegToken={pegToken}
+                marketId={appMarketId}
+                type={currencyType}
+                disabled={
+                  !lendingTermConfig.find((item) => item.termAddress == termAddress)
+                    ?.useGateway
+                }
+              />
+            </div>
+          ) : null }
         </div>
         <LendingStats
           creditMultiplier={data?.creditMultiplier}
@@ -309,7 +318,6 @@ const LendingDetails = () => {
           debtCeiling={data?.debtCeiling}
           utilization={utilization}
           termTotalCollateral={termTotalCollateral}
-          collateralPrice={collateralPrice}
         />
         <h3 className="mb-4 ml-8 mt-6 text-xl font-semibold text-gray-700 dark:text-white">
           Loan
@@ -325,8 +333,8 @@ const LendingDetails = () => {
               }
               creditMultiplier={data?.creditMultiplier}
               creditBalance={data?.creditBalance}
-              usdcBalance={data?.usdcBalance}
-              gusdcNonces={data?.gusdcNonces}
+              pegTokenBalance={data?.pegTokenBalance}
+              creditTokenNonces={data?.creditTokenNonces}
               minBorrow={Number(formatUnits(data?.minBorrow, 18))}
               setReload={setReload}
               reload={reload}
@@ -341,14 +349,12 @@ const LendingDetails = () => {
               lendingTerm={lendingTermData}
               isLoadingEventLoans={isLoadingEventLoans}
               tableData={eventLoans}
-              collateralPrice={collateralPrice}
-              pegPrice={pegPrice}
               setReload={setReload}
               reload={reload}
               creditMultiplier={data?.creditMultiplier}
-              usdcBalance={data?.usdcBalance}
+              pegTokenBalance={data?.pegTokenBalance}
               creditBalance={data?.creditBalance}
-              usdcNonces={data?.usdcNonces}
+              pegTokenNonces={data?.pegTokenNonces}
               minBorrow={data?.minBorrow}
               currencyType={currencyType}
             />
@@ -406,42 +412,48 @@ const LendingDetails = () => {
                         content={
                           <div className="space-y-2 p-2">
                             <p>
-                              Staked GUILD increase the debt ceiling of lending terms
-                              (available gUSDC to borrow).
+                              Staked <Image className="inline-block" src="/img/crypto-logos/guild.png" width={18} height={18} alt="logo" /> GUILD increase the debt ceiling of lending terms
+                              (<Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" /> {pegToken.symbol} borrow cap).
                             </p>
 
                             <p>
-                              If the term creates bad debt, the GUILD tokens staked for
+                              If the term creates bad debt, the <Image className="inline-block" src="/img/crypto-logos/guild.png" width={18} height={18} alt="logo" /> GUILD and <Image className="inline-block" src={pegTokenLogo} width={16} height={16} alt="logo" style={{'borderRadius':'50%','border':'2px solid #3e6b7d'}} /> {creditTokenSymbol} tokens staked for
                               this term are slashed.
                             </p>
 
                             <p>
-                              When you stake your GUILD tokens on a term, this portion of
+                              When you stake your <Image className="inline-block" src="/img/crypto-logos/guild.png" width={18} height={18} alt="logo" /> GUILD tokens on a term, this portion of
                               your balance becomes non-transferable, and if you attempt to
-                              transfer your tokens, your GUILD will be unstaked, which
+                              transfer your tokens, your <Image className="inline-block" src="/img/crypto-logos/guild.png" width={18} height={18} alt="logo" /> GUILD will be unstaked, which
                               will decrease the debt ceiling. If the debt ceiling cannot
                               be decreased (due to active borrowing demand), the loans
                               have to be repaid or called first. Loans can only be called
-                              if they missed a period payment or if the term has been
-                              offboarded.
+                              if they are above the max borrow ratio, missed a periodic payment,
+                              or if the term has been offboarded.
                             </p>
 
                             <p>
-                              GUILD staked on a term earns a proportional share of the
-                              fees earned by this term. If you represent{" "}
-                              <strong>50%</strong> of the GUILD staked for a term, you
-                              will earn <strong>50%</strong> of the fees earned by GUILD
+                              <Image className="inline-block" src="/img/crypto-logos/guild.png" width={18} height={18} alt="logo" /> GUILD staked on a term earns a proportional share of the
+                              fees earned by this term, in the form of <Image className="inline-block" src={pegTokenLogo} width={16} height={16} alt="logo" style={{'borderRadius':'50%','border':'2px solid #3e6b7d'}} /> {creditTokenSymbol} tokens. If you represent{" "}
+                              <strong>50%</strong> of the <Image className="inline-block" src="/img/crypto-logos/guild.png" width={18} height={18} alt="logo" /> GUILD staked for a term, you
+                              will earn <strong>50%</strong> of the fees earned by <Image className="inline-block" src="/img/crypto-logos/guild.png" width={18} height={18} alt="logo" /> GUILD
                               stakers on this term.
                             </p>
 
                             <p>
                               The protocol profit sharing can be updated by governance,
                               and is configured as follow :<br />
-                              &mdash; <strong>{data?.profitSharing.guildSplit}</strong>%
-                              to GUILD stakers
-                              <br />
                               &mdash; <strong>{data?.profitSharing.creditSplit}</strong>
-                              % to gUSDC savers
+                              % to
+                              {" "}
+                              <Image className="inline-block" src={pegTokenLogo} width={16} height={16} alt="logo" style={{'borderRadius':'50%','border':'2px solid #3e6b7d'}} />
+                              {" "}
+                              {creditTokenSymbol}
+                              {" "}
+                              savers
+                              <br />
+                              &mdash; <strong>{data?.profitSharing.guildSplit}</strong>%
+                              to <Image className="inline-block" src="/img/crypto-logos/guild.png" width={18} height={18} alt="logo" /> GUILD stakers
                               <br />
                               &mdash;{" "}
                               <strong>{data?.profitSharing.surplusBufferSplit}</strong>%
@@ -455,7 +467,14 @@ const LendingDetails = () => {
                         }
                         trigger={
                           <div className="flex items-center space-x-2 text-gray-700 dark:text-gray-200">
-                            <span>Risk your GUILD tokens & earn gUSDC rewards</span>
+                            <span>
+                              Risk{" "}
+                              <Image className="inline-block" src="/img/crypto-logos/guild.png" width={24} height={24} alt="logo" />
+                              {" "}GUILD<br/>
+                              Earn{" "}
+                              <Image className="inline-block" src={pegTokenLogo} width={24} height={24} alt="logo" style={{'borderRadius':'50%','border':'3px solid #3e6b7d'}} />
+                              {" "}{creditTokenSymbol}
+                            </span>
                             <QuestionMarkIcon />
                           </div>
                         }
@@ -503,6 +522,7 @@ const LendingDetails = () => {
                           guildBalance={data?.guildBalance}
                           smartContractAddress={termAddress}
                           guildUserWeight={data?.guildUserWeight}
+                          creditMultiplier={data?.creditMultiplier}
                           reload={setReload}
                         />
                       </Tab.Panel>
@@ -515,6 +535,7 @@ const LendingDetails = () => {
                           guildBalance={data?.guildBalance}
                           smartContractAddress={termAddress}
                           guildUserWeight={data?.guildUserWeight}
+                          creditMultiplier={data?.creditMultiplier}
                           reload={setReload}
                         />
                       </Tab.Panel>
@@ -535,7 +556,7 @@ const LendingDetails = () => {
                       className="border-r border-gray-100 px-4 py-3 dark:border-navy-800"
                     >
                       <dt className="text-base font-medium text-gray-900 dark:text-gray-100">
-                        Your gUSDC staked
+                        Your {creditTokenSymbol} staked
                       </dt>
                       <dd className="mt-1 flex items-baseline justify-between gap-6 md:block lg:flex">
                         <div className="flex items-baseline text-2xl font-semibold text-brand-500">
@@ -579,30 +600,28 @@ const LendingDetails = () => {
                         content={
                           <div className="space-y-2 p-2">
                             <p>
-                              The gUSDC staked will act as first-loss capital if this term
-                              creates bad debt. You will not recover any gUSDC if this
-                              term creates bad debt while you staked.
+                              The <Image className="inline-block" src={pegTokenLogo} width={24} height={24} alt="logo" style={{'borderRadius':'50%','border':'3px solid #3e6b7d'}} /> {creditTokenSymbol} staked will act as first-loss capital if this term
+                              creates bad debt. You will not recover any of your stake if this term creates bad debt while you stake.
                             </p>
 
                             <p>
-                              For each gUSDC staked,{" "}
-                              <strong>{formatDecimal(data?.ratioGuildCredit, 2)}</strong>{" "}
-                              GUILD will be minted & staked for this term (see Stake GUILD
-                              tooltip), which will increase the debt ceiling (available
-                              gUSDC to borrow) in this term.
+                              For each <Image className="inline-block" src={pegTokenLogo} width={24} height={24} alt="logo" style={{'borderRadius':'50%','border':'3px solid #3e6b7d'}} /> {creditTokenSymbol} staked,{" "}
+                              <strong>{formatDecimal(data?.sgmMintRatio, 2)}</strong> <Image className="inline-block" src="/img/crypto-logos/guild.png" width={24} height={24} alt="logo" /> GUILD will be minted & staked for this term (see Stake GUILD
+                              tooltip), which will increase the debt ceiling (<Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" /> {pegToken.symbol} borrow cap) in this term.
                             </p>
 
                             <p>
-                              You will earn gUSDC from the regular GUILD stake rewards,
-                              plus an additional <strong>X.XX</strong> GUILD per gUSDC
-                              earned.
+                              You will earn <Image className="inline-block" src={pegTokenLogo} width={24} height={24} alt="logo" style={{'borderRadius':'50%','border':'3px solid #3e6b7d'}} /> {creditTokenSymbol} from the regular <Image className="inline-block" src="/img/crypto-logos/guild.png" width={24} height={24} alt="logo" /> GUILD stake rewards,
+                              plus an additional <Image className="inline-block" src="/img/crypto-logos/guild.png" width={24} height={24} alt="logo" /> <strong>{formatDecimal(data?.sgmRewardRatio, 2)}</strong> GUILD per <Image className="inline-block" src={pegTokenLogo} width={24} height={24} alt="logo" style={{'borderRadius':'50%','border':'3px solid #3e6b7d'}} /> {creditTokenSymbol} earned as an indirect <Image className="inline-block" src="/img/crypto-logos/guild.png" width={24} height={24} alt="logo" /> GUILD staker.
                             </p>
                           </div>
                         }
                         trigger={
                           <div className="flex items-center space-x-2 text-gray-700 dark:text-white">
                             <h4>
-                              Provide first lost capital & earn gUSDC + GUILD rewards
+                              Risk <Image className="inline-block" src={pegTokenLogo} width={24} height={24} alt="logo" style={{'borderRadius':'50%','border':'3px solid #3e6b7d'}} /> {creditTokenSymbol}<br/>
+                              Earn <Image className="inline-block" src={pegTokenLogo} width={24} height={24} alt="logo" style={{'borderRadius':'50%','border':'3px solid #3e6b7d'}} /> {creditTokenSymbol}<br/>
+                              + Bonus <Image className="inline-block" src="/img/crypto-logos/guild.png" width={24} height={24} alt="logo" /> GUILD<br/>
                             </h4>
                             <QuestionMarkIcon />
                           </div>
@@ -650,7 +669,9 @@ const LendingDetails = () => {
                           creditAllocated={data?.creditAllocated}
                           creditBalance={data?.creditBalance}
                           termAddress={termAddress}
-                          ratioGuildCredit={data?.ratioGuildCredit}
+                          sgmMintRatio={data?.sgmMintRatio}
+                          sgmRewardRatio={data?.sgmRewardRatio}
+                          creditMultiplier={data?.creditMultiplier}
                           reload={setReload}
                         />
                       </Tab.Panel>
@@ -662,7 +683,9 @@ const LendingDetails = () => {
                           creditAllocated={data?.creditAllocated}
                           creditBalance={data?.creditBalance}
                           termAddress={termAddress}
-                          ratioGuildCredit={data?.ratioGuildCredit}
+                          sgmMintRatio={data?.sgmMintRatio}
+                          sgmRewardRatio={data?.sgmRewardRatio}
+                          creditMultiplier={data?.creditMultiplier}
                           reload={setReload}
                         />
                       </Tab.Panel>
@@ -685,8 +708,8 @@ const LendingDetails = () => {
               lendingTerm={lendingTermData}
               activeLoans={eventLoans}
               isLoadingEventLoans={isLoadingEventLoans}
+              creditMultiplier={data?.creditMultiplier}
               reload={setReload}
-              currencyType={currencyType}
             />
           </Card>
         </div>

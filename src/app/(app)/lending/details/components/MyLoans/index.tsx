@@ -32,17 +32,16 @@ import { getAllowCollateralTokenCall } from "./helper/repayWithLeverage"
 import { CurrencyTypes } from "components/switch/ToggleCredit"
 import CustomTable from "components/table/CustomTable"
 import { useAppStore } from "store"
+import { marketsConfig } from "config"
 
 function Myloans({
   lendingTerm,
   isLoadingEventLoans,
   tableData,
-  collateralPrice,
   creditMultiplier,
-  pegPrice,
-  usdcBalance,
+  pegTokenBalance,
   creditBalance,
-  usdcNonces,
+  pegTokenNonces,
   setReload,
   reload,
   minBorrow,
@@ -51,18 +50,16 @@ function Myloans({
   lendingTerm: LendingTerms
   isLoadingEventLoans: boolean
   tableData: loanObj[]
-  collateralPrice: number
   creditMultiplier: bigint
-  pegPrice: number
-  usdcBalance: bigint
+  pegTokenBalance: bigint
   creditBalance: bigint
-  usdcNonces: bigint
+  pegTokenNonces: bigint
   minBorrow: bigint
   reload: boolean
   setReload: React.Dispatch<React.SetStateAction<boolean>>
   currencyType: CurrencyTypes
 }) {
-  const { contractsList } = useAppStore()
+  const { appMarketId, coinDetails, contractsList } = useAppStore()
   const { address } = useAccount()
   const [showModal, setShowModal] = useState(false)
   const [tableDataWithDebts, setTableDataWithDebts] = useState<loanObj[]>([])
@@ -70,12 +67,19 @@ function Myloans({
   const [open, setOpen] = useState<boolean>(false)
   const [selectedRow, setSelectedRow] = useState<loanObj>()
 
+  const collateralToken = coinDetails.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase());
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken.price * 100)), 0);
+  const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+
   const [data, setData] = React.useState(() =>
     tableDataWithDebts.filter(
       (loan) =>
-        // loan.status !== "closed" &&
+        loan.closeTime !== 0 &&
         loan.callTime === 0 &&
-        loan.borrowAmount + loan.loanDebt !== BigInt(0) &&
+        loan.loanDebt !== BigInt(0) &&
         loan.borrower === address
     )
   )
@@ -189,7 +193,7 @@ function Myloans({
     setOpen(false)
     const createSteps = (): Step[] => {
       const baseSteps = [
-        { name: `Approve gUSDC`, status: "Not Started" },
+        { name: `Approve ${creditTokenSymbol}`, status: "Not Started" },
         { name: "Partial Repay", status: "Not Started" },
       ]
       return baseSteps
@@ -200,10 +204,10 @@ function Myloans({
     const debtToRepay = parseUnits(value, 18)
 
     try {
-      updateStepStatus("Approve gUSDC", "In Progress")
+      updateStepStatus(`Approve ${creditTokenSymbol}`, "In Progress")
 
       const hash = await writeContract(wagmiConfig, {
-        address: contractsList.creditAddress,
+        address: contractsList?.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: "approve",
         args: [lendingTerm.address, debtToRepay],
@@ -214,13 +218,13 @@ function Myloans({
       })
 
       if (data.status != "success") {
-        updateStepStatus("Approve gUSDC", "Error")
+        updateStepStatus(`Approve ${creditTokenSymbol}`, "Error")
         return
       }
-      updateStepStatus("Approve gUSDC", "Success")
+      updateStepStatus(`Approve ${creditTokenSymbol}`, "Success")
     } catch (e) {
       console.log(e)
-      updateStepStatus("Approve gUSDC", "Error")
+      updateStepStatus(`Approve ${creditTokenSymbol}`, "Error")
       return
     }
 
@@ -232,16 +236,16 @@ function Myloans({
         functionName: "partialRepay",
         args: [loanId, debtToRepay],
       })
-
       const checkRepay = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
       })
-
       if (checkRepay.status != "success") {
         updateStepStatus("Partial Repay", "Error")
       }
       updateStepStatus("Partial Repay", "Success")
-      setReload(true)
+      setTimeout(function() {
+        setReload(true);
+      }, 5000);
     } catch (e) {
       console.log(e)
       updateStepStatus("Partial Repay", "Error")
@@ -253,7 +257,7 @@ function Myloans({
 
     const createSteps = (): Step[] => {
       const baseSteps = [
-        { name: `Approve gUSDC`, status: "Not Started" },
+        { name: `Approve ${creditTokenSymbol}`, status: "Not Started" },
         { name: "Repay", status: "Not Started" },
       ]
       return baseSteps
@@ -262,7 +266,7 @@ function Myloans({
     setShowModal(true)
 
     try {
-      updateStepStatus("Approve gUSDC", "In Progress")
+      updateStepStatus(`Approve ${creditTokenSymbol}`, "In Progress")
       const debtToRepay = tableDataWithDebts.find((item) => item.id == loanId).loanDebt
       const hourlyFees =
         (parseUnits(lendingTerm.interestRate.toString(), 2) * debtToRepay) /
@@ -270,7 +274,7 @@ function Myloans({
         BigInt(HOURS_IN_YEAR)
 
       const hash = await writeContract(wagmiConfig, {
-        address: contractsList.creditAddress,
+        address: contractsList?.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: "approve",
         args: [lendingTerm.address, debtToRepay + hourlyFees],
@@ -281,13 +285,13 @@ function Myloans({
       })
 
       if (data.status != "success") {
-        updateStepStatus("Approve gUSDC", "Error")
+        updateStepStatus(`Approve ${creditTokenSymbol}`, "Error")
         return
       }
-      updateStepStatus("Approve gUSDC", "Success")
+      updateStepStatus(`Approve ${creditTokenSymbol}`, "Success")
     } catch (e) {
       console.log(e)
-      updateStepStatus("Approve gUSDC", "Error")
+      updateStepStatus(`Approve ${creditTokenSymbol}`, "Error")
       return
     }
 
@@ -308,7 +312,9 @@ function Myloans({
         updateStepStatus("Repay", "Error")
       }
       updateStepStatus("Repay", "Success")
-      setReload(true)
+      setTimeout(function() {
+        setReload(true);
+      }, 5000);
     } catch (e) {
       console.log(e)
       updateStepStatus("Repay", "Error")
@@ -320,7 +326,7 @@ function Myloans({
 
     const createSteps = (): Step[] => {
       const baseSteps = [
-        { name: "Sign Permit for USDC", status: "Not Started" },
+        { name: `Sign Permit for ${pegToken.symbol}`, status: "Not Started" },
         { name: "Partial Repay", status: "Not Started" },
       ]
       return baseSteps
@@ -340,28 +346,28 @@ function Myloans({
 
     /* Sign permit on USDC for Gateway*/
     try {
-      updateStepStatus(`Sign Permit for USDC`, "In Progress")
+      updateStepStatus(`Sign Permit for ${pegToken.symbol}`, "In Progress")
 
       signatureUSDC = await signPermit({
-        contractAddress: contractsList.usdcAddress,
-        erc20Name: "ECG Testnet USDC",
+        contractAddress: pegToken.address as Address,
+        erc20Name: pegToken.name,
         ownerAddress: address,
         spenderAddress: contractsList.gatewayAddress as Address,
         value: usdcAmount,
         deadline: BigInt(Number(moment().add(10, "seconds"))),
-        nonce: usdcNonces,
+        nonce: pegTokenNonces,
         chainId: wagmiConfig.chains[0].id,
         permitVersion: "1",
       })
 
       if (!signatureUSDC) {
-        updateStepStatus(`Sign Permit for USDC`, "Error")
+        updateStepStatus(`Sign Permit for ${pegToken.symbol}`, "Error")
         return
       }
-      updateStepStatus(`Sign Permit for USDC`, "Success")
+      updateStepStatus(`Sign Permit for ${pegToken.symbol}`, "Success")
     } catch (e) {
       console.log(e)
-      updateStepStatus(`Sign Permit for USDC`, "Error")
+      updateStepStatus(`Sign Permit for ${pegToken.symbol}`, "Error")
       return
     }
 
@@ -394,7 +400,9 @@ function Myloans({
       })
 
       if (checkBorrow.status === "success") {
-        setReload(true)
+        setTimeout(function() {
+          setReload(true);
+        }, 5000);
         updateStepStatus("Partial Repay", "Success")
         return
       } else {
@@ -529,7 +537,7 @@ function Myloans({
   //       spenderAddress: contractsList.gatewayAddress as Address,
   //       value: usdcAmount,
   //       deadline: BigInt(Number(moment().add(10, "seconds"))),
-  //       nonce: usdcNonces,
+  //       nonce: pegTokenNonces,
   //       chainId: wagmiConfig.chains[0].id,
   //       permitVersion: "1",
   //     })
@@ -588,7 +596,9 @@ function Myloans({
 
   //     if (checkBorrow.status === "success") {
   //
-  //       setReload(true)
+  //       setTimeout(function() {
+  //         setReload(true);
+  //       }, 5000);
   //       updateStepStatus("Partial Repay with Leverage", "Success")
   //       return
   //     } else {
@@ -712,7 +722,9 @@ function Myloans({
       })
 
       if (checkBorrow.status === "success") {
-        setReload(true)
+        setTimeout(function() {
+          setReload(true);
+        }, 5000);
         updateStepStatus("Repay with Leverage", "Success")
         return
       } else {
@@ -763,7 +775,7 @@ function Myloans({
         spenderAddress: contractsList.gatewayAddress as Address,
         value: usdcAmountToApprove,
         deadline: BigInt(Number(moment().add(10, "seconds"))),
-        nonce: usdcNonces,
+        nonce: pegTokenNonces,
         chainId: wagmiConfig.chains[0].id,
         permitVersion: "1",
       })
@@ -808,7 +820,9 @@ function Myloans({
       })
 
       if (checkBorrow.status === "success") {
-        setReload(true)
+        setTimeout(function() {
+          setReload(true);
+        }, 5000);
         updateStepStatus("Repay", "Success")
         return
       } else {
@@ -854,54 +868,34 @@ function Myloans({
         <div>
           <a href="#" className="group inline-flex">
             <p className="text-center text-sm font-medium text-gray-500 dark:text-white">
-              Debt Amount
+              Debt
             </p>
           </a>
         </div>
       ),
       cell: (info: any) => {
-        const borrowValue =
-          currencyType == "USDC"
-            ? Number(
-                formatUnits(
-                  gUsdcToUsdc(
-                    info.row.original.loanDebt,
-                    info.row.original.borrowCreditMultiplier
-                  ),
-                  6
-                )
-              )
-            : Number(formatUnits(info.row.original.loanDebt, 18))
-
-        const usdRate =
-          currencyType == "USDC"
-            ? pegPrice
-            : pegPrice * Number(formatUnits(info.row.original.borrowCreditMultiplier, 18))
-
         return (
           <div className="ml-3 text-center">
             <p className="font-semibold text-gray-700 dark:text-white">
               <div className="flex items-center justify-center gap-1">
-                {toLocaleString(formatDecimal(borrowValue, 2))}
-                {currencyType == "USDC" ? (
-                  <Image
-                    src="/img/crypto-logos/usdc.png"
-                    width={20}
-                    height={20}
-                    alt="logo"
-                  />
-                ) : (
-                  <Image
-                    src="/img/crypto-logos/credit.png"
-                    width={20}
-                    height={20}
-                    alt="logo"
-                  />
+                <Image
+                  src={pegTokenLogo}
+                  width={20}
+                  height={20}
+                  alt="logo"
+                />
+                {" "}
+                {formatDecimal(
+                  Number(info.row.original.loanDebt) / 1e18 * Number(creditMultiplier) / 1e18,
+                  creditTokenDecimalsToDisplay * 2
                 )}
               </div>
             </p>
-            <p className="text-sm text-gray-700 dark:text-gray-200">
-              $ {toLocaleString(formatDecimal(borrowValue * usdRate, 2))}
+            <p className="text-sm text-gray-400 dark:text-gray-200">
+              $ {formatDecimal(
+                pegToken.price * Number(info.row.original.loanDebt) / 1e18 * Number(creditMultiplier) / 1e18,
+                creditTokenDecimalsToDisplay * 2
+              )}
             </p>
           </div>
         )
@@ -914,42 +908,34 @@ function Myloans({
         <div>
           <a href="#" className="group inline-flex">
             <p className="text-center text-sm font-medium text-gray-500 dark:text-white">
-              Collateral Amount
+              Collateral
             </p>
           </a>
         </div>
       ),
       cell: (info: any) => {
-        const collateralValue = formatDecimal(
-          Number(
-            formatUnits(
-              info.row.original.collateralAmount,
-              lendingTerm.collateral.decimals
-            )
-          ) * collateralPrice,
-          2
-        )
-
         return (
           <div className="ml-3 text-center">
             <p className="font-semibold text-gray-700 dark:text-white">
               <div className="flex items-center justify-center gap-1">
-                {toLocaleString(
-                  formatDecimal(
-                    Number(formatUnits(info.getValue(), lendingTerm.collateral.decimals)),
-                    2
-                  )
-                )}{" "}
                 <Image
                   src={lendingTerm.collateral.logo}
                   width={20}
                   height={20}
                   alt="logo"
                 />
+                {" "}
+                {formatDecimal(
+                  Number(formatUnits(info.row.original.collateralAmount, lendingTerm.collateral.decimals)),
+                  collateralTokenDecimalsToDisplay
+                )}
               </div>
             </p>
-            <p className="text-sm text-gray-700 dark:text-gray-200">
-              $ {toLocaleString(collateralValue)}
+            <p className="text-sm text-gray-400 dark:text-gray-200">
+              $ {formatDecimal(
+                Number(formatUnits(info.getValue(), lendingTerm.collateral.decimals)) * collateralToken.price,
+                2
+              )}
             </p>
           </div>
         )
@@ -1022,42 +1008,40 @@ function Myloans({
         <div>
           <a href="#" className="group inline-flex">
             <p className="text-center text-sm font-medium text-gray-500 dark:text-white">
-              LTV
+              Call Threshold
             </p>
           </a>
         </div>
       ),
       cell: (info: any) => {
-        const currentDebtInCollateralEquivalent =
-          Number(
-            formatUnits(
-              info.row.original.borrowAmount / BigInt(lendingTerm.borrowRatio),
-              18
-            )
-          ) * Number(formatUnits(info.row.original.borrowCreditMultiplier, 18))
-
-        const collateralValue = Number(
-          formatUnits(info.row.original.collateralAmount, lendingTerm.collateral.decimals)
-        )
-
-        const ltvValue = formatDecimal(
-          (currentDebtInCollateralEquivalent / collateralValue) * 100,
-          2
-        )
+        const collateralValue = Number(formatUnits(info.row.original.collateralAmount, lendingTerm.collateral.decimals)) * collateralToken.price;
+        const debtValue = pegToken.price * Number(info.row.original.loanDebt) / 1e18 * Number(creditMultiplier) / 1e18;
+        const ltv = 100 * debtValue / collateralValue;
+        const maxBorrow = lendingTerm.borrowRatio * Number(creditMultiplier) / 1e18;
+        const currentBorrowRatio = ((Number(info.row.original.loanDebt) / 1e18) * Number(creditMultiplier) / 1e18) / Number(
+          formatUnits(
+            info.row.original.collateralAmount,
+            collateralToken.decimals
+          )
+        );
+        const borrowRatio = 100 * currentBorrowRatio / maxBorrow;
 
         return (
-          <div className="flex justify-center">
+          <div className="ml-3 text-center">
             <p
               className={clsx(
                 "font-semibold",
-                Number(ltvValue) < 80
+                Number(borrowRatio) < 80
                   ? "text-green-500"
-                  : Number(ltvValue) < 90
+                  : Number(borrowRatio) < 90
                   ? "text-amber-500"
                   : "text-red-500"
               )}
             >
-              {ltvValue}%
+              {formatDecimal(borrowRatio, 2)} %
+            </p>
+            <p className="text-sm text-gray-400 dark:text-gray-200">
+              LTV : {formatDecimal(ltv, 2)} %
             </p>
           </div>
         )
@@ -1113,7 +1097,7 @@ function Myloans({
         setOpen={setOpen}
         isOpen={open}
         creditBalance={creditBalance}
-        usdcBalance={usdcBalance}
+        pegTokenBalance={pegTokenBalance}
         rowData={selectedRow}
         repay={repay}
         partialRepay={partialRepay}

@@ -1,14 +1,18 @@
 import clsx from "clsx"
 
-export type CurrencyTypes = 'USDC' | 'gUSDC'
+export type CurrencyTypes = 'pegToken' | 'creditToken'
 
 
 export function ToggleCredit({
   selectType,
+  pegToken,
+  marketId,
   type,
   disabled,
 }: {
   selectType: (type: CurrencyTypes) => void
+  pegToken: any
+  marketId: number,
   type: CurrencyTypes
   disabled?: boolean
 }) {
@@ -18,38 +22,38 @@ export function ToggleCredit({
         <div className="z-[2]">
           <button
             disabled={disabled}
-            onClick={() => selectType("USDC")}
-            id="USDC"
+            onClick={() => selectType("pegToken")}
+            id="pegToken"
             type="button"
             className={clsx(
               disabled && "cursor-not-allowed",
-              type == "USDC"
+              type == "pegToken"
                 ? "text-white dark:text-gray-100"
                 : "text-zinc-500 hover:text-zinc-700 dark:text-gray-200 dark:hover:text-gray-200",
-              "text-md transition-color inline-flex items-center rounded-lg px-3 py-2 font-semibold duration-150 ease-in"
+              "text-md transition-color inline-flex items-center rounded-lg px-8 py-2 font-semibold duration-150 ease-in"
             )}
           >
-            USDC
+            {pegToken.symbol}
           </button>
           <button
             disabled={disabled}
-            onClick={() => selectType("gUSDC")}
-            id="gUSDC"
+            onClick={() => selectType("creditToken")}
+            id="creditToken"
             type="button"
             className={clsx(
               disabled && "cursor-not-allowed",
-              type == "gUSDC"
+              type == "creditToken"
                 ? "text-white dark:text-gray-100"
                 : "text-zinc-500 hover:text-zinc-700 dark:text-gray-200 dark:hover:text-gray-200",
               "text-md transition-color inline-flex items-center rounded-lg px-2 py-2 font-semibold text-white duration-150 ease-in"
             )}
           >
-            gUSDC
+            g{pegToken.symbol}-{marketId > 999e6 ? 'test' : marketId}
           </button>
         </div>
         <span
           className={clsx(
-            type != "gUSDC" ? "translate-x-0" : "translate-x-[100%]",
+            type != "creditToken" ? "translate-x-0" : "translate-x-[100%]",
             "absolute z-[0] h-[100%] w-1/2 rounded-lg bg-brand-500 transition-all duration-200 ease-in dark:bg-navy-300"
           )}
         ></span>

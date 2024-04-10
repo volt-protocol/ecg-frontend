@@ -6,9 +6,12 @@ import { GiProgression } from "react-icons/gi"
 import { MdBarChart, MdCurrencyExchange } from "react-icons/md"
 import { TbArrowsExchange } from "react-icons/tb"
 import { LendingTerms } from "types/lending"
-import { formatDecimal, formatNumberDecimal, formatCurrencyValue, toLocaleString } from "utils/numbers"
+import { formatDecimal, formatNumberDecimal, formatCurrencyValue } from "utils/numbers"
 import { formatUnits } from "viem"
 import { secondsToAppropriateUnit } from "utils/date"
+import { marketsConfig } from "config"
+import { useAppStore } from "store"
+import Image from "next/image"
 
 export default function LendingStats({
   lendingTermData,
@@ -16,7 +19,6 @@ export default function LendingStats({
   debtCeiling,
   utilization,
   termTotalCollateral,
-  collateralPrice,
   creditMultiplier,
 }: {
   lendingTermData: LendingTerms
@@ -24,9 +26,18 @@ export default function LendingStats({
   debtCeiling: number
   utilization: string
   termTotalCollateral: number
-  collateralPrice: number
   creditMultiplier: bigint
 }) {
+  const { appMarketId, coinDetails, contractsList } = useAppStore()
+  const collateralToken = coinDetails.find((item) => item.address.toLowerCase() === lendingTermData.collateral.address.toLowerCase());
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken.price * 100)), 0);
+  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+
+  const creditMultiplierNumber = Number(formatUnits(creditMultiplier, 18));
+
   return (
     <div className="mt-3 grid grid-cols-1 gap-5 xs:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 3xl:grid-cols-6">
       <TooltipHorizon
@@ -35,21 +46,29 @@ export default function LendingStats({
           <>
             <p>
               Total Collateral Amount :{" "}
+              <Image className="inline-block" src={lendingTermData.collateral.logo} width={18} height={18} alt="logo" />
+              {" "}
               <span className="font-semibold">
-                {formatDecimal(termTotalCollateral, 2)}
+                {formatDecimal(termTotalCollateral, collateralTokenDecimalsToDisplay)}
               </span>{" "}
               {lendingTermData.collateral.symbol}
             </p>
             <p>
-              Unit Collateral Price :{" "}
-              <span className="font-semibold">{collateralPrice}</span> $
+              Unit Collateral Price :
+              {" "}
+              <span className="font-semibold">
+                {collateralToken.price}
+              </span>
+              {" "}
+              $ <span className="text-gray-400">(DefiLlama)</span>
             </p>
             <p>
               Total Collateral Value :{" "}
               <span className="font-semibold">
-                {formatDecimal(termTotalCollateral * collateralPrice, 2)}
-              </span>{" "}
-              $
+                {formatDecimal(termTotalCollateral * collateralToken.price, 2)}
+              </span>
+              {" "}
+              $ <span className="text-gray-400">(DefiLlama)</span>
             </p>
           </>
         }
@@ -59,11 +78,11 @@ export default function LendingStats({
               icon={<BsBank2 className="h-7 w-7" />}
               title={"TVL"}
               subtitle={
-                collateralPrice === 0
+                collateralToken.price === 0
                   ? "$ -.--"
                   :  "$ " + formatCurrencyValue(
                       parseFloat(
-                        formatNumberDecimal(termTotalCollateral * collateralPrice)
+                        formatNumberDecimal(termTotalCollateral * collateralToken.price)
                       )
                     )
               }
@@ -79,17 +98,21 @@ export default function LendingStats({
           <div>
             <p>
               Current Debt :{" "}
-              <span className="font-semibold">{formatDecimal(currentDebt, 2)}</span> gUSDC
+              <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />
+              {" "}
+              <span className="font-semibold">{formatDecimal(currentDebt * creditMultiplierNumber, creditTokenDecimalsToDisplay)}</span> {pegToken.symbol}
             </p>
             <p>
               Debt Ceilling :{" "}
-              <span className="font-semibold">{formatDecimal(debtCeiling, 2)}</span>{" "}
-              gUSDC
+              <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />
+              {" "}
+              <span className="font-semibold">{formatDecimal(debtCeiling * creditMultiplierNumber, creditTokenDecimalsToDisplay)}</span>{" "}
+              {pegToken.symbol}
             </p>
             <p>
               <br />
-              New borrows increase the Current Debt. GUILD & gUSDC stake increase the Debt
-              Ceiling.
+              New borrows increase the Current Debt.<br/>
+              GUILD & {creditTokenSymbol} stake increase the Debt Ceiling.
             </p>
           </div>
         }
@@ -163,16 +186,16 @@ export default function LendingStats({
           <div>
             <p>
               This term allows to borrow{" "}
-              <span className="font-semibold">
-                {toLocaleString(
-                  formatDecimal(
-                    lendingTermData.borrowRatio /
-                      Number(formatUnits(creditMultiplier, 18)),
-                    2
-                  )
+              <Image className="inline-block" src="/img/crypto-logos/credit.png" width={18} height={18} alt="logo" />
+              {" "}<span className="font-semibold">
+                {formatDecimal(
+                  lendingTermData.borrowRatio / creditMultiplierNumber,
+                  creditTokenDecimalsToDisplay
                 )}
-              </span>{" "}
-              gUSDC per unit of {lendingTermData.collateral.symbol} collateral.
+              </span>
+              {" "}{creditTokenSymbol}{" "}
+              (redeemable for <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />
+              {" "}<span className="font-semibold">{formatDecimal(lendingTermData.borrowRatio, creditTokenDecimalsToDisplay)}</span>{" "}{pegToken.symbol}) per unit of <Image className="inline-block" src={lendingTermData.collateral.logo} width={18} height={18} alt="logo" /> {lendingTermData.collateral.symbol} collateral.
             </p>
           </div>
         }
@@ -181,11 +204,9 @@ export default function LendingStats({
             <Widget
               icon={<MdCurrencyExchange className="h-7 w-7" />}
               title={"Borrow Ratio"}
-              subtitle={toLocaleString(
-                formatDecimal(
-                  lendingTermData.borrowRatio / Number(formatUnits(creditMultiplier, 18)),
-                  2
-                )
+              subtitle={formatDecimal(
+                lendingTermData.borrowRatio,
+                creditTokenDecimalsToDisplay
               )}
               extra={<QuestionMarkIcon />}
             />

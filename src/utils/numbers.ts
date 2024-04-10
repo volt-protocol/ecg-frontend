@@ -14,8 +14,10 @@ export const formatNumberDecimal = (value: number): string => {
 
 // Set the number of decimals
 export const formatDecimal = (value: number, decimals: number): string => {
+  if (value == 0) return '0';
+  if (value > 1e40) return 'Infinity';
   const factor = Math.pow(10, decimals)
-  return value != 0 ? (Math.round(value * factor) / factor).toFixed(decimals) : "0"
+  return (Math.round(value * factor) / factor).toFixed(decimals);
 }
 
 export const formatCurrencyValue = (value: number): string => {

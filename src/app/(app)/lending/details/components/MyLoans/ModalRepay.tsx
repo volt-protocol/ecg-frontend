@@ -5,7 +5,7 @@ import { Dialog, Switch, Transition } from "@headlessui/react"
 import { MdWarning } from "react-icons/md"
 import ButtonPrimary from "components/button/ButtonPrimary"
 import DefiInputBox from "components/box/DefiInputBox"
-import { formatDecimal, gUsdcToUsdc, toLocaleString, usdcToGUsdc } from "utils/numbers"
+import { formatDecimal } from "utils/numbers"
 import { formatUnits, parseUnits } from "viem"
 import { getTitleDisabled } from "./helper"
 import Link from "next/link"
@@ -14,12 +14,14 @@ import { RangeSlider } from "components/rangeSlider/RangeSlider"
 import { CurrencyTypes } from "components/switch/ToggleCredit"
 import { parse } from "path"
 import clsx from "clsx"
+import { useAppStore } from "store"
+import { marketsConfig } from "config"
 
 export default function ModalRepay({
   isOpen,
   setOpen,
   creditBalance,
-  usdcBalance,
+  pegTokenBalance,
   creditMultiplier,
   rowData,
   repay,
@@ -33,7 +35,7 @@ export default function ModalRepay({
   isOpen: boolean
   setOpen: (arg: boolean) => void
   creditBalance: bigint
-  usdcBalance: bigint
+  pegTokenBalance: bigint
   creditMultiplier: bigint
   rowData: any
   repay: (id: string) => void
@@ -47,6 +49,14 @@ export default function ModalRepay({
   const [value, setValue] = useState<string>("")
   const [match, setMatch] = useState<boolean>(false)
   const [withLeverage, setWithLeverage] = useState<boolean>(false)
+  const { appMarketId, coinDetails, contractsList } = useAppStore()
+
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const normalizer: bigint = BigInt('1' + '0'.repeat(36 - pegToken.decimals));
+  const pegTokenDebt: bigint = BigInt(rowData?.loanDebt || 0) * creditMultiplier / normalizer;
 
   // Reset value when modal opens
   useEffect(() => {
@@ -56,15 +66,15 @@ export default function ModalRepay({
 
   useEffect(() => {
     if(withLeverage) {
-      setValue(formatUnits(gUsdcToUsdc(rowData.loanDebt, creditMultiplier), 6))
+      setValue(pegTokenDebt.toString());
     }
   }, [withLeverage])
 
   useEffect(() => {
     if (rowData) {
-      currencyType == "USDC"
+      currencyType == "pegToken"
         ? setMatch(
-            parseUnits(value, 6) >= gUsdcToUsdc(rowData.loanDebt, creditMultiplier)
+            parseUnits(value, pegToken.decimals) >= pegTokenDebt
           )
         : setMatch(parseUnits(value, 18) >= rowData.loanDebt)
     }
@@ -72,16 +82,16 @@ export default function ModalRepay({
 
   /* Handlers */
   const setAvailable = (): string => {
-    return currencyType == "USDC"
-      ? formatDecimal(Number(formatUnits(usdcBalance, 6)), 2)
-      : formatDecimal(Number(formatUnits(creditBalance, 18)), 2)
+    return currencyType == "pegToken"
+      ? formatDecimal(Number(formatUnits(pegTokenBalance, pegToken.decimals)), creditTokenDecimalsToDisplay)
+      : formatDecimal(Number(formatUnits(creditBalance, 18)), creditTokenDecimalsToDisplay)
   }
 
   const setMax = () => {
-    currencyType == "USDC"
-      ? usdcBalance > gUsdcToUsdc(rowData.loanDebt, creditMultiplier)
-        ? setValue(formatUnits(gUsdcToUsdc(rowData.loanDebt, creditMultiplier), 6))
-        : setValue(formatUnits(usdcBalance, 6))
+    currencyType == "pegToken"
+      ? pegTokenBalance > pegTokenDebt
+        ? setValue(formatUnits(pegTokenDebt, pegToken.decimals))
+        : setValue(formatUnits(pegTokenBalance, pegToken.decimals))
       : creditBalance > rowData.loanDebt
       ? setValue(formatUnits(rowData.loanDebt, 18))
       : setValue(formatUnits(creditBalance, 18))
@@ -92,9 +102,9 @@ export default function ModalRepay({
 
     // Vérifier si la valeur saisie ne contient que des numéros
     if (/^[0-9]*\.?[0-9]*$/i.test(inputValue)) {
-      currencyType == "USDC"
-        ? usdcToGUsdc(parseUnits(inputValue, 6), creditMultiplier) > rowData.loanDebt
-          ? setValue(formatUnits(gUsdcToUsdc(rowData.loanDebt, creditMultiplier), 6))
+      currencyType == "pegToken"
+        ? (parseUnits(inputValue, pegToken.decimals) * normalizer / BigInt('1' + '0'.repeat(18))) > rowData.loanDebt
+          ? setValue(formatUnits(pegTokenDebt, pegToken.decimals))
           : setValue(inputValue as string)
         : parseUnits(inputValue, 18) > rowData.loanDebt
         ? setValue(formatUnits(rowData.loanDebt, 18))
@@ -103,7 +113,7 @@ export default function ModalRepay({
   }
 
   const getBorrowFunction = () => {
-    currencyType == "USDC"
+    currencyType == "pegToken"
       ? match
         ? withLeverage
           ? repayGatewayLeverage(rowData.id)
@@ -152,11 +162,11 @@ export default function ModalRepay({
                     <div className="mt-2 flex w-full flex-col gap-2">
                       <DefiInputBox
                         topLabel={`Amount of ${
-                          currencyType == "USDC" ? "USDC" : "gUSDC"
+                          currencyType == "pegToken" ? pegToken.symbol : creditTokenSymbol
                         } to repay`}
                         currencyLogo={
-                          currencyType == "USDC"
-                            ? "/img/crypto-logos/usdc.png"
+                          currencyType == "pegToken"
+                            ? pegTokenLogo
                             : "/img/crypto-logos/credit.png"
                         }
                         currencySymbol={currencyType}
@@ -168,15 +178,22 @@ export default function ModalRepay({
                         rightLabel={
                           <>
                             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Available: {toLocaleString(setAvailable())}
+                              Available: {setAvailable()}
+                            </p>
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Debt: {
+                                currencyType == "pegToken" ? 
+                                  formatDecimal(Number(formatUnits(pegTokenDebt, pegToken.decimals)), creditTokenDecimalsToDisplay * 2) :
+                                  formatDecimal(Number(formatUnits(rowData?.loanDebt, 18)), creditTokenDecimalsToDisplay * 2)
+                              }
                             </p>
                             <button
                               className="text-sm font-medium text-brand-500 hover:text-brand-400"
                               onClick={(e) => setMax()}
                             >
                               {rowData &&
-                              usdcBalance >
-                                gUsdcToUsdc(rowData.loanDebt, creditMultiplier)
+                              pegTokenBalance >
+                                pegTokenDebt
                                 ? "Full Repay"
                                 : "Max"}
                             </button>
@@ -187,7 +204,7 @@ export default function ModalRepay({
                       {lendingTermConfig.find(
                         (item) => item.termAddress === rowData.termAddress
                       )?.hasLeverage &&
-                        currencyType == "USDC" && (
+                        currencyType == "pegToken" && (
                           <div className="flex flex-col gap-4 rounded-xl bg-gray-100 py-4 dark:bg-navy-900">
                             <div className="mt w-full px-5">
                               <div className="flex items-center justify-between">
@@ -219,15 +236,15 @@ export default function ModalRepay({
                         variant="lg"
                         title={
                           rowData &&
-                          parseUnits(value, 6) >=
-                            gUsdcToUsdc(rowData.loanDebt, creditMultiplier)
+                          parseUnits(value, pegToken.decimals) >=
+                            pegTokenDebt
                             ? "Full Repay"
                             : "Partial Repay"
                         }
                         titleDisabled={getTitleDisabled(
                           value,
                           rowData.loanDebt,
-                          usdcBalance,
+                          pegTokenBalance,
                           creditMultiplier,
                           minBorrow,
                           match
@@ -235,26 +252,26 @@ export default function ModalRepay({
                         extra="w-full !rounded-xl"
                         disabled={
                           !value ||
-                          parseUnits(value, 6) > usdcBalance ||
+                          parseUnits(value, pegToken.decimals) > pegTokenBalance ||
                           (!match &&
                             rowData.loanDebt -
-                              usdcToGUsdc(parseUnits(value, 6), creditMultiplier) <
+                              (parseUnits(value, pegToken.decimals) * normalizer / creditMultiplier) <
                               minBorrow)
                         }
                         onClick={getBorrowFunction}
                       />
 
                       {/* TODO */}
-                      {parseUnits(value, 6) >
-                        gUsdcToUsdc(creditBalance, creditMultiplier) && (
+                      {parseUnits(value, pegToken.decimals) >
+                        (creditBalance * creditMultiplier / normalizer) && (
                         <div className="my-1 flex items-center justify-center gap-x-3 rounded-md bg-amber-100 px-2.5 py-1.5 text-sm text-amber-500/90 dark:bg-amber-100/0 dark:text-amber-500">
                           <MdWarning className="h-5 w-5" />
                           <p>
-                            You do not have enought gUSDC. Go to{" "}
+                            You do not have enough {creditTokenSymbol}. Go to{" "}
                             <Link href="/mint" className="font-bold">
                               Mint & Saving
                             </Link>{" "}
-                            to mint new gUSDCs.
+                            to mint more with {pegToken.symbol}.
                           </p>
                         </div>
                       )}

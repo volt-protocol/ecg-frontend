@@ -1,9 +1,10 @@
 const Progress = (props: {
   value: number;
   width?: string;
+  max?: number;
   useColors: boolean;
 }) => {
-  const { value, width, useColors } = props;
+  const { value, width, useColors, max } = props;
 
   const getColor = (value) => {
     if(!useColors) return "bg-green-400 dark:bg-green-400"
@@ -17,7 +18,9 @@ const Progress = (props: {
     <div
       className={`h-[10px] ${
         width ? width : "w-full"
-      } rounded-full bg-gray-200 dark:bg-navy-700`}
+      } rounded-full ${
+        ((useColors && value == 0 && (max || 0) != 0) || (max > 1e40)) ? 'bg-green-400' : 'bg-gray-200'
+      } dark:bg-navy-700`}
     >
       <div
         className={`flex h-full items-center justify-center rounded-full ${getColor(value)}`}

@@ -20,6 +20,8 @@ import { AlertMessage } from "components/message/AlertMessage"
 import { LendingTerms } from "types/lending"
 import { wagmiConfig } from "contexts/Web3Provider"
 import { useAppStore } from "store"
+import { marketsConfig } from "config"
+import Image from "next/image"
 
 function StakeGuild({
   debtCeiling,
@@ -29,6 +31,7 @@ function StakeGuild({
   guildBalance,
   smartContractAddress,
   guildUserWeight,
+  creditMultiplier,
   reload,
 }: {
   debtCeiling: number
@@ -38,13 +41,20 @@ function StakeGuild({
   guildBalance: bigint
   smartContractAddress: string
   guildUserWeight: bigint
+  creditMultiplier: bigint
   reload: Dispatch<SetStateAction<boolean>>
 }) {
-  const { contractsList } = useAppStore()
+  const { appMarketId, coinDetails, contractsList } = useAppStore()
   const [value, setValue] = useState<string>("")
   const { isConnected } = useAccount()
   const [showModal, setShowModal] = useState(false)
   const [debtDelta, setDebtDelta] = useState(0)
+
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+
+  const creditMultiplierNumber = Number(formatUnits(creditMultiplier, 18));
 
   const createSteps = (): Step[] => {
     const baseSteps = [
@@ -124,7 +134,9 @@ function StakeGuild({
         }
         updateStepStatus("Stake", "Success")
         setValue("")
-        reload(true)
+        setTimeout(function() {
+          reload(true)
+        }, 3000);
       }
     } else if (textButton === "Unstake") {
       if (Number(value) > Number(formatUnits(guildUserGaugeWeight, 18))) {
@@ -149,7 +161,9 @@ function StakeGuild({
           }
           updateStepStatus("Unstake", "Success")
           setValue("")
-          reload(true)
+          setTimeout(function() {
+            reload(true)
+          }, 3000);
         } catch (e) {
           if (e instanceof ContractFunctionExecutionError) {
             console.log(e.shortMessage, "error")
@@ -294,21 +308,27 @@ function StakeGuild({
             textButton === "Stake" ? (
               <>
                 <p>
-                  Your stake will allow{" "}
+                  Your stake will increase borrow cap by{" "}
+                  <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />
+                  {" "}
                   <span className="font-bold">
-                    {formatCurrencyValue(Number(formatDecimal(debtDelta, 2)))} more gUSDC
-                  </span>{" "}
-                  to be borrowed
+                    {formatDecimal(debtDelta * creditMultiplierNumber, creditTokenDecimalsToDisplay)}
+                  </span>
+                  {" "}{pegToken.symbol}
                 </p>
               </>
             ) : (
               <>
                 <p>
-                  Your unstake will decrease the borrow capacity on this term by{" "}
+                  Your unstake will decrease borrow cap by{" "}
+                  <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />
+                  {" "}
                   <span className="font-bold">
                     {" "}
-                    {formatCurrencyValue(Number(formatDecimal(debtDelta, 2)))} gUSDC
+                    {formatDecimal(debtDelta * creditMultiplierNumber, creditTokenDecimalsToDisplay)}
                   </span>
+                  {" "}
+                  {pegToken.symbol}
                 </p>
               </>
             )

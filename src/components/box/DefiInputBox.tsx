@@ -10,8 +10,10 @@ export default function DefiInputBox({
   pattern,
   value,
   onChange,
+  leftLabel,
   rightLabel,
   currencyLogo,
+  currencyLogoStyle,
   currencySymbol,
   ref,
 }: {
@@ -22,8 +24,10 @@ export default function DefiInputBox({
   pattern: string
   value: string | number | Address
   onChange?: any
+  leftLabel?: JSX.Element
   rightLabel?: JSX.Element
   currencyLogo?: string
+  currencyLogoStyle?: any
   currencySymbol?: string
   ref?: any
 }) {
@@ -46,15 +50,16 @@ export default function DefiInputBox({
           pattern={pattern}
         />
         {currencyLogo && currencySymbol && (
-          <div className="flex items-center gap-2">
-            <Image src={currencyLogo} width={32} height={32} alt="logo" />
-            <span className="font-medium text-gray-800 dark:text-gray-100">
-              {currencySymbol}
-            </span>
+          <div className="flex items-center gap-2" title={currencySymbol}>
+            <Image src={currencyLogo} style={currencyLogoStyle || {}} width={32} height={32} alt="logo" />
+            <span className="font-medium text-gray-800 dark:text-gray-100 hidden" style={{'whiteSpace':'nowrap'}}>{currencySymbol}</span>
           </div>
         )}
       </div>
-      <div className="mt-1 flex justify-end gap-1 px-5 pb-4">{rightLabel}</div>
+      <div className="overflow-auto mt-1 gap-1 px-5 pb-4">
+        <span style={{'float':'left'}}>{leftLabel}</span>
+        <span style={{'float':'right'}}>{rightLabel}</span>
+      </div>
     </div>
   )
 }

@@ -23,6 +23,8 @@ import { getTitleDisabledStake, getTitleDisabledUnstake } from "./helper"
 import { LendingTerms } from "types/lending"
 import { wagmiConfig } from "contexts/Web3Provider"
 import { useAppStore } from "store"
+import { marketsConfig } from "config"
+import Image from "next/image"
 
 function StakeCredit({
   debtCeiling,
@@ -31,7 +33,9 @@ function StakeCredit({
   textButton,
   creditBalance,
   termAddress,
-  ratioGuildCredit,
+  sgmMintRatio,
+  sgmRewardRatio,
+  creditMultiplier,
   reload,
 }: {
   debtCeiling: number
@@ -40,14 +44,24 @@ function StakeCredit({
   textButton: "Stake" | "Unstake"
   creditBalance: bigint
   termAddress: string
-  ratioGuildCredit: number
+  sgmMintRatio: number
+  sgmRewardRatio: number
+  creditMultiplier: bigint
   reload: React.Dispatch<React.SetStateAction<boolean>>
 }) {
-  const { contractsList } = useAppStore()
+  const { appMarketId, coinDetails, lendingTerms, contractsList } = useAppStore()
   const [value, setValue] = useState<string>("")
   const { address, isConnected } = useAccount()
   const [showModal, setShowModal] = useState<boolean>(false)
   const [debtDelta, setDebtDelta] = useState(0)
+
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
+  const surplusGuildMinterAddress = contractsList?.marketContracts[appMarketId].surplusGuildMinterAddress;
+  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const creditMultiplierNumber = Number(formatUnits(creditMultiplier, 18));
 
   const createSteps = (): Step[] => {
     const baseSteps = [
@@ -95,17 +109,17 @@ function StakeCredit({
       }
 
       if (Number(value) > creditBalance) {
-        toastError("Not enough gUSDC")
+        toastError(`Not enough ${creditTokenSymbol}`)
         return
       } else {
         setShowModal(true)
         updateStepStatus("Approve", "In Progress")
         try {
           const hash = await writeContract(wagmiConfig, {
-            address: contractsList?.creditAddress,
+            address: creditAddress,
             abi: CreditABI,
             functionName: "approve",
-            args: [contractsList.surplusGuildMinterAddress, parseEther(value.toString())],
+            args: [surplusGuildMinterAddress, parseEther(value.toString())],
           })
 
           const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
@@ -135,7 +149,7 @@ function StakeCredit({
 
         try {
           const hash = await writeContract(wagmiConfig, {
-            address: contractsList.surplusGuildMinterAddress,
+            address: surplusGuildMinterAddress,
             abi: SurplusGuildMinterABI,
             functionName: "stake",
             args: [termAddress, parseEther(value.toString())],
@@ -165,18 +179,20 @@ function StakeCredit({
         }
         updateStepStatus("Stake", "Success")
         setValue("")
-        reload(true)
+        setTimeout(function() {
+          reload(true)
+        }, 3000);
       }
     } else if (textButton === "Unstake") {
       if (Number(value) > creditAllocated) {
-        toastError("Not enough gUSDC allocated")
+        toastError(`Not enough ${creditTokenSymbol} allocated`)
         return
       } else {
         setShowModal(true)
         updateStepStatus("Unstake", "In Progress")
         try {
           const hash = await writeContract(wagmiConfig, {
-            address: contractsList.surplusGuildMinterAddress,
+            address: surplusGuildMinterAddress,
             abi: SurplusGuildMinterABI,
             functionName: "unstake",
             args: [termAddress, parseEther(value.toString())],
@@ -203,7 +219,9 @@ function StakeCredit({
         }
         updateStepStatus("Unstake", "Success")
         setValue("")
-        reload(true)
+        setTimeout(function() {
+          reload(true)
+        }, 3000);
       }
     }
   }
@@ -222,9 +240,9 @@ function StakeCredit({
     let amount: bigint
 
     if (textButton == "Stake") {
-      amount = parseEther((Number(value) * ratioGuildCredit).toString())
+      amount = parseEther((Number(value) * sgmMintRatio).toString())
     } else {
-      amount = -parseEther((Number(value) * ratioGuildCredit).toString())
+      amount = -parseEther((Number(value) * sgmMintRatio).toString())
     }
 
     const data = await readContract(wagmiConfig, {
@@ -268,9 +286,10 @@ function StakeCredit({
       <div>
         <div className="mb-2 flex flex-col items-center gap-2">
           <DefiInputBox
-            topLabel={"Amount of gUSDC to " + textButton.toLowerCase()}
-            currencyLogo="/img/crypto-logos/credit.png"
-            currencySymbol="gUSDC"
+            topLabel={`Amount of ${creditTokenSymbol} to ${textButton.toLowerCase()}`}
+            currencyLogo={pegTokenLogo}
+            currencyLogoStyle={{'borderRadius':'50%','border':'3px solid #3e6b7d'}}
+            currencySymbol={creditTokenSymbol}
             placeholder="0"
             pattern="^[0-9]*[.,]?[0-9]*$"
             inputSize="text-xl xl:text-3xl"
@@ -296,8 +315,8 @@ function StakeCredit({
             title={textButton}
             titleDisabled={
               textButton == "Stake"
-                ? getTitleDisabledStake(value, creditBalance)
-                : getTitleDisabledUnstake(value, creditAllocated)
+                ? getTitleDisabledStake(value, creditBalance, creditTokenSymbol)
+                : getTitleDisabledUnstake(value, creditAllocated, creditTokenSymbol)
             }
             extra="w-full !rounded-xl"
             onClick={handlestake}
@@ -316,48 +335,54 @@ function StakeCredit({
               textButton === "Stake" ? (
                 <>
                   <div>
-                    The GUILD / gUSDC ratio is{" "}
-                    <div className="inline-flex items-center">
-                      <span className="mr-1 font-bold">
-                        {formatDecimal(ratioGuildCredit, 2)}
-                      </span>
-                      <TooltipHorizon
-                        extra=""
-                        trigger={
-                          <div className="inline-block">
-                            <QuestionMarkIcon />
-                          </div>
-                        }
-                        content={
-                          <div className="w-[15rem] p-2">
-                            <p>
-                              When you stake <span className="font-semibold">gUSDC</span>,
-                              you provide first-loss capital on this term, and in exchange
-                              an amount of <span className="font-semibold">GUILD</span>{" "}
-                              will be minted to vote for this term.
-                            </p>
-                          </div>
-                        }
-                        placement="top"
-                      ></TooltipHorizon>
-                    </div>
-                    {". "}
-                    Your stake will allow{" "}
+                    Your stake will mint & stake{" "}
+                    <Image className="inline-block" src="/img/crypto-logos/guild.png" width={18} height={18} alt="logo" />
+                    {" "}
                     <span className="font-bold">
-                      {formatCurrencyValue(Number(formatDecimal(debtDelta, 2)))} more
-                      gUSDC
-                    </span>{" "}
-                    to be borrowed.
+                      {formatDecimal(Number(value) * sgmMintRatio, creditTokenDecimalsToDisplay)}
+                    </span> GUILD tokens.
+                    {" "}
+                    <TooltipHorizon
+                      extra=""
+                      trigger={
+                        <div className="inline-block">
+                          <QuestionMarkIcon />
+                        </div>
+                      }
+                      content={
+                        <div className="w-[15rem] p-2">
+                          <p>
+                            When you stake <Image className="inline-block" src={pegTokenLogo} width={16} height={16} alt="logo" style={{'borderRadius':'50%','border':'2px solid #3e6b7d'}} /> <span className="font-semibold">{creditTokenSymbol}</span>,
+                            you provide first-loss capital on this term, and in exchange
+                            an amount of <Image className="inline-block" src="/img/crypto-logos/guild.png" width={16} height={16} alt="logo" /> <span className="font-semibold">GUILD</span>{" "}
+                            will be minted to vote for this term.
+                          </p>
+                          <p className="mt-3">
+                            The <Image className="inline-block" src="/img/crypto-logos/guild.png" width={16} height={16} alt="logo" /> GUILD tokens minted are held on a smart contract, and you cannot use these tokens for any other purposes than increasing the debt ceiling of the term you are staking for.
+                          </p>
+                        </div>
+                      }
+                      placement="top"
+                    ></TooltipHorizon>
+
+                    <br/>
+                    Your stake will increase borrow cap by{" "}
+                    <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />
+                    {" "}
+                    <span className="font-bold">
+                      {formatDecimal(debtDelta * creditMultiplierNumber, creditTokenDecimalsToDisplay)}
+                    </span> {pegToken.symbol}.
                   </div>
                 </>
               ) : (
                 <>
                   <p>
-                    Your unstake will decrease the borrow capacity on this term by{" "}
+                    Your unstake will decrease borrow cap by{" "}
+                    <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />
+                    {" "}
                     <span className="font-bold">
-                      {formatCurrencyValue(Number(formatDecimal(debtDelta, 2)))}{" "}
-                    </span>{" "}
-                    gUSDC
+                      {formatDecimal(debtDelta * creditMultiplierNumber, creditTokenDecimalsToDisplay)}
+                    </span> {pegToken.symbol}.
                   </p>
                 </>
               )

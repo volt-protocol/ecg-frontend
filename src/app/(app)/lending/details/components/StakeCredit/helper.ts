@@ -3,27 +3,29 @@ import { formatUnits } from "viem"
 export const getTitleDisabledStake = (
   value: string,
   creditBalance: bigint,
+  symbol: string
 ): string => {
 
   if (!value || Number(value) <= 0) {
-    return "Enter gUSDC amount"
+    return  `Enter ${symbol} amount`
   }
 
   if (Number(value) > (Number(formatUnits(creditBalance, 18)))) {
-    return "Insufficient gUSDC available for staking"
+    return `Insufficient ${symbol} available for staking`
   }
 }
 
 export const getTitleDisabledUnstake = (
   value: string,
-  creditAllocated: bigint
+  creditAllocated: bigint,
+  symbol: string
 ): string => {
 
   if (!value || Number(value) <= 0) {
-    return "Enter gUSDC amount"
+    return `Enter ${symbol} amount`
   }
 
   if (Number(value) > Number(formatUnits(creditAllocated, 18))) {
-    return "Insufficient gUSDC available for unstaking"
+    return `Insufficient ${symbol} available for unstaking`
   }
 }

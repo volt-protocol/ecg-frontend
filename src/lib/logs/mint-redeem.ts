@@ -1,6 +1,7 @@
 import { getPublicClient } from "@wagmi/core"
 import { wagmiConfig } from "contexts/Web3Provider"
 import { PsmUsdcABI } from "lib/contracts"
+import { CoinSettings } from "store/slices/coin-details"
 import { ContractsList } from "store/slices/contracts-list"
 import { FROM_BLOCK } from "utils/constants"
 import { Address, formatUnits } from "viem"
@@ -17,14 +18,16 @@ export interface MintRedeemLogs {
 }
 
 export async function getAllMintRedeemLogs(
+  appMarketId: number,
   contractsList: ContractsList,
+  coinDetails: CoinSettings[],
   userAddress?: Address,
   duration?: number
 ): Promise<MintRedeemLogs[]> {
   const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber()
 
   const mintLogs = await getPublicClient(wagmiConfig).getLogs({
-    address: contractsList.psmUsdcAddress,
+    address: contractsList.marketContracts[appMarketId].psmAddress,
     event: {
       type: "event",
       name: "Mint",
@@ -40,7 +43,7 @@ export async function getAllMintRedeemLogs(
   })
 
   const redeemLogs = await getPublicClient(wagmiConfig).getLogs({
-    address: contractsList.psmUsdcAddress,
+    address: contractsList.marketContracts[appMarketId].psmAddress,
     event: {
       type: "event",
       name: "Redeem",
@@ -55,6 +58,11 @@ export async function getAllMintRedeemLogs(
     toBlock: currentBlock,
   })
 
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const creditToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList.marketContracts[appMarketId].creditAddress.toLowerCase());
+  
+  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+
   const mintLogsMod = mintLogs.map((log) => {
     return {
       termAddress: "",
@@ -62,8 +70,8 @@ export async function getAllMintRedeemLogs(
       category: "mintRedeem",
       type: "Mint",
       to: log.args.to as Address,
-      amountIn: Number(formatUnits(log.args.amountIn as bigint, 6)),
-      amountOut: Number(formatUnits(log.args.amountOut as bigint, 18)),
+      amountIn: Number(formatUnits(log.args.amountIn as bigint, pegToken.decimals)),
+      amountOut: Number(formatUnits(log.args.amountOut as bigint, creditToken.decimals)),
       block: Number(log.blockNumber),
       txHash: log.transactionHash as string,
     }
@@ -76,8 +84,8 @@ export async function getAllMintRedeemLogs(
       category: "mintRedeem",
       type: "Redeem",
       to: log.args.to as Address,
-      amountIn: Number(formatUnits(log.args.amountIn as bigint, 18)),
-      amountOut: Number(formatUnits(log.args.amountOut as bigint, 6)),
+      amountIn: Number(formatUnits(log.args.amountIn as bigint, creditToken.decimals)),
+      amountOut: Number(formatUnits(log.args.amountOut as bigint, pegToken.decimals)),
       block: Number(log.blockNumber),
       txHash: log.transactionHash as string,
     }

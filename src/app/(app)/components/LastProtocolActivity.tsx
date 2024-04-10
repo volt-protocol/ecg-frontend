@@ -19,6 +19,7 @@ import { getLastVoteEventDescription } from "../profile/helper"
 import { AddressBadge } from "components/badge/AddressBadge"
 import { Address } from "viem"
 import { TransactionBadge } from "components/badge/TransactionBadge"
+import { useAppStore } from "store"
 
 export type LastActivitiesLogs = MintRedeemLogs | VoteLogs
 
@@ -31,6 +32,13 @@ export const LastProtocolActivity = ({
   data: LastActivitiesLogs[]
   currentBlock: bigint
 }) => {
+
+  const { appMarketId, lendingTerms, coinDetails, historicalData, contractsList } = useAppStore()
+
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const creditToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList.marketContracts[appMarketId].creditAddress.toLowerCase());
+  
+  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
   const getDescription = (event: LastActivitiesLogs): any => {
     if (event.category === "mintRedeem") {
       return (
@@ -44,7 +52,7 @@ export const LastProtocolActivity = ({
           <span className="font-semibold">
             {toLocaleString(formatDecimal(event.amountIn, 2))}
           </span>
-          {event.type == "Mint" ? "gUSDC" : "USDC"}
+          {event.type == "Mint" ? creditTokenSymbol : pegToken.symbol}
         </div>
       )
     }

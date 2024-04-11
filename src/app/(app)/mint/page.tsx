@@ -18,9 +18,11 @@ import { formatUnits, Address, erc20Abi } from "viem"
 import { wagmiConfig } from "contexts/Web3Provider"
 import { useAppStore } from "store"
 import Spinner from "components/spinner"
+import { marketsConfig } from "config"
+import Image from "next/image"
 
 function MintAndSaving() {
-  const { appMarketId, contractsList } = useAppStore()
+  const { appMarketId, contractsList, coinDetails } = useAppStore()
   const { address, isConnected } = useAccount()
   const [reload, setReload] = React.useState<boolean>(false)
   const [showModal, setShowModal] = useState(false)
@@ -36,6 +38,11 @@ function MintAndSaving() {
   const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
   const pegTokenAddress = contractsList?.marketContracts[appMarketId].pegTokenAddress;
   const psmAddress = contractsList?.marketContracts[appMarketId].psmAddress;
+
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
 
   /* Smart contract reads */
   const { data, isError, isLoading, refetch } = useReadContracts({
@@ -78,10 +85,10 @@ function MintAndSaving() {
     query: {
       select: (data) => {
         return {
-          usdcBalance: Number(formatUnits(data[0].result as bigint, 6)),
-          creditBalance: Number(formatUnits(data[1].result as bigint, 18)),
-          conversionRate: Number(formatUnits(data[2].result as bigint, 18)),
-          usdcAvailableToRedeem: Number(formatUnits(data[3].result as bigint, 6)),
+          pegTokenBalance: data[0].result as bigint,
+          creditTokenBalance: data[1].result as bigint,
+          creditMultiplier: data[2].result as bigint,
+          pegTokenPSMBalance: data[3].result as bigint,
           isRebasing: data[4].result as boolean,
           creditSplit: formatDecimal(
             Number(formatUnits(data[5].result[1] as bigint, 18)) * 100,
@@ -163,7 +170,7 @@ function MintAndSaving() {
 
         <div className=" mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
           <Card
-            title="gUSDC Saving"
+            title="Saving Rate"
             extra="w-full h-full sm:overflow-auto px-6 py-4"
             rightText={
               <Switch
@@ -191,34 +198,27 @@ function MintAndSaving() {
             <div className="h-full rounded-md text-gray-700 dark:text-gray-200">
               <div className="mt-4 flex flex-col gap-4">
                 <p>
-                  If you elect to receive the savings rate, the gUSDC balance of your
-                  wallet will automatically rebase up when the protocol earn fees. The
-                  protocol profit sharing can be updated by governance, and is configured
-                  as follow :
+                  If you elect to receive the savings rate, the <Image className="inline-block" src={pegTokenLogo} width={20} height={20} alt="logo" style={{'borderRadius':'50%','border':'2px solid #3e6b7d'}} /> <strong>{creditTokenSymbol}</strong> balance of your wallet will automatically rebase up when the protocol earn fees. The protocol profit sharing can be updated by governance, and is currently configured as follow :
                 </p>
+                <ul className="list-disc list-inside">
+                  <li className="list-item">
+                    <span className="font-semibold ">{data.creditSplit}</span>% to <Image className="inline-block" src={pegTokenLogo} width={20} height={20} alt="logo" style={{'borderRadius':'50%','border':'2px solid #3e6b7d'}} /> <strong>{creditTokenSymbol}</strong> savers,
+                  </li>
+                  <li className="list-item">
+                      <span className="font-semibold">{data.guildSplit}</span>% to <Image className="inline-block" src="/img/crypto-logos/guild.png" width={20} height={20} alt="logo" /> <strong>GUILD</strong> stakers,
+                  </li>
+                  <li className="list-item">
+                    <span className="font-semibold">{data.surplusBufferSplit}</span>% to the Surplus Buffer.
+                  </li>
+                </ul>
                 <p>
-                  <span className="font-semibold ">{data.creditSplit}</span>% to gUSDC
-                  savers (through rebase), <br></br>{" "}
-                  <span className="font-semibold">{data.surplusBufferSplit}</span>% to the
-                  Surplus Buffer, a first-loss capital reserve shared among all terms,{" "}
-                  <br></br> <span className="font-semibold">{data.guildSplit}</span>% to
-                  GUILD token holders who stake their tokens to increase the debt ceiling
-                  of terms,
+                  The Surplus Buffer is a first-loss capital reserve shared among all terms of a market.
                 </p>
-                <p>
-                  Your current gUSDC Balance :
-                  <span className="font-semibold">
-                    {" "}
-                    {data.creditBalance === undefined
-                      ? "-"
-                      : toLocaleString(formatDecimal(data.creditBalance, 2))}
-                  </span>
+                <p className="text-gray-400">
+                  You might not want to subscribe to the savings rate if your only intent is to borrow <Image className="inline-block" src={pegTokenLogo} width={20} height={20} alt="logo" style={{'borderRadius':'50%','border':'2px solid #3e6b7d'}} /> {creditTokenSymbol} then redeem them for <Image className="inline-block" src={pegTokenLogo} width={20} height={20} alt="logo" /> {pegToken.symbol} (leveraging up on collateral tokens and shorting <Image className="inline-block" src={pegTokenLogo} width={20} height={20} alt="logo" /> {pegToken.symbol}), as being a rebasing address (and delegating voting power to be able to veto) will increase the gas cost of doing <Image className="inline-block" src={pegTokenLogo} width={20} height={20} alt="logo" style={{'borderRadius':'50%','border':'2px solid #3e6b7d'}} /> {creditTokenSymbol} token transfers to/from lending terms and PSM.
                 </p>
-                <p>
-                  Your current rebasing status :{" "}
-                  <span className="font-semibold">
-                    {data.isRebasing === undefined ? "-" : data.isRebasing ? "Yes" : "No"}
-                  </span>
+                <p className="text-gray-400">
+                  The <Image className="inline-block" src={pegTokenLogo} width={20} height={20} alt="logo" style={{'borderRadius':'50%','border':'2px solid #3e6b7d'}} /> {creditTokenSymbol} tokens are not intended to be very liquid on-chain, they act as a receipt token for lending in this ECG market, and can be redeemed in the PSM to inherit the liquidity of the peg token, <Image className="inline-block" src={pegTokenLogo} width={20} height={20} alt="logo" /> {pegToken.symbol}, when there is liquidity. Loans can be called to increase PSM liquidity.
                 </p>
               </div>
             </div>
@@ -226,10 +226,10 @@ function MintAndSaving() {
           <Card extra="order-1 w-full h-full sm:overflow-auto px-6 py-4">
             <MintOrRedeem
               reloadMintRedeem={setReload}
-              usdcBalance={data.usdcBalance}
-              creditBalance={data.creditBalance}
-              conversionRate={data.conversionRate}
-              usdcAvailableToRedeem={data.usdcAvailableToRedeem}
+              pegTokenBalance={data.pegTokenBalance}
+              pegTokenPSMBalance={data.pegTokenPSMBalance}
+              creditTokenBalance={data.creditTokenBalance}
+              creditMultiplier={data.creditMultiplier}
               isRebasing={data.isRebasing}
             />
           </Card>

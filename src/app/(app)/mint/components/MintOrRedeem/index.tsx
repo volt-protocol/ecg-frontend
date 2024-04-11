@@ -3,38 +3,63 @@ import StepModal from "components/stepLoader"
 import { Step } from "components/stepLoader/stepType"
 import { PsmUsdcABI, CreditABI } from "lib/contracts"
 import React, { useEffect, useState } from "react"
-import { Address, erc20Abi, parseUnits } from "viem"
+import { Address, erc20Abi, parseUnits, formatUnits } from "viem"
 import { useAccount } from "wagmi"
 import { Switch, Tab } from "@headlessui/react"
 import clsx from "clsx"
 import DefiInputBox from "components/box/DefiInputBox"
-import { formatDecimal, toLocaleString } from "utils/numbers"
+import { formatDecimal } from "utils/numbers"
 import ButtonPrimary from "components/button/ButtonPrimary"
-import { getTitleDisabled } from "./helper"
 import { AlertMessage } from "components/message/AlertMessage"
 import { wagmiConfig } from "contexts/Web3Provider"
 import { useAppStore } from "store"
+import { marketsConfig } from "config"
+import Image from "next/image"
+import { MdOpenInNew } from "react-icons/md"
 
 function MintOrRedeem({
   reloadMintRedeem,
-  usdcBalance,
-  creditBalance,
-  conversionRate,
-  usdcAvailableToRedeem,
+  pegTokenBalance,
+  creditTokenBalance,
+  creditMultiplier,
+  pegTokenPSMBalance,
   isRebasing,
 }: {
   reloadMintRedeem: React.Dispatch<React.SetStateAction<boolean>>
-  usdcBalance: number
-  creditBalance: number
-  conversionRate: number
-  usdcAvailableToRedeem: number
+  pegTokenBalance: bigint
+  creditTokenBalance: bigint
+  creditMultiplier: bigint
+  pegTokenPSMBalance: bigint
   isRebasing: boolean
 }) {
-  const { contractsList } = useAppStore()
+  const { contractsList, coinDetails, appMarketId } = useAppStore()
   const { address } = useAccount()
   const [showModal, setShowModal] = useState(false)
   const [value, setValue] = useState<string>("")
   const [show, setShow] = useState<boolean>(false)
+
+  const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
+  const pegTokenAddress = contractsList?.marketContracts[appMarketId].pegTokenAddress;
+  const psmAddress = contractsList?.marketContracts[appMarketId].psmAddress;
+
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+
+  const pegTokenBalanceNumber = Number(formatUnits(pegTokenBalance, pegToken.decimals));
+  const creditMultiplierNumber = Number(formatUnits(creditMultiplier, 18));
+  const pegTokenPSMBalanceNumber = Number(formatUnits(pegTokenPSMBalance, pegToken.decimals));
+  const creditTokenBalanceNumber = Number(formatUnits(creditTokenBalance, 18));
+
+  function getTitleDisabled(type: "Mint" | "Redeem", value: number, max: number) {
+    if (!value || value <= 0) {
+      return type == "Mint" ? `Enter ${pegToken.symbol} amount` : `Enter ${creditTokenSymbol} amount`
+    }
+    if (value > max) {
+      return type == "Mint" ? `Insufficient ${pegToken.symbol} balance` : `Insufficient ${creditTokenSymbol} balance`
+    }
+  }
 
   useEffect(() => {
     setShow(!isRebasing)
@@ -69,10 +94,10 @@ function MintOrRedeem({
       updateStepStatus("Approve", "In Progress")
       // approve collateral first
       const hash = await writeContract(wagmiConfig, {
-        address: contractsList.usdcAddress,
+        address: pegTokenAddress,
         abi: erc20Abi,
         functionName: "approve",
-        args: [contractsList.psmUsdcAddress as Address, parseUnits(value.toString(), 6)],
+        args: [psmAddress as Address, parseUnits(value.toString(), pegToken.decimals)],
       })
 
       const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
@@ -92,10 +117,10 @@ function MintOrRedeem({
     try {
       updateStepStatus("Mint", "In Progress")
       const hash = await writeContract(wagmiConfig, {
-        address: contractsList.psmUsdcAddress,
+        address: psmAddress,
         abi: PsmUsdcABI,
         functionName: "mint",
-        args: [address, parseUnits(value.toString(), 6)],
+        args: [address, parseUnits(value.toString(), pegToken.decimals)],
       })
       const checkmint = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
@@ -121,10 +146,10 @@ function MintOrRedeem({
 
       // approve collateral first
       const hash = await writeContract(wagmiConfig, {
-        address: contractsList.usdcAddress,
+        address: pegTokenAddress,
         abi: erc20Abi,
         functionName: "approve",
-        args: [contractsList.psmUsdcAddress as Address, parseUnits(value.toString(), 6)],
+        args: [psmAddress as Address, parseUnits(value.toString(), pegToken.decimals)],
       })
 
       const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
@@ -144,10 +169,10 @@ function MintOrRedeem({
     try {
       updateStepStatus("Mint and Enter Rebase", "In Progress")
       const hash = await writeContract(wagmiConfig, {
-        address: contractsList.psmUsdcAddress,
+        address: psmAddress,
         abi: PsmUsdcABI,
         functionName: "mintAndEnterRebase",
-        args: [parseUnits(value.toString(), 6)],
+        args: [parseUnits(value.toString(), pegToken.decimals)],
       })
       const checkmint = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
@@ -173,10 +198,10 @@ function MintOrRedeem({
 
       // approve collateral first
       const hash = await writeContract(wagmiConfig, {
-        address: contractsList?.creditAddress,
+        address: creditAddress,
         abi: CreditABI,
         functionName: "approve",
-        args: [contractsList.psmUsdcAddress as Address, parseUnits(value.toString(), 18)],
+        args: [psmAddress as Address, parseUnits(value.toString(), 18)],
       })
 
       const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
@@ -196,7 +221,7 @@ function MintOrRedeem({
     try {
       updateStepStatus("Redeem", "In Progress")
       const hash = await writeContract(wagmiConfig, {
-        address: contractsList.psmUsdcAddress,
+        address: psmAddress,
         abi: PsmUsdcABI,
         functionName: "redeem",
         args: [address, parseUnits(value.toString(), 18)],
@@ -222,7 +247,7 @@ function MintOrRedeem({
     const inputValue = e.target.value
 
     // Vérifier si la valeur saisie ne contient que des numéros
-    if (/^\d*$/.test(inputValue)) {
+    if (/^[0-9]*\.?[0-9]*$/i.test(inputValue)) {
       setValue(inputValue as string)
     }
   }
@@ -238,6 +263,20 @@ function MintOrRedeem({
             setSteps={setSteps}
           />
         )}
+
+        <div className="bg-gray-100 mb-3 rounded-md text-sm">
+          <a className="block p-1 text-center text-gray-500" target="__blank" href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS}/${address}`}>
+            Your balances <MdOpenInNew className="inline" />
+          </a>
+          <div className="flex space-x-1 rounded-md pb-2">
+            <div className="text-center w-full">
+              <Image className="align-top inline-block" src={pegTokenLogo} width={20} height={20} alt="logo" /> <strong>{pegTokenBalanceNumber ? formatDecimal(pegTokenBalanceNumber, pegTokenDecimalsToDisplay) : 0}</strong> {pegToken.symbol}
+            </div>
+            <div className="text-center w-full">
+              <Image className="align-top inline-block" src={pegTokenLogo} width={20} height={20} alt="logo" style={{'borderRadius':'50%','border':'2px solid #3e6b7d'}} /> <strong>{creditTokenBalanceNumber ? formatDecimal(creditTokenBalanceNumber, pegTokenDecimalsToDisplay) : 0}</strong> {creditTokenSymbol}
+            </div>
+          </div>
+        </div>
 
         <Tab.Group
           onChange={(index) => {
@@ -276,9 +315,9 @@ function MintOrRedeem({
             <Tab.Panel key="mint" className={"px-3 py-1"}>
               <div className="flex flex-col items-center gap-2">
                 <DefiInputBox
-                  topLabel="Mint gUSDC with USDC"
-                  currencyLogo="/img/crypto-logos/usdc.png"
-                  currencySymbol="USDC"
+                  topLabel={`Mint ${creditTokenSymbol} from ${pegToken.symbol}`}
+                  currencyLogo={pegTokenLogo}
+                  currencySymbol={pegToken.symbol}
                   placeholder="0"
                   pattern="^[0-9]*[.,]?[0-9]*$"
                   inputSize="text-2xl sm:text-3xl"
@@ -288,11 +327,11 @@ function MintOrRedeem({
                     <>
                       <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         Available:{" "}
-                        {usdcBalance ? toLocaleString(formatDecimal(usdcBalance, 2)) : 0}
+                        {pegTokenBalance ? formatDecimal(pegTokenBalanceNumber, pegTokenDecimalsToDisplay) : 0}
                       </p>
                       <button
                         className="text-sm font-medium text-brand-500 hover:text-brand-400"
-                        onClick={(e) => setValue(usdcBalance.toString())}
+                        onClick={(e) => setValue(formatDecimal(pegTokenBalanceNumber, pegToken.decimals))}
                       >
                         Max
                       </button>
@@ -302,7 +341,11 @@ function MintOrRedeem({
                 <div className="flex w-full flex-col rounded-xl bg-gray-100 py-4 dark:bg-navy-900">
                   <div className="sm:w-ha flex w-full items-center justify-between px-5">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Enter Saving Rate
+                      { !isRebasing ? <span>Enter Saving Rate</span> : <span>
+                        <span className="line-through">Enter Saving Rate</span>
+                        {" "}
+                        <span className="opacity-50">Already entered savings rate! 🚀</span>
+                      </span> }
                     </label>
                     <Switch
                       disabled={isRebasing}
@@ -327,10 +370,10 @@ function MintOrRedeem({
                 <ButtonPrimary
                   variant="lg"
                   title={show ? "Mint and Enter Rebase" : "Mint"}
-                  titleDisabled={getTitleDisabled("Mint", Number(value), usdcBalance)}
+                  titleDisabled={getTitleDisabled("Mint", Number(value), pegTokenBalanceNumber)}
                   extra="w-full !rounded-xl"
                   onClick={show ? mintAndEnterRebase : mint}
-                  disabled={Number(value) > usdcBalance || Number(value) <= 0 || !value}
+                  disabled={Number(value) > pegTokenBalanceNumber || Number(value) <= 0 || !value}
                 />
                 <AlertMessage
                   type="info"
@@ -338,12 +381,13 @@ function MintOrRedeem({
                     <>
                       <p>
                         You will receive{" "}
+                        <Image className="align-top inline-block" src={pegTokenLogo} width={20} height={20} alt="logo" style={{'borderRadius':'50%','border':'2px solid #3e6b7d'}} />
+                        {" "}
                         <span className="font-bold">
-                          {toLocaleString(
-                            formatDecimal(Number(value) / conversionRate, 2)
-                          )}{" "}
-                          gUSDC
+                          {formatDecimal(Number(value) / creditMultiplierNumber, pegTokenDecimalsToDisplay)}
                         </span>
+                        {" "}
+                        {creditTokenSymbol}
                       </p>
                     </>
                   }
@@ -353,9 +397,10 @@ function MintOrRedeem({
             <Tab.Panel key="redeem" className={"px-3 py-1"}>
               <div className="flex flex-col items-center gap-2">
                 <DefiInputBox
-                  topLabel="Redeem USDC with gUSDC"
-                  currencyLogo="/img/crypto-logos/credit.png"
-                  currencySymbol="gUSDC"
+                  topLabel={`Redeem ${pegToken.symbol} from ${creditTokenSymbol}`}
+                  currencyLogo={pegTokenLogo}
+                  currencyLogoStyle={{'borderRadius':'50%','border':'3px solid #3e6b7d'}}
+                  currencySymbol={creditTokenSymbol}
                   placeholder="0"
                   pattern="^[0-9]*[.,]?[0-9]*$"
                   inputSize="text-2xl sm:text-3xl"
@@ -365,31 +410,51 @@ function MintOrRedeem({
                     <>
                       <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         Available:{" "}
-                        {creditBalance
-                          ? toLocaleString(formatDecimal(creditBalance, 2))
+                        {creditTokenBalanceNumber
+                          ? formatDecimal(creditTokenBalanceNumber, pegTokenDecimalsToDisplay)
                           : 0}
                       </p>
                       <button
                         className="text-sm font-medium text-brand-500 hover:text-brand-400"
-                        onClick={(e) => setValue(creditBalance.toString())}
+                        onClick={(e) => setValue(creditTokenBalanceNumber.toString())}
                       >
                         Max
                       </button>
                     </>
                   }
                 />
+                <div className="flex w-full flex-col rounded-xl bg-gray-100 py-4 dark:bg-navy-900">
+                  <div className="sm:w-ha w-full text-center">
+                    <a
+                      className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                      target="__blank"
+                      href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS}/${psmAddress}`}
+                    >
+                      PSM Balance (max. redeemable) :{" "}
+                        <Image className="align-bottom inline-block" src={pegTokenLogo} width={22} height={22} alt="logo" />
+                        {" "}
+                        <span className="font-bold">
+                        {formatDecimal(pegTokenPSMBalanceNumber, pegTokenDecimalsToDisplay)}
+                        </span>
+                        {" "}
+                        {pegToken.symbol}
+                        {" "}
+                        <MdOpenInNew className="inline" />
+                    </a>
+                  </div>
+                </div>
                 <ButtonPrimary
                   variant="lg"
                   title={"Redeem"}
                   titleDisabled={getTitleDisabled(
                     "Redeem",
                     Number(value),
-                    usdcAvailableToRedeem
+                    pegTokenPSMBalanceNumber
                   )}
                   extra="w-full !rounded-xl"
                   onClick={redeem}
                   disabled={
-                    Number(value) > usdcAvailableToRedeem || !value ? true : false
+                    Number(value) > pegTokenPSMBalanceNumber || !value ? true : false
                   }
                 />
                 <AlertMessage
@@ -398,12 +463,13 @@ function MintOrRedeem({
                     <>
                       <p>
                         You will receive{" "}
+                        <Image className="align-top inline-block" src={pegTokenLogo} width={20} height={20} alt="logo" />
+                        {" "}
                         <span className="font-bold">
-                          {toLocaleString(
-                            formatDecimal(Number(value) * 1 * conversionRate, 2)
-                          )}{" "}
-                          USDC
+                        {formatDecimal(Number(value) * creditMultiplierNumber, pegTokenDecimalsToDisplay)}
                         </span>
+                        {" "}
+                        {pegToken.symbol}
                       </p>
                     </>
                   }

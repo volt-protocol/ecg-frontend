@@ -338,13 +338,13 @@ export default function AuctionsTable({
               {" "}
               <span className="text-center text-sm font-semibold text-gray-700 dark:text-white">
                 {formatDecimal(
-                  Number(formatUnits(BigInt(info.getValue()), 18)),
+                  Number(formatUnits(BigInt(info.getValue()), collateralToken.decimals)),
                   collateralTokenDecimalsToDisplay
                 )}
               </span>
             </div>
             <div className="text-center text-sm text-gray-400 dark:text-white">
-              ≈ $ {formatDecimal(Number(formatUnits(BigInt(info.getValue()), 18)) * collateralToken.price, 2)}
+              ≈ $ {formatDecimal(Number(formatUnits(BigInt(info.getValue()), collateralToken.decimals)) * collateralToken.price, 2)}
             </div>
           </>
         )

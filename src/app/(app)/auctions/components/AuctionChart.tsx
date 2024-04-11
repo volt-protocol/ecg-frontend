@@ -28,7 +28,7 @@ export function AuctionChart({
   const endTime = auction.startTime + duration * 1.2;
   const maxDebt = creditMultiplier * Number(auction.callDebt) / 1e18;
   const maxCollateral = Number(auction.collateralAmount) / (10**collateralToken.decimals);
-  const steps = 100;
+  const steps = 200;
 
   const xData = [];
   const debtData = [];
@@ -66,8 +66,6 @@ export function AuctionChart({
           color: '#FF5722',
           borderColor: '#FF5722'
         },
-        
-        orientation: 'horizontal',
         text: 'Bid'
       }
     });
@@ -82,7 +80,6 @@ export function AuctionChart({
           color: '#673AB7',
           borderColor: '#673AB7'
         },
-        
         orientation: 'horizontal',
         text: 'Now'
       }

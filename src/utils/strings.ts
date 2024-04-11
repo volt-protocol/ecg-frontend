@@ -16,7 +16,7 @@ export function eq(str1: string, str2: string) {
 }
 
 export const shortenUint = (string: string) => {
-  return `${string.slice(0, 10)}...`
+  return `${(string || '').slice(0, 10)}...`
 }
 
 export const shortenAddress = (address: Address) => {

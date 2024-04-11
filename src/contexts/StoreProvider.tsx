@@ -7,6 +7,7 @@ import { useAppStore } from "store"
 const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const {
+    fetchAuctions,
     fetchLendingTerms,
     fetchCoins,
     fetchHistoricalData,
@@ -24,7 +25,8 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
         fetchCoins(appMarketId),
         fetchHistoricalData(appMarketId),
         fetchContractsList(appChainId),
-        fetchLendingTerms(appMarketId)
+        fetchLendingTerms(appMarketId),
+        fetchAuctions(appMarketId)
       ]);
       setIsLoading(false);
     }

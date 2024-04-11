@@ -22,8 +22,8 @@ import { useAppStore } from "store"
 //Define form schema
 const schema = yup
   .object({
-    openingFee: yup.number().integer().max(10).required(),
-    interestRate: yup.number().positive().max(100).required(),
+    openingFee: yup.number().moreThan(-0.000001).max(10).required(),
+    interestRate: yup.number().moreThan(-0.000001).max(100).required(),
     borrowRatio: yup.number().positive().required(),
     hardCap: yup.number().positive().required(),
   })
@@ -259,7 +259,8 @@ export default function Create() {
                 type="number"
                 name="openingFee"
                 id="openingFee"
-                placeholder="0"
+                step=".1"
+                placeholder="0.00"
                 className={clsx(
                   formState.errors.openingFee
                     ? "ring-red-500"
@@ -286,7 +287,7 @@ export default function Create() {
               <input
                 {...register("interestRate")}
                 type="number"
-                step=".01"
+                step=".1"
                 name="interestRate"
                 id="interestRate"
                 placeholder="0.00"

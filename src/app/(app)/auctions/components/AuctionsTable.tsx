@@ -15,9 +15,8 @@ import { AuctionHouseABI, CreditABI } from "lib/contracts"
 import { waitForTransactionReceipt, writeContract, readContract } from "@wagmi/core"
 import { formatDecimal, toLocaleString } from "utils/numbers"
 import { FaSort, FaSortDown, FaSortUp } from "react-icons/fa"
-import { formatUnits, parseUnits } from "viem"
+import { formatUnits, parseUnits, Address } from "viem"
 import moment from "moment"
-import { Auction } from "lib/logs/auctions"
 import { MdChevronLeft, MdChevronRight, MdOpenInNew, MdShowChart } from "react-icons/md"
 import { coinsList } from "config"
 import ButtonPrimary from "components/button/ButtonPrimary"
@@ -31,23 +30,31 @@ import { TransactionBadge } from "components/badge/TransactionBadge"
 import { ItemIdBadge } from "components/badge/ItemIdBadge"
 import { useAppStore } from "store"
 import { shortenUint } from "utils/strings"
+import { Auction, AuctionHouse } from "../../../../store/slices/auctions"
+import { marketsConfig } from "config"
 
 export default function AuctionsTable({
-  auctionDuration,
-  tableData,
-  setOpen,
+  auctions,
+  auctionHouses,
+  setOpenAuction,
   setReload,
 }: {
-  auctionDuration: number
-  tableData: Auction[]
-  setOpen: (arg: boolean) => void
+  auctions: Auction[]
+  auctionHouses: AuctionHouse[],
+  setOpenAuction: (arg: Auction) => void
   setReload: (arg: boolean) => void
 }) {
-  const { contractsList, appMarketId } = useAppStore()
+  const { appMarketId, coinDetails, contractsList, lendingTerms } = useAppStore()
   const { isConnected } = useAccount()
   const columnHelper = createColumnHelper<Auction>()
   const [showModal, setShowModal] = useState(false)
   const [data, setData] = React.useState<Auction[]>([])
+
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
+  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
 
   /* Create Modal Steps */
   const createSteps = (): Step[] => {
@@ -64,8 +71,8 @@ export default function AuctionsTable({
   }
 
   useEffect(() => {
-    setData([...tableData])
-  }, [tableData])
+    setData([...auctions])
+  }, [auctions])
 
   const getActionButton = (auction: Auction) => {
     if (!isConnected) {
@@ -76,57 +83,59 @@ export default function AuctionsTable({
       )
     }
 
-    if (auction.closed) {
+    const collateralToken = coinDetails.find((item) => item.address.toLowerCase() === auction.collateralTokenAddress.toLowerCase());
+    const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken.price * 100)), 0);
+    const lendingTerm = lendingTerms.find((item) => item.address.toLowerCase() == auction.lendingTermAddress.toLowerCase());
+    const debtRecoveredPegToken = (Number(formatUnits(BigInt(auction.debtRecovered), 18))) * (Number(auction.callCreditMultiplier) / 1e18);
+
+    if (auction.status == 'closed') {
       return (
         <div className="flex flex-col items-center gap-1">
           <p className="flex items-center justify-center gap-1 text-sm text-gray-700 dark:text-white">
-            Collateral Sold:{" "}
-            <span className="font-semibold">
-              {toLocaleString(
-                formatDecimal(
-                  Number(
-                    formatUnits(auction.collateralSold, auction.collateralTokenDecimals)
-                  ),
-                  4
-                )
-              )}
-            </span>
+            Collateral Sold:
             <Image
-              src={
-                coinsList.find((item) => item.nameECG === auction.collateralTokenSymbol)
-                  ?.logo
-              }
+              src={lendingTerm.collateral.logo}
               width={20}
               height={20}
               alt={"logo"}
             />
+            {" "}
+            <span className="font-semibold">
+              {formatDecimal(
+                Number(
+                  formatUnits(BigInt(auction.collateralSold), collateralToken.decimals)
+                ),
+                collateralTokenDecimalsToDisplay
+              )}
+            </span>
           </p>
           <p className="flex items-center justify-center gap-1 text-sm text-gray-700 dark:text-white">
             Debt Recovered:{" "}
-            <span className="font-semibold">
-              {toLocaleString(
-                formatDecimal(Number(formatUnits(auction.debtRecovered, 18)), 4)
-              )}
-            </span>
             <Image
-              src="/img/crypto-logos/credit.png"
+              src={pegTokenLogo}
               width={20}
               height={20}
               alt={"logo"}
-            />
+            />{" "}
+            <span className="font-semibold">
+              {formatDecimal(debtRecoveredPegToken, creditTokenDecimalsToDisplay)}
+            </span>
           </p>
         </div>
       )
     }
 
+    const auctionHouse = auctionHouses.find((item) => item.address.toLowerCase() == auction.auctionHouseAddress.toLowerCase());
+    const auctionEnd = auction.startTime + auctionHouse.duration * 1000;
+
     if (
-      moment().isAfter(moment.unix(Number(auction.when)).add(auctionDuration, "seconds"))
+      Date.now() > auctionEnd
     ) {
       return (
         <ButtonPrimary
           variant="xs"
           title="Forgive"
-          onClick={() => forgive(auction.loanId)}
+          onClick={() => forgive(auctionHouse, auction)}
           extra="mt-1"
         />
       )
@@ -135,7 +144,7 @@ export default function AuctionsTable({
         <ButtonPrimary
           variant="xs"
           title="Bid"
-          onClick={() => bid(auction.loanId)}
+          onClick={() => bid(auctionHouse, auction)}
           extra="mt-1"
         />
       )
@@ -143,20 +152,13 @@ export default function AuctionsTable({
   }
 
   /* Smart contract writes */
-  const bid = async (loanId: string): Promise<void> => {
+  const bid = async (auctionHouse: AuctionHouse, auction: Auction): Promise<void> => {
+    const loanId : string = auction.loanId;
     setShowModal(true)
-
-    //get auction details
-    const auctionDetails = await readContract(wagmiConfig, {
-      address: contractsList?.auctionHouseAddress,
-      abi: AuctionHouseABI,
-      functionName: "getAuction",
-      args: [loanId],
-    })
 
     //Init Steps
     setSteps([
-      { name: `Approve gUSDC`, status: "Not Started" },
+      { name: `Approve ${creditTokenSymbol}`, status: "Not Started" },
       {
         name: "Bid for loan " + shortenUint(loanId),
         status: "Not Started",
@@ -164,33 +166,33 @@ export default function AuctionsTable({
     ])
 
     try {
-      updateStepStatus(`Approve gUSDC`, "In Progress")
+      updateStepStatus(`Approve ${creditTokenSymbol}`, "In Progress")
 
       const hash = await writeContract(wagmiConfig, {
-        address: contractsList?.marketContracts[appMarketId].creditAddress,
+        address: creditAddress,
         abi: CreditABI,
         functionName: "approve",
-        args: [auctionDetails.lendingTerm, auctionDetails.callDebt],
+        args: [auction.lendingTermAddress, auction.callDebt],
       })
       const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
       })
 
       if (checkApprove.status != "success") {
-        updateStepStatus(`Approve gUSDC`, "Error")
+        updateStepStatus(`Approve ${creditTokenSymbol}`, "Error")
         return
       }
-      updateStepStatus(`Approve gUSDC`, "Success")
+      updateStepStatus(`Approve ${creditTokenSymbol}`, "Success")
     } catch (e) {
       console.log(e)
-      updateStepStatus(`Approve gUSDC`, "Error")
+      updateStepStatus(`Approve ${creditTokenSymbol}`, "Error")
       return
     }
 
     try {
       updateStepStatus("Bid for loan " + shortenUint(loanId), "In Progress")
       const hash = await writeContract(wagmiConfig, {
-        address: contractsList?.auctionHouseAddress,
+        address: auctionHouse.address,
         abi: AuctionHouseABI,
         functionName: "bid",
         args: [loanId],
@@ -206,7 +208,9 @@ export default function AuctionsTable({
       }
 
       updateStepStatus("Bid for loan " + shortenUint(loanId), "Success")
-      setReload(true)
+      setTimeout(function() {
+        setReload(true)
+      }, 3000);
     } catch (e: any) {
       console.log(e)
       updateStepStatus("Bid for loan " + shortenUint(loanId), "Error")
@@ -215,7 +219,8 @@ export default function AuctionsTable({
     }
   }
 
-  const forgive = async (loanId: string): Promise<void> => {
+  const forgive = async (auctionHouse: AuctionHouse, auction: Auction): Promise<void> => {
+    const loanId : string = auction.loanId;
     //Init Steps
     setSteps([
       {
@@ -228,7 +233,7 @@ export default function AuctionsTable({
       setShowModal(true)
       updateStepStatus("Forgive for loan  " + shortenUint(loanId), "In Progress")
       const hash = await writeContract(wagmiConfig, {
-        address: contractsList?.auctionHouseAddress,
+        address: auctionHouse.address,
         abi: AuctionHouseABI,
         functionName: "forgive",
         args: [loanId],
@@ -244,7 +249,9 @@ export default function AuctionsTable({
       }
 
       updateStepStatus("Forgive for loan  " + shortenUint(loanId), "Success")
-      setReload(true)
+      setTimeout(function() {
+        setReload(true)
+      }, 3000);
     } catch (e: any) {
       console.log(e)
       updateStepStatus("Forgive for loan  " + shortenUint(loanId), "Error")
@@ -275,8 +282,8 @@ export default function AuctionsTable({
         </div>
       ),
     }),
-    columnHelper.accessor("collateralTokenSymbol", {
-      id: "collateralTokenSymbol",
+    columnHelper.accessor("collateralTokenAddress", {
+      id: "collateralTokenAddress",
       enableSorting: true,
       header: () => (
         <div>
@@ -287,16 +294,20 @@ export default function AuctionsTable({
           </a>
         </div>
       ),
-      cell: (info: any) => (
-        <a
-          className="flex items-center justify-center gap-1 pl-2 text-sm font-bold text-gray-600 hover:text-brand-500 dark:text-white"
-          target="__blank"
-          href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS}/${info.row.original.collateralToken}`}
-        >
-          {info.getValue()}
-          <MdOpenInNew />
-        </a>
-      ),
+      cell: (info: any) => {
+        const collateralToken = coinDetails.find((item) => item.address.toLowerCase() === info.getValue().toLowerCase());
+  
+        return (
+            <a
+              className="flex items-center justify-center gap-1 pl-2 text-sm font-bold text-gray-600 hover:text-brand-500 dark:text-white"
+              target="__blank"
+              href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS}/${collateralToken.address}`}
+            >
+              {collateralToken.symbol}
+              <MdOpenInNew />
+            </a>
+          );
+        },
     }),
     columnHelper.accessor("collateralAmount", {
       id: "collateralAmount",
@@ -310,30 +321,34 @@ export default function AuctionsTable({
           </a>
         </div>
       ),
-      cell: (info) => (
-        <div className="flex items-center justify-center gap-1">
-          <p className="text-center text-sm font-semibold text-gray-700 dark:text-white">
-            {toLocaleString(
-              formatDecimal(
-                Number(
-                  formatUnits(info.getValue(), info.row.original.collateralTokenDecimals)
-                ),
-                4
-              )
-            )}
-          </p>
-          <Image
-            src={
-              coinsList.find(
-                (item) => item.nameECG === info.row.original.collateralTokenSymbol
-              )?.logo
-            }
-            width={20}
-            height={20}
-            alt={"logo"}
-          />
-        </div>
-      ),
+      cell: (info) => {
+        const collateralToken = coinDetails.find((item) => item.address.toLowerCase() === info.row.original.collateralTokenAddress.toLowerCase());
+        const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken.price * 100)), 0);
+        const lendingTerm = lendingTerms.find((item) => item.address.toLowerCase() == info.row.original.lendingTermAddress.toLowerCase());
+
+        return (
+          <>
+            <div className="flex items-center justify-center gap-1">
+              <Image
+                src={lendingTerm.collateral.logo}
+                width={20}
+                height={20}
+                alt={"logo"}
+              />
+              {" "}
+              <span className="text-center text-sm font-semibold text-gray-700 dark:text-white">
+                {formatDecimal(
+                  Number(formatUnits(BigInt(info.getValue()), 18)),
+                  collateralTokenDecimalsToDisplay
+                )}
+              </span>
+            </div>
+            <div className="text-center text-sm text-gray-400 dark:text-white">
+              ≈ $ {formatDecimal(Number(formatUnits(BigInt(info.getValue()), 18)) * collateralToken.price, 2)}
+            </div>
+          </>
+        )
+      },
     }),
     columnHelper.accessor("callDebt", {
       id: "callDebt",
@@ -347,14 +362,23 @@ export default function AuctionsTable({
           </a>
         </div>
       ),
-      cell: (info) => (
-        <div className="flex justify-center gap-1">
-          <p className="text-sm font-semibold text-gray-700 dark:text-white">
-            {toLocaleString(formatDecimal(Number(formatUnits(info.getValue(), 18)), 2))}
-          </p>
-          <Image src="/img/crypto-logos/credit.png" width={20} height={20} alt={"logo"} />
-        </div>
-      ),
+      cell: (info) => {
+        const callDebtPegToken = (Number(info.getValue()) / 1e18) * (Number(info.row.original.callCreditMultiplier) / 1e18);
+        return (
+          <>
+            <div className="flex justify-center gap-1">
+              <Image src={pegTokenLogo} width={20} height={20} alt={"logo"} />
+              {" "}
+              <p className="text-sm font-semibold text-gray-700 dark:text-white">
+                {formatDecimal(callDebtPegToken, creditTokenDecimalsToDisplay)}
+              </p>
+            </div>
+            <div className="text-center text-sm text-gray-400 dark:text-white">
+              ≈ $ {formatDecimal(callDebtPegToken * pegToken.price, 2)}
+            </div>
+          </>
+        )
+      },
     }),
     {
       id: "chart",
@@ -372,7 +396,7 @@ export default function AuctionsTable({
         return (
           <div className="flex items-center justify-center gap-1">
             <button
-              onClick={() => setOpen(true)}
+              onClick={() => setOpenAuction(info.row.original)}
               type="button"
               className="rounded-md bg-gray-100 px-3 py-1.5 text-sm text-gray-700 ring-1 ring-inset ring-gray-200 transition-all duration-150 ease-in-out hover:ring-gray-300 dark:bg-navy-600 dark:text-gray-200 dark:ring-navy-500 dark:hover:ring-navy-300"
             >
@@ -385,14 +409,14 @@ export default function AuctionsTable({
         )
       },
     },
-    columnHelper.accessor("when", {
-      id: "when",
+    columnHelper.accessor("startTime", {
+      id: "startTime",
       enableSorting: true,
       header: () => (
         <div>
           <a href="#" className="group inline-flex">
             <p className="text-center text-sm font-medium text-gray-500 dark:text-white">
-              Date Start
+              Start
             </p>
           </a>
         </div>
@@ -400,15 +424,15 @@ export default function AuctionsTable({
       cell: (info: any) => (
         <div className="flex flex-col items-center justify-center gap-1">
           <p className="text-center text-sm text-gray-700 dark:text-white">
-            {moment.unix(Number(info.getValue())).format("MM/DD/YYYY h:mm:ssa")}
+            {moment.unix(Number(info.getValue()) / 1000).format("YYYY-MM-DD")}<br/>
+            {moment.unix(Number(info.getValue()) / 1000).format("HH:mm:ss")}
           </p>
-          <TransactionBadge txHash={info.row.original.txHashStart} />
         </div>
       ),
     }),
 
-    columnHelper.accessor("closed", {
-      id: "closed",
+    columnHelper.accessor("endTime", {
+      id: "endTime",
       header: () => (
         <div>
           <a href="#" className="group inline-flex">
@@ -418,43 +442,47 @@ export default function AuctionsTable({
           </a>
         </div>
       ),
-      cell: (info: any) => (
-        <div className="flex items-center justify-center gap-1">
-          <p className="text-center text-sm text-gray-700 dark:text-white">
-            {!info.getValue() ? (
-              moment().isAfter(
-                moment
-                  .unix(Number(info.row.original.when))
-                  .add(auctionDuration, "seconds")
-              ) ? (
-                <span className="inline-flex items-center gap-x-1.5 rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-500">
-                  Expired
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-x-1.5 rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-500">
-                  <svg
-                    className="h-1.5 w-1.5 animate-pulse fill-green-500"
-                    viewBox="0 0 6 6"
-                    aria-hidden="true"
-                  >
-                    <circle cx={3} cy={3} r={3} />
-                  </svg>
-                  Active
-                </span>
-              )
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-1.5">
-                <span className="items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-500">
-                  Closed
-                </span>
-                <TransactionBadge txHash={info.row.original.txHashEnd} />
-              </div>
-            )}
-          </p>
-        </div>
-      ),
-    }),
+      cell: (info: any) => {
+        const auction = info.row.original;
+        const auctionHouse = auctionHouses.find((item) => item.address.toLowerCase() == auction.auctionHouseAddress.toLowerCase());
+        const auctionEnd = auction.startTime + auctionHouse.duration * 1000;
 
+        return (
+          <div className="flex items-center justify-center gap-1">
+            <p className="text-center text-sm text-gray-700 dark:text-white">
+              {!info.getValue() ? ((Date.now() > auctionEnd) ? (
+                  <span className="inline-flex items-center gap-x-1.5 rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-500">
+                    Expired
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-x-1.5 rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-500">
+                    <svg
+                      className="h-1.5 w-1.5 animate-pulse fill-green-500"
+                      viewBox="0 0 6 6"
+                      aria-hidden="true"
+                    >
+                      <circle cx={3} cy={3} r={3} />
+                    </svg>
+                    Active
+                  </span>
+                )
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-1.5">
+                  <a
+                    className="items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-500"
+                    href={process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_TX + "/" + info.row.original.bidTxHash}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Closed <MdOpenInNew className="inline" />
+                  </a>
+                </div>
+              )}
+            </p>
+          </div>
+        );
+      }
+    }),
     {
       id: "action",
       header: () => <></>,
@@ -490,12 +518,19 @@ export default function AuctionsTable({
     },
   })
 
-  if (tableData.length === 0)
+  if (auctions.length === 0)
     return (
       <div className="my-10 flex justify-center">
         <p className="text-stone-400 dark:text-gray-100">No auctions found</p>
       </div>
     )
+
+  /*return (
+    <div>
+      <pre>auctionHouses: {JSON.stringify(auctionHouses, null, 2)}</pre>
+      <pre>auctions: {JSON.stringify(auctions, null, 2)}</pre>
+    </div>
+  );*/
 
   return (
     <>

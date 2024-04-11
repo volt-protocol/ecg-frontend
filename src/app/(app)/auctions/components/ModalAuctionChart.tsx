@@ -1,28 +1,58 @@
 "use client"
 
-import { Fragment, useEffect, useState } from "react"
+import { Fragment } from "react"
 import { Dialog, Transition } from "@headlessui/react"
-import { MdCheck, MdWarning } from "react-icons/md"
-import { formatUnits } from "viem"
-import Link from "next/link"
 import { AuctionChart } from "./AuctionChart"
-import { CollateralTypes } from "app/(app)/components/CollateralTypes"
-import { CreditTotalSupply } from "app/(app)/components/CreditTotalSupply"
+import { Auction, AuctionHouse } from "../../../../store/slices/auctions"
+import { secondsToAppropriateUnit } from "utils/date"
+import { useAppStore } from "store"
+import { formatDecimal } from "utils/numbers"
+import moment from "moment"
+import { MdOpenInNew } from "react-icons/md"
 
 export default function ModalAuctionChart({
-  isOpen,
-  setOpen,
-  auctionDuration,
-  midpoint,
+  setOpenAuction,
+  openAuction,
+  auctionHouses
 }: {
-  isOpen: boolean
-  setOpen: (arg: boolean) => void
-  auctionDuration: number
-  midpoint: number
+  setOpenAuction: (arg: Auction | null) => void
+  openAuction: Auction | null,
+  auctionHouses: AuctionHouse[]
 }) {
+  const auctionHouse = auctionHouses.find((item) => item.address.toLowerCase() == openAuction?.auctionHouseAddress.toLowerCase());
+
+  if (!openAuction || !auctionHouse) {
+    return null;
+  }
+
+  function setOpen(x: boolean) {
+    if (x) {
+      setOpenAuction(openAuction)
+    } else {
+      setOpenAuction(null);
+    }
+  }
+
+  const { appMarketId, coinDetails, contractsList } = useAppStore()
+  const collateralToken = coinDetails.find((item) => item.address.toLowerCase() === openAuction.collateralTokenAddress.toLowerCase());
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+
+  function bidTxLink() {
+    if (openAuction.bidTxHash) {
+      const creditMultiplier = Number(openAuction.callCreditMultiplier) / 1e18;
+      const bidPrice = (Number(openAuction.debtRecovered) / 1e18) * creditMultiplier / (Number(openAuction.collateralSold) / (10**collateralToken.decimals));
+      return <a className="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-500" target="__blank"
+      href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_TX}/${openAuction.bidTxHash}`}>
+        Bid: {moment(openAuction.endTime).format("YYYY-MM-DD HH:mm:ss")} @ <strong>{formatDecimal(bidPrice, pegTokenDecimalsToDisplay)}</strong> {pegToken.symbol} / {collateralToken.symbol} <MdOpenInNew className="inline" />
+      </a>
+    }
+    return null;
+  }
+
   return (
     <>
-      <Transition.Root show={isOpen} as={Fragment}>
+      <Transition.Root show={openAuction != null} as={Fragment}>
         <Dialog as="div" className="relative z-[40]" onClose={setOpen}>
           <Transition.Child
             as={Fragment}
@@ -52,16 +82,30 @@ export default function ModalAuctionChart({
                     Auction Profile
                   </h3>
 
-                  <div className="w-full">
+                  { auctionHouse?.duration ? <div className="w-full">
                     <p className="flex items-center justify-center gap-1 text-sm text-gray-700 dark:text-white mt-4">
                       Midpoint:{" "}
-                      <span className="font-semibold">{midpoint} seconds</span>
+                      <span className="font-semibold">{secondsToAppropriateUnit(auctionHouse?.midPoint)}</span>
                     </p>
                     <p className="flex items-center justify-center gap-1 text-sm text-gray-700 dark:text-white">
                       Auction Duration:{" "}
-                      <span className="font-semibold">{auctionDuration} seconds</span>
+                      <span className="font-semibold">{secondsToAppropriateUnit(auctionHouse?.duration)}</span>
                     </p>
-                    <AuctionChart />
+                    <p className="flex items-center justify-center gap-1 text-sm text-gray-700 dark:text-white">
+                      Auction Start:{" "}
+                      <span className="font-semibold">{moment(openAuction.startTime).format('YYYY-MM-DD HH:mm:ss')}</span>
+                    </p>
+                    <p className="flex items-center justify-center gap-1 text-sm text-gray-700 dark:text-white">
+                      Auction End:{" "}
+                      <span className="font-semibold">{moment(openAuction.startTime + auctionHouse?.duration * 1000).format('YYYY-MM-DD HH:mm:ss')}</span>
+                    </p>
+                  </div> : null }
+                  <AuctionChart auctionHouse={auctionHouse} auction={openAuction} />
+                  <div className="mt-3 text-center">
+                    {bidTxLink()}
+                  </div>
+                  <div className="mt-3 text-center text-xs text-gray-400 text-italic">
+                    Market price: source DefiLlama, using ${formatDecimal(collateralToken.price, 2)} / {collateralToken.symbol} and ${formatDecimal(pegToken.price, 2)} / {pegToken.symbol}.
                   </div>
                 </Dialog.Panel>
               </Transition.Child>

@@ -39,6 +39,7 @@ function DelegateCredit({
   userAddress,
   isConnected,
   delegateLockupPeriod,
+  creditTokenSymbol,
 }: {
   creditNotUsed: bigint
   reloadCredit: React.Dispatch<React.SetStateAction<boolean>>
@@ -47,6 +48,7 @@ function DelegateCredit({
   userAddress: string
   isConnected: boolean
   delegateLockupPeriod: bigint
+  creditTokenSymbol: string
 }) {
   const { contractsList, appMarketId } = useAppStore()
   const { address } = useAccount()
@@ -59,9 +61,9 @@ function DelegateCredit({
 
   const createSteps = (actionType?: "Delegate" | "Undelegate"): Step[] => {
     if (actionType === "Delegate") {
-      return [{ name: "Delegate gUSDC", status: "Not Started" }]
+      return [{ name: `Delegate ${creditTokenSymbol}`, status: "Not Started" }]
     } else {
-      return [{ name: "Undelegate gUSDC", status: "Not Started" }]
+      return [{ name: `Undelegate ${creditTokenSymbol}`, status: "Not Started" }]
     }
   }
 
@@ -135,7 +137,7 @@ function DelegateCredit({
     }
     try {
       setShowModal(true)
-      updateStepStatus("Delegate gUSDC", "In Progress")
+      updateStepStatus(`Delegate ${creditTokenSymbol}`, "In Progress")
       const hash = await writeContract(wagmiConfig, {
         address: contractsList.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
@@ -148,18 +150,18 @@ function DelegateCredit({
       })
 
       if (checkdelegate.status != "success") {
-        updateStepStatus("Delegate gUSDC", "Error")
+        updateStepStatus(`Delegate ${creditTokenSymbol}`, "Error")
 
         return
       }
 
-      updateStepStatus("Delegate gUSDC", "Success")
+      updateStepStatus(`Delegate ${creditTokenSymbol}`, "Success")
       setValue("")
       setAddressValue("")
       reloadCredit(true)
     } catch (e) {
       console.log(e)
-      updateStepStatus("Delegate gUSDC", "Error")
+      updateStepStatus(`Delegate ${creditTokenSymbol}`, "Error")
       toastError("Transaction failed")
     }
   }
@@ -174,7 +176,7 @@ function DelegateCredit({
     }
     try {
       setShowModal(true)
-      updateStepStatus("Undelegate gUSDC", "In Progress")
+      updateStepStatus(`Undelegate ${creditTokenSymbol}`, "In Progress")
       const hash = await writeContract(wagmiConfig, {
         address: contractsList.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
@@ -187,18 +189,18 @@ function DelegateCredit({
       })
 
       if (checkdelegate.status != "success") {
-        updateStepStatus("Undelegate gUSDC", "Error")
+        updateStepStatus(`Undelegate ${creditTokenSymbol}`, "Error")
 
         return
       }
 
-      updateStepStatus("Undelegate gUSDC", "Success")
+      updateStepStatus(`Undelegate ${creditTokenSymbol}`, "Success")
       setValue("")
       setAddressValue("")
       reloadCredit(true)
     } catch (e) {
       console.log(e)
-      updateStepStatus("Undelegate gUSDC", "Error")
+      updateStepStatus(`Undelegate ${creditTokenSymbol}`, "Error")
       toastError("Transaction failed")
     }
   }
@@ -229,7 +231,7 @@ function DelegateCredit({
     }),
     columnHelper.accessor("votes", {
       id: "votes",
-      header: "gUSDC Delegated",
+      header: `${creditTokenSymbol} Delegated`,
       enableSorting: true,
       cell: (info) => (
         <p className="text-sm font-bold text-gray-600 dark:text-gray-200">
@@ -276,7 +278,7 @@ function DelegateCredit({
       <div className="mt-4 h-full rounded-xl text-gray-700 dark:text-gray-200">
         <div className="my-2 -mt-1 grid grid-cols-2 gap-y-1">
           <p className="col-span-2">
-            Your gUSDC balance :{" "}
+            Your {creditTokenSymbol} balance :{" "}
             <span className="font-semibold">
               {creditBalance
                 ? toLocaleString(formatDecimal(Number(formatUnits(creditBalance, 18)), 2))
@@ -284,7 +286,7 @@ function DelegateCredit({
             </span>
           </p>
           <p className="col-span-2">
-            Your gUSDC voting weight:{" "}
+            Your {creditTokenSymbol} voting weight:{" "}
             <span className="font-semibold">
               {creditVotingWeight
                 ? toLocaleString(
@@ -296,7 +298,7 @@ function DelegateCredit({
         </div>
         <div className="flex flex-col gap-2">
           <DefiInputBox
-            topLabel="Delegate gUSDC to"
+            topLabel={`Delegate ${creditTokenSymbol} to`}
             placeholder="0x..."
             inputSize="text-xl"
             pattern="^[0-9a-fA-F]$"
@@ -313,9 +315,9 @@ function DelegateCredit({
           />
 
           <DefiInputBox
-            topLabel="Delegate gUSDC"
+            topLabel={`Delegate ${creditTokenSymbol}`}
             currencyLogo="/img/crypto-logos/credit.png"
-            currencySymbol="gUSDC"
+            currencySymbol={creditTokenSymbol}
             placeholder="0"
             inputSize="text-2xl sm:text-3xl"
             pattern="^[0-9]*[.,]?[0-9]*$"
@@ -343,8 +345,8 @@ function DelegateCredit({
 
           <ButtonPrimary
             variant="lg"
-            title="Delegate gUSDC"
-            titleDisabled={getTitleDisabled(Number(value), addressValue, creditNotUsed)}
+            title={`Delegate ${creditTokenSymbol}`}
+            titleDisabled={getTitleDisabled(Number(value), addressValue, creditNotUsed, creditTokenSymbol)}
             extra="w-full mt-1 !rounded-xl"
             onClick={handleDelegate}
             disabled={
@@ -386,7 +388,7 @@ function DelegateCredit({
                 <MdOutlineAccountBalance className="h-10 w-10" />
               </div>
               <div className="mt-2 flex justify-center">
-                <p>You haven't delegated any gUSDC yet</p>
+                <p>You haven't delegated any {creditTokenSymbol} yet</p>
               </div>
             </div>
           ) : (

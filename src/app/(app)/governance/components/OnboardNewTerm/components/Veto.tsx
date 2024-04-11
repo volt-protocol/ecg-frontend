@@ -52,13 +52,14 @@ function Veto({
   creditVotingWeight: bigint
   guildVotingWeight: bigint
 }) {
-  const { contractsList } = useAppStore()
+  const { contractsList, coinDetails } = useAppStore()
   const { address } = useAccount()
   const [showModal, setShowModal] = useState(false)
   const [activeVetoVotes, setActiveVetoVotes] = useState<ActivOnboardingVetoVotes[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [currentBlock, setCurrentBlock] = useState<BigInt>()
   const [selectHolderType, setSelectHolderType] = useState<"guild" | "credit">("credit")
+  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
 
   useEffect(() => {
     address && fetchActiveOnboardingVetoVotes()

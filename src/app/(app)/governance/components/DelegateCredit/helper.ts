@@ -3,16 +3,17 @@ import { Address, formatUnits, isAddress } from "viem"
 export const getTitleDisabled = (
   value: number,
   addressValue: Address | undefined,
-  guildNotUsed: bigint
+  guildNotUsed: bigint,
+  creditTokenSymbol: string
 ) => {
   if (!addressValue || !isAddress(addressValue)) {
     return "Enter Delegatee address"
   }
   if (!value || value <= 0) {
-    return "Enter gUSDC amount"
+    return `Enter ${creditTokenSymbol} amount`
   }
   if (value > Number(formatUnits(guildNotUsed, 18))) {
-    return "Insufficient gUSDC balance"
+    return `Insufficient ${creditTokenSymbol} balance`
   }
 }
 

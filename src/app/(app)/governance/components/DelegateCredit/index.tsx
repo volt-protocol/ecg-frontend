@@ -319,6 +319,7 @@ function DelegateCredit({
           <DefiInputBox
             topLabel={`Delegate ${creditTokenSymbol}`}
             currencyLogo={pegTokenLogo}
+            currencyLogoStyle={{'borderRadius':'50%','border':'3px solid #3e6b7d'}}
             currencySymbol={creditTokenSymbol}
             placeholder="0"
             inputSize="text-2xl sm:text-3xl"

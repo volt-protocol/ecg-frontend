@@ -52,13 +52,14 @@ function Veto({
   creditVotingWeight: bigint
   guildVotingWeight: bigint
 }) {
-  const { contractsList, coinDetails } = useAppStore()
+  const { contractsList, coinDetails, appMarketId } = useAppStore()
   const { address } = useAccount()
   const [showModal, setShowModal] = useState(false)
   const [activeVetoVotes, setActiveVetoVotes] = useState<ActivOnboardingVetoVotes[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [currentBlock, setCurrentBlock] = useState<BigInt>()
   const [selectHolderType, setSelectHolderType] = useState<"guild" | "credit">("credit")
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
   const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
 
   useEffect(() => {
@@ -705,7 +706,7 @@ function Veto({
                         as="span"
                         className="font-semilight block text-gray-700"
                       >
-                        Use my gUSDC voting power
+                        Use my {creditTokenSymbol} voting power
                       </RadioGroup.Label>
                       <RadioGroup.Description
                         as="span"
@@ -714,7 +715,7 @@ function Veto({
                         {toLocaleString(
                           formatDecimal(Number(formatUnits(creditVotingWeight, 18)), 2)
                         )}{" "}
-                        gUSDC
+                        {creditTokenSymbol}
                       </RadioGroup.Description>
                     </span>
                   </span>
@@ -789,7 +790,7 @@ function Veto({
         </RadioGroup>
 
         <p className="mt-4">
-          Using {selectHolderType == "credit" ? "gUSDC" : "GUILD"} veto power will cancel
+          Using {selectHolderType == "credit" ? {creditTokenSymbol} : "GUILD"} veto power will cancel
           the onboarding of a lending term that GUILD votes successfully voted to add.
         </p>
         <div>

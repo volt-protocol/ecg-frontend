@@ -149,19 +149,19 @@ function Veto({
           const data = await readContracts(wagmiConfig, {
             contracts: [
               {
-                address: contractsList.onboardVetoCreditAddress,
+                address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: "proposalVotes",
                 args: [item.proposalId],
               },
               {
-                address: contractsList.onboardVetoCreditAddress,
+                address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: "quorum",
                 args: [item.timestamp],
               },
               {
-                address: contractsList.onboardVetoCreditAddress,
+                address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: "state",
                 args: [item.proposalId],
@@ -203,7 +203,7 @@ function Veto({
                 args: [item.timelockId],
               },
               {
-                address: contractsList.onboardVetoCreditAddress,
+                address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: "hasVoted",
                 args: [item.proposalId, address],
@@ -342,7 +342,7 @@ function Veto({
       const targetContract =
         selectHolderType == "credit"
           ? {
-              address: contractsList.onboardVetoCreditAddress,
+              address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
               abi: OnboardVetoCreditABI,
             }
           : {
@@ -408,7 +408,7 @@ function Veto({
       const targetContract =
         selectHolderType == "credit"
           ? {
-              address: contractsList.onboardVetoCreditAddress,
+              address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
               abi: OnboardVetoCreditABI,
             }
           : {
@@ -790,14 +790,14 @@ function Veto({
         </RadioGroup>
 
         <p className="mt-4">
-          Using {selectHolderType == "credit" ? {creditTokenSymbol} : "GUILD"} veto power will cancel
+          Using {selectHolderType == "credit" ? `${creditTokenSymbol}` : "GUILD"} veto power will cancel
           the onboarding of a lending term that GUILD votes successfully voted to add.
         </p>
         <div>
           {loading ? (
             <div className="mt-4 flex flex-grow flex-col items-center justify-center gap-2">
               <Spinner />
-            </div>
+            </div>  
           ) : (
             <>
               <div className="overflow-auto">

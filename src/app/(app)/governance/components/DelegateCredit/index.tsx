@@ -25,6 +25,7 @@ import DefiInputBox from "components/box/DefiInputBox"
 import { wagmiConfig } from "contexts/Web3Provider"
 import { AlertMessage } from "components/message/AlertMessage"
 import { useAppStore } from "store"
+import { marketsConfig } from "config"
 
 interface Delegatee {
   address: string
@@ -58,6 +59,7 @@ function DelegateCredit({
   const [delegatees, setDelegatees] = useState<Delegatee[]>([])
   const [steps, setSteps] = useState<Step[]>()
   const [isLoadingDelegations, setIsLoadingDelegations] = useState<boolean>(true)
+  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
 
   const createSteps = (actionType?: "Delegate" | "Undelegate"): Step[] => {
     if (actionType === "Delegate") {
@@ -316,7 +318,7 @@ function DelegateCredit({
 
           <DefiInputBox
             topLabel={`Delegate ${creditTokenSymbol}`}
-            currencyLogo="/img/crypto-logos/credit.png"
+            currencyLogo={pegTokenLogo}
             currencySymbol={creditTokenSymbol}
             placeholder="0"
             inputSize="text-2xl sm:text-3xl"

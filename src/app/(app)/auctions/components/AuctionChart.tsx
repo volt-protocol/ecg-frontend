@@ -13,8 +13,8 @@ export function AuctionChart({
   auctionHouse: AuctionHouse | null,
   auction: Auction | null
 }) {
-  if (!auction || !auctionHouse) return null;
   const { appMarketId, coinDetails, contractsList } = useAppStore()
+  if (!auction || !auctionHouse) return null;
   const collateralToken = coinDetails.find((item) => item.address.toLowerCase() === auction.collateralTokenAddress.toLowerCase());
   const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken.price * 100)), 0);
   const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());

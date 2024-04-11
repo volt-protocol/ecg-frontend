@@ -19,6 +19,7 @@ export default function ModalAuctionChart({
   openAuction: Auction | null,
   auctionHouses: AuctionHouse[]
 }) {
+  const { appMarketId, coinDetails, contractsList } = useAppStore()
   const auctionHouse = auctionHouses.find((item) => item.address.toLowerCase() == openAuction?.auctionHouseAddress.toLowerCase());
 
   if (!openAuction || !auctionHouse) {
@@ -32,8 +33,6 @@ export default function ModalAuctionChart({
       setOpenAuction(null);
     }
   }
-
-  const { appMarketId, coinDetails, contractsList } = useAppStore()
   const collateralToken = coinDetails.find((item) => item.address.toLowerCase() === openAuction.collateralTokenAddress.toLowerCase());
   const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
   const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);

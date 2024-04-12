@@ -92,6 +92,9 @@ function CreateLoan({
   }
   const [steps, setSteps] = useState<Step[]>([])
 
+  const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
+  const psmAddress = contractsList?.marketContracts[appMarketId].psmAddress;
+
   /* Smart contract reads */
   const { data, isError, isLoading, refetch } = useReadContracts({
     contracts: [
@@ -313,7 +316,7 @@ function CreateLoan({
       updateStepStatus(`Sign Permit for gUSDC`, "In Progress")
 
       signatureGUSDC = await signPermit({
-        contractAddress: contractsList.creditAddress as Address,
+        contractAddress: creditAddress as Address,
         erc20Name: "Ethereum Credit Guild - gUSDC",
         ownerAddress: address,
         spenderAddress: contractsList.gatewayAddress as Address,
@@ -344,7 +347,8 @@ function CreateLoan({
         parseUnits(collateralAmount, lendingTerm.collateral.decimals),
         signatureCollateral,
         signatureGUSDC,
-        contractsList
+        creditAddress,
+        psmAddress
       )
 
       const callsDescription = getMulticallsDecoded(calls, lendingTerm, contractsList)
@@ -473,7 +477,7 @@ function CreateLoan({
       updateStepStatus(`Sign Permit for gUSDC`, "In Progress")
 
       signatureGUSDC = await signPermit({
-        contractAddress: contractsList.creditAddress as Address,
+        contractAddress: creditAddress as Address,
         erc20Name: "Ethereum Credit Guild - gUSDC",
         ownerAddress: address,
         spenderAddress: contractsList.gatewayAddress as Address,
@@ -523,7 +527,7 @@ function CreateLoan({
       )
 
       /*** Calculate maxLoanDebt with 1% slippage ***/
-      const path = [contractsList.usdcAddress, lendingTerm.collateral.address]
+      const path = [pegToken.address, lendingTerm.collateral.address]
 
       //get min amount of usdc to swap with collateral from uniswap
       const result = await readContract(wagmiConfig, {
@@ -543,10 +547,10 @@ function CreateLoan({
         functionName: "borrowWithBalancerFlashLoan",
         args: [
           lendingTerm.address,
-          contractsList.psmUsdcAddress,
+          psmAddress,
           contractsList.uniswapRouterAddress,
           lendingTerm.collateral.address,
-          contractsList.usdcAddress,
+          pegToken.address,
           parseUnits(collateralAmount, lendingTerm.collateral.decimals),
           flashLoanCollateralAmount,
           maxLoanDebt,

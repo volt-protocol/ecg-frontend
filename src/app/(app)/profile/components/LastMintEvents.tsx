@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-table"
 import CustomTable from "components/table/CustomTable"
 import moment from "moment"
-import { formatDecimal, toLocaleString} from "utils/numbers"
+import { formatDecimal } from "utils/numbers"
 import {
   MdArrowDownward,
   MdArrowUpward,
@@ -20,6 +20,10 @@ import { BLOCK_LENGTH_MILLISECONDS } from "utils/constants"
 import { MintRedeemLogs } from "lib/logs/mint-redeem"
 import { Address } from "viem"
 import { TransactionBadge } from "components/badge/TransactionBadge"
+import { useAppStore } from "store"
+import { getCreditTokenSymbol } from "utils/strings"
+import { marketsConfig } from "config"
+import Image from "next/image"
 
 export default function LastMintEvents({
   userAddress,
@@ -31,6 +35,13 @@ export default function LastMintEvents({
   currentBlock: BigInt
 }) {
   const { address } = useAccount()
+  const { contractsList, appMarketId, coinDetails } = useAppStore()
+
+  const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
 
   /* Create Table */
   const columnHelper = createColumnHelper<MintRedeemLogs>()
@@ -64,28 +75,22 @@ export default function LastMintEvents({
     }),
     columnHelper.accessor("amountIn", {
       id: "amountIn",
-      header: "Amount In",
+      header: "Sent",
       cell: (info) => {
         return (
           <div className="ml-4 text-sm ">
-            <span className="font-semibold mr-1">
-              {toLocaleString(formatDecimal(info.getValue(), 2))}
-            </span>
-            {info.row.original.type == "Mint" ? "USDC" : "gUSDC"}
+            <Image src={pegTokenLogo} width={20} height={20} alt="" title={info.row.original.type == "Mint" ? pegToken.symbol : creditTokenSymbol} className="inline align-bottom" style={info.row.original.type == "Mint" ? {} : {'borderRadius':'50%','border':'2px solid #3e6b7d'}} /> <span className="font-semibold mr-1">{formatDecimal(info.getValue(), pegTokenDecimalsToDisplay)}</span>
           </div>
         )
       },
     }),
     columnHelper.accessor("amountOut", {
       id: "amountOut",
-      header: "Amount Out",
+      header: "Received",
       cell: (info) => {
         return (
           <div className="ml-4 text-sm ">
-            <span className="font-semibold mr-1">
-              {toLocaleString(formatDecimal(info.getValue(), 2))}
-            </span>
-            {info.row.original.type == "Mint" ? "gUSDC" : "USDC"}
+            <Image src={pegTokenLogo} width={20} height={20} alt="" title={info.row.original.type == "Redeem" ? pegToken.symbol : creditTokenSymbol} className="inline align-bottom" style={info.row.original.type == "Redeem" ? {} : {'borderRadius':'50%','border':'2px solid #3e6b7d'}} /> <span className="font-semibold mr-1">{formatDecimal(info.getValue(), pegTokenDecimalsToDisplay)}</span>
           </div>
         )
       },

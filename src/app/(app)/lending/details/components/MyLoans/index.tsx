@@ -74,6 +74,9 @@ function Myloans({
   const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
   const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
 
+  const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
+  const psmAddress = contractsList?.marketContracts[appMarketId].psmAddress;
+
   const [data, setData] = React.useState(() =>
     tableDataWithDebts.filter(
       (loan) =>
@@ -381,7 +384,10 @@ function Myloans({
         usdcAmount,
         debtToRepay,
         signatureUSDC,
-        contractsList
+        contractsList,
+        pegToken.address,
+        creditAddress,
+        psmAddress
       )
 
       //get description of calls in multicall
@@ -531,8 +537,8 @@ function Myloans({
   //     updateStepStatus(`Sign Permit for USDC`, "In Progress")
 
   //     signatureUSDC = await signPermit({
-  //       contractAddress: contractsList.usdcAddress,
-  //       erc20Name: "ECG Testnet USDC",
+  //       contractAddress: pegToken.address,
+  //       erc20Name: pegToken.name,
   //       ownerAddress: address,
   //       spenderAddress: contractsList.gatewayAddress as Address,
   //       value: usdcAmount,
@@ -577,7 +583,11 @@ function Myloans({
   //       usdcAmountFlashloan,
   //       signatureCollateral,
   //       signatureUSDC,
-  //       deadlineSwap
+  //       deadlineSwap,
+  //       contractsList,
+  //       pegToken.address,
+  //       creditAddress,
+  //       psmAddress
   //     )
 
   //     //get description of calls in multicall
@@ -708,10 +718,10 @@ function Myloans({
         args: [
           loanId,
           lendingTerm.address,
-          contractsList.psmUsdcAddress,
+          psmAddress,
           contractsList.uniswapRouterAddress,
           lendingTerm.collateral.address,
-          contractsList.usdcAddress,
+          pegToken.address,
           collateralAmount,
           getAllowCollateralTokenCall(lendingTerm, collateralAmount, signatureCollateral),
         ],
@@ -769,8 +779,8 @@ function Myloans({
       updateStepStatus(`Sign Permit for USDC`, "In Progress")
 
       signatureUSDC = await signPermit({
-        contractAddress: contractsList.usdcAddress,
-        erc20Name: "ECG Testnet USDC",
+        contractAddress: pegToken.address as Address,
+        erc20Name: pegToken.name,
         ownerAddress: address,
         spenderAddress: contractsList.gatewayAddress as Address,
         value: usdcAmountToApprove,
@@ -801,7 +811,10 @@ function Myloans({
         usdcAmountToApprove,
         tableDataWithDebts.find((item) => item.id == loanId).loanDebt + hourlyFees,
         signatureUSDC,
-        contractsList
+        contractsList,
+        pegToken.address,
+        creditAddress,
+        psmAddress
       )
 
       //get description of calls in multicall
@@ -985,13 +998,13 @@ function Myloans({
                   Min. repay:{" "}
                   <strong>
                     ${" "}
-                    {toLocaleString(
+                    {
                       formatDecimal(
                         Number(formatUnits(info.row.original.borrowAmount, 18)) *
                           lendingTerm.minPartialRepayPercent,
                         2
                       )
-                    )}
+                    }
                   </strong>
                 </p>
               </>

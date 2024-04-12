@@ -7,12 +7,16 @@ import {
 } from "@tanstack/react-table"
 import CustomTable from "components/table/CustomTable"
 import moment from "moment"
-import { formatDecimal, toLocaleString } from "utils/numbers"
+import { formatDecimal, } from "utils/numbers"
 import { MdOpenInNew } from "react-icons/md"
 import clsx from "clsx"
 import Link from "next/link"
 import { useAccount } from "wagmi"
 import { Address } from "viem"
+import { useAppStore } from "store"
+import Image from "next/image"
+import { marketsConfig } from "config"
+import { getCreditTokenSymbol } from "utils/strings"
 
 export default function UserLoan({
   userAddress,
@@ -22,51 +26,56 @@ export default function UserLoan({
   data: any
 }) {
   const { address } = useAccount()
+  const { appMarketId, coinDetails, contractsList, lendingTerms } = useAppStore()
+
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
 
   /* Create Table */
   const columnHelper = createColumnHelper<>()
 
   const columns = [
-    columnHelper.accessor("collateral", {
-      id: "collateral",
+    columnHelper.accessor("collateralAmount", {
+      id: "collateralAmount",
       header: "Collateral",
       enableSorting: true,
       cell: (info) => {
-        return <span className="pl-2 font-semibold">{info.getValue() as string}</span>
+        const lendingTerm = lendingTerms.find((item) => item.address.toLowerCase() == info.row.original.termAddress.toLowerCase());
+        const collateralToken = coinDetails.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase());
+        const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken.price * 100)), 0);
+
+        return (
+          <>
+            <Image src={lendingTerm.collateral.logo} width={20} height={20} alt="" className="inline align-text-bottom" />
+            {" "}
+            <span className="font-semibold">
+              {formatDecimal(Number(info.getValue()), collateralTokenDecimalsToDisplay)}
+            </span>
+            {" "}
+            <span>{collateralToken.symbol}</span>
+          </>
+        )
       },
     }),
-    columnHelper.accessor("collateralAmount", {
-      id: "collateralAmount",
-      header: "Collateral Amount",
+    columnHelper.accessor('borrowAmount', {
+      id: 'borrowAmount',
+      header: "Debt",
       enableSorting: true,
-      cell: (info) => {
+      cell: (info: any) => {
         return (
           <>
+            <Image src={pegTokenLogo} width={20} height={20} alt="" className="inline align-text-bottom" />
+            {" "}
             <span className="font-semibold">
-              {toLocaleString(formatDecimal(Number(info.getValue()), 2)) + " "}
+              {formatDecimal((info.getValue() as number) * info.row.original.borrowCreditMultiplier, pegTokenDecimalsToDisplay)}
             </span>
-            <span>{info.row.original.collateral}</span>
+            {" "}
+            <span>{pegToken.symbol}</span>
           </>
         )
       },
     }),
-    {
-      id: "debitAmount",
-      header: "Debt Value",
-      enableSorting: false,
-      cell: (info: any) => {
-        const collateralValue = Number(info.row.original.collateralAmount)
-        const borrowRatio = Number(info.row.original.borrowRatio)
-        return (
-          <>
-            <span className="font-semibold">
-              {toLocaleString(formatDecimal(collateralValue * borrowRatio, 2))}
-            </span>
-            <span>{" gUSDC"}</span>
-          </>
-        )
-      },
-    },
     columnHelper.accessor("interestRate", {
       id: "interestRate",
       header: "Interest Rate",
@@ -121,7 +130,7 @@ export default function UserLoan({
               }
               target="_blank"
             >
-              {moment.unix(Number(info.getValue())).format("MM/DD/YYYY h:mma")}
+              {moment.unix(Number(info.getValue())).format("YYYY-MM-DD HH:mm")}
             </a>
             <MdOpenInNew className="ml-1" />
           </div>
@@ -149,7 +158,7 @@ export default function UserLoan({
               target="_blank"
             >
               {info.getValue() != 0
-                ? moment.unix(Number(info.getValue())).format("MM/DD/YYYY h:mma")
+                ? moment.unix(Number(info.getValue())).format("YYYY-MM-DD HH:mm")
                 : "-"}
             </a>
             {info.getValue() != 0 && <MdOpenInNew className="ml-1" />}

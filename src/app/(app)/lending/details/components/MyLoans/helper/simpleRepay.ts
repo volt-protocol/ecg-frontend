@@ -10,7 +10,10 @@ export const simpleRepay = (
   usdcAmount: bigint, //in USDC
   debtToRepay: bigint, //in gUSDC
   permitDataUSDC: any,
-  contractsList: ContractsList
+  contractsList: ContractsList,
+  pegTokenAddress: string,
+  creditAddress: string,
+  psmAddress: string
 ) => {
   let calls = []
 
@@ -20,7 +23,7 @@ export const simpleRepay = (
       abi: GatewayABI as Abi,
       functionName: "consumePermit",
       args: [
-        contractsList.usdcAddress,
+        pegTokenAddress,
         usdcAmount,
         permitDataUSDC.deadline,
         permitDataUSDC.v,
@@ -34,7 +37,7 @@ export const simpleRepay = (
     encodeFunctionData({
       abi: GatewayABI as Abi,
       functionName: "consumeAllowance",
-      args: [contractsList.usdcAddress, usdcAmount],
+      args: [pegTokenAddress, usdcAmount],
     })
   )
 
@@ -44,11 +47,11 @@ export const simpleRepay = (
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        contractsList.usdcAddress,
+        pegTokenAddress,
         encodeFunctionData({
           abi: UsdcABI,
           functionName: "approve",
-          args: [contractsList.psmUsdcAddress, usdcAmount],
+          args: [psmAddress, usdcAmount],
         }),
       ],
     })
@@ -59,7 +62,7 @@ export const simpleRepay = (
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        contractsList.psmUsdcAddress,
+        psmAddress,
         encodeFunctionData({
           abi: PsmUsdcABI,
           functionName: "mint",
@@ -75,7 +78,7 @@ export const simpleRepay = (
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        contractsList.creditAddress,
+        creditAddress,
         encodeFunctionData({
           abi: CreditABI as Abi,
           functionName: "approve",
@@ -122,7 +125,7 @@ export const simpleRepay = (
     encodeFunctionData({
       abi: GatewayABI as Abi,
       functionName: "sweep",
-      args: [contractsList.creditAddress],
+      args: [creditAddress],
     })
   )
 

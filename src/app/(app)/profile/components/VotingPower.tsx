@@ -4,21 +4,30 @@ import { readContract } from "@wagmi/core"
 import { useEffect, useState } from "react"
 import { useReadContracts } from "wagmi"
 import { Address, formatUnits } from "viem"
-import { formatDecimal, toLocaleString } from "utils/numbers"
+import { formatDecimal } from "utils/numbers"
 import { Delegatee } from "app/(app)/governance/page"
 import { ApexChartWrapper } from "components/charts/ApexChartWrapper"
 import Spinner from "components/spinner"
 import { wagmiConfig } from "contexts/Web3Provider"
 import { useAppStore } from "store"
+import { getCreditTokenSymbol } from "utils/strings"
+import { marketsConfig } from "config"
+import Image from "next/image"
 
 export default function VotingPower({ userAddress }: { userAddress: Address }) {
-  const { contractsList } = useAppStore()
+  const { contractsList, appMarketId, coinDetails } = useAppStore()
   const [guildDelegatees, setGuildDelegatees] = useState<Delegatee[]>([])
   const [creditDelegatees, setCreditDelegatees] = useState<Delegatee[]>([])
   const [loadingGuildDelegation, setLoadingGuildDelegation] = useState<boolean>(true)
   const [loadingCreditDelegation, setLoadingCreditDelegation] = useState<boolean>(true)
   const [guildChart, setGuildChart] = useState<any>(undefined)
   const [creditChart, setCreditChart] = useState<any>(undefined)
+
+  const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
 
   /* Read contracts */
   const { data, isError, isLoading, isFetched } = useReadContracts({
@@ -42,19 +51,19 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
         args: [userAddress],
       },
       {
-        address: contractsList.creditAddress,
+        address: creditAddress,
         abi: CreditABI,
         functionName: "balanceOf",
         args: [userAddress],
       },
       {
-        address: contractsList.creditAddress,
+        address: creditAddress,
         abi: CreditABI,
         functionName: "freeVotes",
         args: [userAddress],
       },
       {
-        address: contractsList.creditAddress,
+        address: creditAddress,
         abi: CreditABI,
         functionName: "getVotes",
         args: [userAddress],
@@ -66,7 +75,7 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
         args: [userAddress],
       },
       {
-        address: contractsList.creditAddress,
+        address: creditAddress,
         abi: CreditABI,
         functionName: "delegates",
         args: [userAddress],
@@ -116,7 +125,7 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
       setLoadingCreditDelegation(true)
       for (const delegatee of data.creditDelegatees) {
         const result = await readContract(wagmiConfig, {
-          address: contractsList.creditAddress,
+          address: creditAddress,
           abi: CreditABI,
           functionName: "delegatesVotesCount",
           args: [userAddress, delegatee],
@@ -159,9 +168,9 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
             type: "pie",
           },
           labels: [
-            "Voting power not delegated yet",
-            "Voting power delegated to himself",
-            "Voting power delegated to others",
+            "Not delegated yet",
+            "Delegated to yourself",
+            "Delegated to others",
           ],
           responsive: [
             {
@@ -202,7 +211,7 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
           },
           tooltip: {
             y: {
-              formatter: (val) => formatDecimal(val, 2) + " gUSDC",
+              formatter: (val) => formatDecimal(val, 2) + ' ' + creditTokenSymbol,
             },
           },
           chart: {
@@ -210,9 +219,9 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
             type: "pie",
           },
           labels: [
-            "Voting power not delegated yet",
-            "Voting power delegated to himself",
-            "Voting power delegated to others",
+            "Not delegated yet",
+            "Delegated to yourself",
+            "Delegated to others",
           ],
           responsive: [
             {
@@ -249,31 +258,27 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
       <dl className="mt-3 grid grid-cols-1 divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow dark:divide-navy-600 dark:bg-navy-700 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
         <div key="guildVotingPower" className="px-2 py-4 sm:p-5">
           <dt className="text-sm font-normal text-gray-500 dark:text-gray-300 xl:text-base">
-            Max GUILD Voting Power
+            <Image className="inline align-bottom" src="/img/crypto-logos/guild.png" width={28} height={28} alt="" /> Voting Power
           </dt>
           <dd className="mt-1 flex items-baseline justify-between md:block lg:flex">
             <div className="flex items-baseline overflow-hidden text-lg font-semibold text-gray-700 dark:text-gray-200 xl:text-2xl">
               {data &&
                 data.guildBalance &&
-                toLocaleString(
-                  formatDecimal(Number(formatUnits(data.guildBalance, 18)), 2)
-                )}{" "}
+                  formatDecimal(Number(formatUnits(data.guildBalance, 18)), 2)}{" "}
               <span className="ml-1 text-base font-medium">GUILD</span>
             </div>
           </dd>
         </div>
         <div key="creditVotingPower" className="px-2 py-4 sm:p-5">
           <dt className="text-sm font-normal text-gray-500 dark:text-gray-300 xl:text-base">
-            Max gUSDC Voting Power
+            <Image src={pegTokenLogo} width={28} height={28} alt="" className="inline align-bottom" style={{'borderRadius':'50%','border':'3px solid #3e6b7d'}} /> Voting Power
           </dt>
           <dd className="mt-1 flex items-baseline justify-between md:block lg:flex">
             <div className="flex items-baseline overflow-hidden text-lg font-semibold text-gray-700 dark:text-gray-200 xl:text-2xl">
               {data &&
                 data.guildBalance &&
-                toLocaleString(
-                  formatDecimal(Number(formatUnits(data.creditBalance, 18)), 2)
-                )}{" "}
-              <span className="ml-1 text-base font-medium">gUSDC</span>
+                  formatDecimal(Number(formatUnits(data.creditBalance, 18)), pegTokenDecimalsToDisplay)}{" "}
+              <span className="ml-1 text-base font-medium">{creditTokenSymbol}</span>
             </div>
           </dd>
         </div>

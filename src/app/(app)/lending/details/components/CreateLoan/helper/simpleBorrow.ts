@@ -5,7 +5,6 @@ import {
 } from "lib/contracts"
 import { LendingTerms } from "types/lending"
 import { Abi, Address, encodeFunctionData, erc20Abi } from "viem"
-import { ContractsList } from "store/slices/contracts-list"
 
 export const simpleBorrow = (
   userAddress: Address,
@@ -14,7 +13,8 @@ export const simpleBorrow = (
   collateralAmount: bigint,
   permitDataCollateral: any | undefined,
   permitDatagUSDC: any,
-  contractsList: ContractsList
+  creditAddress: string,
+  psmAddress: string
 ) => {
   let calls = []
 
@@ -78,7 +78,7 @@ export const simpleBorrow = (
       abi: GatewayABI as Abi,
       functionName: "consumePermit",
       args: [
-        contractsList.creditAddress,
+        creditAddress,
         borrowAmount,
         permitDatagUSDC.deadline,
         permitDatagUSDC.v,
@@ -92,7 +92,7 @@ export const simpleBorrow = (
     encodeFunctionData({
       abi: GatewayABI as Abi,
       functionName: "consumeAllowance",
-      args: [contractsList.creditAddress, borrowAmount],
+      args: [creditAddress, borrowAmount],
     })
   )
 
@@ -101,11 +101,11 @@ export const simpleBorrow = (
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        contractsList.creditAddress,
+        creditAddress,
         encodeFunctionData({
           abi: erc20Abi as Abi,
           functionName: "approve",
-          args: [contractsList.psmUsdcAddress, borrowAmount],
+          args: [psmAddress, borrowAmount],
         }),
       ],
     })
@@ -116,7 +116,7 @@ export const simpleBorrow = (
       abi: GatewayABI as Abi,
       functionName: "callExternal",
       args: [
-        contractsList.psmUsdcAddress,
+        psmAddress,
         encodeFunctionData({
           abi: PsmUsdcABI as Abi,
           functionName: "redeem",

@@ -274,7 +274,7 @@ function Veto({
       const targetContract =
         selectHolderType == "credit"
           ? {
-              address: contractsList.onboardVetoCreditAddress,
+              address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
               abi: OnboardVetoCreditABI,
             }
           : {

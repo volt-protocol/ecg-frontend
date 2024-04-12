@@ -14,7 +14,7 @@ import { AlertMessage } from 'components/message/AlertMessage';
 import { LendingTerms } from 'types/lending';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
-import { marketsConfig } from 'config';
+import { getPegTokenLogo, marketsConfig } from 'config';
 import Image from 'next/image';
 
 function StakeGuild({
@@ -38,7 +38,7 @@ function StakeGuild({
   creditMultiplier: bigint;
   reload: Dispatch<SetStateAction<boolean>>;
 }) {
-  const { appMarketId, coinDetails, contractsList } = useAppStore();
+  const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
   const [value, setValue] = useState<string>('');
   const { isConnected } = useAccount();
   const [showModal, setShowModal] = useState(false);
@@ -48,7 +48,7 @@ function StakeGuild({
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
   );
   const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
-  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
 
   const creditMultiplierNumber = Number(formatUnits(creditMultiplier, 18));
 

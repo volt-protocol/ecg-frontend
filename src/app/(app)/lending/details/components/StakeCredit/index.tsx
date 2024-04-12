@@ -17,7 +17,7 @@ import { getTitleDisabledStake, getTitleDisabledUnstake } from './helper';
 import { LendingTerms } from 'types/lending';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
-import { marketsConfig } from 'config';
+import { getPegTokenLogo, marketsConfig } from 'config';
 import Image from 'next/image';
 
 function StakeCredit({
@@ -43,7 +43,7 @@ function StakeCredit({
   creditMultiplier: bigint;
   reload: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const { appMarketId, coinDetails, lendingTerms, contractsList } = useAppStore();
+  const { appMarketId, appChainId, coinDetails, lendingTerms, contractsList } = useAppStore();
   const [value, setValue] = useState<string>('');
   const { address, isConnected } = useAccount();
   const [showModal, setShowModal] = useState<boolean>(false);
@@ -56,7 +56,7 @@ function StakeCredit({
   const surplusGuildMinterAddress = contractsList?.marketContracts[appMarketId].surplusGuildMinterAddress;
   const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
   const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
-  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
   const creditMultiplierNumber = Number(formatUnits(creditMultiplier, 18));
 
   const createSteps = (): Step[] => {

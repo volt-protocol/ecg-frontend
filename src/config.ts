@@ -54,24 +54,36 @@ export type SupportedMarket = {
 };
 
 // set the available markets here
-export const marketsConfig: SupportedMarket[] = [
-  {
-    key: 'usdc-test',
-    pegToken: 'USDC',
-    name: 'USDC-test',
-    marketId: 999999999,
-    networkId: 42161,
-    logo: '/img/crypto-logos/usdc.png'
-  },
-  {
-    key: 'weth-test',
-    pegToken: 'WETH',
-    name: 'WETH-test',
-    marketId: 999999998,
-    networkId: 42161,
-    logo: '/img/crypto-logos/weth.png'
-  }
-];
+export const marketsConfig: { [chainId: number]: SupportedMarket[] } = {
+  42161: [
+    {
+      key: 'usdc-test',
+      pegToken: 'USDC',
+      name: 'USDC-test',
+      marketId: 999999999,
+      networkId: 42161,
+      logo: '/img/crypto-logos/usdc.png'
+    },
+    {
+      key: 'weth-test',
+      pegToken: 'WETH',
+      name: 'WETH-test',
+      marketId: 999999998,
+      networkId: 42161,
+      logo: '/img/crypto-logos/weth.png'
+    }
+  ],
+  11155111: [
+    {
+      key: 'USDC-sepolia',
+      pegToken: 'USDC',
+      name: 'USDC-sepolia',
+      marketId: 1,
+      networkId: 11155111,
+      logo: '/img/crypto-logos/usdc.png'
+    }
+  ]
+};
 
 // set the available contracts for each chain here
 /*
@@ -145,4 +157,8 @@ export function getApiBaseUrl(chainId: number) {
     case 42161:
       return process.env.NEXT_PUBLIC_BACKEND_API_URL || process.env.NEXT_PUBLIC_ARBITRUM_BACKEND_API_URL;
   }
+}
+
+export function getPegTokenLogo(chainId: number, marketId: number) {
+  return marketsConfig[chainId].find((item) => item.marketId == marketId).logo;
 }

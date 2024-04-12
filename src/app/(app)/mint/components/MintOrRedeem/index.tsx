@@ -13,7 +13,7 @@ import ButtonPrimary from 'components/button/ButtonPrimary';
 import { AlertMessage } from 'components/message/AlertMessage';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
-import { marketsConfig } from 'config';
+import { getPegTokenLogo, marketsConfig } from 'config';
 import Image from 'next/image';
 import { MdOpenInNew } from 'react-icons/md';
 
@@ -32,7 +32,7 @@ function MintOrRedeem({
   pegTokenPSMBalance: bigint;
   isRebasing: boolean;
 }) {
-  const { contractsList, coinDetails, appMarketId } = useAppStore();
+  const { contractsList, appChainId, coinDetails, appMarketId } = useAppStore();
   const { address } = useAccount();
   const [showModal, setShowModal] = useState(false);
   const [value, setValue] = useState<string>('');
@@ -46,7 +46,8 @@ function MintOrRedeem({
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
   );
   const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
-  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
+
   const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
 
   const pegTokenBalanceNumber = Number(formatUnits(pegTokenBalance, pegToken.decimals));

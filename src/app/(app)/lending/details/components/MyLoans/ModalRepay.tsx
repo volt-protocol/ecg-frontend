@@ -9,7 +9,7 @@ import { formatDecimal } from 'utils/numbers';
 import { formatUnits, parseUnits } from 'viem';
 import { getTitleDisabled } from './helper';
 import Link from 'next/link';
-import { lendingTermConfig } from 'config';
+import { getPegTokenLogo, lendingTermConfig } from 'config';
 import { RangeSlider } from 'components/rangeSlider/RangeSlider';
 import { CurrencyTypes } from 'components/switch/ToggleCredit';
 import { parse } from 'path';
@@ -49,15 +49,15 @@ export default function ModalRepay({
   const [value, setValue] = useState<string>('');
   const [match, setMatch] = useState<boolean>(false);
   const [withLeverage, setWithLeverage] = useState<boolean>(false);
-  const { appMarketId, coinDetails, contractsList } = useAppStore();
+  const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
 
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
   );
   const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
   const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
-  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
-  const normalizer: bigint = BigInt('1' + '0'.repeat(36 - pegToken.decimals));
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
+  const normalizer = BigInt('1' + '0'.repeat(36 - pegToken.decimals));
   const pegTokenDebt: bigint = (BigInt(rowData?.loanDebt || 0) * creditMultiplier) / normalizer;
 
   // Reset value when modal opens

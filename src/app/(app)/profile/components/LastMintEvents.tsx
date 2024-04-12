@@ -19,7 +19,7 @@ import { Address } from 'viem';
 import { TransactionBadge } from 'components/badge/TransactionBadge';
 import { useAppStore } from 'store';
 import { getCreditTokenSymbol } from 'utils/strings';
-import { marketsConfig } from 'config';
+import { getPegTokenLogo, marketsConfig } from 'config';
 import Image from 'next/image';
 
 export default function LastMintEvents({
@@ -32,14 +32,15 @@ export default function LastMintEvents({
   currentBlock: BigInt;
 }) {
   const { address } = useAccount();
-  const { contractsList, appMarketId, coinDetails } = useAppStore();
+  const { contractsList, appMarketId, coinDetails, appChainId } = useAppStore();
 
   const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
   );
   const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
-  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
+
   const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
 
   /* Create Table */

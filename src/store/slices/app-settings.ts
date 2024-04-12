@@ -1,4 +1,5 @@
 import { SupportedMarket, marketsConfig } from 'config';
+import { wagmiConfig } from 'contexts/Web3Provider';
 import { Address } from 'viem';
 import { StateCreator } from 'zustand';
 
@@ -18,9 +19,9 @@ export interface AppSettingsSlice {
 }
 
 export const createAppSettingsSlice: StateCreator<AppSettingsSlice> = (set, get) => ({
-  appMarketId: marketsConfig[0].marketId,
-  appMarket: marketsConfig[0],
-  appChainId: marketsConfig[0].networkId,
+  appChainId: wagmiConfig.chains[0].id,
+  appMarketId: marketsConfig[wagmiConfig.chains[0].id][0].marketId,
+  appMarket: marketsConfig[wagmiConfig.chains[0].id][0],
   searchFocused: false,
   termsAccepted: false,
   searchHistory: [],

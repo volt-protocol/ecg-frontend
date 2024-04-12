@@ -11,11 +11,11 @@ import Spinner from 'components/spinner';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
 import { getCreditTokenSymbol } from 'utils/strings';
-import { marketsConfig } from 'config';
+import { getPegTokenLogo, marketsConfig } from 'config';
 import Image from 'next/image';
 
 export default function VotingPower({ userAddress }: { userAddress: Address }) {
-  const { contractsList, appMarketId, coinDetails } = useAppStore();
+  const { contractsList, appMarketId, coinDetails, appChainId } = useAppStore();
   const [guildDelegatees, setGuildDelegatees] = useState<Delegatee[]>([]);
   const [creditDelegatees, setCreditDelegatees] = useState<Delegatee[]>([]);
   const [loadingGuildDelegation, setLoadingGuildDelegation] = useState<boolean>(true);
@@ -28,7 +28,8 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
   );
   const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
-  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
+
   const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
 
   /* Read contracts */

@@ -4,7 +4,7 @@ import { readContract } from '@wagmi/core';
 import { useReadContracts } from 'wagmi';
 import { useAppStore } from 'store';
 import { Abi, Address, formatUnits, erc20Abi } from 'viem';
-import { coinsList } from 'config';
+import { coinsList, getPegTokenLogo } from 'config';
 import { ProfitManagerABI, GuildABI, CreditABI, TermABI } from 'lib/contracts';
 import { useEffect, useState } from 'react';
 import { getActiveLoanLogs, getCloseLoanLogs, getOpenLoanLogs } from 'lib/logs/loans';
@@ -28,7 +28,7 @@ import { TVLChart } from './components/TVLChart';
 import { marketsConfig } from 'config';
 
 const GlobalDashboard = () => {
-  const { appMarketId, lendingTerms, coinDetails, historicalData, contractsList } = useAppStore();
+  const { appMarketId, appChainId, lendingTerms, coinDetails, historicalData, contractsList } = useAppStore();
   const [totalActiveLoans, setTotalActiveLoans] = useState<number>();
   const [debtCeilingData, setDebtCeilingData] = useState([]);
   const [collateralData, setCollateralData] = useState([]);
@@ -43,7 +43,7 @@ const GlobalDashboard = () => {
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
   );
-  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
   const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
 
   // round historicalData for presentation

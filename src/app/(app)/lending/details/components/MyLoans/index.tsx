@@ -27,7 +27,7 @@ import moment from 'moment';
 import { simpleRepay } from './helper/simpleRepay';
 import { getMulticallsDecoded } from 'lib/transactions/getMulticallsDecoded';
 import { HOURS_IN_YEAR } from 'utils/constants';
-import { permitConfig } from 'config';
+import { getPegTokenLogo, permitConfig } from 'config';
 import { getAllowCollateralTokenCall } from './helper/repayWithLeverage';
 import { CurrencyTypes } from 'components/switch/ToggleCredit';
 import CustomTable from 'components/table/CustomTable';
@@ -59,7 +59,7 @@ function Myloans({
   setReload: React.Dispatch<React.SetStateAction<boolean>>;
   currencyType: CurrencyTypes;
 }) {
-  const { appMarketId, coinDetails, contractsList } = useAppStore();
+  const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
   const { address } = useAccount();
   const [showModal, setShowModal] = useState(false);
   const [tableDataWithDebts, setTableDataWithDebts] = useState<loanObj[]>([]);
@@ -75,7 +75,7 @@ function Myloans({
   );
   const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken.price * 100)), 0);
   const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
-  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
   const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
 
   const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;

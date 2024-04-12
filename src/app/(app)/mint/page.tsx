@@ -18,11 +18,11 @@ import { formatUnits, Address, erc20Abi } from 'viem';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
 import Spinner from 'components/spinner';
-import { marketsConfig } from 'config';
+import { getPegTokenLogo, marketsConfig } from 'config';
 import Image from 'next/image';
 
 function MintAndSaving() {
-  const { appMarketId, contractsList, coinDetails } = useAppStore();
+  const { appMarketId, appChainId, contractsList, coinDetails } = useAppStore();
   const { address, isConnected } = useAccount();
   const [reload, setReload] = React.useState<boolean>(false);
   const [showModal, setShowModal] = useState(false);
@@ -43,7 +43,7 @@ function MintAndSaving() {
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
   );
   const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
-  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
   const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
 
   /* Smart contract reads */

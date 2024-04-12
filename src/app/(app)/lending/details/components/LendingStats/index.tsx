@@ -9,7 +9,7 @@ import { LendingTerms } from 'types/lending';
 import { formatDecimal, formatNumberDecimal, formatCurrencyValue } from 'utils/numbers';
 import { formatUnits } from 'viem';
 import { secondsToAppropriateUnit } from 'utils/date';
-import { marketsConfig } from 'config';
+import { getPegTokenLogo, marketsConfig } from 'config';
 import { useAppStore } from 'store';
 import Image from 'next/image';
 
@@ -28,7 +28,7 @@ export default function LendingStats({
   termTotalCollateral: number;
   creditMultiplier: bigint;
 }) {
-  const { appMarketId, coinDetails, contractsList } = useAppStore();
+  const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
   const collateralToken = coinDetails.find(
     (item) => item.address.toLowerCase() === lendingTermData.collateral.address.toLowerCase()
   );
@@ -38,8 +38,7 @@ export default function LendingStats({
   const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken.price * 100)), 0);
   const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
   const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
-  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
-
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
   const creditMultiplierNumber = Number(formatUnits(creditMultiplier, 18));
 
   return (

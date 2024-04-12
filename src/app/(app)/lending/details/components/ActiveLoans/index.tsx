@@ -25,7 +25,7 @@ import CustomTable from 'components/table/CustomTable';
 import clsx from 'clsx';
 import { useReadContracts } from 'wagmi';
 import { eq } from 'utils/strings';
-import { marketsConfig } from 'config';
+import { getPegTokenLogo, marketsConfig } from 'config';
 
 const columnHelper = createColumnHelper<loanObj>();
 
@@ -42,7 +42,7 @@ function ActiveLoans({
   creditMultiplier: bigint;
   reload: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const { appMarketId, coinDetails, contractsList } = useAppStore();
+  const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
   const [collateralPrice, setCollateralPrice] = useState(0);
   const [pegPrice, setPegPrice] = useState(0);
   const [repays, setRepays] = useState<Record<string, number>>({});
@@ -262,7 +262,7 @@ function ActiveLoans({
   );
   const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken.price * 100)), 0);
   const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
-  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
 
   const columns = [
     columnHelper.accessor('id', {

@@ -23,7 +23,7 @@ import clsx from 'clsx';
 import { Abi, formatUnits, erc20Abi, Address } from 'viem';
 import { eq, generateTermName } from 'utils/strings';
 import { formatDecimal, toLocaleString } from 'utils/numbers';
-import { coinsList } from 'config';
+import { coinsList, getPegTokenLogo } from 'config';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { lendingTermConfig } from 'config';
 import { ToggleCredit } from 'components/switch/ToggleCredit';
@@ -32,7 +32,7 @@ import Image from 'next/image';
 
 const LendingDetails = () => {
   const { address, isConnected } = useAccount();
-  const { appMarketId, coinDetails, lendingTerms, contractsList } = useAppStore();
+  const { appMarketId, coinDetails, lendingTerms, contractsList, appChainId } = useAppStore();
   const searchParams = useSearchParams();
   const termAddress = searchParams.get('term');
   const [lendingTermData, setLendingTermData] = useState<LendingTerms>();
@@ -58,7 +58,7 @@ const LendingDetails = () => {
   const surplusGuildMinterAddress = contractsList?.marketContracts[appMarketId].surplusGuildMinterAddress;
 
   const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
-  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
 
   /* Smart contract reads */
   const { data, isError, isLoading, refetch } = useReadContracts({

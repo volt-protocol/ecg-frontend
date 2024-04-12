@@ -15,18 +15,18 @@ import { useAccount } from 'wagmi';
 import { Address } from 'viem';
 import { useAppStore } from 'store';
 import Image from 'next/image';
-import { marketsConfig } from 'config';
+import { getPegTokenLogo, marketsConfig } from 'config';
 import { getCreditTokenSymbol } from 'utils/strings';
 
 export default function UserLoan({ userAddress, data }: { userAddress: Address; data: any }) {
   const { address } = useAccount();
-  const { appMarketId, coinDetails, contractsList, lendingTerms } = useAppStore();
+  const { appMarketId, coinDetails, contractsList, lendingTerms, appChainId } = useAppStore();
 
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
   );
   const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
-  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
 
   /* Create Table */
   const columnHelper = createColumnHelper<>();

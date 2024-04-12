@@ -25,7 +25,7 @@ import DefiInputBox from 'components/box/DefiInputBox';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { AlertMessage } from 'components/message/AlertMessage';
 import { useAppStore } from 'store';
-import { marketsConfig } from 'config';
+import { getPegTokenLogo, marketsConfig } from 'config';
 
 interface Delegatee {
   address: string;
@@ -51,7 +51,7 @@ function DelegateCredit({
   delegateLockupPeriod: bigint;
   creditTokenSymbol: string;
 }) {
-  const { contractsList, appMarketId } = useAppStore();
+  const { contractsList, appMarketId, appChainId } = useAppStore();
   const { address } = useAccount();
   const [value, setValue] = useState<string>('');
   const [showModal, setShowModal] = useState(false);
@@ -59,7 +59,7 @@ function DelegateCredit({
   const [delegatees, setDelegatees] = useState<Delegatee[]>([]);
   const [steps, setSteps] = useState<Step[]>();
   const [isLoadingDelegations, setIsLoadingDelegations] = useState<boolean>(true);
-  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
 
   const createSteps = (actionType?: 'Delegate' | 'Undelegate'): Step[] => {
     if (actionType === 'Delegate') {

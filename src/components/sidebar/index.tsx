@@ -55,8 +55,8 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
         </div>
         <div className="mt-2 px-1">
           <DropdownSelect
-            options={marketsConfig}
-            selectedOption={marketsConfig.find((market) => market.key === appMarket.key)}
+            options={marketsConfig[appChainId]}
+            selectedOption={marketsConfig[appChainId].find((market) => market.key === appMarket.key)}
             onChange={(option) => setAppMarket(option)}
             getLabel={(option) => (
               <div className="flex items-center gap-1 text-sm">

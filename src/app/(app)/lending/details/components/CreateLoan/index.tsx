@@ -49,7 +49,7 @@ function CreateLoan({
   setReload: React.Dispatch<React.SetStateAction<boolean>>;
   currencyType: CurrencyTypes;
 }) {
-  const { contractsList, coinDetails, appMarketId } = useAppStore();
+  const { contractsList, coinDetails, appMarketId, appChainId } = useAppStore();
   const { address } = useAccount();
   const [borrowAmount, setBorrowAmount] = useState<bigint>(BigInt(0));
   const [collateralAmount, setCollateralAmount] = useState<string>('');
@@ -591,7 +591,7 @@ function CreateLoan({
   const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
   const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
   const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
-  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
 
   return (
     <>

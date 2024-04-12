@@ -18,7 +18,7 @@ import { FaSort, FaSortDown, FaSortUp } from 'react-icons/fa';
 import { formatUnits, parseUnits, Address } from 'viem';
 import moment from 'moment';
 import { MdChevronLeft, MdChevronRight, MdOpenInNew, MdShowChart } from 'react-icons/md';
-import { coinsList } from 'config';
+import { coinsList, getPegTokenLogo } from 'config';
 import ButtonPrimary from 'components/button/ButtonPrimary';
 import { Step } from 'components/stepLoader/stepType';
 import StepModal from 'components/stepLoader';
@@ -44,7 +44,7 @@ export default function AuctionsTable({
   setOpenAuction: (arg: Auction) => void;
   setReload: (arg: boolean) => void;
 }) {
-  const { appMarketId, coinDetails, contractsList, lendingTerms } = useAppStore();
+  const { appMarketId, appChainId, coinDetails, contractsList, lendingTerms } = useAppStore();
   const { isConnected } = useAccount();
   const columnHelper = createColumnHelper<Auction>();
   const [showModal, setShowModal] = useState(false);
@@ -55,7 +55,7 @@ export default function AuctionsTable({
   );
   const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
   const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
-  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
   const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
 
   /* Create Modal Steps */

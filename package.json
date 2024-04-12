@@ -66,8 +66,8 @@
     "deploy": "gh-pages -d build",
     "lint": "eslint . --ext .ts",
     "lintfix": "eslint . --ext .ts --fix",
-    "prettier-format": "prettier --config .prettierrc \"./src/**/*.(ts|tsx)\" --write",
-    "prettier-watch": "onchange \"src/**/*.(ts|tsx)\" -- prettier --config .prettierrc --write {{changed}}",
+    "prettier:format": "prettier --config .prettierrc \"./src/**/*.(ts|tsx)\" --write",
+    "prettier:watch": "onchange \"src/**/*.(ts|tsx)\" -- prettier --config .prettierrc --write {{changed}}",
     
     "pages:build": "npx @cloudflare/next-on-pages"
   },

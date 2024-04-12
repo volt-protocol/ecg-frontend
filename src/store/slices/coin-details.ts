@@ -1,5 +1,6 @@
 import { StateCreator } from "zustand"
 import { HttpGet } from "utils/HttpHelper"
+import { getApiBaseUrl } from "config"
 
 export interface CoinSettings {
   address: string
@@ -11,13 +12,13 @@ export interface CoinSettings {
 
 export interface CoinDetailsSlice {
   coinDetails: CoinSettings[]
-  fetchCoins: (marketId: number) => Promise<any>
+  fetchCoins: (marketId: number, chainId: number) => Promise<any>
 }
 
 export const createCoinDetailsSlice: StateCreator<CoinDetailsSlice> = (set, get) => ({
   coinDetails: [],
-  fetchCoins: async (marketId: number) => {
-    const apiUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL + `/markets/${marketId}/tokens`
+  fetchCoins: async (marketId: number, chainId: number) => {
+    const apiUrl = getApiBaseUrl(chainId) + `/markets/${marketId}/tokens`
     const tokensReponse = await HttpGet<CoinSettings[]>(apiUrl);
 
     // console.log('tokensResponse', JSON.stringify(tokensReponse, null, 2));

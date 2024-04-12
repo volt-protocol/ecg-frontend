@@ -103,7 +103,6 @@ const GlobalDashboard = () => {
       setFirstLossData(firstLossData)
       const lastActivities = await getLastActivities()
       setLastActivites(lastActivities)
-      console.log('hey')
     }
 
     !isLoading && data?.creditMultiplier && lendingTerms.length && asyncFunc()

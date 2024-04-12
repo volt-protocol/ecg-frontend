@@ -30,6 +30,7 @@ export const createAppSettingsSlice: StateCreator<AppSettingsSlice> = (set, get)
     set({ appMarketId: market.marketId })
   },
   setAppChainId: (chainId: number) => {
+    console.log('newchain id', chainId);
     set({ appChainId: chainId })
   },
   addSearchHistory: (value: Address) => {

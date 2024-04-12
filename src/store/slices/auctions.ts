@@ -1,6 +1,7 @@
 // Libraries
 import { StateCreator } from "zustand"
 import { HttpGet } from "utils/HttpHelper"
+import { getApiBaseUrl } from "config";
 
 export interface Auction {
   loanId: string;
@@ -40,15 +41,15 @@ export interface AuctionsSlice {
   auctionHouses: AuctionHouse[]
   auctions: Auction[]
   updated: number | null
-  fetchAuctions: (marketId: number) => void
+  fetchAuctions: (marketId: number, chainId: number) => void
 }
 
 export const createAuctionsSlice: StateCreator<AuctionsSlice> = (set, get) => ({
   auctionHouses: [],
   auctions: [],
   updated: null,
-  fetchAuctions: async (marketId: number) => {
-    const apiUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL + `/markets/${marketId}/auctions`
+  fetchAuctions: async (marketId: number, chainId: number) => {
+    const apiUrl = getApiBaseUrl(chainId) + `/markets/${marketId}/auctions`
     const response = await HttpGet<any>(apiUrl);
     set({
       auctionHouses: response.auctionHouses, 

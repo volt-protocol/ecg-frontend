@@ -21,12 +21,13 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const asyncFunc = async () => {
       setIsLoading(true);
+      console.log('store provider', appChainId)
       await Promise.all([
-        fetchCoins(appMarketId),
-        fetchHistoricalData(appMarketId),
+        fetchCoins(appMarketId, appChainId),
+        fetchHistoricalData(appMarketId, appChainId),
         fetchContractsList(appChainId),
-        fetchLendingTerms(appMarketId),
-        fetchAuctions(appMarketId)
+        fetchLendingTerms(appMarketId, appChainId),
+        fetchAuctions(appMarketId, appChainId)
       ]);
       setIsLoading(false);
     }

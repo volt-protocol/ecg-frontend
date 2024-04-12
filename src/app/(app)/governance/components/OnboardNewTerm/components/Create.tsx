@@ -8,10 +8,10 @@ import * as yup from "yup"
 import { ErrorMessage } from "components/message/ErrorMessage"
 import clsx from "clsx"
 import { waitForTransactionReceipt, writeContract } from "@wagmi/core"
-import { LendingTermFactoryABI } from "lib/contracts"
+import { LendingTermFactoryABI, TermABI } from "lib/contracts"
 import { toastError } from "components/toast"
 import { Step } from "components/stepLoader/stepType"
-import { Address, parseEther } from "viem"
+import { AbiParameter, Address, encodeAbiParameters, parseEther } from "viem"
 import { SECONDS_IN_YEAR } from "utils/constants"
 import { MdCheckCircle, MdClose } from "react-icons/md"
 import { formatNumberDecimal } from "utils/numbers"
@@ -39,7 +39,7 @@ export interface CreateTermForm {
 }
 
 export default function Create() {
-  const { contractsList } = useAppStore()
+  const { contractsList, appMarketId } = useAppStore()
   const [showModal, setShowModal] = useState<boolean>(false)
   const [selectedPeriod, setSelectedPeriod] = useState<string>("None")
   const { register, handleSubmit, watch, reset, formState } = useForm({
@@ -162,15 +162,25 @@ export default function Create() {
       setShowModal(true)
       updateStepStatus("Create New Term", "In Progress")
 
+      const encodedLendingTermParameters = encodeAbiParameters([
+        {name: 'collateralToken', type: 'address'},
+        {name: 'maxDebtPerCollateralToken', type: 'uint256'},
+        {name: 'interestRate', type: 'uint256'},
+        {name: 'maxDelayBetweenPartialRepay', type: 'uint256'},
+        {name: 'minPartialRepayPercent', type: 'uint256'},
+        {name: 'openingFee', type: 'uint256'},
+        {name: 'hardCap', type: 'uint256'},
+      ], [args.collateralToken, args.maxDebtPerCollateralToken, args.interestRate, args.maxDelayBetweenPartialRepay, args.minPartialRepayPercent, args.openingFee, args.hardCap]);
+
       const hash = await writeContract(wagmiConfig, {
         address: contractsList.lendingTermFactoryAddress,
         abi: LendingTermFactoryABI,
         functionName: "createTerm",
         args: [
-          1, //gauge type
+          appMarketId, //gauge type
           contractsList.lendingTermV1ImplementationAddress, //implementation
           contractsList.auctionHouseAddress, //auction house
-          args,
+          encodedLendingTermParameters,
         ],
       })
 

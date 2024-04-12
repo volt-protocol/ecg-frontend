@@ -133,7 +133,7 @@ export const getProposalIdFromActionId = (contractsList: ContractsList, actionId
             args: [actionId]
           })
         ],
-        keccak256(stringToHex(`Veto proposal for `) + encodePacked(['bytes32'], [actionId as Address]).slice(2))
+        keccak256(stringToHex('Veto proposal for ') + encodePacked(['bytes32'], [actionId as Address]).slice(2))
       ])
     )
   );

@@ -12,7 +12,7 @@ export const simpleBorrow = (
   creditAddress: string,
   psmAddress: string
 ) => {
-  let calls = [];
+  const calls = [];
 
   if (permitDataCollateral) {
     calls.push(

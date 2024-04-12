@@ -16,7 +16,7 @@ export const borrowWithLeverage = (
   contractsList: ContractsList,
   appMarketId: number
 ) => {
-  let calls = [];
+  const calls = [];
 
   // consume user permit
   if (permitDataCollateral) {
@@ -199,7 +199,7 @@ export const getPullCollateralCalls = (
   collateralAmount: bigint, // eg: sDAI
   permitDataCollateral: any | undefined
 ) => {
-  let calls = [];
+  const calls = [];
 
   // consume user permit
   if (permitDataCollateral) {
@@ -237,7 +237,7 @@ export const getAllowBorrowedCreditCall = (
   contractsList: ContractsList,
   appMarketId: number
 ) => {
-  let calls = [];
+  const calls = [];
 
   calls.push(
     encodeFunctionData({

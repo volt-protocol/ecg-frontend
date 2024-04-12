@@ -17,7 +17,7 @@ export interface ActiveOnboardingVotes {
   interestRate: string;
   borrowRatio: number;
   quorum: string;
-  proposalId: BigInt;
+  proposalId: bigint;
   proposer: Address;
   isActive: boolean;
   hasVoted: boolean;

@@ -20,12 +20,7 @@ export interface AppSettingsSlice {
 export const createAppSettingsSlice: StateCreator<AppSettingsSlice> = (set, get) => ({
   appMarketId: marketsConfig[0].marketId,
   appMarket: marketsConfig[0],
-  appChainId:
-    process.env.NEXT_PUBLIC_APP_ENV === 'arbitrum'
-      ? 42161
-      : process.env.NEXT_PUBLIC_APP_ENV === 'production'
-      ? 1
-      : 11155111,
+  appChainId: marketsConfig[0].networkId,
   searchFocused: false,
   termsAccepted: false,
   searchHistory: [],

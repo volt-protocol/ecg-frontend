@@ -6,7 +6,7 @@ export const toLocaleString = (value: string): string => {
 
 // Add 2 decimal to number < 1000
 export const formatNumberDecimal = (value: number): string => {
-  let decimals = value > 1000 ? 0 : 2;
+  const decimals = value > 1000 ? 0 : 2;
   const factor = Math.pow(10, decimals);
 
   return (Math.round(value * factor) / factor).toFixed(decimals);

@@ -20,7 +20,7 @@ export const repayWithLeverage = (
   creditTokenAddress: string,
   psmAddress: string
 ) => {
-  let calls = [];
+  const calls = [];
 
   // pull usdc on gateway
   calls.push(

@@ -20,10 +20,8 @@
         "prettier"
     ],
     "rules": {
-        "indent": [
-            "error",
-            2
-        ],
+        "indent": ["error", 2, { "SwitchCase": 1, "flatTernaryExpressions": true }],
+        "multiline-ternary": ["error", "always-multiline"],
         "linebreak-style": [
             "error",
             "unix"

@@ -29,9 +29,9 @@ const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID;
 export const wagmiConfig = createConfig({
   chains,
   transports: {
-    [arbitrum.id]: http(process.env.NEXT_PUBLIC_RPC_URL_ARBITRUM),
-    [mainnet.id]: http(process.env.NEXT_PUBLIC_RPC_URL_ETHEREUM),
-    [sepolia.id]: http(process.env.NEXT_PUBLIC_RPC_URL_SEPOLIA)
+    [arbitrum.id]: http(process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL),
+    [mainnet.id]: http(process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL),
+    [sepolia.id]: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL)
   },
   connectors: [
     walletConnect({ projectId, metadata, showQrModal: false }),

@@ -52,13 +52,15 @@ function Veto({
   creditVotingWeight: bigint
   guildVotingWeight: bigint
 }) {
-  const { contractsList } = useAppStore()
+  const { contractsList, coinDetails, appMarketId } = useAppStore()
   const { address } = useAccount()
   const [showModal, setShowModal] = useState(false)
   const [activeVetoVotes, setActiveVetoVotes] = useState<ActivOnboardingVetoVotes[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [currentBlock, setCurrentBlock] = useState<BigInt>()
   const [selectHolderType, setSelectHolderType] = useState<"guild" | "credit">("credit")
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
 
   useEffect(() => {
     address && fetchActiveOnboardingVetoVotes()
@@ -147,19 +149,19 @@ function Veto({
           const data = await readContracts(wagmiConfig, {
             contracts: [
               {
-                address: contractsList.onboardVetoCreditAddress,
+                address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: "proposalVotes",
                 args: [item.proposalId],
               },
               {
-                address: contractsList.onboardVetoCreditAddress,
+                address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: "quorum",
                 args: [item.timestamp],
               },
               {
-                address: contractsList.onboardVetoCreditAddress,
+                address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: "state",
                 args: [item.proposalId],
@@ -201,7 +203,7 @@ function Veto({
                 args: [item.timelockId],
               },
               {
-                address: contractsList.onboardVetoCreditAddress,
+                address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: "hasVoted",
                 args: [item.proposalId, address],
@@ -272,7 +274,7 @@ function Veto({
       const targetContract =
         selectHolderType == "credit"
           ? {
-              address: contractsList.onboardVetoCreditAddress,
+              address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
               abi: OnboardVetoCreditABI,
             }
           : {
@@ -340,7 +342,7 @@ function Veto({
       const targetContract =
         selectHolderType == "credit"
           ? {
-              address: contractsList.onboardVetoCreditAddress,
+              address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
               abi: OnboardVetoCreditABI,
             }
           : {
@@ -406,7 +408,7 @@ function Veto({
       const targetContract =
         selectHolderType == "credit"
           ? {
-              address: contractsList.onboardVetoCreditAddress,
+              address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
               abi: OnboardVetoCreditABI,
             }
           : {
@@ -704,7 +706,7 @@ function Veto({
                         as="span"
                         className="font-semilight block text-gray-700"
                       >
-                        Use my gUSDC voting power
+                        Use my {creditTokenSymbol} voting power
                       </RadioGroup.Label>
                       <RadioGroup.Description
                         as="span"
@@ -713,7 +715,7 @@ function Veto({
                         {toLocaleString(
                           formatDecimal(Number(formatUnits(creditVotingWeight, 18)), 2)
                         )}{" "}
-                        gUSDC
+                        {creditTokenSymbol}
                       </RadioGroup.Description>
                     </span>
                   </span>
@@ -788,14 +790,14 @@ function Veto({
         </RadioGroup>
 
         <p className="mt-4">
-          Using {selectHolderType == "credit" ? "gUSDC" : "GUILD"} veto power will cancel
+          Using {selectHolderType == "credit" ? `${creditTokenSymbol}` : "GUILD"} veto power will cancel
           the onboarding of a lending term that GUILD votes successfully voted to add.
         </p>
         <div>
           {loading ? (
             <div className="mt-4 flex flex-grow flex-col items-center justify-center gap-2">
               <Spinner />
-            </div>
+            </div>  
           ) : (
             <>
               <div className="overflow-auto">

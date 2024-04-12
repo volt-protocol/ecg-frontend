@@ -17,10 +17,13 @@ export type Delegatee = {
 }
 
 function Governance() {
-  const { appMarketId, contractsList } = useAppStore()
+  const { appMarketId, contractsList, coinDetails } = useAppStore()
   const { address, isConnected, isDisconnected } = useAccount()
   const [reloadGuild, setReloadGuild] = React.useState<boolean>(false)
   const [reloadCredit, setReloadCredit] = React.useState<boolean>(false)
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+
 
   //TODO:  optimize contracts call with useReadContracts
   const { data, isError, isLoading, refetch } = useReadContracts({
@@ -118,7 +121,7 @@ function Governance() {
             />
           </Card>
           <Card
-            title="Delegate gUSDC"
+            title={`Delegate ${creditTokenSymbol}`}
             extra="w-full h-full sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
           >
             <DelegateCredit
@@ -129,6 +132,7 @@ function Governance() {
               userAddress={address}
               isConnected={isConnected}
               delegateLockupPeriod={data?.delegateLockupPeriod}
+              creditTokenSymbol={creditTokenSymbol}
             />
           </Card>
         </div>

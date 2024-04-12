@@ -27,20 +27,15 @@ export const CreditTotalSupply = ({
     const state = {
       series: [
         {
-          name: "Credit Total Supply",
+          name: "Total Supply",
           data: creditSupply.values,
           color: "#50bdae",
         },
         {
-          name: "Credit Total Issuance",
+          name: "Total Borrows",
           data: creditTotalIssuance.values,
           color: "#f7b924",
-        },
-        // {
-        //   name: "Credit Total Issuance",
-        //   data: creditTotalIssuance.values,
-        //   color: "#9966CC"
-        // }
+        }
       ],
       options: {
         chart: {
@@ -112,7 +107,7 @@ export const CreditTotalSupply = ({
 
   return (
     <Card
-      title={`${getCreditTokenSymbol(coinDetails, appMarketId, contractsList)} Total Supply`}
+      title={`Total Supply (${getCreditTokenSymbol(coinDetails, appMarketId, contractsList)})`}
       extra="w-full min-h-[300px] md:col-span-2 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
       rightText={getTimelineButton({ timeline, updateData })}
     >

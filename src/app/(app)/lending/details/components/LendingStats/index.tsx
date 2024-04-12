@@ -186,7 +186,7 @@ export default function LendingStats({
           <div>
             <p>
               This term allows to borrow{" "}
-              <Image className="inline-block" src="/img/crypto-logos/credit.png" width={18} height={18} alt="logo" />
+              <Image className="inline-block" src={pegTokenLogo} style={{'borderRadius':'50%','border':'3px solid #3e6b7d'}} width={18} height={18} alt="logo" />
               {" "}<span className="font-semibold">
                 {formatDecimal(
                   lendingTermData.borrowRatio / creditMultiplierNumber,

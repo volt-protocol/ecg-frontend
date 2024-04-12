@@ -63,8 +63,8 @@ export const LastProtocolActivity = ({
 
     if (event.category == "loan") {
       return event.type == "opening"
-        ? "Opened loan #" + shortenUint(event.loanId)
-        : "Closed loan #" + shortenUint(event.loanId)
+        ? "Opened loan"
+        : "Closed loan"
     }
   }
 

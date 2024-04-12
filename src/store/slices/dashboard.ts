@@ -12,7 +12,7 @@ const getCreditSupply = async (marketId: number) => {
     process.env.NEXT_PUBLIC_BACKEND_API_URL + `/history/CreditSupply?marketId=${marketId}`
   )
   const formattedValues = res.data.values.map((item) => {
-    return formatDecimal(Number(item), 0)
+    return Number(item)
   })
 
   const formattedTimestamps = res.data.timestamps.map((item) => {
@@ -31,7 +31,7 @@ const getCreditTotalIssuance = async (marketId: number) => {
   )
 
   const formattedValues = res.data.values.map((item) => {
-    return formatDecimal(Number(item), 0)
+    return Number(item)
   })
 
   const formattedTimestamps = res.data.timestamps.map((item) => {
@@ -69,7 +69,7 @@ const getTVL = async (marketId: number) => {
   )
 
   const formattedValues = res.data.values.map((item) => {
-    return formatDecimal(Number(item), 0)
+    return formatDecimal(Number(item), 2)
   })
 
   const formattedTimestamps = res.data.timestamps.map((item) => {

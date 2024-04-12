@@ -7,12 +7,20 @@ import am5themes_Animated from "@amcharts/amcharts5/themes/Animated"
 import am5themes_Responsive from "@amcharts/amcharts5/themes/Responsive"
 import { useLayoutEffect, useMemo } from "react"
 
-export const DebtCeiling = ({ data, labels }: { data: any[]; labels: string[] }) => {
+export const DebtCeiling = ({
+  data,
+  labels,
+  pegTokenSymbol
+}: {
+  data: any[]
+  labels: string[]
+  pegTokenSymbol: string
+}) => {
   const dataProcessed = useMemo(() => {
     return data.map((item) => {
       return [
         Number(item.currentDebt),
-        Number(item.debitCeiling) - Number(item.currentDebt),
+        Number(item.debtCeiling) - Number(item.currentDebt),
       ]
     })
   }, [data])
@@ -37,26 +45,29 @@ export const DebtCeiling = ({ data, labels }: { data: any[]; labels: string[] })
       am5radar.RadarChart.new(root, {
         panX: false,
         panY: false,
-        wheelX: "panX",
-        wheelY: "zoomX",
+        wheelX: null,//"panX",
+        wheelY: null,//"zoomX",
       })
     )
 
     chart
       .get("colors")
       .set("colors", [
-        am5.color(0x50bdae),
-        am5.color(0xf7b924),
-        am5.color(0x9966cc),
-        am5.color(0x80bf80),
-        am5.color(0xf28073),
-        am5.color(0xb2cce6),
-        am5.color(0x800021),
+        am5.color(0xFF5252), // red
+        am5.color(0x4CAF50), // green
+        am5.color(0x50bdae), // unused
+        am5.color(0xf7b924), // unused
+        am5.color(0x9966cc), // unused
+        am5.color(0x80bf80), // unused
+        am5.color(0xf28073), // unused
+        am5.color(0xb2cce6), // unused
+        am5.color(0x800021), // unused
       ])
 
     let xRenderer = am5radar.AxisRendererCircular.new(root, {})
     xRenderer.labels.template.setAll({
-      radius: 10,
+      radius: 0,
+      fillOpacity: 0.00001 // no labels showing
     })
 
     let xAxis = chart.xAxes.push(
@@ -89,7 +100,7 @@ export const DebtCeiling = ({ data, labels }: { data: any[]; labels: string[] })
       series.columns.template.setAll({
         width: am5.p100,
         strokeOpacity: 0.1,
-        tooltipText: "{name}: {valueY} gUSDC",
+        tooltipHTML: "<strong>{categoryX}</strong><br/>{name}<br/>{valueY} " + pegTokenSymbol
       })
 
       series.data.setAll(generateDatas(dataProcessed.length, i))

@@ -164,11 +164,8 @@ export default function ModalRepay({
                         topLabel={`Amount of ${
                           currencyType == "pegToken" ? pegToken.symbol : creditTokenSymbol
                         } to repay`}
-                        currencyLogo={
-                          currencyType == "pegToken"
-                            ? pegTokenLogo
-                            : "/img/crypto-logos/credit.png"
-                        }
+                        currencyLogo={pegTokenLogo}
+                        currencyLogoStyle={currencyType == 'pegToken' ? {} : {'borderRadius':'50%','border':'3px solid #3e6b7d'}}
                         currencySymbol={currencyType}
                         placeholder="0"
                         pattern="^[0-9]*[.,]?[0-9]*$"

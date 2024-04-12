@@ -381,7 +381,13 @@ const LendingDetails = () => {
                                 alt="logo"
                               />{' '}
                               GUILD increase the debt ceiling of lending terms (
-                              <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                              <Image
+                                className="inline-block"
+                                src={pegTokenLogo}
+                                width={18}
+                                height={18}
+                                alt="logo"
+                              />{' '}
                               {pegToken.symbol} borrow cap).
                             </p>
 
@@ -670,7 +676,13 @@ const LendingDetails = () => {
                               />{' '}
                               GUILD will be minted & staked for this term (see Stake GUILD tooltip), which will increase
                               the debt ceiling (
-                              <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                              <Image
+                                className="inline-block"
+                                src={pegTokenLogo}
+                                width={18}
+                                height={18}
+                                alt="logo"
+                              />{' '}
                               {pegToken.symbol} borrow cap) in this term.
                             </p>
 
@@ -745,8 +757,7 @@ const LendingDetails = () => {
                                 style={{ borderRadius: '50%', border: '3px solid #3e6b7d' }}
                               />{' '}
                               {creditTokenSymbol}
-                              <br />
-                              + Bonus{' '}
+                              <br />+ Bonus{' '}
                               <Image
                                 className="inline-block"
                                 src="/img/crypto-logos/guild.png"

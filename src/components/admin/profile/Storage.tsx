@@ -1,9 +1,9 @@
-import Card from "components/card";
-import CardMenu from "components/card/CardMenu";
-import { BsCloudCheck } from "react-icons/bs";
+import Card from 'components/card';
+import CardMenu from 'components/card/CardMenu';
+import { BsCloudCheck } from 'react-icons/bs';
 const Storage = () => {
   return (
-    <Card extra={"w-full h-full p-4"}>
+    <Card extra={'w-full h-full p-4'}>
       <div className="ml-auto">
         <CardMenu />
       </div>
@@ -12,9 +12,7 @@ const Storage = () => {
         <div className="mt-2 flex items-center justify-center rounded-full bg-lightPrimary p-[26px] text-5xl font-bold text-brand-500 dark:!bg-navy-700 dark:text-white">
           <BsCloudCheck />
         </div>
-        <p className="mb-px mt-3 text-2xl font-bold text-navy-700 dark:text-white">
-          Your storage
-        </p>
+        <p className="mb-px mt-3 text-2xl font-bold text-navy-700 dark:text-white">Your storage</p>
         <p className="px-5 text-center text-base font-normal text-gray-600 md:!px-0 xl:!px-8">
           Supervise your drive space in the easiest way
         </p>

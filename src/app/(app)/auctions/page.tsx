@@ -1,32 +1,28 @@
-"use client"
+'use client';
 
-import React, { useEffect, useState } from "react"
-import { useAccount, useReadContracts } from "wagmi"
-import Card from "components/card"
-import AuctionsTable from "./components/AuctionsTable"
-import { MdOpenInNew, MdOutlineBalance } from "react-icons/md"
-import Spinner from "components/spinner"
-import ModalAuctionChart from "./components/ModalAuctionChart"
-import { Auction, AuctionHouse } from "../../../store/slices/auctions"
-import { useAppStore } from "store"
+import React, { useEffect, useState } from 'react';
+import { useAccount, useReadContracts } from 'wagmi';
+import Card from 'components/card';
+import AuctionsTable from './components/AuctionsTable';
+import { MdOpenInNew, MdOutlineBalance } from 'react-icons/md';
+import Spinner from 'components/spinner';
+import ModalAuctionChart from './components/ModalAuctionChart';
+import { Auction, AuctionHouse } from '../../../store/slices/auctions';
+import { useAppStore } from 'store';
 
 const Auctions = () => {
-  const { contractsList, coinDetails, auctionHouses, auctions } = useAppStore()
-  const [loading, setLoading] = useState(false)
-  const [openAuction, setOpenAuction] = useState<Auction | null>(null)
-  const [reload, setReload] = useState<boolean>(true)
+  const { contractsList, coinDetails, auctionHouses, auctions } = useAppStore();
+  const [loading, setLoading] = useState(false);
+  const [openAuction, setOpenAuction] = useState<Auction | null>(null);
+  const [reload, setReload] = useState<boolean>(true);
 
   useEffect(() => {
-    setReload(false)
-  }, [reload])
+    setReload(false);
+  }, [reload]);
 
   return (
     <>
-      <ModalAuctionChart
-        setOpenAuction={setOpenAuction}
-        openAuction={openAuction}
-        auctionHouses={auctionHouses}
-      />
+      <ModalAuctionChart setOpenAuction={setOpenAuction} openAuction={openAuction} auctionHouses={auctionHouses} />
       <div>
         <div className="mt-3">
           <Card
@@ -67,7 +63,7 @@ const Auctions = () => {
         </div>
       </div>
     </>
-  )
-}
+  );
+};
 
-export default Auctions
+export default Auctions;

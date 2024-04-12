@@ -1,38 +1,33 @@
-import React, { useEffect, useState } from "react"
-import Image from "next/image"
-import { LendingTerms, LoansObj, loanObj } from "types/lending"
+import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { LendingTerms, LoansObj, loanObj } from 'types/lending';
 import {
   createColumnHelper,
   getCoreRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
-import {
-  readContract,
-  readContracts,
-  waitForTransactionReceipt,
-  writeContract,
-} from "@wagmi/core"
-import { TermABI, GuildABI } from "lib/contracts"
-import { QuestionMarkIcon, TooltipHorizon } from "components/tooltip"
-import { Step } from "components/stepLoader/stepType"
-import StepModal from "components/stepLoader"
-import Spinner from "components/spinner"
-import { useAppStore } from "store"
-import { wagmiConfig } from "contexts/Web3Provider"
-import { ItemIdBadge } from "components/badge/ItemIdBadge"
-import { AddressBadge } from "components/badge/AddressBadge"
-import { formatUnits, Address, parseUnits, Abi } from "viem"
-import { formatDecimal, toLocaleString } from "utils/numbers"
-import { secondsToAppropriateUnit } from "utils/date"
-import CustomTable from "components/table/CustomTable"
-import clsx from "clsx"
-import { useReadContracts } from "wagmi"
-import { eq } from "utils/strings"
-import { marketsConfig } from "config"
+  useReactTable
+} from '@tanstack/react-table';
+import { readContract, readContracts, waitForTransactionReceipt, writeContract } from '@wagmi/core';
+import { TermABI, GuildABI } from 'lib/contracts';
+import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
+import { Step } from 'components/stepLoader/stepType';
+import StepModal from 'components/stepLoader';
+import Spinner from 'components/spinner';
+import { useAppStore } from 'store';
+import { wagmiConfig } from 'contexts/Web3Provider';
+import { ItemIdBadge } from 'components/badge/ItemIdBadge';
+import { AddressBadge } from 'components/badge/AddressBadge';
+import { formatUnits, Address, parseUnits, Abi } from 'viem';
+import { formatDecimal, toLocaleString } from 'utils/numbers';
+import { secondsToAppropriateUnit } from 'utils/date';
+import CustomTable from 'components/table/CustomTable';
+import clsx from 'clsx';
+import { useReadContracts } from 'wagmi';
+import { eq } from 'utils/strings';
+import { marketsConfig } from 'config';
 
-const columnHelper = createColumnHelper<loanObj>()
+const columnHelper = createColumnHelper<loanObj>();
 
 function ActiveLoans({
   isLoadingEventLoans,
@@ -41,100 +36,98 @@ function ActiveLoans({
   creditMultiplier,
   reload
 }: {
-  isLoadingEventLoans: boolean
-  activeLoans: loanObj[]
-  lendingTerm: LendingTerms
-  creditMultiplier: bigint
-  reload: React.Dispatch<React.SetStateAction<boolean>>
+  isLoadingEventLoans: boolean;
+  activeLoans: loanObj[];
+  lendingTerm: LendingTerms;
+  creditMultiplier: bigint;
+  reload: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const { appMarketId, coinDetails, contractsList } = useAppStore()
-  const [collateralPrice, setCollateralPrice] = useState(0)
-  const [pegPrice, setPegPrice] = useState(0)
-  const [repays, setRepays] = useState<Record<string, number>>({})
-  const [showModal, setShowModal] = useState(false)
+  const { appMarketId, coinDetails, contractsList } = useAppStore();
+  const [collateralPrice, setCollateralPrice] = useState(0);
+  const [pegPrice, setPegPrice] = useState(0);
+  const [repays, setRepays] = useState<Record<string, number>>({});
+  const [showModal, setShowModal] = useState(false);
 
-  const [steps, setSteps] = useState<Step[]>()
+  const [steps, setSteps] = useState<Step[]>();
 
-  const updateStepStatus = (stepName: string, status: Step["status"]) => {
-    setSteps((prevSteps) =>
-      prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step))
-    )
-  }
+  const updateStepStatus = (stepName: string, status: Step['status']) => {
+    setSteps((prevSteps) => prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step)));
+  };
 
-  const [data, setData] = useState<loanObj[]>([])
+  const [data, setData] = useState<loanObj[]>([]);
 
   const {
     data: contractData,
     isError,
     isLoading,
-    refetch,
+    refetch
   } = useReadContracts({
     contracts: [
       {
         address: contractsList.guildAddress,
         abi: GuildABI,
-        functionName: "isGauge",
-        args: [lendingTerm.address],
-      },
+        functionName: 'isGauge',
+        args: [lendingTerm.address]
+      }
     ],
     query: {
       select: (data) => {
         return {
-          isGauge: data[0].result as boolean,
-        }
-      },
-    },
-  })
+          isGauge: data[0].result as boolean
+        };
+      }
+    }
+  });
   /* End Smart contract reads */
 
   useEffect(() => {
     async function fetchLoanDebts() {
-      const debts = await Promise.all(activeLoans.map((loan) => getLoanDebt(loan.id)))
+      const debts = await Promise.all(activeLoans.map((loan) => getLoanDebt(loan.id)));
       const newTableData = activeLoans
         .map((loan, index) => ({
           ...loan,
-          loanDebt: debts[index],
+          loanDebt: debts[index]
         }))
-        .filter(
-          (loan) => loan.callTime === 0 && loan.borrowAmount + loan.loanDebt !== BigInt(0)
-        )
-      setData(newTableData)
+        .filter((loan) => loan.callTime === 0 && loan.borrowAmount + loan.loanDebt !== BigInt(0));
+      setData(newTableData);
     }
 
     const fetchRepays = async () => {
       const repaysPromises = activeLoans.map((loan) =>
         lastPartialRepay(loan.id).then((partialRepay) => [loan.id, partialRepay])
-      )
-      const repaysResults = await Promise.all(repaysPromises)
-      const newRepays = Object.fromEntries(repaysResults)
-      setRepays(newRepays)
-    }
+      );
+      const repaysResults = await Promise.all(repaysPromises);
+      const newRepays = Object.fromEntries(repaysResults);
+      setRepays(newRepays);
+    };
 
     if (activeLoans) {
-      fetchRepays()
-      fetchLoanDebts()
+      fetchRepays();
+      fetchLoanDebts();
     }
-  }, [activeLoans, reload])
+  }, [activeLoans, reload]);
 
   useEffect(() => {
     async function getCollateralPrice() {
-      const price = coinDetails.find(_ => eq(_.address,  lendingTerm.collateral.address)).price;
-      setCollateralPrice(price)
+      const price = coinDetails.find((_) => eq(_.address, lendingTerm.collateral.address)).price;
+      setCollateralPrice(price);
     }
 
     async function getPegPrice() {
-      const price = coinDetails.find(_ => eq(_.address, contractsList.marketContracts[appMarketId].pegTokenAddress)).price;
-      setPegPrice(price)
+      const price = coinDetails.find((_) =>
+        eq(_.address, contractsList.marketContracts[appMarketId].pegTokenAddress)
+      ).price;
+      setPegPrice(price);
     }
 
     if (lendingTerm) {
-      getCollateralPrice()
-      getPegPrice()
+      getCollateralPrice();
+      getPegPrice();
     }
-  }, [lendingTerm])
+  }, [lendingTerm]);
 
   function CallableButton({ original }: { original: LoansObj }) {
-    const [isCallable, setIsCallable] = useState(false)
+    const [isCallable, setIsCallable] = useState(false);
     useEffect(() => {
       async function isCallable() {
         const data = await readContracts(wagmiConfig, {
@@ -142,28 +135,24 @@ function ActiveLoans({
             {
               address: lendingTerm.address as Address,
               abi: TermABI as Abi,
-              functionName: "partialRepayDelayPassed",
-              args: [original.id],
+              functionName: 'partialRepayDelayPassed',
+              args: [original.id]
             },
             {
               address: lendingTerm.address as Address,
               abi: TermABI as Abi,
-              functionName: "maxDebtForCollateral",
-              args: [original.collateralAmount],
-            },
-          ],
-        })
+              functionName: 'maxDebtForCollateral',
+              args: [original.collateralAmount]
+            }
+          ]
+        });
 
-        if (
-          !contractData.isGauge ||
-          data[0].result ||
-          (data[1].result as bigint) < original.loanDebt
-        ) {
-          setIsCallable(true)
+        if (!contractData.isGauge || data[0].result || (data[1].result as bigint) < original.loanDebt) {
+          setIsCallable(true);
         }
       }
-      isCallable()
-    }, [])
+      isCallable();
+    }, []);
 
     return (
       <div className="flex items-center">
@@ -175,133 +164,136 @@ function ActiveLoans({
           Call
         </button>
       </div>
-    )
+    );
   }
 
   async function getLoanDebt(loanId: string): Promise<bigint> {
     const result = await readContract(wagmiConfig, {
       address: lendingTerm.address as Address,
       abi: TermABI,
-      functionName: "getLoanDebt",
-      args: [loanId],
-    })
-    return result as bigint
+      functionName: 'getLoanDebt',
+      args: [loanId]
+    });
+    return result as bigint;
   }
 
   async function lastPartialRepay(id: string): Promise<number> {
     const response = await readContract(wagmiConfig, {
       address: lendingTerm.address as Address,
       abi: TermABI,
-      functionName: "getLoan",
-      args: [id],
-    })
+      functionName: 'getLoan',
+      args: [id]
+    });
 
-    return Number(response.lastPartialRepay)
+    return Number(response.lastPartialRepay);
   }
 
   /* Smart Contract write functions */
   async function call(loandId: string) {
     const createSteps = (): Step[] => {
-      const baseSteps = [{ name: "Call", status: "Not Started" }]
+      const baseSteps = [{ name: 'Call', status: 'Not Started' }];
 
-      return baseSteps
-    }
+      return baseSteps;
+    };
 
-    setSteps(createSteps())
+    setSteps(createSteps());
 
     try {
-      setShowModal(true)
-      updateStepStatus("Call", "In Progress")
+      setShowModal(true);
+      updateStepStatus('Call', 'In Progress');
       const hash = await writeContract(wagmiConfig, {
         address: lendingTerm.address,
         abi: TermABI,
-        functionName: "call",
-        args: [loandId],
-      })
+        functionName: 'call',
+        args: [loandId]
+      });
       const checkCall = await waitForTransactionReceipt(wagmiConfig, {
-        hash: hash,
-      })
+        hash: hash
+      });
 
-      if (checkCall.status != "success") {
-        updateStepStatus("Call", "Error")
-        return
+      if (checkCall.status != 'success') {
+        updateStepStatus('Call', 'Error');
+        return;
       }
-      updateStepStatus("Call", "Success")
-      reload(true)
+      updateStepStatus('Call', 'Success');
+      reload(true);
     } catch (e) {
-      console.log(e)
-      updateStepStatus("Call", "Error")
+      console.log(e);
+      updateStepStatus('Call', 'Error');
     }
   }
 
   async function callMany() {
     const createSteps = (): Step[] => {
-      const baseSteps = [{ name: "Call Many", status: "Not Started" }]
+      const baseSteps = [{ name: 'Call Many', status: 'Not Started' }];
 
-      return baseSteps
-    }
-    setSteps(createSteps())
+      return baseSteps;
+    };
+    setSteps(createSteps());
 
     try {
-      updateStepStatus("Call Many", "In Progress")
+      updateStepStatus('Call Many', 'In Progress');
       const hash = await writeContract(wagmiConfig, {
         address: lendingTerm.address,
         abi: TermABI,
-        functionName: "callMany",
-        args: [data.map((loan) => loan.id)],
-      })
+        functionName: 'callMany',
+        args: [data.map((loan) => loan.id)]
+      });
       const checkCall = await waitForTransactionReceipt(wagmiConfig, {
-        hash: hash,
-      })
-      if (checkCall.status != "success") {
-        updateStepStatus("Call Many", "Error")
-        return
+        hash: hash
+      });
+      if (checkCall.status != 'success') {
+        updateStepStatus('Call Many', 'Error');
+        return;
       }
-      updateStepStatus("Call Many", "Success")
+      updateStepStatus('Call Many', 'Success');
     } catch (e) {
-      console.log(e)
-      updateStepStatus("Call Many", "Error")
+      console.log(e);
+      updateStepStatus('Call Many', 'Error');
     }
   }
   /* End Smart Contract write functions */
 
-  const collateralToken = coinDetails.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase());
-  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const collateralToken = coinDetails.find(
+    (item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase()
+  );
+  const pegToken = coinDetails.find(
+    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
+  );
   const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken.price * 100)), 0);
   const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
   const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
 
   const columns = [
-    columnHelper.accessor("id", {
-      id: "loadId",
-      header: "Loan ID",
+    columnHelper.accessor('id', {
+      id: 'loadId',
+      header: 'Loan ID',
       enableSorting: true,
       cell: (info) => (
         <div className="flex justify-center">
           <ItemIdBadge id={info.getValue()} />
         </div>
-      ),
+      )
     }),
-    columnHelper.accessor("borrower", {
-      id: "borrower",
-      header: "Borrower",
+    columnHelper.accessor('borrower', {
+      id: 'borrower',
+      header: 'Borrower',
       enableSorting: true,
       cell: (info) => (
         <div className="flex justify-center">
           <AddressBadge address={info.getValue()} />
         </div>
-      ),
+      )
     }),
     {
-      id: "ltv",
-      header: "Call Threshold",
+      id: 'ltv',
+      header: 'Call Threshold',
       cell: (info: any) => {
-
-        const maxBorrow = lendingTerm.borrowRatio * Number(creditMultiplier) / 1e18;
-        const loanDebtPegToken = (Number(info.row.original.loanDebt) / 1e18) * Number(creditMultiplier) / 1e18;
+        const maxBorrow = (lendingTerm.borrowRatio * Number(creditMultiplier)) / 1e18;
+        const loanDebtPegToken = ((Number(info.row.original.loanDebt) / 1e18) * Number(creditMultiplier)) / 1e18;
         const collateralAmount = Number(formatUnits(info.row.original.collateralAmount, collateralToken.decimals));
         const borrowRatio = loanDebtPegToken / collateralAmount;
-        const callThreshold = formatDecimal(100 * borrowRatio / maxBorrow, 2);
+        const callThreshold = formatDecimal((100 * borrowRatio) / maxBorrow, 2);
 
         return (
           <TooltipHorizon
@@ -310,71 +302,55 @@ function ActiveLoans({
               <div className="space-y-4 p-2">
                 <div>
                   <p>
-                    Max Borrow :{" "}
-                    <span className="font-semibold">
-                      {" "}
-                      {formatDecimal(
-                        maxBorrow,
-                        creditTokenDecimalsToDisplay
-                      )}
-                    </span>{" "}
+                    Max Borrow :{' '}
+                    <span className="font-semibold"> {formatDecimal(maxBorrow, creditTokenDecimalsToDisplay)}</span>{' '}
                     {pegToken.symbol} / {lendingTerm.collateral.name}
                   </p>
                   <p>
-                    Borrow Ratio :{" "}
+                    Borrow Ratio :{' '}
                     <span className="font-semibold">
-                      {" "}
+                      {' '}
                       {formatDecimal(borrowRatio, creditTokenDecimalsToDisplay * 3)}
-                    </span>{" "}
+                    </span>{' '}
                     {pegToken.symbol} / {collateralToken.symbol}
                   </p>
                   <p>
-                    <br/>
-                    Collateral :{" "}
+                    <br />
+                    Collateral :{' '}
                     <span className="font-semibold">
-                      {" "}
+                      {' '}
                       {formatDecimal(
-                        Number(
-                          formatUnits(
-                            info.row.original.collateralAmount,
-                            collateralToken.decimals
-                          )
-                        ),
+                        Number(formatUnits(info.row.original.collateralAmount, collateralToken.decimals)),
                         collateralTokenDecimalsToDisplay
                       )}
-                    </span>{" "}
-                    {collateralToken.symbol}
-                    {" "}
+                    </span>{' '}
+                    {collateralToken.symbol}{' '}
                     <span className="text-gray-400">
                       (≈ ${formatDecimal(collateralToken.price * collateralAmount, 2)}, DefiLlama)
                     </span>
                   </p>
                   <p>
-                    Debt :{" "}
+                    Debt :{' '}
                     <span className="font-semibold">
-                      {" "}
+                      {' '}
                       {formatDecimal(loanDebtPegToken, creditTokenDecimalsToDisplay * 3)}
-                    </span>{" "}
-                    {pegToken.symbol}
-                    {" "}
+                    </span>{' '}
+                    {pegToken.symbol}{' '}
                     <span className="text-gray-400">
                       (≈ ${formatDecimal(loanDebtPegToken * pegToken.price, 2)}, DefiLlama)
                     </span>
                   </p>
                   <p>
                     <span className="text-gray-400">
-                    LTV :{" "}
-                    <span className="font-semibold">
-                      {" "}
-                      {formatDecimal(
-                        100 * (loanDebtPegToken * pegToken.price) /
-                        (collateralToken.price * collateralAmount),
-                        2
-                      )}
-                    </span>
-                    {" "}%
-                    {" "}
-                      (based on DefiLlama prices)
+                      LTV :{' '}
+                      <span className="font-semibold">
+                        {' '}
+                        {formatDecimal(
+                          (100 * (loanDebtPegToken * pegToken.price)) / (collateralToken.price * collateralAmount),
+                          2
+                        )}
+                      </span>{' '}
+                      % (based on DefiLlama prices)
                     </span>
                   </p>
                 </div>
@@ -384,12 +360,12 @@ function ActiveLoans({
               <div className="flex items-center justify-center">
                 <p
                   className={clsx(
-                    "font-semibold",
+                    'font-semibold',
                     Number(callThreshold) < 80
-                      ? "text-green-500"
+                      ? 'text-green-500'
                       : Number(callThreshold) < 90
-                      ? "text-amber-500"
-                      : "text-red-500"
+                      ? 'text-amber-500'
+                      : 'text-red-500'
                   )}
                 >
                   {callThreshold}%
@@ -401,56 +377,54 @@ function ActiveLoans({
             }
             placement="top"
           />
-        )
-      },
+        );
+      }
     },
     {
-      id: "DebtAmount",
-      header: "Debt",
+      id: 'DebtAmount',
+      header: 'Debt',
       cell: (info: any) => (
         <p className="font-semibold text-gray-700 dark:text-white">
           <div className="flex justify-center gap-1">
             {formatDecimal(
-              Number(formatUnits(info.row.original.loanDebt, 18)) *
-              Number(creditMultiplier) / 1e18,
+              (Number(formatUnits(info.row.original.loanDebt, 18)) * Number(creditMultiplier)) / 1e18,
               creditTokenDecimalsToDisplay
             )}
             <Image src={pegTokenLogo} width={25} height={25} alt="logo" />
           </div>
         </p>
-      ),
+      )
     },
     {
-      id: "nextPaymentDue",
-      header: "Next Payment Due",
+      id: 'nextPaymentDue',
+      header: 'Next Payment Due',
       cell: (info: any) => {
-        const currentDateInSeconds = Date.now() / 1000
-        const sumOfTimestamps =
-          repays[info.row.original.id] + lendingTerm.maxDelayBetweenPartialRepay
+        const currentDateInSeconds = Date.now() / 1000;
+        const sumOfTimestamps = repays[info.row.original.id] + lendingTerm.maxDelayBetweenPartialRepay;
         return (
           <>
             <p className="font-semibold text-gray-700 dark:text-white">
               {lendingTerm.maxDelayBetweenPartialRepay === 0
-                ? "n/a"
+                ? 'n/a'
                 : Number.isNaN(sumOfTimestamps)
-                ? "--"
+                ? '--'
                 : sumOfTimestamps < currentDateInSeconds
-                ? "Overdue"
+                ? 'Overdue'
                 : secondsToAppropriateUnit(sumOfTimestamps - currentDateInSeconds)}
             </p>
           </>
-        )
-      },
+        );
+      }
     },
 
     {
-      id: "call",
+      id: 'call',
       enableSorting: false,
       cell: (info: any) => {
-        return <CallableButton original={info.row.original} />
-      },
-    },
-  ] // eslint-disable-next-line
+        return <CallableButton original={info.row.original} />;
+      }
+    }
+  ]; // eslint-disable-next-line
 
   const table = useReactTable({
     data,
@@ -461,23 +435,23 @@ function ActiveLoans({
     debugTable: true,
     initialState: {
       pagination: {
-        pageSize: 10,
+        pageSize: 10
       },
       sorting: [
         {
-          id: "nextPaymentDue",
-          desc: true,
-        },
-      ],
-    },
-  })
+          id: 'nextPaymentDue',
+          desc: true
+        }
+      ]
+    }
+  });
 
-  if (!contractData) return null
+  if (!contractData) return null;
 
   return (
     <>
       {showModal && <StepModal steps={steps} close={setShowModal} setSteps={setSteps} />}
-      { data.length != 0 ? (
+      {data.length != 0 ? (
         <div className="relative flex items-center justify-between">
           <p className="mt-4 space-x-2 text-gray-700 dark:text-gray-200">
             There are <span className="font-semibold">{data?.length}</span> active loans
@@ -494,24 +468,20 @@ function ActiveLoans({
             </div>
           )}
         </div>
-      ) : null }
+      ) : null}
       {isLoadingEventLoans ? (
         <div className="flex flex-grow flex-col items-center justify-center gap-2">
           <Spinner />
         </div>
+      ) : data.length == 0 ? (
+        <div className="text-center text-gray-400">No active loans on this term yet.</div>
       ) : (
-        data.length == 0 ? (
-          <div className="text-center text-gray-400">
-            No active loans on this term yet.
-          </div>
-        ) : (
-          <>
-            <CustomTable withNav={true} table={table} />
-          </>
-        )
+        <>
+          <CustomTable withNav={true} table={table} />
+        </>
       )}
     </>
-  )
+  );
 }
 
-export default ActiveLoans
+export default ActiveLoans;

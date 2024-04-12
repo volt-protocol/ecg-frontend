@@ -1,30 +1,28 @@
-"use client"
+'use client';
 // Layout components
-import { usePathname } from "next/navigation"
-import { useState } from "react"
-import routes from "routes"
-import { getActiveNavbar, getActiveRoute } from "utils/navigation"
-import React from "react"
-import Navbar from "components/navbar"
-import Sidebar from "components/sidebar"
-import { useAccount, useSwitchChain } from "wagmi"
-import { ToastContainer } from "react-toastify"
-import TermsConditionsModal from "components/modals/TermsConditionsModal"
-import { useAppStore } from "store"
-import { MdError } from "react-icons/md"
+import { usePathname } from 'next/navigation';
+import { useState } from 'react';
+import routes from 'routes';
+import { getActiveNavbar, getActiveRoute } from 'utils/navigation';
+import React from 'react';
+import Navbar from 'components/navbar';
+import Sidebar from 'components/sidebar';
+import { useAccount, useSwitchChain } from 'wagmi';
+import { ToastContainer } from 'react-toastify';
+import TermsConditionsModal from 'components/modals/TermsConditionsModal';
+import { useAppStore } from 'store';
+import { MdError } from 'react-icons/md';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { isConnected, chainId } = useAccount()
-  const { chains, switchChain } = useSwitchChain()
-  const { termsAccepted, appChainId } = useAppStore()
-  const [open, setOpen] = useState(false)
-  const pathname = usePathname()
+  const { isConnected, chainId } = useAccount();
+  const { chains, switchChain } = useSwitchChain();
+  const { termsAccepted, appChainId } = useAppStore();
+  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
     <div className="flex h-full w-full bg-background-100/70 dark:bg-background-900">
-      {!termsAccepted &&
-        pathname !== "/terms-conditions" &&
-        pathname !== "/risk-statement" && <TermsConditionsModal />}
+      {!termsAccepted && pathname !== '/terms-conditions' && pathname !== '/risk-statement' && <TermsConditionsModal />}
       <ToastContainer />
       <Sidebar routes={routes} open={open} setOpen={setOpen} variant="admin" />
       {/* Navbar & Main Content */}
@@ -33,8 +31,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {isConnected && chainId != appChainId && (
           <div className="flex items-center justify-center gap-2 bg-red-100 py-2 text-sm text-red-500/90 dark:bg-red-100/0 dark:text-red-500 xl:ml-[260px]">
             <MdError className="h-6 w-6" />
-            Please switch to {chains.find((chain) => chain.id == appChainId)?.name}{" "}
-            network.
+            Please switch to {chains.find((chain) => chain.id == appChainId)?.name} network.
             <span
               className="cursor-pointer font-semibold underline"
               onClick={() => switchChain({ chainId: appChainId })}
@@ -63,5 +60,5 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
     </div>
-  )
+  );
 }

@@ -1,7 +1,6 @@
-import React from "react";
+import React from 'react';
 import dynamic from 'next/dynamic';
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
-
 
 type ChartProps = {
   // using `interface` is also ok
@@ -18,14 +17,14 @@ class PieChart extends React.Component<ChartProps, ChartState> {
 
     this.state = {
       chartData: [],
-      chartOptions: {},
+      chartOptions: {}
     };
   }
 
   componentDidMount() {
     this.setState({
       chartData: this.props.chartData,
-      chartOptions: this.props.chartOptions,
+      chartOptions: this.props.chartOptions
     });
   }
 

@@ -7,7 +7,7 @@ export async function HttpGet<T>(url: string, config?: any): Promise<T> {
 }
 
 export async function HttpPost<T>(url: string, body?: any, config?: any): Promise<T> {
-  const axiosResp: AxiosResponse<T> =(await axios.post(url, body, config)) as AxiosResponse<T>;
+  const axiosResp: AxiosResponse<T> = (await axios.post(url, body, config)) as AxiosResponse<T>;
 
   return axiosResp.data;
 }

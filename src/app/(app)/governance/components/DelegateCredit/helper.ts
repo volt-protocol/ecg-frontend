@@ -1,4 +1,4 @@
-import { Address, formatUnits, isAddress } from "viem"
+import { Address, formatUnits, isAddress } from 'viem';
 
 export const getTitleDisabled = (
   value: number,
@@ -7,15 +7,15 @@ export const getTitleDisabled = (
   creditTokenSymbol: string
 ) => {
   if (!addressValue || !isAddress(addressValue)) {
-    return "Enter Delegatee address"
+    return 'Enter Delegatee address';
   }
   if (!value || value <= 0) {
-    return `Enter ${creditTokenSymbol} amount`
+    return `Enter ${creditTokenSymbol} amount`;
   }
   if (value > Number(formatUnits(guildNotUsed, 18))) {
-    return `Insufficient ${creditTokenSymbol} balance`
+    return `Insufficient ${creditTokenSymbol} balance`;
   }
-}
+};
 
 export const style = {
   content: `w-full rounded-md text-gray-700 dark:text-white`,
@@ -27,8 +27,8 @@ export const style = {
   currencySelectorIcon: `flex items-center`,
   currencySelectorTicker: `mx-2`,
   currencySelectorArrow: `text-lg`,
-  confirmButton: `mt-4 mb-2 rounded-md py-4 px-8 text-lg font-semibold flex items-center justify-center cursor-pointer w-full disabled:bg-gray-300 disabled:text-gray-700 disabled:cursor-not-allowed text-white bg-brand-500 hover:bg-brand-400 dark:disabled:bg-navy-900 dark:disabled:text-navy-400 transition-all ease-in-out duration-150`,
-}
+  confirmButton: `mt-4 mb-2 rounded-md py-4 px-8 text-lg font-semibold flex items-center justify-center cursor-pointer w-full disabled:bg-gray-300 disabled:text-gray-700 disabled:cursor-not-allowed text-white bg-brand-500 hover:bg-brand-400 dark:disabled:bg-navy-900 dark:disabled:text-navy-400 transition-all ease-in-out duration-150`
+};
 
 //   const style = {
 //     wrapper: `w-screen flex items-center justify-center mt-14 `,

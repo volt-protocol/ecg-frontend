@@ -13,21 +13,21 @@ export const onboardNewTermTabs: OnboardNewTermTabs[] = [
   {
     key: 'create',
     title: 'Create',
-    content: <Create />,
+    content: <Create />
   },
   {
     key: 'propose',
     title: 'Propose',
-    content: <Propose />,
+    content: <Propose />
   },
   {
     key: 'vote',
     title: 'Vote',
-    content: <Vote />,
+    content: <Vote />
   },
   {
     key: 'veto',
     title: 'Veto',
-    content: <Veto />,
-  },
-];  
+    content: <Veto />
+  }
+];

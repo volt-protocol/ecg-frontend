@@ -1,6 +1,6 @@
-import clsx from "clsx"
-import Image from "next/image"
-import { Address } from "viem"
+import clsx from 'clsx';
+import Image from 'next/image';
+import { Address } from 'viem';
 
 export default function DefiInputBox({
   disabled = false,
@@ -15,27 +15,25 @@ export default function DefiInputBox({
   currencyLogo,
   currencyLogoStyle,
   currencySymbol,
-  ref,
+  ref
 }: {
-  disabled?: boolean
-  topLabel: string
-  placeholder: string
-  inputSize: string
-  pattern: string
-  value: string | number | Address
-  onChange?: any
-  leftLabel?: JSX.Element
-  rightLabel?: JSX.Element
-  currencyLogo?: string
-  currencyLogoStyle?: any
-  currencySymbol?: string
-  ref?: any
+  disabled?: boolean;
+  topLabel: string;
+  placeholder: string;
+  inputSize: string;
+  pattern: string;
+  value: string | number | Address;
+  onChange?: any;
+  leftLabel?: JSX.Element;
+  rightLabel?: JSX.Element;
+  currencyLogo?: string;
+  currencyLogoStyle?: any;
+  currencySymbol?: string;
+  ref?: any;
 }) {
   return (
     <div className="relative w-full rounded-xl bg-brand-100/50 dark:bg-navy-700">
-      <div className="mb-1 px-5 pt-4 text-sm font-medium text-gray-700 dark:text-gray-300">
-        {topLabel}
-      </div>
+      <div className="mb-1 px-5 pt-4 text-sm font-medium text-gray-700 dark:text-gray-300">{topLabel}</div>
       <div className="flex items-center justify-between px-5">
         <input
           ref={ref}
@@ -44,7 +42,7 @@ export default function DefiInputBox({
           value={value}
           className={clsx(
             inputSize,
-            "block max-w-[70%] border-gray-300 bg-brand-100/0 text-gray-800 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:border-brand-400/80 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-50 sm:leading-6"
+            'block max-w-[70%] border-gray-300 bg-brand-100/0 text-gray-800 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:border-brand-400/80 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-50 sm:leading-6'
           )}
           placeholder={placeholder}
           pattern={pattern}
@@ -52,14 +50,16 @@ export default function DefiInputBox({
         {currencyLogo && currencySymbol && (
           <div className="flex items-center gap-2" title={currencySymbol}>
             <Image src={currencyLogo} style={currencyLogoStyle || {}} width={32} height={32} alt="logo" />
-            <span className="font-medium text-gray-800 dark:text-gray-100 hidden" style={{'whiteSpace':'nowrap'}}>{currencySymbol}</span>
+            <span className="hidden font-medium text-gray-800 dark:text-gray-100" style={{ whiteSpace: 'nowrap' }}>
+              {currencySymbol}
+            </span>
           </div>
         )}
       </div>
-      <div className="overflow-auto mt-1 gap-1 px-5 pb-4">
-        <span style={{'float':'left'}}>{leftLabel}</span>
-        <span style={{'float':'right'}}>{rightLabel}</span>
+      <div className="mt-1 gap-1 overflow-auto px-5 pb-4">
+        <span style={{ float: 'left' }}>{leftLabel}</span>
+        <span style={{ float: 'right' }}>{rightLabel}</span>
       </div>
     </div>
-  )
+  );
 }

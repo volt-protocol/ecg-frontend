@@ -1,109 +1,104 @@
-"use client"
+'use client';
 
-import Card from "components/card"
-import { ApexChartWrapper } from "components/charts/ApexChartWrapper"
-import Spinner from "components/spinner"
-import { useEffect, useState } from "react"
-import { ChartTimeline } from "types/charts"
-import { getDateFrom, getTimelineButton } from "./helper"
-import moment from "moment"
-import { useAppStore } from "store"
-import { getCreditTokenSymbol } from "utils/strings"
+import Card from 'components/card';
+import { ApexChartWrapper } from 'components/charts/ApexChartWrapper';
+import Spinner from 'components/spinner';
+import { useEffect, useState } from 'react';
+import { ChartTimeline } from 'types/charts';
+import { getDateFrom, getTimelineButton } from './helper';
+import moment from 'moment';
+import { useAppStore } from 'store';
+import { getCreditTokenSymbol } from 'utils/strings';
 
 export const CreditTotalSupply = ({
   creditSupply,
-  creditTotalIssuance,
+  creditTotalIssuance
 }: {
-  creditSupply: any
-  creditTotalIssuance: any
+  creditSupply: any;
+  creditTotalIssuance: any;
 }) => {
-  const [chartData, setChartData] = useState<any>([])
-  const [timeline, setTimeline] = useState<ChartTimeline>("all")
-  const { appMarketId, coinDetails, contractsList } = useAppStore()
+  const [chartData, setChartData] = useState<any>([]);
+  const [timeline, setTimeline] = useState<ChartTimeline>('all');
+  const { appMarketId, coinDetails, contractsList } = useAppStore();
 
   useEffect(() => {
-    if (!creditSupply || !creditTotalIssuance) return
+    if (!creditSupply || !creditTotalIssuance) return;
 
     const state = {
       series: [
         {
-          name: "Total Supply",
+          name: 'Total Supply',
           data: creditSupply.values,
-          color: "#50bdae",
+          color: '#50bdae'
         },
         {
-          name: "Total Borrows",
+          name: 'Total Borrows',
           data: creditTotalIssuance.values,
-          color: "#f7b924",
+          color: '#f7b924'
         }
       ],
       options: {
         chart: {
-          id: "creditTotalSupplyChart",
+          id: 'creditTotalSupplyChart',
           toolbar: {
-            show: false,
+            show: false
           },
           height: 350,
-          type: "area",
+          type: 'area',
           zoom: {
-            autoScaleYaxis: true,
-          },
+            autoScaleYaxis: true
+          }
         },
         legend: {
           show: true,
           floating: false,
-          fontSize: "14px",
-          fontFamily: "Inter",
+          fontSize: '14px',
+          fontFamily: 'Inter',
           fontWeight: 400,
-          offsetY: 3,
+          offsetY: 3
         },
         dataLabels: {
-          enabled: false,
+          enabled: false
         },
         stroke: {
-          curve: "straight",
+          curve: 'straight'
         },
         xaxis: {
-          type: "datetime",
+          type: 'datetime',
           tickAmount: 6,
           labels: {
             datetimeFormatter: {
-              year: "yyyy",
+              year: 'yyyy',
               month: "MMM 'yy",
-              day: "dd MMM",
-              hour: "HH:mm",
-            },
+              day: 'dd MMM',
+              hour: 'HH:mm'
+            }
           },
           min: new Date(creditSupply.timestamps[0]).getTime(),
-          categories: creditSupply.timestamps,
+          categories: creditSupply.timestamps
         },
         fill: {
-          colors: ["#50bdae", "f7b924"],
-          type: "gradient",
+          colors: ['#50bdae', 'f7b924'],
+          type: 'gradient',
           gradient: {
             shadeIntensity: 1,
             opacityFrom: 0.7,
             opacityTo: 0.9,
-            stops: [0, 100],
-          },
-        },
-      },
-    }
+            stops: [0, 100]
+          }
+        }
+      }
+    };
 
-    setChartData(state)
-  }, [creditSupply, creditTotalIssuance])
+    setChartData(state);
+  }, [creditSupply, creditTotalIssuance]);
 
   const updateData = (timeline: ChartTimeline) => {
     // reload the chart with the new timeline
-    ApexCharts.exec(
-      "creditTotalSupplyChart",
-      "zoomX",
-      getDateFrom(timeline, chartData),
-      moment().toDate().getTime()
-    )
+    ApexCharts.exec('creditTotalSupplyChart', 'zoomX', getDateFrom(timeline, chartData), moment().toDate().getTime());
 
-    setTimeline(timeline)
-  }
+    setTimeline(timeline);
+  };
 
   return (
     <Card
@@ -117,14 +112,9 @@ export const CreditTotalSupply = ({
         </div>
       ) : (
         <div>
-          <ApexChartWrapper
-            options={chartData.options}
-            series={chartData.series}
-            type="area"
-            height={350}
-          />
+          <ApexChartWrapper options={chartData.options} series={chartData.series} type="area" height={350} />
         </div>
       )}
     </Card>
-  )
-}
+  );
+};

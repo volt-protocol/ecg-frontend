@@ -1,7 +1,7 @@
 // Libraries
-import { StateCreator } from "zustand"
-import { HttpGet } from "utils/HttpHelper"
-import { getApiBaseUrl } from "config";
+import { StateCreator } from 'zustand';
+import { HttpGet } from 'utils/HttpHelper';
+import { getApiBaseUrl } from 'config';
 
 export interface Auction {
   loanId: string;
@@ -38,10 +38,10 @@ export interface AuctionsApiReponse {
 }
 
 export interface AuctionsSlice {
-  auctionHouses: AuctionHouse[]
-  auctions: Auction[]
-  updated: number | null
-  fetchAuctions: (marketId: number, chainId: number) => void
+  auctionHouses: AuctionHouse[];
+  auctions: Auction[];
+  updated: number | null;
+  fetchAuctions: (marketId: number, chainId: number) => void;
 }
 
 export const createAuctionsSlice: StateCreator<AuctionsSlice> = (set, get) => ({
@@ -49,12 +49,12 @@ export const createAuctionsSlice: StateCreator<AuctionsSlice> = (set, get) => ({
   auctions: [],
   updated: null,
   fetchAuctions: async (marketId: number, chainId: number) => {
-    const apiUrl = getApiBaseUrl(chainId) + `/markets/${marketId}/auctions`
+    const apiUrl = getApiBaseUrl(chainId) + `/markets/${marketId}/auctions`;
     const response = await HttpGet<any>(apiUrl);
     set({
-      auctionHouses: response.auctionHouses, 
-      auctions: response.auctions, 
+      auctionHouses: response.auctionHouses,
+      auctions: response.auctions,
       updated: response.updated
-    })
-  },
-})
+    });
+  }
+});

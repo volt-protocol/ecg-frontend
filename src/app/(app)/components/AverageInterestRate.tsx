@@ -1,96 +1,87 @@
-"use client"
+'use client';
 
-import Card from "components/card"
-import { ApexChartWrapper } from "components/charts/ApexChartWrapper"
-import Spinner from "components/spinner"
-import { useEffect, useState } from "react"
-import { ChartTimeline } from "types/charts"
-import { getDateFrom, getTimelineButton } from "./helper"
-import moment from "moment"
+import Card from 'components/card';
+import { ApexChartWrapper } from 'components/charts/ApexChartWrapper';
+import Spinner from 'components/spinner';
+import { useEffect, useState } from 'react';
+import { ChartTimeline } from 'types/charts';
+import { getDateFrom, getTimelineButton } from './helper';
+import moment from 'moment';
 
-export const AverageInterestRate = ({
-  averageInterestRate,
-}: {
-  averageInterestRate: any
-}) => {
-  const [chartData, setChartData] = useState<any>([])
-  const [timeline, setTimeline] = useState<ChartTimeline>("all")
+export const AverageInterestRate = ({ averageInterestRate }: { averageInterestRate: any }) => {
+  const [chartData, setChartData] = useState<any>([]);
+  const [timeline, setTimeline] = useState<ChartTimeline>('all');
 
   useEffect(() => {
-    if (!averageInterestRate) return
+    if (!averageInterestRate) return;
 
     const state = {
       series: [
         {
-          name: "Average Interest Rate",
+          name: 'Average Interest Rate',
           data: averageInterestRate.values,
-          color: "#50bdae",
-        },
+          color: '#50bdae'
+        }
       ],
       options: {
         tooltip: {
           y: {
-            formatter: (val) => val + "%",
-          },
+            formatter: (val) => val + '%'
+          }
         },
         chart: {
-          id: "averageInterestChart",
+          id: 'averageInterestChart',
           toolbar: {
-            show: false,
+            show: false
           },
           height: 350,
-          type: "area",
+          type: 'area',
           zoom: {
-            autoScaleYaxis: true,
-          },
+            autoScaleYaxis: true
+          }
         },
         dataLabels: {
-          enabled: false,
+          enabled: false
         },
         stroke: {
-          curve: "straight",
+          curve: 'straight'
         },
         xaxis: {
-          type: "datetime",
+          type: 'datetime',
           tickAmount: 6,
           labels: {
             datetimeFormatter: {
-              year: "yyyy",
+              year: 'yyyy',
               month: "MMM 'yy",
-              day: "dd MMM",
-              hour: "HH:mm",
-            },
+              day: 'dd MMM',
+              hour: 'HH:mm'
+            }
           },
           min: new Date(averageInterestRate.timestamps[0]).getTime(),
-          categories: averageInterestRate.timestamps,
+          categories: averageInterestRate.timestamps
         },
         fill: {
-          colors: ["#50bdae"],
-          type: "gradient",
+          colors: ['#50bdae'],
+          type: 'gradient',
           gradient: {
             shadeIntensity: 1,
             opacityFrom: 0.7,
             opacityTo: 0.9,
-            stops: [0, 100],
-          },
-        },
-      },
-    }
+            stops: [0, 100]
+          }
+        }
+      }
+    };
 
-    setChartData(state)
-  }, [averageInterestRate])
+    setChartData(state);
+  }, [averageInterestRate]);
 
   const updateData = (timeline: ChartTimeline) => {
     // reload the chart with the new timeline
-    ApexCharts.exec(
-      "averageInterestChart",
-      "zoomX",
-      getDateFrom(timeline, chartData),
-      moment().toDate().getTime()
-    )
+    ApexCharts.exec('averageInterestChart', 'zoomX', getDateFrom(timeline, chartData), moment().toDate().getTime());
 
-    setTimeline(timeline)
-  }
+    setTimeline(timeline);
+  };
 
   return (
     <Card
@@ -104,14 +95,9 @@ export const AverageInterestRate = ({
         </div>
       ) : (
         <div>
-          <ApexChartWrapper
-            options={chartData.options}
-            series={chartData.series}
-            type="area"
-            height={350}
-          />
+          <ApexChartWrapper options={chartData.options} series={chartData.series} type="area" height={350} />
         </div>
       )}
     </Card>
-  )
-}
+  );
+};

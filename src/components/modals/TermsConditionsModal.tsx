@@ -1,19 +1,19 @@
-import { Fragment, useState } from "react"
-import { Dialog, Transition } from "@headlessui/react"
-import { MdCheck } from "react-icons/md"
-import ButtonPrimary from "components/button/ButtonPrimary"
-import { useAppStore } from "store"
+import { Fragment, useState } from 'react';
+import { Dialog, Transition } from '@headlessui/react';
+import { MdCheck } from 'react-icons/md';
+import ButtonPrimary from 'components/button/ButtonPrimary';
+import { useAppStore } from 'store';
 
 export default function TermsConditionsModal() {
-  const [open, setOpen] = useState<boolean>(true)
-  const [checkedTerms, isCheckedTerms] = useState<boolean>(false)
-  const [checkedRisks, isCheckedRisks] = useState<boolean>(false)
-  const { setTermsAccepted } = useAppStore()
+  const [open, setOpen] = useState<boolean>(true);
+  const [checkedTerms, isCheckedTerms] = useState<boolean>(false);
+  const [checkedRisks, isCheckedRisks] = useState<boolean>(false);
+  const { setTermsAccepted } = useAppStore();
 
   const handleAcceptterms = () => {
-    setTermsAccepted(true)
-    setOpen(false)
-  }
+    setTermsAccepted(true);
+    setOpen(false);
+  };
 
   return (
     <Transition.Root show={open} as={Fragment}>
@@ -47,16 +47,12 @@ export default function TermsConditionsModal() {
                     <MdCheck className="h-6 w-6 text-green-600" aria-hidden="true" />
                   </div>
                   <div className="mt-3 text-center text-sm sm:mt-5 sm:text-base">
-                    <Dialog.Title
-                      as="h3"
-                      className="text-base font-semibold leading-6 text-gray-900"
-                    >
+                    <Dialog.Title as="h3" className="text-base font-semibold leading-6 text-gray-900">
                       Terms and Conditions
                     </Dialog.Title>
                     <div className="my-2">
                       <p className="text-gray-500">
-                        Please carefully read our terms and conditions before using the
-                        app.
+                        Please carefully read our terms and conditions before using the app.
                       </p>
                     </div>
                     <div className="mb-2 flex items-center justify-center gap-1">
@@ -71,11 +67,11 @@ export default function TermsConditionsModal() {
                         />
                       </div>
                       <div className="leading-6">
-                        <label htmlFor="risks" className="text-gray-500 cursor-pointer">
-                          I fully agree to the{" "}
+                        <label htmlFor="risks" className="cursor-pointer text-gray-500">
+                          I fully agree to the{' '}
                           <a href="/risk-statement" target="_blank" className="font-medium text-brand-500">
                             Risk and Security agreement
-                          </a>{" "}
+                          </a>{' '}
                           of the Ethereum Credit Guild.
                         </label>
                       </div>
@@ -92,11 +88,11 @@ export default function TermsConditionsModal() {
                         />
                       </div>
                       <div className="leading-6">
-                        <label htmlFor="terms" className="text-gray-500 cursor-pointer">
-                          I fully agree to the{" "}
-                          <a href="/terms-conditions" target="_blank"  className="font-medium text-brand-500">
+                        <label htmlFor="terms" className="cursor-pointer text-gray-500">
+                          I fully agree to the{' '}
+                          <a href="/terms-conditions" target="_blank" className="font-medium text-brand-500">
                             Terms and Conditions
-                          </a>{" "}
+                          </a>{' '}
                           of the Ethereum Credit Guild.
                         </label>
                       </div>
@@ -117,5 +113,5 @@ export default function TermsConditionsModal() {
         </div>
       </Dialog>
     </Transition.Root>
-  )
+  );
 }

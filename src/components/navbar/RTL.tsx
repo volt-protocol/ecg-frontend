@@ -7,17 +7,12 @@ import { BsArrowBarUp } from 'react-icons/bs';
 import { FiSearch } from 'react-icons/fi';
 import { RiMoonFill, RiSunFill } from 'react-icons/ri';
 import Image from 'next/image';
-import {
-  IoMdNotificationsOutline,
-  IoMdInformationCircleOutline,
-} from 'react-icons/io';
+import { IoMdNotificationsOutline, IoMdInformationCircleOutline } from 'react-icons/io';
 import avatar from '/public/img/avatars/avatar4.png';
 
 const Navbar = (props: { brandText: string; [x: string]: any }) => {
   const { onOpenSidenav, brandText, mini, hovered } = props;
-  const [darkmode, setDarkmode] = React.useState(
-    document.body.classList.contains('dark'),
-  );
+  const [darkmode, setDarkmode] = React.useState(document.body.classList.contains('dark'));
   return (
     <nav
       className={`duration-175 linear fixed left-3 top-3 flex flex-row flex-wrap items-center justify-between rounded-xl bg-white/30 transition-all ${
@@ -35,10 +30,7 @@ const Navbar = (props: { brandText: string; [x: string]: any }) => {
             href=" "
           >
             Pages
-            <span className="mx-1 text-sm text-navy-700 hover:text-navy-700 dark:text-white">
-              {' '}
-              /{' '}
-            </span>
+            <span className="mx-1 text-sm text-navy-700 hover:text-navy-700 dark:text-white"> / </span>
           </a>
           <NavLink
             className="text-sm font-normal capitalize text-navy-700 hover:underline dark:text-white dark:hover:text-white"
@@ -48,10 +40,7 @@ const Navbar = (props: { brandText: string; [x: string]: any }) => {
           </NavLink>
         </div>
         <p className="shrink text-[33px] capitalize text-navy-700 dark:text-white">
-          <NavLink
-            href="#"
-            className="font-bold capitalize hover:text-navy-700 dark:hover:text-white"
-          >
+          <NavLink href="#" className="font-bold capitalize hover:text-navy-700 dark:hover:text-white">
             {brandText}
           </NavLink>
         </p>
@@ -68,10 +57,7 @@ const Navbar = (props: { brandText: string; [x: string]: any }) => {
             className="block h-full w-full rounded-full bg-lightPrimary text-sm font-medium text-navy-700 outline-none placeholder:!text-gray-400 dark:bg-navy-900 dark:text-white dark:placeholder:!text-white sm:w-fit"
           />
         </div>
-        <span
-          className="flex cursor-pointer text-xl text-gray-600 dark:text-white xl:hidden "
-          onClick={onOpenSidenav}
-        >
+        <span className="flex cursor-pointer text-xl text-gray-600 dark:text-white xl:hidden " onClick={onOpenSidenav}>
           <FiAlignJustify className="h-5 w-5" />
         </span>
         {/* start Notification */}
@@ -86,12 +72,8 @@ const Navbar = (props: { brandText: string; [x: string]: any }) => {
         >
           <div className="flex w-[360px] flex-col gap-3 rounded-[20px] bg-white p-4 shadow-xl shadow-shadow-500 dark:!bg-navy-700 dark:text-white dark:shadow-none sm:w-[460px]">
             <div className="flex items-center justify-between">
-              <p className="text-base font-bold text-navy-700 dark:text-white">
-                Notification
-              </p>
-              <p className="text-sm font-bold text-navy-700 dark:text-white">
-                Mark all read
-              </p>
+              <p className="text-base font-bold text-navy-700 dark:text-white">Notification</p>
+              <p className="text-sm font-bold text-navy-700 dark:text-white">Mark all read</p>
             </div>
 
             <button className="flex w-full items-center">
@@ -138,7 +120,7 @@ const Navbar = (props: { brandText: string; [x: string]: any }) => {
               style={{
                 backgroundImage: `url(${navbarimage.src})`,
                 backgroundRepeat: 'no-repeat',
-                backgroundSize: 'cover',
+                backgroundSize: 'cover'
               }}
               className="mb-2 aspect-video w-full rounded-lg"
             />
@@ -185,44 +167,25 @@ const Navbar = (props: { brandText: string; [x: string]: any }) => {
         </div>
         {/* Profile & Dropdown */}
         <Dropdown
-          button={
-            <Image
-              width="2"
-              height="20"
-              className="h-10 w-10 rounded-full"
-              src={avatar}
-              alt="Elon Musk"
-            />
-          }
+          button={<Image width="2" height="20" className="h-10 w-10 rounded-full" src={avatar} alt="Elon Musk" />}
           classNames={'py-2 top-8 -left-[180px] w-max'}
         >
           <div className="flex h-max w-56 flex-col justify-start rounded-[20px] bg-white bg-cover bg-no-repeat pb-4 shadow-xl shadow-shadow-500 dark:!bg-navy-700 dark:text-white dark:shadow-none">
             <div className="ml-4 mt-3">
               <div className="flex items-center gap-2">
-                <p className="text-sm font-bold text-navy-700 dark:text-white">
-                  👋 Hey, Adela
-                </p>{' '}
+                <p className="text-sm font-bold text-navy-700 dark:text-white">👋 Hey, Adela</p>{' '}
               </div>
             </div>
             <div className="mt-3 h-px w-full bg-gray-200 dark:bg-white/20 " />
 
             <div className="ml-4 mt-3 flex flex-col">
-              <a
-                href=" "
-                className="text-sm text-gray-800 dark:text-white hover:dark:text-white"
-              >
+              <a href=" " className="text-sm text-gray-800 dark:text-white hover:dark:text-white">
                 Profile Settings
               </a>
-              <a
-                href=" "
-                className="mt-3 text-sm text-gray-800 dark:text-white hover:dark:text-white"
-              >
+              <a href=" " className="mt-3 text-sm text-gray-800 dark:text-white hover:dark:text-white">
                 Newsletter Settings
               </a>
-              <a
-                href=" "
-                className="mt-3 text-sm font-medium text-red-500 hover:text-red-500"
-              >
+              <a href=" " className="mt-3 text-sm font-medium text-red-500 hover:text-red-500">
                 Log Out
               </a>
             </div>

@@ -1,4 +1,4 @@
-'use client'
+'use client';
 /* eslint-disable */
 import { CacheProvider } from '@emotion/react';
 import createCache from '@emotion/cache';
@@ -7,11 +7,10 @@ import { isWindowAvailable } from 'utils/navigation';
 // NB: A unique `key` is important for it to work!
 let options = {
   rtl: { key: 'css-ar', stylisPlugins: [rtl] },
-  ltr: { key: 'css-en' },
+  ltr: { key: 'css-en' }
 };
 export function RtlProvider({ children }: any) {
-  const dir =
-    isWindowAvailable() && document.documentElement.dir == 'ar' ? 'rtl' : 'ltr';
+  const dir = isWindowAvailable() && document.documentElement.dir == 'ar' ? 'rtl' : 'ltr';
   const cache = createCache(options[dir]);
   return <CacheProvider value={cache} children={children} />;
 }

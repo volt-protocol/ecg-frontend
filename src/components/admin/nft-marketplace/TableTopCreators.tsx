@@ -8,7 +8,7 @@ import {
   getCoreRowModel,
   getSortedRowModel,
   SortingState,
-  useReactTable,
+  useReactTable
 } from '@tanstack/react-table';
 type RowObj = {
   name: string[];
@@ -24,71 +24,47 @@ function CheckTable(props: { tableData: any }) {
   const columns = [
     columnHelper.accessor('name', {
       id: 'name',
-      header: () => (
-        <p className="text-sm font-bold text-gray-600 dark:text-white">NAME</p>
-      ),
+      header: () => <p className="text-sm font-bold text-gray-600 dark:text-white">NAME</p>,
       cell: (info: any) => (
         <div className="flex items-center gap-2">
           <div className="h-[30px] w-[30px] rounded-full">
-            <Image
-              width="2"
-              height="20"
-              src={info.getValue()[1]}
-              className="h-full w-full rounded-full"
-              alt=""
-            />
+            <Image width="2" height="20" src={info.getValue()[1]} className="h-full w-full rounded-full" alt="" />
           </div>
-          <p className="text-sm font-medium text-navy-700 dark:text-white">
-            {info.getValue()[0]}
-          </p>
+          <p className="text-sm font-medium text-navy-700 dark:text-white">{info.getValue()[0]}</p>
         </div>
-      ),
+      )
     }),
     columnHelper.accessor('artworks', {
       id: 'artworks',
-      header: () => (
-        <p className="text-sm font-bold text-gray-600 dark:text-white">
-          ARTWORKS
-        </p>
-      ),
-      cell: (info) => (
-        <p className="text-md font-medium text-gray-600 dark:text-white">
-          {info.getValue()}
-        </p>
-      ),
+      header: () => <p className="text-sm font-bold text-gray-600 dark:text-white">ARTWORKS</p>,
+      cell: (info) => <p className="text-md font-medium text-gray-600 dark:text-white">{info.getValue()}</p>
     }),
     columnHelper.accessor('rating', {
       id: 'rating',
-      header: () => (
-        <p className="text-sm font-bold text-gray-600 dark:text-white">
-          RATING
-        </p>
-      ),
+      header: () => <p className="text-sm font-bold text-gray-600 dark:text-white">RATING</p>,
       cell: (info) => (
         <div className="mx-2 flex font-bold">
           <Progress width="w-16" value={info.getValue()} />
         </div>
-      ),
-    }),
+      )
+    })
   ]; // eslint-disable-next-line
   const [data, setData] = React.useState(() => [...defaultData]);
   const table = useReactTable({
     data,
     columns,
     state: {
-      sorting,
+      sorting
     },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    debugTable: true,
+    debugTable: true
   });
   return (
     <Card extra={'w-full sm:overflow-auto px-6'}>
       <header className="relative flex items-center justify-between pt-4">
-        <div className="text-xl font-bold text-navy-700 dark:text-white">
-          Check Table
-        </div>
+        <div className="text-xl font-bold text-navy-700 dark:text-white">Check Table</div>
 
         <button className="dark:active-bg-white-20 linear rounded-[20px] bg-lightPrimary px-4 py-2 text-base font-medium text-brand-500 transition duration-200 hover:bg-gray-100 active:bg-gray-200 dark:bg-white/5 dark:text-white dark:hover:bg-white/10">
           See all
@@ -109,13 +85,10 @@ function CheckTable(props: { tableData: any }) {
                       className="cursor-pointer border-b border-gray-200 pb-2 pr-4 pt-4 text-start"
                     >
                       <div className="items-center justify-between text-xs text-gray-200">
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                        {flexRender(header.column.columnDef.header, header.getContext())}
                         {{
                           asc: '',
-                          desc: '',
+                          desc: ''
                         }[header.column.getIsSorted() as string] ?? null}
                       </div>
                     </th>
@@ -133,14 +106,8 @@ function CheckTable(props: { tableData: any }) {
                   <tr key={row.id}>
                     {row.getVisibleCells().map((cell) => {
                       return (
-                        <td
-                          key={cell.id}
-                          className="min-w-[150px] border-white/0 py-3  pr-4"
-                        >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
+                        <td key={cell.id} className="min-w-[150px] border-white/0 py-3  pr-4">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
                       );
                     })}

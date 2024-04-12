@@ -1,37 +1,37 @@
-import { Table, flexRender } from "@tanstack/react-table"
-import clsx from "clsx"
-import { FaSort, FaSortDown, FaSortUp } from "react-icons/fa"
-import { MdChevronLeft, MdChevronRight } from "react-icons/md"
+import { Table, flexRender } from '@tanstack/react-table';
+import clsx from 'clsx';
+import { FaSort, FaSortDown, FaSortUp } from 'react-icons/fa';
+import { MdChevronLeft, MdChevronRight } from 'react-icons/md';
 
 export default function CustomTable<T>({
   table,
   withNav,
   onRowClick,
-  variant = "sm",
+  variant = 'sm'
 }: {
-  table: Table<T>
-  withNav?: boolean
-  onRowClick?: (row: any) => void
-  variant?: "sm" | "md" | "lg"
+  table: Table<T>;
+  withNav?: boolean;
+  onRowClick?: (row: any) => void;
+  variant?: 'sm' | 'md' | 'lg';
 }) {
   const getVariant = () => {
     switch (variant) {
-      case "sm":
+      case 'sm':
         return {
-          font: "text-sm",
-        }
-      case "md":
+          font: 'text-sm'
+        };
+      case 'md':
         return {
-          font: "text-md",
-        }
-      case "lg":
+          font: 'text-md'
+        };
+      case 'lg':
         return {
-          font: "text-lg",
-        }
+          font: 'text-lg'
+        };
       default:
-        return "text-sm"
+        return 'text-sm';
     }
-  }
+  };
 
   return (
     <>
@@ -56,7 +56,7 @@ export default function CustomTable<T>({
                           {{
                             asc: <FaSortDown />,
                             desc: <FaSortUp />,
-                            null: <FaSort />,
+                            null: <FaSort />
                           }[header.column.getIsSorted() as string] ?? <FaSort />}
                         </span>
                       )}
@@ -79,14 +79,14 @@ export default function CustomTable<T>({
                       key={cell.id}
                       className={clsx(
                         getVariant(),
-                        "relative min-w-[85px] border-white/0 py-2 text-center text-gray-700 dark:text-gray-200"
+                        'relative min-w-[85px] border-white/0 py-2 text-center text-gray-700 dark:text-gray-200'
                       )}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
                 </tr>
-              )
+              );
             })}
           </tbody>
         </table>
@@ -99,11 +99,8 @@ export default function CustomTable<T>({
         >
           <div className="hidden sm:block">
             <p className="text-sm ">
-              Showing page{" "}
-              <span className="font-medium">
-                {table.getState().pagination.pageIndex + 1}
-              </span>{" "}
-              of <span className="font-semibold">{table.getPageCount()}</span>
+              Showing page <span className="font-medium">{table.getState().pagination.pageIndex + 1}</span> of{' '}
+              <span className="font-semibold">{table.getPageCount()}</span>
             </p>
           </div>
           <div className="flex flex-1 justify-between sm:justify-end">
@@ -127,5 +124,5 @@ export default function CustomTable<T>({
         </nav>
       )}
     </>
-  )
+  );
 }

@@ -1,61 +1,59 @@
-"use client"
+'use client';
 import {
   createColumnHelper,
   useReactTable,
   getCoreRowModel,
   getSortedRowModel,
-  getPaginationRowModel,
-} from "@tanstack/react-table"
-import CustomTable from "components/table/CustomTable"
-import moment from "moment"
-import { Address } from "viem"
-import { fromNow } from "utils/date"
-import { BLOCK_LENGTH_MILLISECONDS } from "utils/constants"
-import { VoteLogs } from "lib/logs/votes"
-import { getLastVoteEventDescription } from "../helper"
-import { TransactionBadge } from "components/badge/TransactionBadge"
+  getPaginationRowModel
+} from '@tanstack/react-table';
+import CustomTable from 'components/table/CustomTable';
+import moment from 'moment';
+import { Address } from 'viem';
+import { fromNow } from 'utils/date';
+import { BLOCK_LENGTH_MILLISECONDS } from 'utils/constants';
+import { VoteLogs } from 'lib/logs/votes';
+import { getLastVoteEventDescription } from '../helper';
+import { TransactionBadge } from 'components/badge/TransactionBadge';
 
 export default function LastVotes({
   userAddress,
   data,
-  currentBlock,
+  currentBlock
 }: {
-  userAddress: Address
-  data: any
-  currentBlock: BigInt
+  userAddress: Address;
+  data: any;
+  currentBlock: BigInt;
 }) {
   /* Create Table */
-  const columnHelper = createColumnHelper<VoteLogs>()
+  const columnHelper = createColumnHelper<VoteLogs>();
 
   const columns = [
-    columnHelper.accessor("category", {
-      id: "category",
-      header: "Event",
+    columnHelper.accessor('category', {
+      id: 'category',
+      header: 'Event',
       cell: (info) => {
         return (
           <div className="ml-4">
-            <span className="text-sm font-medium">
-              {getLastVoteEventDescription(info.row.original)}
-            </span>
+            <span className="text-sm font-medium">{getLastVoteEventDescription(info.row.original)}</span>
           </div>
-        )
-      },
+        );
+      }
     }),
-    columnHelper.accessor("type", {
-      id: "type",
-      header: "Contract",
+    columnHelper.accessor('type', {
+      id: 'type',
+      header: 'Contract',
       enableSorting: true,
       cell: (info) => {
         return (
           <span className="inline-flex items-center gap-x-1.5 rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-navy-600 dark:text-gray-100">
             {info.row.original.type}
           </span>
-        )
-      },
+        );
+      }
     }),
-    columnHelper.accessor("block", {
-      id: "block",
-      header: "Date",
+    columnHelper.accessor('block', {
+      id: 'block',
+      header: 'Date',
       enableSorting: true,
       cell: (info) => {
         return (
@@ -63,23 +61,22 @@ export default function LastVotes({
             {fromNow(
               Number(
                 moment().subtract(
-                  (Number(currentBlock) - Number(info.getValue())) *
-                    BLOCK_LENGTH_MILLISECONDS,
-                  "milliseconds"
+                  (Number(currentBlock) - Number(info.getValue())) * BLOCK_LENGTH_MILLISECONDS,
+                  'milliseconds'
                 )
               )
             )}
           </p>
-        )
-      },
+        );
+      }
     }),
-    columnHelper.accessor("txHash", {
-      id: "txHash",
-      header: "Transaction",
+    columnHelper.accessor('txHash', {
+      id: 'txHash',
+      header: 'Transaction',
       enableSorting: true,
-      cell: (info) => <TransactionBadge txHash={info.getValue()} />,
-    }),
-  ]
+      cell: (info) => <TransactionBadge txHash={info.getValue()} />
+    })
+  ];
 
   const table = useReactTable({
     data: data,
@@ -90,17 +87,17 @@ export default function LastVotes({
     debugTable: true,
     initialState: {
       pagination: {
-        pageSize: 8,
+        pageSize: 8
       },
       sorting: [
         {
-          id: "block",
-          desc: true,
-        },
-      ],
-    },
-  })
+          id: 'block',
+          desc: true
+        }
+      ]
+    }
+  });
   /* End Create Table */
 
-  return <CustomTable withNav={true} table={table} />
+  return <CustomTable withNav={true} table={table} />;
 }

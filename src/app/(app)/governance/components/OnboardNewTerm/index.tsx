@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from "react"
-import { Tab } from "@headlessui/react"
-import clsx from "clsx"
-import { onboardNewTermTabs } from "./helper"
+import React, { useEffect, useState } from 'react';
+import { Tab } from '@headlessui/react';
+import clsx from 'clsx';
+import { onboardNewTermTabs } from './helper';
 
 function OnboardNewterm({
   creditVotingWeight,
-  guildVotingWeight,
+  guildVotingWeight
 }: {
-  creditVotingWeight: bigint
-  guildVotingWeight: bigint
+  creditVotingWeight: bigint;
+  guildVotingWeight: bigint;
 }) {
   return (
     <>
@@ -21,10 +21,10 @@ function OnboardNewterm({
                   key={item.key}
                   className={({ selected }) =>
                     clsx(
-                      "w-full rounded-md px-2 py-1 text-sm leading-5 transition-all duration-150 ease-in-out sm:px-4 sm:py-2 sm:text-base",
+                      'w-full rounded-md px-2 py-1 text-sm leading-5 transition-all duration-150 ease-in-out sm:px-4 sm:py-2 sm:text-base',
                       selected
-                        ? "bg-white font-semibold text-brand-500 dark:bg-navy-600/70"
-                        : "font-medium text-brand-500/80 hover:bg-white/30 dark:text-gray-200 dark:hover:bg-navy-600/50"
+                        ? 'bg-white font-semibold text-brand-500 dark:bg-navy-600/70'
+                        : 'font-medium text-brand-500/80 hover:bg-white/30 dark:text-gray-200 dark:hover:bg-navy-600/50'
                     )
                   }
                 >
@@ -34,7 +34,7 @@ function OnboardNewterm({
             </Tab.List>
             <Tab.Panels className="mt-2">
               {onboardNewTermTabs.map((item) => (
-                <Tab.Panel key={item.key} className={"p-3"}>
+                <Tab.Panel key={item.key} className={'p-3'}>
                   {React.cloneElement(item.content as React.ReactElement<any>, {
                     creditVotingWeight,
                     guildVotingWeight
@@ -46,7 +46,7 @@ function OnboardNewterm({
         </div>
       </div>
     </>
-  )
+  );
 }
 
-export default OnboardNewterm
+export default OnboardNewterm;

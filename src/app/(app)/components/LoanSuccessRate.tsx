@@ -1,111 +1,100 @@
-"use client"
+'use client';
 
-import { ApexChartWrapper } from "components/charts/ApexChartWrapper"
-import { formatCurrencyValue } from "utils/numbers"
+import { ApexChartWrapper } from 'components/charts/ApexChartWrapper';
+import { formatCurrencyValue } from 'utils/numbers';
 
 const mockData = [
   {
-    x: "Open Loan",
+    x: 'Open Loan',
     count: 22,
     percent: 80,
-    cummulativeValue: 22,
+    cummulativeValue: 22
   },
   {
-    x: "Successfully Repaid",
+    x: 'Successfully Repaid',
     count: 3,
     percent: 10,
-    cummulativeValue: 8,
+    cummulativeValue: 8
   },
   {
-    x: "Bad Debt Created, Repaid",
+    x: 'Bad Debt Created, Repaid',
     count: 2,
     percent: 2,
-    cummulativeValue: 2,
+    cummulativeValue: 2
   },
   {
-    x: "Bad Debt Created",
+    x: 'Bad Debt Created',
     count: 5,
     percent: 8,
-    cummulativeValue: 4,
-  },
-]
+    cummulativeValue: 4
+  }
+];
 
-export const LoanSuccessRate = ({
-  data,
-  labels,
-}: {
-  data: number[]
-  labels: string[]
-}) => {
+export const LoanSuccessRate = ({ data, labels }: { data: number[]; labels: string[] }) => {
   const series = mockData.map((item) => {
     return {
       x: item.x,
-      y: item.count,
-    }
-  })
+      y: item.count
+    };
+  });
 
   const state = {
     series: [
       {
-        data: series,
-      },
+        data: series
+      }
     ],
     options: {
       legend: {
-        show: false,
+        show: false
       },
-      colors: ["#4AB8A6", "#93B84A", "#6F4AB8", "#B84A5C"],
+      colors: ['#4AB8A6', '#93B84A', '#6F4AB8', '#B84A5C'],
       chart: {
         height: 150,
-        type: "treemap",
+        type: 'treemap',
         toolbar: {
-          show: false,
-        },
+          show: false
+        }
       },
       tooltip: {
         y: {
           formatter: function (value, { series, seriesIndex, dataPointIndex, w }) {
             return (
-              "<div>" +
+              '<div>' +
               mockData[dataPointIndex].count +
-              " (" +
+              ' (' +
               mockData[dataPointIndex].percent +
-              "%)" +
-              "</div><div>" +
-              "Cumulative Value: " +
+              '%)' +
+              '</div><div>' +
+              'Cumulative Value: ' +
               formatCurrencyValue(mockData[dataPointIndex].cummulativeValue) +
-              "</div>"
-            )
-          },
-        },
+              '</div>'
+            );
+          }
+        }
       },
       dataLabels: {
         enabled: true,
         style: {
-          fontSize: "12px",
+          fontSize: '12px'
         },
         formatter: function (text, op) {
-          return [text]
+          return [text];
         },
-        offsetY: -4,
+        offsetY: -4
       },
       plotOptions: {
         treemap: {
           distributed: true,
-          enableShades: false,
-        },
-      },
-    },
-  }
+          enableShades: false
+        }
+      }
+    }
+  };
 
   return (
     <div className="my-auto">
-      <ApexChartWrapper
-        options={state.options}
-        series={state.series}
-        type="treemap"
-        height={250}
-      />
+      <ApexChartWrapper options={state.options} series={state.series} type="treemap" height={250} />
     </div>
-  )
-}
+  );
+};

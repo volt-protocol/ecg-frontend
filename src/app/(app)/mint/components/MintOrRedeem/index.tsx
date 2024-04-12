@@ -264,7 +264,7 @@ function MintOrRedeem({
           />
         )}
 
-        <div className="bg-gray-100 mb-3 rounded-md text-sm">
+        <div className="bg-gray-100 mt-4 mb-3 rounded-md text-sm">
           <a className="block p-1 text-center text-gray-500" target="__blank" href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS}/${address}`}>
             Your balances <MdOpenInNew className="inline" />
           </a>

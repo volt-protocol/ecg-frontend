@@ -170,7 +170,7 @@ function MintAndSaving() {
 
         <div className=" mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
           <Card
-            title="Saving Rate"
+            title="Savings Rate"
             extra="w-full h-full sm:overflow-auto px-6 py-4"
             rightText={
               <Switch
@@ -223,7 +223,7 @@ function MintAndSaving() {
               </div>
             </div>
           </Card>
-          <Card extra="order-1 w-full h-full sm:overflow-auto px-6 py-4">
+          <Card title="Mint / Redeem" extra="order-1 w-full h-full sm:overflow-auto px-6 py-4">
             <MintOrRedeem
               reloadMintRedeem={setReload}
               pegTokenBalance={data.pegTokenBalance}

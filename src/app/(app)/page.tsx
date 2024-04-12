@@ -25,9 +25,10 @@ import { getAllMintRedeemLogs } from "lib/logs/mint-redeem"
 import { getAllVotes } from "lib/logs/votes"
 import { BLOCK_PER_WEEK, BLOCK_PER_DAY } from "utils/constants"
 import { wagmiConfig } from "contexts/Web3Provider"
-import { generateTermName } from "utils/strings"
+import { generateTermName, getCreditTokenSymbol } from "utils/strings"
 import { GlobalStatCarts } from "./components/GlobalStatCarts"
 import { TVLChart } from "./components/TVLChart"
+import { marketsConfig } from "config"
 
 const GlobalDashboard = () => {
   const { appMarketId, lendingTerms, coinDetails, historicalData, contractsList } = useAppStore()
@@ -42,6 +43,18 @@ const GlobalDashboard = () => {
   const guildAddress = contractsList.guildAddress;
   const profitManagerAddress = contractsList?.marketContracts[appMarketId].profitManagerAddress;
   const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+
+  // round historicalData for presentation
+  historicalData.creditSupply.values = historicalData.creditSupply.values.map(function(x, i) {
+    return formatDecimal(Number(x), pegTokenDecimalsToDisplay);
+  });
+  historicalData.creditTotalIssuance.values = historicalData.creditTotalIssuance.values.map(function(x) {
+    return formatDecimal(Number(x), pegTokenDecimalsToDisplay);
+  });
+
   /* Read contracts */
   const { data, isError, isLoading } = useReadContracts({
     contracts: [
@@ -74,8 +87,7 @@ const GlobalDashboard = () => {
     },
   })
 
-  console.log({isLoading});
-  console.log('data 2', JSON.stringify(data, null, 2));
+  console.log('firstLossData', data?.creditMultiplier, firstLossData);
 
   /* End Read Contract data  */
 
@@ -153,8 +165,8 @@ const GlobalDashboard = () => {
               term.interestRate,
               term.borrowRatio / data?.creditMultiplier
             ),
-            currentDebt: term.currentDebt,
-            debitCeiling: Number(formatUnits(debtCeiling as bigint, 18)),
+            currentDebt: term.currentDebt * data?.creditMultiplier,
+            debtCeiling: Number(formatUnits(debtCeiling as bigint, 18)) * data?.creditMultiplier,
           }
         })
     )
@@ -207,7 +219,7 @@ const GlobalDashboard = () => {
       allOpenLoans.push(...openLoans, ...closeLoans)
     }
 
-    // last loan closing
+    // psm mint/redeem
     const lastMintRedeem = await getAllMintRedeemLogs(
       appMarketId,
       contractsList,
@@ -291,6 +303,7 @@ const GlobalDashboard = () => {
             </div>
           ) : (
             <DebtCeiling
+              pegTokenSymbol={pegToken.symbol}
               data={debtCeilingData}
               labels={debtCeilingData.map((item) => item.collateral)}
             />
@@ -300,7 +313,7 @@ const GlobalDashboard = () => {
 
       <div className="my-3 grid grid-cols-1 gap-5 md:grid-cols-3">
         <Card
-          title="First-loss Capital"
+          title={`First-loss Capital (${pegToken.symbol})`}
           extra="w-full min-h-[300px] md:col-span-1 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
         >
           <dl className="mt-3 grid grid-cols-1 divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow dark:divide-navy-600 dark:bg-navy-700 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
@@ -310,17 +323,17 @@ const GlobalDashboard = () => {
               </dt>
               <dd className="mt-1 flex items-baseline justify-between md:block lg:flex">
                 <div className="flex items-center gap-2 overflow-hidden text-lg font-semibold text-gray-700 dark:text-gray-200 xl:text-2xl">
-                  {firstLossData && firstLossData.length != 0 ? (
-                    formatCurrencyValue(firstLossData[firstLossData.length - 1].value)
-                  ) : (
-                    <div className="h-5 w-28 animate-pulse rounded-md bg-gray-200" />
-                  )}
                   <Image
-                    src="/img/crypto-logos/credit.png"
+                    src={pegTokenLogo}
                     width={32}
                     height={32}
                     alt={""}
                   />
+                  {firstLossData && firstLossData.length != 0 ? (
+                    formatDecimal(firstLossData[firstLossData.length - 1].value * data?.creditMultiplier, pegTokenDecimalsToDisplay)
+                  ) : (
+                    <div className="h-5 w-28 animate-pulse rounded-md bg-gray-200" />
+                  )}
                 </div>
               </dd>
             </div>
@@ -330,21 +343,23 @@ const GlobalDashboard = () => {
               </dt>
               <dd className="mt-1 flex items-baseline justify-between md:block lg:flex">
                 <div className="flex items-center gap-2 overflow-hidden text-lg font-semibold text-gray-700 dark:text-gray-200 xl:text-2xl">
-                  {firstLossData && firstLossData.length != 0 ? (
-                    formatCurrencyValue(
-                      firstLossData
-                        .filter((item) => item.term != "Global")
-                        .reduce((a, b) => a + b.value, 0)
-                    )
-                  ) : (
-                    <div className="h-5 w-28 animate-pulse rounded-md bg-gray-200" />
-                  )}
                   <Image
-                    src="/img/crypto-logos/credit.png"
+                    src={pegTokenLogo}
                     width={32}
                     height={32}
                     alt={""}
                   />
+                  {firstLossData && firstLossData.length != 0 ? (
+                    formatDecimal(
+                      firstLossData
+                        .filter((item) => item.term != "Global")
+                        .reduce((a, b) => a + b.value, 0)
+                        * data?.creditMultiplier,
+                      pegTokenDecimalsToDisplay
+                    )
+                  ) : (
+                    <div className="h-5 w-28 animate-pulse rounded-md bg-gray-200" />
+                  )}
                 </div>
               </dd>
             </div>

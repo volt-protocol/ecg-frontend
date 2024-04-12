@@ -1,4 +1,5 @@
 import axios, { AxiosResponse } from "axios"
+import { getApiBaseUrl } from "config"
 import { MintRedeemLogs } from "lib/logs/mint-redeem"
 import { VoteLogs } from "lib/logs/votes"
 import { useAppStore } from "store"
@@ -7,9 +8,9 @@ import { Address } from "viem"
 import { StateCreator } from "zustand"
 
 
-const getCreditSupply = async (marketId: number) => {
+const getCreditSupply = async (marketId: number, chainId: number) => {
   const res: AxiosResponse<any, any> = await axios.get(
-    process.env.NEXT_PUBLIC_BACKEND_API_URL + `/history/CreditSupply?marketId=${marketId}`
+    getApiBaseUrl(chainId) + `/history/CreditSupply?marketId=${marketId}`
   )
   const formattedValues = res.data.values.map((item) => {
     return Number(item)
@@ -25,9 +26,9 @@ const getCreditSupply = async (marketId: number) => {
   }
 }
 
-const getCreditTotalIssuance = async (marketId: number) => {
+const getCreditTotalIssuance = async (marketId: number, chainId: number) => {
   const res: AxiosResponse<any, any> = await axios.get(
-    process.env.NEXT_PUBLIC_BACKEND_API_URL + `/history/CreditTotalIssuance?marketId=${marketId}`
+    getApiBaseUrl(chainId) + `/history/CreditTotalIssuance?marketId=${marketId}`
   )
 
   const formattedValues = res.data.values.map((item) => {
@@ -44,9 +45,9 @@ const getCreditTotalIssuance = async (marketId: number) => {
   }
 }
 
-const getAverageInterestRate = async (marketId: number) => {
+const getAverageInterestRate = async (marketId: number, chainId: number) => {
   const res: AxiosResponse<any, any> = await axios.get(
-    process.env.NEXT_PUBLIC_BACKEND_API_URL + `/history/AverageInterestRate?marketId=${marketId}`
+    getApiBaseUrl(chainId) + `/history/AverageInterestRate?marketId=${marketId}`
   )
 
   const formattedValues = res.data.values.map((item) => {
@@ -63,9 +64,9 @@ const getAverageInterestRate = async (marketId: number) => {
   }
 }
 
-const getTVL = async (marketId: number) => {
+const getTVL = async (marketId: number, chainId: number) => {
   const res: AxiosResponse<any, any> = await axios.get(
-    process.env.NEXT_PUBLIC_BACKEND_API_URL + `/history/TVL?marketId=${marketId}`
+    getApiBaseUrl(chainId) + `/history/TVL?marketId=${marketId}`
   )
 
   const formattedValues = res.data.values.map((item) => {
@@ -99,7 +100,7 @@ export interface DashboardSlice {
   addLastVotes: (userAddress: Address, array: VoteLogs[]) => void
   addLastMints: (userAddress: Address, array: MintRedeemLogs[]) => void
   setLastLoanUpdate: (timestamp: number) => void
-  fetchHistoricalData: (marketId: number) => void
+  fetchHistoricalData: (marketId: number, chainId: number) => void
 }
 
 export const createDashboardSlice: StateCreator<DashboardSlice> = (set, get) => ({
@@ -168,11 +169,11 @@ export const createDashboardSlice: StateCreator<DashboardSlice> = (set, get) => 
     }
   },
   setLastLoanUpdate: (timestamp) => set(() => ({ lastLoanUpdate: timestamp })),
-  fetchHistoricalData: async (marketId: number) => {
-    const creditSupplyData = await getCreditSupply(marketId)
-    const creditTotalIssuanceData = await getCreditTotalIssuance(marketId)
-    const averageInterestRateData = await getAverageInterestRate(marketId)
-    const tvlData = await getTVL(marketId)
+  fetchHistoricalData: async (marketId: number, chainId: number) => {
+    const creditSupplyData = await getCreditSupply(marketId, chainId)
+    const creditTotalIssuanceData = await getCreditTotalIssuance(marketId, chainId)
+    const averageInterestRateData = await getAverageInterestRate(marketId, chainId)
+    const tvlData = await getTVL(marketId, chainId)
 
     const data = {
       creditSupply: creditSupplyData,

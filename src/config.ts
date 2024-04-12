@@ -2,12 +2,9 @@ import { Address } from "viem"
 import {
   mainnet,
   sepolia,
-  arbitrum,
-  optimism,
-  arbitrumSepolia,
-  optimismSepolia,
-  polygonMumbai,
+  arbitrum
 } from "wagmi/chains"
+
 
 export interface LendingTermConfig {
   termAddress: Address
@@ -139,3 +136,16 @@ export const coinsList: CoinProperties[] = [
     address: "0x1ced1eb530b5e71e6db9221a22c725e862fc0e60",
   }
 ]
+
+export function getApiBaseUrl(chainId: number) {
+  console.log('getApiBaseUrl', chainId);
+  switch(chainId) {
+    default:
+      return ''
+      // throw new Error(`Unknown chain ${chainId}`);
+    case 11155111:
+        return process.env.NEXT_PUBLIC_SEPOLIA_BACKEND_API_URL;
+    case 42161:
+      return process.env.NEXT_PUBLIC_BACKEND_API_URL || process.env.NEXT_PUBLIC_ARBITRUM_BACKEND_API_URL;
+  }
+}

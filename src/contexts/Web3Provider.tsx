@@ -1,7 +1,7 @@
 'use client';
 import { createWeb3Modal } from '@web3modal/wagmi/react';
 import { cookieStorage, createStorage, http, createConfig, WagmiProvider, State } from 'wagmi';
-import { mainnet, sepolia, arbitrum, optimism, arbitrumSepolia, optimismSepolia, polygonMumbai } from 'wagmi/chains';
+import { mainnet, sepolia, arbitrum } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { walletConnect, injected, coinbaseWallet } from 'wagmi/connectors';
 

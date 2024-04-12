@@ -26,13 +26,12 @@ export const createAppSettingsSlice: StateCreator<AppSettingsSlice> = (set, get)
   termsAccepted: false,
   searchHistory: [],
   setAppMarket: (market: SupportedMarket) => {
-    console.log(`SET APP MARKET ${market.marketId}`);
     set({ appMarket: market });
     set({ appMarketId: market.marketId });
   },
   setAppChainId: (chainId: number) => {
-    console.log('newchain id', chainId);
-    set({ appChainId: chainId });
+    const defaultMarket = marketsConfig[chainId][0];
+    set({ appChainId: chainId, appMarket: defaultMarket, appMarketId: defaultMarket.marketId });
   },
   addSearchHistory: (value: Address) => {
     const history = get().searchHistory;

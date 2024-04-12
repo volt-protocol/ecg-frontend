@@ -78,7 +78,7 @@ export const marketsConfig: { [chainId: number]: SupportedMarket[] } = {
       key: 'USDC-sepolia',
       pegToken: 'USDC',
       name: 'USDC-sepolia',
-      marketId: 1,
+      marketId: 42,
       networkId: 11155111,
       logo: '/img/crypto-logos/usdc.png'
     }
@@ -98,12 +98,12 @@ export const chainsConfig = [
   {
     id: mainnet.id,
     jsonUrl:
-      'https://raw.githubusercontent.com/volt-protocol/ethereum-credit-guild/main/protocol-configuration/addresses.sepolia.json'
+      'https://raw.githubusercontent.com/volt-protocol/ethereum-credit-guild/feat/arbitrum-deployment/protocol-configuration/addresses.mainnet.json'
   },
   {
     id: sepolia.id,
     jsonUrl:
-      'https://raw.githubusercontent.com/volt-protocol/ethereum-credit-guild/main/protocol-configuration/addresses.sepolia.json'
+      'https://raw.githubusercontent.com/volt-protocol/ethereum-credit-guild/feat/arbitrum-deployment/protocol-configuration/addresses.sepolia.json'
   }
 ];
 
@@ -147,7 +147,6 @@ export const coinsList: CoinProperties[] = [
 ];
 
 export function getApiBaseUrl(chainId: number) {
-  console.log('getApiBaseUrl', chainId);
   switch (chainId) {
     default:
       return '';

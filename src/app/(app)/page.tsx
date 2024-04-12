@@ -25,7 +25,6 @@ import { wagmiConfig } from 'contexts/Web3Provider';
 import { generateTermName, getCreditTokenSymbol } from 'utils/strings';
 import { GlobalStatCarts } from './components/GlobalStatCarts';
 import { TVLChart } from './components/TVLChart';
-import { marketsConfig } from 'config';
 
 const GlobalDashboard = () => {
   const { appMarketId, appChainId, lendingTerms, coinDetails, historicalData, contractsList } = useAppStore();
@@ -36,23 +35,6 @@ const GlobalDashboard = () => {
   const [lastActivities, setLastActivites] = useState<LastActivitiesLogs[]>([]);
 
   const { data: currentBlock } = useBlockNumber();
-
-  const guildAddress = contractsList.guildAddress;
-  const profitManagerAddress = contractsList?.marketContracts[appMarketId].profitManagerAddress;
-  const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
-  const pegToken = coinDetails.find(
-    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
-  );
-  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
-  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
-
-  // round historicalData for presentation
-  historicalData.creditSupply.values = historicalData.creditSupply.values.map(function (x, i) {
-    return formatDecimal(Number(x), pegTokenDecimalsToDisplay);
-  });
-  historicalData.creditTotalIssuance.values = historicalData.creditTotalIssuance.values.map(function (x) {
-    return formatDecimal(Number(x), pegTokenDecimalsToDisplay);
-  });
 
   /* Read contracts */
   const { data, isError, isLoading } = useReadContracts({
@@ -86,8 +68,6 @@ const GlobalDashboard = () => {
     }
   });
 
-  console.log('firstLossData', data?.creditMultiplier, firstLossData);
-
   /* End Read Contract data  */
 
   useEffect(() => {
@@ -106,6 +86,32 @@ const GlobalDashboard = () => {
 
     !isLoading && data?.creditMultiplier && lendingTerms.length && asyncFunc();
   }, [data, isLoading, lendingTerms]);
+
+  if (!contractsList?.marketContracts[appMarketId]) {
+    return (
+      <div className="absolute bottom-1/2 right-1/2 translate-x-1/2 translate-y-1/2 transform">
+        <Spinner />
+      </div>
+    );
+  }
+
+  const guildAddress = contractsList.guildAddress;
+  const profitManagerAddress = contractsList?.marketContracts[appMarketId].profitManagerAddress;
+
+  const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
+  const pegToken = coinDetails.find(
+    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
+  );
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+
+  // round historicalData for presentation
+  historicalData.creditSupply.values = historicalData.creditSupply.values.map(function (x, i) {
+    return formatDecimal(Number(x), pegTokenDecimalsToDisplay);
+  });
+  historicalData.creditTotalIssuance.values = historicalData.creditTotalIssuance.values.map(function (x) {
+    return formatDecimal(Number(x), pegTokenDecimalsToDisplay);
+  });
 
   /**** Get Dashboard data ****/
   const getTotalActiveLoans = async () => {

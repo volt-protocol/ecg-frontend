@@ -21,7 +21,6 @@ export const createCoinDetailsSlice: StateCreator<CoinDetailsSlice> = (set, get)
     const apiUrl = getApiBaseUrl(chainId) + `/markets/${marketId}/tokens`;
     const tokensReponse = await HttpGet<CoinSettings[]>(apiUrl);
 
-    // console.log('tokensResponse', JSON.stringify(tokensReponse, null, 2));
     set({ coinDetails: tokensReponse });
   }
 });

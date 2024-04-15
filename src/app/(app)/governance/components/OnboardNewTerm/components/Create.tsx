@@ -41,7 +41,7 @@ export interface CreateTermForm {
 }
 
 export default function Create() {
-  const { contractsList, appMarketId } = useAppStore();
+  const { contractsList, appMarketId, coinDetails } = useAppStore();
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedPeriod, setSelectedPeriod] = useState<string>('None');
   const { register, handleSubmit, watch, reset, formState } = useForm({
@@ -57,6 +57,9 @@ export default function Create() {
     address: Address;
     decimals: number;
   }>({});
+  const pegToken = coinDetails.find(
+    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
+  );
 
   const createSteps = (): Step[] => {
     return [{ name: 'Propose Offboarding', status: 'Not Started' }];
@@ -217,16 +220,24 @@ export default function Create() {
     <>
       {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
       <div className="px-1">
+        <div className="mb-4 rounded-full px-2.5 py-0.5">
+          <div className="text-center">
+            {`For ${collateralToken.symbol && watchBorrowRatio ? `every ${collateralToken.symbol}, ` : '...'}${
+              watchBorrowRatio && collateralToken.symbol
+                ? `users will be able to borrow ${watchBorrowRatio} ${pegToken.symbol}.`
+                : ''
+            }`}
+          </div>
+        </div>
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="mb-3 sm:grid sm:grid-cols-3 sm:items-start">
             <label htmlFor="collateralToken" className="text-md block font-medium leading-6 sm:pt-1.5">
               Collateral Token
               {collateralToken && collateralToken.address ? (
-                  <MdCheckCircle className="ml-1 inline text-green-500" />
-              )
-: (
-                  <MdClose className="ml-1 inline text-red-500" />
-                )}
+                <MdCheckCircle className="ml-1 inline text-green-500" />
+              ) : (
+                <MdClose className="ml-1 inline text-red-500" />
+              )}
             </label>
             <div className="mt-2 sm:col-span-2 sm:mt-0">
               <div className="relative">
@@ -321,9 +332,21 @@ export default function Create() {
           </div>
           <ErrorMessage title={formState.errors.interestRate?.message} variant="error" />
           <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">
-            <label htmlFor="borrowRatio" className="text-md block font-medium leading-6 sm:pt-1.5">
-              Borrow Ratio
-            </label>
+            <TooltipHorizon
+              extra=""
+              trigger={
+                <label htmlFor="borrowRatio" className="text-md block font-medium leading-6 sm:pt-1.5">
+                  Borrow Ratio <BiInfoCircle className="ml-1 inline" />
+                </label>
+              }
+              content={
+                <p>
+                  How many {pegToken.symbol ? pegToken.symbol : 'peg token'} users can borrow for every{' '}
+                  {collateralToken.symbol ? collateralToken.symbol : 'collateral token'} supplied.
+                </p>
+              }
+              placement="top"
+            />
             <div className="mt-2 sm:col-span-2 sm:mt-0">
               <input
                 {...register('borrowRatio')}
@@ -341,11 +364,11 @@ export default function Create() {
           </div>
           <ErrorMessage title={formState.errors.borrowRatio?.message} variant="error" />
           <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">
-          <TooltipHorizon
+            <TooltipHorizon
               extra=""
               trigger={
                 <label htmlFor="periodicPayments" className="text-md block font-medium leading-6 sm:pt-1.5">
-              Periodic Payments <BiInfoCircle className="ml-1 inline" />
+                  Periodic Payments <BiInfoCircle className="ml-1 inline" />
                 </label>
               }
               content={<p>If a borrower misses a periodic payment, their loan will be called.</p>}

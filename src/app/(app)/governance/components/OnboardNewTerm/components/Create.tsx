@@ -18,6 +18,8 @@ import { formatNumberDecimal } from 'utils/numbers';
 import getToken from 'lib/getToken';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
+import { BiInfoCircle, BiQuestionMark } from 'react-icons/bi';
+import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
 
 //Define form schema
 const schema = yup
@@ -220,10 +222,11 @@ export default function Create() {
             <label htmlFor="collateralToken" className="text-md block font-medium leading-6 sm:pt-1.5">
               Collateral Token
               {collateralToken && collateralToken.address ? (
-                <MdCheckCircle className="ml-1 inline text-green-500" />
-              ) : (
-                <MdClose className="ml-1 inline text-red-500" />
-              )}
+                  <MdCheckCircle className="ml-1 inline text-green-500" />
+              )
+: (
+                  <MdClose className="ml-1 inline text-red-500" />
+                )}
             </label>
             <div className="mt-2 sm:col-span-2 sm:mt-0">
               <div className="relative">
@@ -261,9 +264,16 @@ export default function Create() {
             </div>
           </div>
           <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">
-            <label htmlFor="openingFee" className="text-md block font-medium leading-6 sm:pt-1.5">
-              Opening Fee
-            </label>
+            <TooltipHorizon
+              extra=""
+              trigger={
+                <label htmlFor="openingFee" className="text-md block font-medium leading-6 sm:pt-1.5">
+                  Opening Fee <BiInfoCircle className="ml-1 inline" />
+                </label>
+              }
+              content={<p>The opening fee is added to the user's debt balance.</p>}
+              placement="top"
+            />
             <div className="relative mt-2 rounded-md sm:col-span-2 sm:mt-0">
               <input
                 {...register('openingFee')}
@@ -331,9 +341,16 @@ export default function Create() {
           </div>
           <ErrorMessage title={formState.errors.borrowRatio?.message} variant="error" />
           <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">
-            <label htmlFor="periodicPayments" className="text-md block font-medium leading-6 sm:pt-1.5">
-              Periodic Payments
-            </label>
+          <TooltipHorizon
+              extra=""
+              trigger={
+                <label htmlFor="periodicPayments" className="text-md block font-medium leading-6 sm:pt-1.5">
+              Periodic Payments <BiInfoCircle className="ml-1 inline" />
+                </label>
+              }
+              content={<p>If a borrower misses a periodic payment, their loan will be called.</p>}
+              placement="top"
+            />
             <div className="mt-2 sm:col-span-2 sm:mt-0">
               <DropdownSelect
                 {...register('interestRate')}
@@ -346,9 +363,16 @@ export default function Create() {
             </div>
           </div>
           <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">
-            <label htmlFor="hardCap" className="text-md block font-medium leading-6 sm:pt-1.5">
-              Hard Cap
-            </label>
+            <TooltipHorizon
+              extra=""
+              trigger={
+                <label htmlFor="hardCap" className="text-md block font-medium leading-6 sm:pt-1.5">
+                  Hard Cap <BiInfoCircle className="ml-1 inline" />
+                </label>
+              }
+              content={<p>Maximum debt ceiling regardless of how much capital is voting for that term.</p>}
+              placement="top"
+            />
             <div className="mt-2 sm:col-span-2 sm:mt-0">
               <input
                 {...register('hardCap')}

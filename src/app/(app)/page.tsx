@@ -36,9 +36,20 @@ const GlobalDashboard = () => {
 
   const { data: currentBlock } = useBlockNumber();
 
-  /* Read contracts */
-  const { data, isError, isLoading } = useReadContracts({
-    contracts: [
+  let contracts = [];
+
+  const guildAddress = contractsList.guildAddress;
+  const profitManagerAddress = contractsList?.marketContracts[appMarketId]?.profitManagerAddress;
+
+  const creditAddress = contractsList?.marketContracts[appMarketId]?.creditAddress;
+  const pegToken = coinDetails.find(
+    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
+  );
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10((pegToken ? pegToken.price : 0) * 100)), 0);
+
+  if (contractsList && contractsList.marketContracts[appMarketId]) {
+    contracts = [
       {
         address: guildAddress,
         abi: GuildABI,
@@ -55,7 +66,12 @@ const GlobalDashboard = () => {
         abi: CreditABI,
         functionName: 'totalSupply'
       }
-    ],
+    ];
+  }
+
+  /* Read contracts */
+  const { data, isError, isLoading } = useReadContracts({
+    contracts,
     allowFailure: true,
     query: {
       select: (data) => {
@@ -94,16 +110,6 @@ const GlobalDashboard = () => {
       </div>
     );
   }
-
-  const guildAddress = contractsList.guildAddress;
-  const profitManagerAddress = contractsList?.marketContracts[appMarketId].profitManagerAddress;
-
-  const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
-  const pegToken = coinDetails.find(
-    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
-  );
-  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
-  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
 
   // round historicalData for presentation
   historicalData.creditSupply.values = historicalData.creditSupply.values.map(function (x, i) {

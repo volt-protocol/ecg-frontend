@@ -6,7 +6,6 @@ import { useAppStore } from 'store';
 import { useAccount, useSwitchChain } from 'wagmi';
 
 const StoreProvider = ({ children }: { children: React.ReactNode }) => {
-  const { chains, switchChain, switchChainAsync } = useSwitchChain();
   const { isConnected, chainId } = useAccount();
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -25,11 +24,6 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
     const asyncFunc = async () => {
       setIsLoading(true);
       console.log('store provider', appChainId);
-      if (!isConnected) {
-        console.log('switching chain');
-        const s = await switchChainAsync({ chainId: appChainId });
-        console.log('end switch chain', s);
-      }
       await Promise.all([
         fetchContractsList(appChainId),
         fetchCoins(appMarketId, appChainId),

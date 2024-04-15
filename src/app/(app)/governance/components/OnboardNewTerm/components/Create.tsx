@@ -8,18 +8,18 @@ import * as yup from 'yup';
 import { ErrorMessage } from 'components/message/ErrorMessage';
 import clsx from 'clsx';
 import { waitForTransactionReceipt, writeContract } from '@wagmi/core';
-import { LendingTermFactoryABI, TermABI } from 'lib/contracts';
+import { LendingTermFactoryABI } from 'lib/contracts';
 import { toastError } from 'components/toast';
 import { Step } from 'components/stepLoader/stepType';
-import { AbiParameter, Address, encodeAbiParameters, parseEther } from 'viem';
+import { Address, encodeAbiParameters, parseEther } from 'viem';
 import { SECONDS_IN_YEAR } from 'utils/constants';
 import { MdCheckCircle, MdClose } from 'react-icons/md';
 import { formatNumberDecimal } from 'utils/numbers';
 import getToken from 'lib/getToken';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
-import { BiInfoCircle, BiQuestionMark } from 'react-icons/bi';
-import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
+import { BiInfoCircle } from 'react-icons/bi';
+import { TooltipHorizon } from 'components/tooltip';
 
 //Define form schema
 const schema = yup

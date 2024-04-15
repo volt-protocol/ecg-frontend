@@ -176,9 +176,9 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
       cell: (info: any) => {
         const collateralAddress = info.row.original.collateral.address.toLowerCase();
         const collateralToken = coinDetails.find((item) => item.address.toLowerCase() === collateralAddress);
-        const priceRatio = pegToken.price / collateralToken.price;
+        const priceRatio = pegToken.price / (collateralToken.price || 1);
         const decimalsToDisplay = Math.max(Math.ceil(Math.log10(priceRatio * 100)), 0);
-        const ltv = (info.row.original.borrowRatio * pegToken.price) / collateralToken.price;
+        const ltv = (info.row.original.borrowRatio * pegToken.price) / (collateralToken.price || 1);
 
         return (
           <div>
@@ -189,7 +189,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
                   <p>
                     LTV (Loan-to-Value):{' '}
                     <span className="font-semibold">
-                      {formatDecimal(100 * ltv, 1)}
+                      {collateralToken.price ? formatDecimal(100 * ltv, 1) : '-.--'}
                       {'%'}
                     </span>
                   </p>
@@ -216,7 +216,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
                     <br />
                     <i>
                       LTV detail : {formatDecimal(info.getValue() / contractData?.creditMultiplier, decimalsToDisplay)}{' '}
-                      * {pegToken.price} / {collateralToken.price} = {formatDecimal(ltv, 3)}
+                      * {pegToken.price || '?'} / {collateralToken.price || '?'} = {ltv ? formatDecimal(ltv, 3) : '?'}
                     </i>
                   </p>
                 </div>

@@ -25,6 +25,7 @@ import { useAppStore } from 'store';
 import { marketsConfig } from 'config';
 import { secondsToAppropriateUnit } from 'utils/date';
 import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
+import { getPegTokenLogo } from 'config';
 
 function CreateLoan({
   lendingTerm,

@@ -12,6 +12,7 @@ import { secondsToAppropriateUnit } from 'utils/date';
 import { getPegTokenLogo, marketsConfig } from 'config';
 import { useAppStore } from 'store';
 import Image from 'next/image';
+import ImageWithFallback from 'components/image/ImageWithFallback';
 
 export default function LendingStats({
   lendingTermData,
@@ -49,7 +50,14 @@ export default function LendingStats({
           <>
             <p>
               Total Collateral Amount :{' '}
-              <Image className="inline-block" src={lendingTermData.collateral.logo} width={18} height={18} alt="logo" />{' '}
+              <ImageWithFallback
+                className="inline-block"
+                src={lendingTermData.collateral.logo}
+                fallbackSrc="/img/crypto-logos/unk.png"
+                width={18}
+                height={18}
+                alt="logo"
+              />{' '}
               <span className="font-semibold">
                 {formatDecimal(termTotalCollateral, collateralTokenDecimalsToDisplay)}
               </span>{' '}
@@ -182,7 +190,14 @@ export default function LendingStats({
                 {formatDecimal(lendingTermData.borrowRatio, creditTokenDecimalsToDisplay)}
               </span>{' '}
               {pegToken.symbol}) per unit of{' '}
-              <Image className="inline-block" src={lendingTermData.collateral.logo} width={18} height={18} alt="logo" />{' '}
+              <ImageWithFallback
+                className="inline-block"
+                src={lendingTermData.collateral.logo}
+                fallbackSrc="/img/crypto-logos/unk.png"
+                width={18}
+                height={18}
+                alt="logo"
+              />{' '}
               {lendingTermData.collateral.symbol} collateral.
             </p>
           </div>

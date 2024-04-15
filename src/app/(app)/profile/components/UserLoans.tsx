@@ -15,6 +15,7 @@ import { useAccount } from 'wagmi';
 import { Address } from 'viem';
 import { useAppStore } from 'store';
 import Image from 'next/image';
+import ImageWithFallback from 'components/image/ImageWithFallback';
 import { getPegTokenLogo, marketsConfig, getExplorerBaseUrl } from 'config';
 import { getCreditTokenSymbol } from 'utils/strings';
 
@@ -47,8 +48,9 @@ export default function UserLoan({ userAddress, data }: { userAddress: Address; 
 
         return (
           <>
-            <Image
+            <ImageWithFallback
               src={lendingTerm.collateral.logo}
+              fallbackSrc="/img/crypto-logos/unk.png"
               width={20}
               height={20}
               alt=""

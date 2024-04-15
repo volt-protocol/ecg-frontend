@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import ImageWithFallback from 'components/image/ImageWithFallback';
 import Image from 'next/image';
 import {
   createColumnHelper,
@@ -98,7 +99,13 @@ export default function AuctionsTable({
         <div className="flex flex-col items-center gap-1">
           <p className="flex items-center justify-center gap-1 text-sm text-gray-700 dark:text-white">
             Collateral Sold:
-            <Image src={lendingTerm.collateral.logo} width={20} height={20} alt={'logo'} />{' '}
+            <ImageWithFallback
+              src={lendingTerm.collateral.logo}
+              fallbackSrc="/img/crypto-logos/unk.png"
+              width={20}
+              height={20}
+              alt={'logo'}
+            />{' '}
             <span className="font-semibold">
               {formatDecimal(
                 Number(formatUnits(BigInt(auction.collateralSold), collateralToken.decimals)),
@@ -304,8 +311,17 @@ export default function AuctionsTable({
         return (
           <>
             <div className="flex items-center justify-center gap-1">
-              <Image src={lendingTerm.collateral.logo} width={20} height={20} alt={'logo'} />{' '}
-              <span className="text-center text-sm font-semibold text-gray-700 dark:text-white">
+              <ImageWithFallback
+                src={lendingTerm.collateral.logo}
+                fallbackSrc="/img/crypto-logos/unk.png"
+                width={20}
+                height={20}
+                alt={'logo'}
+              />{' '}
+              <span
+                className="text-
+              center text-sm font-semibold text-gray-700 dark:text-white"
+              >
                 {formatDecimal(
                   Number(formatUnits(BigInt(info.getValue()), collateralToken.decimals)),
                   collateralTokenDecimalsToDisplay

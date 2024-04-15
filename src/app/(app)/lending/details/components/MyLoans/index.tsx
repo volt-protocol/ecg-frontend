@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
+import ImageWithFallback from 'components/image/ImageWithFallback';
 import {
   getCoreRowModel,
   getSortedRowModel,
@@ -900,7 +901,13 @@ function Myloans({
           <div className="ml-3 text-center">
             <p className="font-semibold text-gray-700 dark:text-white">
               <div className="flex items-center justify-center gap-1">
-                <Image src={lendingTerm.collateral.logo} width={20} height={20} alt="logo" />{' '}
+                <ImageWithFallback
+                  src={lendingTerm.collateral.logo}
+                  fallbackSrc="/img/crypto-logos/unk.png"
+                  width={20}
+                  height={20}
+                  alt="logo"
+                />{' '}
                 {formatDecimal(
                   Number(formatUnits(info.row.original.collateralAmount, lendingTerm.collateral.decimals)),
                   collateralTokenDecimalsToDisplay

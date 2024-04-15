@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import Image from 'next/image';
+import ImageWithFallback from 'components/image/ImageWithFallback';
 import {
   createColumnHelper,
   flexRender,
@@ -148,7 +148,13 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
       ),
       cell: (info: any) => (
         <div className="ml-3 flex items-center gap-2 text-center">
-          <Image src={info.row.original.collateral.logo} width={32} height={32} alt={'logo'} />
+          <ImageWithFallback
+            src={info.row.original.collateral.logo}
+            fallbackSrc="/img/crypto-logos/unk.png"
+            width={32}
+            height={32}
+            alt={'logo'}
+          />
           <p className="text-sm font-bold text-gray-700 dark:text-white">{info.getValue()}</p>
         </div>
       )

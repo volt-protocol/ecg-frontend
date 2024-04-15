@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import Image from 'next/image';
+import ImageWithFallback from 'components/image/ImageWithFallback';
 import { Address } from 'viem';
 
 export default function DefiInputBox({
@@ -49,7 +49,14 @@ export default function DefiInputBox({
         />
         {currencyLogo && currencySymbol && (
           <div className="flex items-center gap-2" title={currencySymbol}>
-            <Image src={currencyLogo} style={currencyLogoStyle || {}} width={32} height={32} alt="logo" />
+            <ImageWithFallback
+              src={currencyLogo}
+              fallbackSrc="/img/crypto-logos/unk.png"
+              style={currencyLogoStyle || {}}
+              width={32}
+              height={32}
+              alt="logo"
+            />
             <span className="hidden font-medium text-gray-800 dark:text-gray-100" style={{ whiteSpace: 'nowrap' }}>
               {currencySymbol}
             </span>

@@ -24,7 +24,7 @@ import { fromNow } from 'utils/date';
 import moment from 'moment';
 import { Address, decodeFunctionData, formatUnits } from 'viem';
 import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
-import { BLOCK_LENGTH_MILLISECONDS, FROM_BLOCK } from 'utils/constants';
+import { BLOCK_LENGTH_MILLISECONDS } from 'utils/constants';
 import { checkVetoVoteValidity, getProposalIdFromActionId, getVotableTerms } from './helper';
 import Progress from 'components/progress';
 import clsx from 'clsx';
@@ -32,7 +32,7 @@ import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
 
 function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: bigint; guildVotingWeight: bigint }) {
-  const { contractsList, coinDetails, appMarketId } = useAppStore();
+  const { contractsList, coinDetails, appMarketId, appChainId } = useAppStore();
   const { address } = useAccount();
   const [showModal, setShowModal] = useState(false);
   const [activeVetoVotes, setActiveVetoVotes] = useState<ActivOnboardingVetoVotes[]>([]);
@@ -71,11 +71,11 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
           { indexed: false, name: 'delay', type: 'uint256' }
         ]
       },
-      fromBlock: BigInt(FROM_BLOCK),
+      fromBlock: BigInt(0),
       toBlock: currentBlockNumber
     });
 
-    const termsCreated = await getVotableTerms(contractsList);
+    const termsCreated = await getVotableTerms(contractsList, appMarketId);
     const activeVetoVotes = await Promise.all(
       logs
         .map((log) => {
@@ -84,7 +84,7 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
             target: log.args.target,
             data: log.args.data,
             delay: Number(log.args.delay),
-            timestamp: Number(log.blockNumber)
+            scheduleBlockNumber: Number(log.blockNumber)
           };
         })
         .reduce((acc, item) => {
@@ -97,12 +97,11 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
               timelockId: item.id,
               targets: [item.target],
               datas: [item.data],
-              timestamp: item.timestamp,
-              onboardIn: item.delay + item.timestamp
+              scheduleBlockNumber: item.scheduleBlockNumber
             });
           }
           return acc;
-        }, [] as { timelockId: string; targets: Address[]; datas: string[]; timestamp: number; onboardIn: number }[])
+        }, [] as { timelockId: string; targets: Address[]; datas: string[]; scheduleBlockNumber: number }[])
         .filter((item) => checkVetoVoteValidity(contractsList, item.targets, item.datas))
         .map((item) => {
           //TODO : get term name decoding data[0]
@@ -132,67 +131,85 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
                 address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: 'proposalVotes',
-                args: [item.proposalId]
+                args: [item.proposalId],
+                chainId: appChainId as any
               },
               {
                 address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: 'quorum',
-                args: [item.timestamp]
+                args: [item.scheduleBlockNumber],
+                chainId: appChainId as any
               },
               {
                 address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: 'state',
-                args: [item.proposalId]
+                args: [item.proposalId],
+                chainId: appChainId as any
               },
               {
                 address: contractsList.onboardVetoGuildAddress,
                 abi: OnboardVetoGuildABI,
                 functionName: 'proposalVotes',
-                args: [item.proposalId]
+                args: [item.proposalId],
+                chainId: appChainId as any
               },
               {
                 address: contractsList.onboardVetoGuildAddress,
                 abi: OnboardVetoGuildABI,
                 functionName: 'quorum',
-                args: [item.timestamp]
+                args: [item.scheduleBlockNumber],
+                chainId: appChainId as any
               },
               {
                 address: contractsList.onboardVetoGuildAddress,
                 abi: OnboardVetoGuildABI,
                 functionName: 'state',
-                args: [item.proposalId]
+                args: [item.proposalId],
+                chainId: appChainId as any
               },
               {
                 address: contractsList.onboardTimelockAddress,
                 abi: OnboardTimelockABI,
                 functionName: 'isOperationPending',
-                args: [item.timelockId]
+                args: [item.timelockId],
+                chainId: appChainId as any
               },
               {
                 address: contractsList.onboardTimelockAddress,
                 abi: OnboardTimelockABI,
                 functionName: 'isOperationReady',
-                args: [item.timelockId]
+                args: [item.timelockId],
+                chainId: appChainId as any
               },
               {
                 address: contractsList.onboardTimelockAddress,
                 abi: OnboardTimelockABI,
                 functionName: 'isOperationDone',
-                args: [item.timelockId]
+                args: [item.timelockId],
+                chainId: appChainId as any
               },
               {
                 address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: 'hasVoted',
-                args: [item.proposalId, address]
+                args: [item.proposalId, address],
+                chainId: appChainId as any
               },
               {
                 address: contractsList.onboardVetoGuildAddress,
                 abi: OnboardVetoGuildABI,
                 functionName: 'hasVoted',
-                args: [item.proposalId, address]
+                args: [item.proposalId, address],
+                chainId: appChainId as any
+              },
+              {
+                address: contractsList.onboardTimelockAddress,
+                abi: OnboardTimelockABI,
+                functionName: 'getTimestamp',
+                args: [item.timelockId],
+                chainId: appChainId as any
               }
             ]
           });
@@ -214,7 +231,8 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
             timelock: {
               isOperationPending: data[6].status == 'success' ? data[6].result : false,
               isOperationReady: data[7].status == 'success' ? data[7].result : false,
-              isOperationDone: data[8].status == 'success' ? data[8].result : false
+              isOperationDone: data[8].status == 'success' ? data[8].result : false,
+              getTimestamp: data[11].status == 'success' ? data[11].result : 0
             }
           };
         })
@@ -414,23 +432,18 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
         );
       }
     }),
-    columnHelper.accessor('onboardIn', {
-      id: 'onboardIn',
+    columnHelper.accessor('scheduleBlockNumber', {
+      id: 'scheduleBlockNumber',
       header: 'Onboard in',
       enableSorting: true,
       cell: (info) => {
         return (
           <p className="text-sm font-bold text-gray-600 dark:text-white">
-            {Number(info.getValue()) - Number(currentBlock) > 0 && !info.row.original.timelock.isOperationDone
-              ? fromNow(
-                  Number(
-                    moment().add(
-                      (Number(info.getValue()) - Number(currentBlock)) * BLOCK_LENGTH_MILLISECONDS,
-                      'milliseconds'
-                    )
-                  )
-                )
-              : 'Onboarded'}
+            {info.row.original.timelock.isOperationDone
+              ? 'Onboarded'
+              : Number(info.row.original.timelock.getTimestamp) * 1000 <= Date.now()
+              ? 'Ready'
+              : fromNow(Number(info.row.original.timelock.getTimestamp) * 1000)}
           </p>
         );
       }
@@ -470,7 +483,7 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
                   <Progress
                     useColors={false}
                     width="w-[100px]"
-                    value={Math.round((supportVotes / Number(formatUnits(quorum, 18))) * 100)}
+                    value={Math.min(Math.round((supportVotes / Number(formatUnits(quorum, 18))) * 100), 100)}
                   />
                   <div className="ml-1">
                     <QuestionMarkIcon />
@@ -505,7 +518,7 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
       },
       sorting: [
         {
-          id: 'onboardIn',
+          id: 'scheduleBlockNumber',
           desc: true
         }
       ]
@@ -515,10 +528,13 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
 
   const getActionButton = (item: ActivOnboardingVetoVotes) => {
     const state = selectHolderType == 'credit' ? item.creditVeto.state : item.guildVeto.state;
+    const otherState = selectHolderType == 'credit' ? item.guildVeto.state : item.creditVeto.state;
 
     const hasVoted = selectHolderType == 'credit' ? item.creditVeto.hasVoted : item.guildVeto.hasVoted;
 
-    if (Number(item.onboardIn) - Number(currentBlock) < 0 || item.timelock.isOperationDone) {
+    // proposal state
+
+    if (item.timelock.isOperationDone || item.timelock.isOperationReady || state == 3 /*Defeated*/) {
       return (
         <span className="items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-500">
           Veto failed
@@ -526,19 +542,24 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
       );
     }
 
-    if (state == 'Reverts') {
+    if (state == 7 /*Executed*/ || otherState == 7 /*Executed*/) {
+      return (
+        <span className="items-center rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-600">
+          {otherState == 7 ? 'Other' : ''} Veto Executed
+        </span>
+      );
+    }
+
+    if (state == 'Reverts' || state == 0 /*Pending*/) {
+      console.log('vetorow', item, state, hasVoted);
       return <ButtonPrimary variant="xs" title="Create Veto" onClick={() => createVeto(item.timelockId)} />;
     }
 
-    if (state == 0) {
-      return <ButtonPrimary variant="xs" title="Create Veto" onClick={() => createVeto(item.timelockId)} />;
-    }
-
-    if (state == 1 && !hasVoted) {
+    if (state == 1 /*Active*/ && !hasVoted) {
       return <ButtonPrimary variant="xs" title="Support Veto" onClick={() => castVote(item.proposalId, 0)} />;
     }
 
-    if (state == 1 && hasVoted) {
+    if (state == 1 /*Active*/ && hasVoted) {
       return (
         <span className="items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
           Already voted
@@ -546,24 +567,8 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
       );
     }
 
-    if (state == 3) {
-      return (
-        <span className="items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-500">
-          Veto failed
-        </span>
-      );
-    }
-
-    if (state == 4) {
+    if (state == 4 /*Succeeded*/) {
       return <ButtonPrimary variant="xs" title="Execute Veto" onClick={() => executeVeto(item.timelockId)} />;
-    }
-
-    if (state == 7) {
-      return (
-        <span className="items-center rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-600">
-          Veto Successfull
-        </span>
-      );
     }
 
     return null;

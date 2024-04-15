@@ -83,7 +83,8 @@ function DelegateCredit({
       address: contractsList.marketContracts[appMarketId].creditAddress,
       abi: CreditABI,
       functionName: 'delegates',
-      args: [userAddress]
+      args: [userAddress],
+      chainId: appChainId as any
     });
     return result as string[];
   }
@@ -95,7 +96,8 @@ function DelegateCredit({
         address: contractsList.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: 'delegatesVotesCount',
-        args: [userAddress, delegatee]
+        args: [userAddress, delegatee],
+        chainId: appChainId as any
       });
 
       if (result != BigInt(0)) {

@@ -232,7 +232,8 @@ function StakeCredit({
       address: lendingTerm.address as Address,
       abi: TermABI as Abi,
       functionName: 'debtCeiling',
-      args: [amount]
+      args: [amount],
+      chainId: appChainId as any
     });
 
     setDebtDelta(Math.abs(Number(formatUnits(data as bigint, 18)) - debtCeiling));

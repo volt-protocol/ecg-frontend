@@ -107,7 +107,8 @@ function Myloans({
         address: lendingTerm.collateral.address as Address,
         abi: ERC20PermitABI as Abi,
         functionName: 'nonces',
-        args: [address]
+        args: [address],
+        chainId: appChainId
       }
     ],
     query: {
@@ -167,7 +168,8 @@ function Myloans({
       address: lendingTerm.address as Address,
       abi: TermABI,
       functionName: 'getLoanDebt',
-      args: [loanId]
+      args: [loanId],
+      chainId: appChainId as any
     });
 
     return result as bigint;
@@ -178,7 +180,8 @@ function Myloans({
       address: lendingTerm.address as Address,
       abi: TermABI,
       functionName: 'getLoan',
-      args: [id]
+      args: [id],
+      chainId: appChainId as any
     });
     return response;
   }

@@ -4,7 +4,7 @@ import { ContractsList } from 'store/slices/contracts-list';
 import { CoinSettings } from 'store/slices/coin-details';
 
 export const generateTermName = (collateral: string, interestRate: number, borrowRatio: number) => {
-  return `${collateral}-${(interestRate * 100).toFixed(1)}%-${formatNumberDecimal(borrowRatio)}`;
+  return `${collateral}-${formatNumberDecimal(borrowRatio)}-${(interestRate * 100).toFixed(1)}%`;
 };
 
 export function getCreditTokenSymbol(coinDetails: CoinSettings[], appMarketId: number, contractsList: ContractsList) {

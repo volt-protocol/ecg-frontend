@@ -4,6 +4,7 @@ export interface ActiveOffboardingPolls {
   term: Address;
   timestamp: number;
   snapshotBlock: number;
+  currentBlock: number;
   user: Address;
   userWeight: bigint;
   canOffboard: boolean;

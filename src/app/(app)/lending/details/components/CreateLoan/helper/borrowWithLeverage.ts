@@ -358,6 +358,7 @@ export const getAllowBorrowedCreditCall = (
 //     ...psmUsdcContract,
 //     functionName: "getRedeemAmountOut",
 //     args: [debtAmount],
+//     chainId: appChainId as any
 //   })
 
 //   const deadlineSwap = BigInt(Number(moment().add(3600, "seconds")))

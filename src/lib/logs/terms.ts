@@ -3,12 +3,12 @@ import { wagmiConfig } from 'contexts/Web3Provider';
 import { TermABI, GuildABI } from 'lib/contracts';
 import { ContractsList } from 'store/slices/contracts-list';
 import { LendingTerms } from 'types/lending';
-import { FROM_BLOCK } from 'utils/constants';
 import { extractTermAddress } from 'utils/strings';
 import { Abi, Address } from 'viem';
+import getToken from 'lib/getToken';
 
 //get all created terms
-export const getTermsCreatedLogs = async (contractsList: ContractsList) => {
+export const getTermsCreatedLogs = async (contractsList: ContractsList, marketId: number) => {
   const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber();
 
   const logs = await getPublicClient(wagmiConfig).getLogs({
@@ -20,39 +20,33 @@ export const getTermsCreatedLogs = async (contractsList: ContractsList) => {
         { type: 'uint256', indexed: true, name: 'when' },
         { type: 'uint256', indexed: true, name: 'gaugeType' },
         { type: 'address', indexed: true, name: 'term' },
-        {
-          type: 'tuple',
-          indexed: false,
-          name: 'params',
-          components: [
-            { internalType: 'address', name: 'collateralToken', type: 'address' },
-            {
-              internalType: 'uint256',
-              name: 'maxDebtPerCollateralToken',
-              type: 'uint256'
-            },
-            { internalType: 'uint256', name: 'interestRate', type: 'uint256' },
-            {
-              internalType: 'uint256',
-              name: 'maxDelayBetweenPartialRepay',
-              type: 'uint256'
-            },
-            {
-              internalType: 'uint256',
-              name: 'minPartialRepayPercent',
-              type: 'uint256'
-            },
-            { internalType: 'uint256', name: 'openingFee', type: 'uint256' },
-            { internalType: 'uint256', name: 'hardCap', type: 'uint256' }
-          ]
-        }
+        { type: 'bytes', indexed: false, name: 'params' }
       ]
     },
-    fromBlock: BigInt(FROM_BLOCK),
+    fromBlock: BigInt(0),
     toBlock: currentBlock
   });
 
-  return logs.map((log) => log.args);
+  return Promise.all(
+    logs
+      .filter(function (log) {
+        return Number(log.args.gaugeType) == marketId;
+      })
+      .map(async (log) => {
+        let ret = { ...log.args };
+        const params = await readContract(wagmiConfig, {
+          address: ret.term as Address,
+          abi: TermABI as Abi,
+          functionName: 'getParameters'
+        });
+        const collateralTokenDetails = await getToken(params.collateralToken as Address);
+        return {
+          ...ret,
+          params: params,
+          collateralTokenDetails: collateralTokenDetails
+        };
+      })
+  );
 };
 
 //get proposed terms
@@ -112,7 +106,7 @@ export const getTermsProposedLogs = async (contractsList: ContractsList) => {
         }
       ]
     },
-    fromBlock: BigInt(FROM_BLOCK),
+    fromBlock: BigInt(0),
     toBlock: currentBlock
   });
 
@@ -131,8 +125,12 @@ export const getDeprecatedTermAddresses = async (contractsList: ContractsList): 
 };
 
 //get proposable terms
-export const getProposableTermsLogs = async (contractsList: ContractsList, lendingTerms: LendingTerms[]) => {
-  const termsCreatedLogs = await getTermsCreatedLogs(contractsList);
+export const getProposableTermsLogs = async (
+  contractsList: ContractsList,
+  lendingTerms: LendingTerms[],
+  marketId: number
+) => {
+  const termsCreatedLogs = await getTermsCreatedLogs(contractsList, marketId);
   const termsProposedLogs = await getTermsProposedLogs(contractsList);
   const liveTermsAddresses = lendingTerms.filter((_) => _.status === 'live').map((_) => _.address);
 
@@ -147,8 +145,8 @@ export const getProposableTermsLogs = async (contractsList: ContractsList, lendi
     });
 };
 
-export const getVotableTermsLogs = async (contractsList: ContractsList) => {
-  const termsCreatedLogs = await getTermsCreatedLogs(contractsList);
+export const getVotableTermsLogs = async (contractsList: ContractsList, marketId: number) => {
+  const termsCreatedLogs = await getTermsCreatedLogs(contractsList, marketId);
   const termsProposedLogs = await getTermsProposedLogs(contractsList);
 
   return termsCreatedLogs.filter((log) => {

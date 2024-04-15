@@ -30,7 +30,7 @@ export type ProposedTerm = {
 };
 
 export default function Propose() {
-  const { contractsList, lendingTerms } = useAppStore();
+  const { appChainId, appMarketId, contractsList, lendingTerms } = useAppStore();
   const { address } = useAccount();
   const [showModal, setShowModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
@@ -43,13 +43,15 @@ export default function Propose() {
       {
         address: contractsList.onboardGovernorGuildAddress,
         abi: OnboardGovernorGuildABI,
-        functionName: 'proposalThreshold'
+        functionName: 'proposalThreshold',
+        chainId: appChainId
       },
       {
         address: contractsList.guildAddress,
         abi: GuildABI,
         functionName: 'getVotes',
-        args: [address]
+        args: [address],
+        chainId: appChainId
       }
     ],
     query: {
@@ -83,7 +85,7 @@ export default function Propose() {
   const fetchProposableTerms = async () => {
     setLoading(true);
 
-    const terms = await getProposableTerms(contractsList, lendingTerms);
+    const terms = await getProposableTerms(contractsList, lendingTerms, appMarketId);
 
     setLoading(false);
     setSelectedTerm(terms[0]);
@@ -157,9 +159,9 @@ export default function Propose() {
                     />
                   )}
                 </div>
-                <div className="mt-4">
+                <div className="mt-4 text-sm">
                   <dl className="divide-y divide-gray-100 text-gray-700 dark:text-gray-200">
-                    <div className="px-1 py-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <div className="px-1 py-0.5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                       <dt className="font-medium ">Contract Address</dt>
                       <dd className="mt-1 leading-6  sm:col-span-2 sm:mt-0">
                         <a
@@ -173,7 +175,7 @@ export default function Propose() {
                         </a>
                       </dd>
                     </div>
-                    <div className="px-1 py-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <div className="px-1 py-0.5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                       <dt className="font-medium ">Collateral Token</dt>
                       <dd className="mt-1 flex items-center gap-1 leading-6  sm:col-span-2 sm:mt-0">
                         {selectedTerm?.collateralTokenSymbol}
@@ -191,27 +193,27 @@ export default function Propose() {
                         </a>
                       </dd>
                     </div>
-                    <div className="px-1 py-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <div className="px-1 py-0.5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                       <dt className="font-medium ">Opening Fee</dt>
                       <dd className="mt-1 leading-6  sm:col-span-2 sm:mt-0">{selectedTerm?.openingFee}%</dd>
                     </div>
-                    <div className="px-1 py-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <div className="px-1 py-0.5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                       <dt className="font-medium ">Interest Rate</dt>
                       <dd className="mt-1 leading-6  sm:col-span-2 sm:mt-0">{selectedTerm?.interestRate}%</dd>
                     </div>
-                    <div className="px-1 py-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <div className="px-1 py-0.5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                       <dt className="font-medium ">Borrow Ratio</dt>
                       <dd className="mt-1 leading-6  sm:col-span-2 sm:mt-0">
                         {formatNumberDecimal(selectedTerm?.borrowRatio)}
                       </dd>
                     </div>
-                    <div className="px-1 py-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <div className="px-1 py-0.5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                       <dt className="font-medium ">Periodic Payments</dt>
                       <dd className="mt-1 leading-6  sm:col-span-2 sm:mt-0">
                         {selectedTerm?.minPartialRepayPercent}% every {selectedTerm?.maxDelayBetweenPartialRepay}d
                       </dd>
                     </div>
-                    <div className="px-1 py-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <div className="px-1 py-0.5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                       <dt className="font-medium ">Hard Cap</dt>
                       <dd className="mt-1 leading-6  sm:col-span-2 sm:mt-0">{selectedTerm?.hardCap}</dd>
                     </div>

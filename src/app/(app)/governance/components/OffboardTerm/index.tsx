@@ -29,11 +29,10 @@ import moment from 'moment';
 import { formatUnits, Address } from 'viem';
 import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
 import { isActivePoll } from './helper';
-import { BLOCK_LENGTH_MILLISECONDS, FROM_BLOCK } from 'utils/constants';
 import { wagmiConfig } from 'contexts/Web3Provider';
 
 function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
-  const { lendingTerms, contractsList } = useAppStore();
+  const { appChainId, lendingTerms, contractsList } = useAppStore();
   const [selectedTerm, setSelectedTerm] = useState<LendingTerms>(undefined);
   const [showModal, setShowModal] = useState(false);
   const [activeOffboardingPolls, setActiveOffboardingPolls] = useState<ActiveOffboardingPolls[]>([]);
@@ -45,17 +44,20 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
       {
         address: contractsList.lendingTermOffboardingAddress,
         abi: OffboardGovernorGuildABI,
-        functionName: 'quorum'
+        functionName: 'quorum',
+        chainId: appChainId
       },
       {
         address: contractsList.lendingTermOffboardingAddress,
         abi: OffboardGovernorGuildABI,
-        functionName: 'POLL_DURATION_BLOCKS'
+        functionName: 'POLL_DURATION_BLOCKS',
+        chainId: appChainId
       },
       {
         address: contractsList.guildAddress,
         abi: GuildABI,
-        functionName: 'deprecatedGauges'
+        functionName: 'deprecatedGauges',
+        chainId: appChainId
       }
     ],
     query: {
@@ -93,7 +95,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
           { type: 'uint256', indexed: false, name: 'userWeight' }
         ]
       },
-      fromBlock: BigInt(FROM_BLOCK),
+      fromBlock: BigInt(0),
       toBlock: currentBlock
     });
 
@@ -106,6 +108,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
             timestamp: Number(log.args.timestamp),
             userWeight: log.args.userWeight as bigint,
             snapshotBlock: Number(log.args.snapshotBlock),
+            currentBlock: Number(currentBlock),
             user: log.args.user as Address
           };
         })
@@ -123,13 +126,15 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
             contracts: [
               {
                 ...termContract(item.term as Address),
-                functionName: 'issuance'
+                functionName: 'issuance',
+                chainId: appChainId as any
               },
               {
                 address: contractsList.lendingTermOffboardingAddress,
                 abi: OffboardGovernorGuildABI,
                 functionName: 'canOffboard',
-                args: [item.term as Address]
+                args: [item.term as Address],
+                chainId: appChainId as any
               }
             ]
           });
@@ -315,7 +320,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         const lendingTerm = lendingTerms.find((term) => term.address === info.getValue());
         return (
           <a
-            className="flex items-center gap-1 pl-2 text-center text-sm font-bold text-gray-600 hover:text-brand-500 dark:text-white"
+            className="flex items-center gap-1 whitespace-nowrap pl-2 text-center text-sm font-bold text-gray-600 hover:text-brand-500 dark:text-white"
             target="__blank"
             href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS}/${info.getValue()}`}
           >
@@ -332,15 +337,9 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
       cell: (info) => {
         return (
           <p className="text-sm font-bold text-gray-600 dark:text-white">
-            {data && data.pollDurationBlock && isActivePoll(info.getValue(), data.pollDurationBlock)
-              ? fromNow(
-                  Number(
-                    moment
-                      .unix(info.getValue())
-                      .add(BLOCK_LENGTH_MILLISECONDS * Number(data.pollDurationBlock), 'milliseconds')
-                  )
-                )
-              : 'Expired'}
+            {info.row.original.currentBlock >= info.row.original.snapshotBlock + data.pollDurationBlock
+              ? 'Expired'
+              : info.row.original.snapshotBlock + data.pollDurationBlock - info.row.original.currentBlock + ' blocks'}
           </p>
         );
       }
@@ -437,7 +436,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
     }
 
     if (item.userWeight >= data.quorum && !data.deprecatedTerms.includes(item.term)) {
-      return <ButtonPrimary variant="xs" title="Execute Offboard" onClick={() => offboard(item.term)} />;
+      return <ButtonPrimary variant="xs" title="Offboard" onClick={() => offboard(item.term)} />;
     }
 
     if (data.deprecatedTerms.includes(item.term) && item.issuance != 0) {
@@ -466,7 +465,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
 
     if (data.deprecatedTerms.includes(item.term) && item.issuance == 0 && item.canOffboard) {
       //not active, above quorum and term.issuance() == 0
-      return <ButtonPrimary variant="xs" title="Execute Cleanup" onClick={() => cleanup(item.term)} />;
+      return <ButtonPrimary variant="xs" title="Cleanup" onClick={() => cleanup(item.term)} />;
     }
 
     return (
@@ -499,7 +498,6 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
           />
         </div>
         <div className="mt-4 flex flex-col 3xl:flex-row 3xl:items-center 3xl:justify-between">
-          <p>Active Offboarding polls: </p>
           <p>
             Your GUILD voting weight:{' '}
             <span className="font-semibold">
@@ -507,6 +505,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
                 toLocaleString(formatDecimal(Number(formatUnits(guildVotingWeight, 18)), 2))}
             </span>
           </p>
+          <p>Active Offboarding polls: </p>
         </div>
         <div>
           {loading || isLoading ? (

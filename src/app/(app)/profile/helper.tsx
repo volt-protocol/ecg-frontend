@@ -13,7 +13,8 @@ type UserLevel = 'dragon_egg' | 'baby_dragon' | 'teenage_dragon' | 'adult_dragon
 export const getUserLoans = async (
   lendingTerms: LendingTerms[],
   termAddress: Address,
-  borrower: Address
+  borrower: Address,
+  appChainId: Number
 ): Promise<LoansObj[]> => {
   let loans: LoansObj[] = [];
 
@@ -27,7 +28,8 @@ export const getUserLoans = async (
     const loan = await readContract(wagmiConfig, {
       ...termContract(termAddress),
       functionName: 'getLoan',
-      args: [log.loanId]
+      args: [log.loanId],
+      chainId: appChainId as any
     });
 
     const lendingTerm = lendingTerms.find((term) => term.address === termAddress);

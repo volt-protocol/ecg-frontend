@@ -17,7 +17,7 @@ export type Delegatee = {
 };
 
 function Governance() {
-  const { appMarketId, contractsList, coinDetails } = useAppStore();
+  const { appChainId, appMarketId, contractsList, coinDetails } = useAppStore();
   const { address, isConnected, isDisconnected } = useAccount();
   const [reloadGuild, setReloadGuild] = React.useState<boolean>(false);
   const [reloadCredit, setReloadCredit] = React.useState<boolean>(false);
@@ -33,42 +33,49 @@ function Governance() {
         address: contractsList.guildAddress,
         abi: GuildABI,
         functionName: 'balanceOf',
-        args: [address]
+        args: [address],
+        chainId: appChainId
       },
       {
         address: contractsList.guildAddress,
         abi: GuildABI,
         functionName: 'freeVotes',
-        args: [address]
+        args: [address],
+        chainId: appChainId
       },
       {
         address: contractsList.guildAddress,
         abi: GuildABI,
         functionName: 'getVotes',
-        args: [address]
+        args: [address],
+        chainId: appChainId
       },
       {
         address: contractsList.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: 'balanceOf',
-        args: [address]
+        args: [address],
+        chainId: appChainId
       },
       {
         address: contractsList.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: 'freeVotes',
-        args: [address]
+        args: [address],
+        chainId: appChainId
       },
       {
         address: contractsList.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: 'getVotes',
-        args: [address]
+        args: [address],
+        chainId: appChainId
       },
       {
         address: contractsList.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
-        functionName: 'delegateLockupPeriod'
+        functionName: 'delegateLockupPeriod',
+        chainId: appChainId
       }
     ],
     query: {

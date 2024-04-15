@@ -367,9 +367,9 @@ export default function Create() {
           <div className="mt-6 block w-full">
             <ButtonPrimary
               type="submit"
-              title={`Create New Term ${collateralToken.symbol ?? ''}${
-                watchInterestRate ? '-' + formatNumberDecimal(watchInterestRate) + '%' : ''
-              }${watchBorrowRatio ? '-' + formatNumberDecimal(watchBorrowRatio) : ''}`}
+              title={`Create New Term ${collateralToken.symbol ?? ''}
+              ${watchBorrowRatio ? '-' + formatNumberDecimal(watchBorrowRatio) : ''}
+              ${watchInterestRate ? '-' + formatNumberDecimal(watchInterestRate) + '%' : ''}`}
               extra="w-full"
               disabled={!collateralToken.decimals || !formState.isValid}
             />

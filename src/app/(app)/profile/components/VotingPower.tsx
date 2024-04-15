@@ -39,49 +39,57 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
         address: contractsList.guildAddress,
         abi: GuildABI,
         functionName: 'balanceOf',
-        args: [userAddress]
+        args: [userAddress],
+        chainId: appChainId
       },
       {
         address: contractsList.guildAddress,
         abi: GuildABI,
         functionName: 'freeVotes',
-        args: [userAddress]
+        args: [userAddress],
+        chainId: appChainId
       },
       {
         address: contractsList.guildAddress,
         abi: GuildABI,
         functionName: 'getVotes',
-        args: [userAddress]
+        args: [userAddress],
+        chainId: appChainId
       },
       {
         address: creditAddress,
         abi: CreditABI,
         functionName: 'balanceOf',
-        args: [userAddress]
+        args: [userAddress],
+        chainId: appChainId
       },
       {
         address: creditAddress,
         abi: CreditABI,
         functionName: 'freeVotes',
-        args: [userAddress]
+        args: [userAddress],
+        chainId: appChainId
       },
       {
         address: creditAddress,
         abi: CreditABI,
         functionName: 'getVotes',
-        args: [userAddress]
+        args: [userAddress],
+        chainId: appChainId
       },
       {
         address: contractsList.guildAddress,
         abi: GuildABI,
         functionName: 'delegates',
-        args: [userAddress]
+        args: [userAddress],
+        chainId: appChainId
       },
       {
         address: creditAddress,
         abi: CreditABI,
         functionName: 'delegates',
-        args: [userAddress]
+        args: [userAddress],
+        chainId: appChainId
       }
     ],
     query: {
@@ -108,7 +116,8 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
           address: contractsList.guildAddress,
           abi: GuildABI,
           functionName: 'delegatesVotesCount',
-          args: [userAddress, delegatee]
+          args: [userAddress, delegatee],
+          chainId: appChainId as any
         });
         const tempDelegatees = {
           address: delegatee,
@@ -131,7 +140,8 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
           address: creditAddress,
           abi: CreditABI,
           functionName: 'delegatesVotesCount',
-          args: [userAddress, delegatee]
+          args: [userAddress, delegatee],
+          chainId: appChainId as any
         });
         const tempDelegatees = {
           address: delegatee,

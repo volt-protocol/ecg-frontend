@@ -66,103 +66,121 @@ const LendingDetails = () => {
       {
         address: profitManagerAddress,
         abi: ProfitManagerABI,
-        functionName: 'creditMultiplier'
+        functionName: 'creditMultiplier',
+        chainId: appChainId
       },
       {
         address: pegToken.address,
         abi: erc20Abi,
         functionName: 'balanceOf',
-        args: [address]
+        args: [address],
+        chainId: appChainId
       },
       {
         address: creditAddress,
         abi: CreditABI,
         functionName: 'balanceOf',
-        args: [address]
+        args: [address],
+        chainId: appChainId
       },
       {
         address: creditAddress,
         abi: CreditABI,
         functionName: 'nonces',
-        args: [address]
+        args: [address],
+        chainId: appChainId
       },
       {
         address: pegToken.address,
         abi: ERC20PermitABI,
         functionName: 'nonces',
-        args: [address]
+        args: [address],
+        chainId: appChainId
       },
       {
         address: profitManagerAddress,
         abi: ProfitManagerABI,
-        functionName: 'minBorrow'
+        functionName: 'minBorrow',
+        chainId: appChainId
       },
       {
         address: guildAddress,
         abi: GuildABI,
         functionName: 'getUserWeight',
-        args: [address]
+        args: [address],
+        chainId: appChainId
       },
       {
         address: guildAddress,
         abi: GuildABI,
         functionName: 'balanceOf',
-        args: [address]
+        args: [address],
+        chainId: appChainId
       },
       {
         address: guildAddress,
         abi: GuildABI,
         functionName: 'getUserGaugeWeight',
-        args: [address, termAddress]
+        args: [address, termAddress],
+        chainId: appChainId
       },
       {
         address: surplusGuildMinterAddress,
         abi: SurplusGuildMinterABI,
         functionName: 'getUserStake',
-        args: [address, termAddress]
+        args: [address, termAddress],
+        chainId: appChainId
       },
       {
         address: termAddress as Address,
         abi: TermABI,
-        functionName: 'debtCeiling'
+        functionName: 'debtCeiling',
+        chainId: appChainId
       },
       {
         address: guildAddress,
         abi: GuildABI,
         functionName: 'getGaugeWeight',
-        args: [termAddress]
+        args: [termAddress],
+        chainId: appChainId
       },
       {
         address: guildAddress,
         abi: GuildABI,
         functionName: 'totalTypeWeight',
-        args: [appMarketId]
+        args: [appMarketId],
+        chainId: appChainId
       },
       {
         address: creditAddress,
         abi: CreditABI,
         functionName: 'totalSupply',
-        args: []
+        args: [],
+        chainId: appChainId
       },
       {
         address: surplusGuildMinterAddress,
         abi: SurplusGuildMinterABI,
-        functionName: 'mintRatio'
+        functionName: 'mintRatio',
+        chainId: appChainId
       },
       {
         address: surplusGuildMinterAddress,
         abi: SurplusGuildMinterABI,
-        functionName: 'rewardRatio'
+        functionName: 'rewardRatio',
+        chainId: appChainId
       },
       {
         address: termAddress as Address,
         abi: TermABI,
-        functionName: 'issuance'
+        functionName: 'issuance',
+        chainId: appChainId
       },
       {
         address: profitManagerAddress,
         abi: ProfitManagerABI,
-        functionName: 'getProfitSharingConfig'
+        functionName: 'getProfitSharingConfig',
+        chainId: appChainId
       }
     ],
     query: {
@@ -202,7 +220,8 @@ const LendingDetails = () => {
         address: lendingTermData.collateral.address as Address,
         abi: erc20Abi as Abi,
         functionName: 'balanceOf',
-        args: [lendingTermData.address]
+        args: [lendingTermData.address],
+        chainId: appChainId as any
       });
 
       setTermTotalCollateral(Number(formatUnits(result as bigint, lendingTermData.collateral.decimals)));

@@ -3,7 +3,6 @@ import { readContract } from '@wagmi/core';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { TermABI } from 'lib/contracts';
 import { LoansObj, loanObj, loanObjCall } from 'types/lending';
-import { FROM_BLOCK } from 'utils/constants';
 import { Address } from 'viem';
 
 //get all open loans logs from a lending term contract
@@ -26,7 +25,7 @@ export async function getOpenLoanLogs(address: Address, borrower?: Address, dura
     args: {
       borrower: borrower
     },
-    fromBlock: duration ? currentBlock - BigInt(duration) : BigInt(FROM_BLOCK),
+    fromBlock: duration ? currentBlock - BigInt(duration) : BigInt(0),
     toBlock: currentBlock
   });
 
@@ -60,7 +59,7 @@ export async function getCloseLoanLogs(address: Address, duration?: number) {
         { type: 'uint256', indexed: false, name: 'debtRepaid' }
       ]
     },
-    fromBlock: duration ? currentBlock - BigInt(duration) : BigInt(FROM_BLOCK),
+    fromBlock: duration ? currentBlock - BigInt(duration) : BigInt(0),
     toBlock: currentBlock
   });
 

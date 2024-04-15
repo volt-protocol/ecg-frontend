@@ -1,9 +1,7 @@
 import { getPublicClient } from '@wagmi/core';
 import { wagmiConfig } from 'contexts/Web3Provider';
-import { PsmUsdcABI } from 'lib/contracts';
 import { CoinSettings } from 'store/slices/coin-details';
 import { ContractsList } from 'store/slices/contracts-list';
-import { FROM_BLOCK } from 'utils/constants';
 import { Address, formatUnits } from 'viem';
 
 export interface MintRedeemLogs {
@@ -38,7 +36,7 @@ export async function getAllMintRedeemLogs(
         { type: 'uint256', name: 'amountOut' }
       ]
     },
-    fromBlock: duration ? currentBlock - BigInt(duration) : BigInt(FROM_BLOCK),
+    fromBlock: duration ? currentBlock - BigInt(duration) : BigInt(0),
     toBlock: currentBlock
   });
 
@@ -54,7 +52,7 @@ export async function getAllMintRedeemLogs(
         { type: 'uint256', name: 'amountOut' }
       ]
     },
-    fromBlock: duration ? currentBlock - BigInt(duration) : BigInt(FROM_BLOCK),
+    fromBlock: duration ? currentBlock - BigInt(duration) : BigInt(0),
     toBlock: currentBlock
   });
 

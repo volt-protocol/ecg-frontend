@@ -67,7 +67,8 @@ function ActiveLoans({
         address: contractsList.guildAddress,
         abi: GuildABI,
         functionName: 'isGauge',
-        args: [lendingTerm.address]
+        args: [lendingTerm.address],
+        chainId: appChainId
       }
     ],
     query: {
@@ -136,13 +137,15 @@ function ActiveLoans({
               address: lendingTerm.address as Address,
               abi: TermABI as Abi,
               functionName: 'partialRepayDelayPassed',
-              args: [original.id]
+              args: [original.id],
+              chainId: appChainId as any
             },
             {
               address: lendingTerm.address as Address,
               abi: TermABI as Abi,
               functionName: 'maxDebtForCollateral',
-              args: [original.collateralAmount]
+              args: [original.collateralAmount],
+              chainId: appChainId as any
             }
           ]
         });
@@ -172,7 +175,8 @@ function ActiveLoans({
       address: lendingTerm.address as Address,
       abi: TermABI,
       functionName: 'getLoanDebt',
-      args: [loanId]
+      args: [loanId],
+      chainId: appChainId as any
     });
     return result as bigint;
   }
@@ -182,7 +186,8 @@ function ActiveLoans({
       address: lendingTerm.address as Address,
       abi: TermABI,
       functionName: 'getLoan',
-      args: [id]
+      args: [id],
+      chainId: appChainId as any
     });
 
     return Number(response.lastPartialRepay);

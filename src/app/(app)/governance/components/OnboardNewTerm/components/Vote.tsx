@@ -25,14 +25,14 @@ import { fromNow } from 'utils/date';
 import moment from 'moment';
 import { formatUnits, keccak256, stringToBytes, Address } from 'viem';
 import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
-import { BLOCK_LENGTH_MILLISECONDS, FROM_BLOCK } from 'utils/constants';
+import { BLOCK_LENGTH_MILLISECONDS } from 'utils/constants';
 import { getVotableTerms } from './helper';
 import VoteStatusBar from 'components/bar/VoteStatusBar';
 import { extractTermAddress } from 'utils/strings';
 import { wagmiConfig } from 'contexts/Web3Provider';
 
 function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
-  const { appMarketId, contractsList } = useAppStore();
+  const { appChainId, appMarketId, contractsList } = useAppStore();
   const { address } = useAccount();
   const { fetchLendingTerms } = useAppStore();
   const [showModal, setShowModal] = useState(false);
@@ -56,7 +56,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
     setCurrentBlock(currentBlockData);
 
     // get TermCreated logs
-    const termsCreated = await getVotableTerms(contractsList);
+    const termsCreated = await getVotableTerms(contractsList, appMarketId);
 
     //logs are returned from oldest to newest
     const logs = await getPublicClient(wagmiConfig).getLogs({
@@ -112,14 +112,13 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
           }
         ]
       },
-      fromBlock: BigInt(FROM_BLOCK),
+      fromBlock: BigInt(0),
       toBlock: currentBlockData
     });
 
     const activeVotes = await Promise.all(
       logs.map(async (log) => {
         //Get term name
-        console.log(log.args);
         const term = termsCreated.find(
           (term) => term.termAddress.toLowerCase() === extractTermAddress(log.args.description).toLowerCase()
         );
@@ -131,31 +130,36 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
               address: contractsList.onboardGovernorGuildAddress,
               abi: OnboardGovernorGuildABI,
               functionName: 'proposalVotes',
-              args: [log.args.proposalId]
+              args: [log.args.proposalId],
+              chainId: appChainId as any
             },
             {
               address: contractsList.onboardGovernorGuildAddress,
               abi: OnboardGovernorGuildABI,
               functionName: 'hasVoted',
-              args: [log.args.proposalId, address]
+              args: [log.args.proposalId, address],
+              chainId: appChainId as any
             },
             {
               address: contractsList.onboardGovernorGuildAddress,
               abi: OnboardGovernorGuildABI,
               functionName: 'quorum',
-              args: [Number(log.args.voteStart)]
+              args: [Number(log.args.voteStart)],
+              chainId: appChainId as any
             },
             {
               address: contractsList.onboardGovernorGuildAddress,
               abi: OnboardGovernorGuildABI,
               functionName: 'state',
-              args: [log.args.proposalId]
+              args: [log.args.proposalId],
+              chainId: appChainId as any
             },
             {
               address: contractsList.onboardGovernorGuildAddress,
               abi: OnboardGovernorGuildABI,
               functionName: 'proposalEta',
-              args: [log.args.proposalId]
+              args: [log.args.proposalId],
+              chainId: appChainId as any
             }
           ]
         });
@@ -320,7 +324,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
       updateStepStatus('Execute Proposal ' + proposal.proposalId.toString().slice(0, 6) + '...', 'Success');
       await fetchActiveOnboardingVotes();
       //fetch lending terms globally
-      await fetchLendingTerms(appMarketId);
+      await fetchLendingTerms(appMarketId, appChainId);
     } catch (e: any) {
       console.log(e);
       updateStepStatus('Execute Proposal ' + proposal.proposalId.toString().slice(0, 6) + '...', 'Error');
@@ -349,17 +353,17 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
       cell: (info) => {
         return (
           <a
-            className="flex items-center gap-1 pl-2 text-center text-sm font-bold text-gray-600 hover:text-brand-500 dark:text-white"
+            className="flex items-center gap-1 whitespace-nowrap pl-2 text-center text-xs font-bold text-gray-600 hover:text-brand-500 dark:text-white"
             target="__blank"
             href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS}/${info.row.original.termAddress}`}
           >
-            {info.getValue()}
+            {info.row.original.termName}
             <MdOpenInNew />
           </a>
         );
       }
     }),
-    columnHelper.accessor('interestRate', {
+    /*columnHelper.accessor('interestRate', {
       id: 'interestRate',
       header: 'Interest',
       enableSorting: true,
@@ -374,24 +378,17 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
       cell: (info) => {
         return <span className="text-center text-sm font-bold text-gray-600 dark:text-white">{info.getValue()}</span>;
       }
-    }),
+    }),*/
     columnHelper.accessor('voteEnd', {
       id: 'expiry',
-      header: 'Expiry',
+      header: 'Vote End',
       enableSorting: true,
       cell: (info) => {
         return (
-          <p className="text-sm font-bold text-gray-600 dark:text-white">
-            {info.row.original.isActive
-              ? fromNow(
-                  Number(
-                    moment().add(
-                      (Number(info.getValue()) - Number(currentBlock)) * BLOCK_LENGTH_MILLISECONDS,
-                      'milliseconds'
-                    )
-                  )
-                )
-              : 'Expired'}
+          <p className="whitespace-nowrap text-xs font-bold text-gray-600 dark:text-white">
+            {info.row.original.voteEnd <= Number(currentBlock)
+              ? 'Ended'
+              : info.row.original.voteEnd - Number(currentBlock) + ' blocks'}
           </p>
         );
       }
@@ -442,7 +439,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
                 </div>
               }
               trigger={
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 text-xs">
                   <VoteStatusBar width={100} height={10} votes={info.row.original.votes} />
                   <div className="ml-1">
                     <QuestionMarkIcon />

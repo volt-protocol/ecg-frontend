@@ -45,7 +45,7 @@ function DelegateGuild({
   userAddress: string;
   isConnected: boolean;
 }) {
-  const { contractsList } = useAppStore();
+  const { appChainId, contractsList } = useAppStore();
   const { address } = useAccount();
   const [value, setValue] = useState<string>('');
   const [showModal, setShowModal] = useState(false);
@@ -77,7 +77,8 @@ function DelegateGuild({
       address: contractsList.guildAddress,
       abi: GuildABI,
       functionName: 'delegates',
-      args: [userAddress]
+      args: [userAddress],
+      chainId: appChainId as any
     });
     return result as string[];
   }
@@ -90,7 +91,8 @@ function DelegateGuild({
         address: contractsList.guildAddress,
         abi: GuildABI,
         functionName: 'delegatesVotesCount',
-        args: [userAddress, delegatee]
+        args: [userAddress, delegatee],
+        chainId: appChainId as any
       });
       tempDelegatees.push({
         address: delegatee,

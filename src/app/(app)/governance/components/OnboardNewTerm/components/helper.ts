@@ -19,33 +19,38 @@ import { ContractsList } from 'store/slices/contracts-list';
 import { LendingTerms } from 'types/lending';
 
 //get the newly created terms using TermCreated event from LendingTermOnboarding contract
-export const getProposableTerms = async (contractsList: ContractsList, lendingTerms: LendingTerms[]) => {
-  const proposableTermsLogs = await getProposableTermsLogs(contractsList, lendingTerms);
+export const getProposableTerms = async (
+  contractsList: ContractsList,
+  lendingTerms: LendingTerms[],
+  marketId: number
+) => {
+  const proposableTermsLogs = await getProposableTermsLogs(contractsList, lendingTerms, marketId);
 
   const proposableTerms = await Promise.all(
     proposableTermsLogs.map(async (log) => {
-      const collateralTokenDetails = await getToken(log.params.collateralToken as Address);
+      const params = log.params;
+      const collateralTokenDetails = log.collateralTokenDetails;
 
       //Calulate borrow ratio and interest rate
       const calculatedBorrowRatio = Number(
         formatNumberDecimal(
-          Number(log.params.maxDebtPerCollateralToken) / (Number(10 ** (18 - collateralTokenDetails[0].result)) * 1e18)
+          Number(params.maxDebtPerCollateralToken) / (Number(10 ** (18 - collateralTokenDetails[0].result)) * 1e18)
         )
       );
 
-      const calculatedInterestRate = Number(formatDecimal(Number(formatUnits(log.params.interestRate, 18)), 3));
+      const calculatedInterestRate = Number(formatDecimal(Number(formatUnits(params.interestRate, 18)), 3));
 
       return {
         termAddress: log.term,
         collateralTokenSymbol: collateralTokenDetails[1].result,
         termName: generateTermName(collateralTokenDetails[1].result, calculatedInterestRate, calculatedBorrowRatio),
-        collateralToken: log.params.collateralToken as Address,
-        openingFee: Number(formatUnits(log.params.openingFee, 18)) * 100,
+        collateralToken: params.collateralToken as Address,
+        openingFee: Number(formatUnits(params.openingFee, 18)) * 100,
         interestRate: (calculatedInterestRate * 100).toFixed(1),
         borrowRatio: calculatedBorrowRatio,
-        maxDelayBetweenPartialRepay: formatDecimal(Number(log.params.maxDelayBetweenPartialRepay) / SECONDS_IN_DAY, 1),
-        minPartialRepayPercent: formatDecimal(Number(formatUnits(log.params.minPartialRepayPercent, 18)) * 100, 4),
-        hardCap: formatCurrencyValue(Number(formatUnits(log.params.hardCap, 18)))
+        maxDelayBetweenPartialRepay: formatDecimal(Number(params.maxDelayBetweenPartialRepay) / SECONDS_IN_DAY, 1),
+        minPartialRepayPercent: formatDecimal(Number(formatUnits(params.minPartialRepayPercent, 18)) * 100, 4),
+        hardCap: formatCurrencyValue(Number(formatUnits(params.hardCap, 18)))
       };
     })
   );
@@ -53,8 +58,8 @@ export const getProposableTerms = async (contractsList: ContractsList, lendingTe
   return proposableTerms;
 };
 
-export const getVotableTerms = async (contractsList: ContractsList) => {
-  const votableTermsLogs = await getVotableTermsLogs(contractsList);
+export const getVotableTerms = async (contractsList: ContractsList, marketId: number) => {
+  const votableTermsLogs = await getVotableTermsLogs(contractsList, marketId);
 
   const votableTerms = await Promise.all(
     votableTermsLogs.map(async (log) => {

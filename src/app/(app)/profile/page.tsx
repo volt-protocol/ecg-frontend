@@ -28,8 +28,17 @@ import { wagmiConfig } from 'contexts/Web3Provider';
 const UserDashboard = () => {
   const searchParams = useSearchParams();
   const { address, isConnected } = useAccount();
-  const { appMarketId, coinDetails, lendingTerms, addUserLoans, userData, addLastVotes, addLastMints, contractsList } =
-    useAppStore();
+  const {
+    appChainId,
+    appMarketId,
+    coinDetails,
+    lendingTerms,
+    addUserLoans,
+    userData,
+    addLastVotes,
+    addLastMints,
+    contractsList
+  } = useAppStore();
   const [userLoansData, setUserLoansData] = useState<LoansObj[]>([]);
   const [lastUpdated, setLastUpdated] = useState<number>();
   const [loadingLoans, setLoadingLoans] = useState<boolean>(true);
@@ -77,7 +86,7 @@ const UserDashboard = () => {
       setLastUpdated(data.lastUpdated);
     } else {
       for (const term of lendingTerms) {
-        const data = await getUserLoans(lendingTerms, term.address as Address, userAddress);
+        const data = await getUserLoans(lendingTerms, term.address as Address, userAddress, appChainId);
         loans.push(...data);
       }
 

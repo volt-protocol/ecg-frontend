@@ -1,7 +1,7 @@
 'use client';
 import Image from 'next/image';
 import { readContract } from '@wagmi/core';
-import { useReadContracts } from 'wagmi';
+import { UseChainIdParameters, useReadContracts } from 'wagmi';
 import { useAppStore } from 'store';
 import { Abi, Address, formatUnits, erc20Abi } from 'viem';
 import { coinsList, getPegTokenLogo } from 'config';
@@ -22,7 +22,7 @@ import { getAllMintRedeemLogs } from 'lib/logs/mint-redeem';
 import { getAllVotes } from 'lib/logs/votes';
 import { BLOCK_PER_WEEK, BLOCK_PER_DAY } from 'utils/constants';
 import { wagmiConfig } from 'contexts/Web3Provider';
-import { generateTermName, getCreditTokenSymbol } from 'utils/strings';
+import { generateTermName } from 'utils/strings';
 import { GlobalStatCarts } from './components/GlobalStatCarts';
 import { TVLChart } from './components/TVLChart';
 
@@ -54,17 +54,20 @@ const GlobalDashboard = () => {
         address: guildAddress,
         abi: GuildABI,
         functionName: 'totalTypeWeight',
-        args: [appMarketId]
+        args: [appMarketId],
+        chainId: appChainId as any
       },
       {
         address: profitManagerAddress,
         abi: ProfitManagerABI as Abi,
-        functionName: 'creditMultiplier'
+        functionName: 'creditMultiplier',
+        chainId: appChainId as any
       },
       {
         address: creditAddress,
         abi: CreditABI,
-        functionName: 'totalSupply'
+        functionName: 'totalSupply',
+        chainId: appChainId as any
       }
     ];
   }
@@ -136,7 +139,8 @@ const GlobalDashboard = () => {
             address: term.collateral.address as Address,
             abi: erc20Abi as Abi,
             functionName: 'balanceOf',
-            args: [term.address]
+            args: [term.address],
+            chainId: appChainId as any
           });
 
           const exchangeRate = coinDetails.find((_) => _.address == term.collateral.address).price;
@@ -161,7 +165,8 @@ const GlobalDashboard = () => {
           const debtCeiling = await readContract(wagmiConfig, {
             address: term.address as Address,
             abi: TermABI as Abi,
-            functionName: 'debtCeiling'
+            functionName: 'debtCeiling',
+            chainId: appChainId as any
           });
 
           return {
@@ -181,7 +186,8 @@ const GlobalDashboard = () => {
     const globalSurplusBuffer = await readContract(wagmiConfig, {
       address: contractsList.marketContracts[appMarketId].profitManagerAddress,
       abi: ProfitManagerABI as Abi,
-      functionName: 'surplusBuffer'
+      functionName: 'surplusBuffer',
+      chainId: appChainId as any
     });
 
     const termsArray = await Promise.all(
@@ -192,7 +198,8 @@ const GlobalDashboard = () => {
             address: contractsList.marketContracts[appMarketId].profitManagerAddress,
             abi: ProfitManagerABI as Abi,
             functionName: 'termSurplusBuffer',
-            args: [term.address]
+            args: [term.address],
+            chainId: appChainId as any
           });
           return {
             term: term.collateral.symbol,

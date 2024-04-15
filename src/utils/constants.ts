@@ -3,7 +3,6 @@ export const SECONDS_IN_YEAR = 31557600; //seconds in a year
 export const SECONDS_IN_DAY = 86400; //seconds in a day
 export const HOURS_IN_YEAR = 8760; //hours in a year
 
-export const FROM_BLOCK = 197_000_000; //block to start fetching logs from
 export const BLOCK_PER_MINUTE = 240; //average blocks per hour
 export const BLOCK_PER_HOUR = 60 * BLOCK_PER_MINUTE; //average blocks per hour
 export const BLOCK_PER_DAY = 24 * BLOCK_PER_HOUR; //average blocks per day

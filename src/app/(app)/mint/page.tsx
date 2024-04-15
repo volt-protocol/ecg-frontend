@@ -53,35 +53,41 @@ function MintAndSaving() {
         address: pegTokenAddress,
         abi: erc20Abi,
         functionName: 'balanceOf',
-        args: [address]
+        args: [address],
+        chainId: appChainId
       },
       {
         address: creditAddress,
         abi: CreditABI,
         functionName: 'balanceOf',
-        args: [address]
+        args: [address],
+        chainId: appChainId
       },
       {
         address: profitManagerAddress,
         abi: ProfitManagerABI,
-        functionName: 'creditMultiplier'
+        functionName: 'creditMultiplier',
+        chainId: appChainId
       },
       {
         address: pegTokenAddress,
         abi: erc20Abi,
         functionName: 'balanceOf',
-        args: [psmAddress]
+        args: [psmAddress],
+        chainId: appChainId
       },
       {
         address: creditAddress,
         abi: CreditABI,
         functionName: 'isRebasing',
-        args: [address as Address]
+        args: [address as Address],
+        chainId: appChainId
       },
       {
         address: profitManagerAddress,
         abi: ProfitManagerABI,
-        functionName: 'getProfitSharingConfig'
+        functionName: 'getProfitSharingConfig',
+        chainId: appChainId
       }
     ],
     query: {

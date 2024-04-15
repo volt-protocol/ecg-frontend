@@ -27,7 +27,7 @@ import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
 
 export default function LendingTermsTable(props: { tableData: LendingTerms[] }) {
-  const { appMarketId, contractsList, coinDetails } = useAppStore();
+  const { appChainId, appMarketId, contractsList, coinDetails } = useAppStore();
   const { tableData } = props;
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const columnHelper = createColumnHelper<LendingTerms>();
@@ -51,12 +51,14 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
         address: contractsList?.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
         functionName: 'totalSupply',
-        args: []
+        args: [],
+        chainId: appChainId
       },
       {
         address: contractsList?.marketContracts[appMarketId].profitManagerAddress,
         abi: ProfitManagerABI as Abi,
-        functionName: 'creditMultiplier'
+        functionName: 'creditMultiplier',
+        chainId: appChainId
       }
     ],
     query: {
@@ -104,23 +106,27 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
           address: contractsList.guildAddress,
           abi: GuildABI,
           functionName: 'getGaugeWeight',
-          args: [term.address] // Assuming each term has a unique contractAddress
+          args: [term.address], // Assuming each term has a unique contractAddress
+          chainId: appChainId as any
         },
         {
           address: contractsList.guildAddress,
           abi: GuildABI,
           functionName: 'totalTypeWeight',
-          args: [appMarketId]
+          args: [appMarketId],
+          chainId: appChainId as any
         },
         {
           address: term.address as Address,
           abi: TermABI as Abi,
-          functionName: 'issuance'
+          functionName: 'issuance',
+          chainId: appChainId as any
         },
         {
           address: term.address as Address,
           abi: TermABI as Abi,
-          functionName: 'debtCeiling'
+          functionName: 'debtCeiling',
+          chainId: appChainId as any
         }
       ]
     });

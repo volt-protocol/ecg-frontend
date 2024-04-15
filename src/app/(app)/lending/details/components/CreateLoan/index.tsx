@@ -79,13 +79,15 @@ function CreateLoan({
         address: lendingTerm.collateral.address as Address,
         abi: erc20Abi as Abi,
         functionName: 'balanceOf',
-        args: [address]
+        args: [address],
+        chainId: appChainId
       },
       {
         address: lendingTerm.collateral.address as Address,
         abi: ERC20PermitABI as Abi,
         functionName: 'nonces',
-        args: [address]
+        args: [address],
+        chainId: appChainId
       }
     ],
     query: {
@@ -473,7 +475,8 @@ function CreateLoan({
         address: contractsList.uniswapRouterAddress,
         abi: UniswapRouterABI,
         functionName: 'getAmountsIn',
-        args: [flashLoanCollateralAmount, path]
+        args: [flashLoanCollateralAmount, path],
+        chainId: appChainId as any
       });
       const minUsdcAmount = usdcToGUsdc(result[0], creditMultiplier);
       const maxLoanDebt = minUsdcAmount + minUsdcAmount / BigInt(100);

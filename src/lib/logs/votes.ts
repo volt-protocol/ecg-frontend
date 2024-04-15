@@ -1,7 +1,6 @@
 import { getPublicClient } from '@wagmi/core';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { Address } from 'viem';
-import { FROM_BLOCK } from 'utils/constants';
 import { ContractsList } from 'store/slices/contracts-list';
 
 export interface VoteLogs {
@@ -30,7 +29,7 @@ export async function getVotesLendingOffboarding(contractsList: ContractsList, a
         { type: 'uint256', indexed: false, name: 'userWeight' }
       ]
     },
-    fromBlock: duration ? currentBlock - BigInt(duration) : BigInt(FROM_BLOCK),
+    fromBlock: duration ? currentBlock - BigInt(duration) : BigInt(0),
     toBlock: currentBlock
   });
 
@@ -70,7 +69,7 @@ export async function getVotesGovernor(
         { type: 'string', indexed: false, name: 'reason' }
       ]
     },
-    fromBlock: duration ? currentBlock - BigInt(duration) : BigInt(FROM_BLOCK),
+    fromBlock: duration ? currentBlock - BigInt(duration) : BigInt(0),
     toBlock: currentBlock
   });
 

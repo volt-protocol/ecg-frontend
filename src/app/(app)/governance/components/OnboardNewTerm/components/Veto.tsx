@@ -30,6 +30,7 @@ import Progress from 'components/progress';
 import clsx from 'clsx';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
+import { getExplorerBaseUrl } from 'config';
 
 function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: bigint; guildVotingWeight: bigint }) {
   const { contractsList, coinDetails, appMarketId, appChainId } = useAppStore();
@@ -424,7 +425,7 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
           <a
             className="flex items-center gap-1 pl-2 text-center text-sm font-bold text-gray-600 hover:text-brand-500 dark:text-white"
             target="__blank"
-            href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS}/${info.row.original.termAddress}`}
+            href={`${getExplorerBaseUrl(appChainId)}/address/${info.row.original.termAddress}`}
           >
             {info.getValue()}
             <MdOpenInNew />

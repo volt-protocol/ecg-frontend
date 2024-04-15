@@ -18,7 +18,7 @@ import { FaSort, FaSortDown, FaSortUp } from 'react-icons/fa';
 import { formatUnits, parseUnits, Address } from 'viem';
 import moment from 'moment';
 import { MdChevronLeft, MdChevronRight, MdOpenInNew, MdShowChart } from 'react-icons/md';
-import { coinsList, getPegTokenLogo } from 'config';
+import { getPegTokenLogo } from 'config';
 import ButtonPrimary from 'components/button/ButtonPrimary';
 import { Step } from 'components/stepLoader/stepType';
 import StepModal from 'components/stepLoader';
@@ -31,7 +31,7 @@ import { ItemIdBadge } from 'components/badge/ItemIdBadge';
 import { useAppStore } from 'store';
 import { shortenUint } from 'utils/strings';
 import { Auction, AuctionHouse } from '../../../../store/slices/auctions';
-import { marketsConfig } from 'config';
+import { getExplorerBaseUrl } from 'config';
 
 export default function AuctionsTable({
   auctions,
@@ -274,7 +274,7 @@ export default function AuctionsTable({
           <a
             className="flex items-center justify-center gap-1 pl-2 text-sm font-bold text-gray-600 hover:text-brand-500 dark:text-white"
             target="__blank"
-            href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS}/${collateralToken.address}`}
+            href={`${getExplorerBaseUrl(appChainId)}/address/${collateralToken.address}`}
           >
             {collateralToken.symbol}
             <MdOpenInNew />
@@ -435,7 +435,7 @@ export default function AuctionsTable({
                 <div className="flex flex-col items-center justify-center gap-1.5">
                   <a
                     className="items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-500"
-                    href={process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_TX + '/' + info.row.original.bidTxHash}
+                    href={getExplorerBaseUrl(appChainId) + '/tx/' + info.row.original.bidTxHash}
                     target="_blank"
                     rel="noopener noreferrer"
                   >

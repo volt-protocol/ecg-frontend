@@ -30,6 +30,7 @@ import { getVotableTerms } from './helper';
 import VoteStatusBar from 'components/bar/VoteStatusBar';
 import { extractTermAddress } from 'utils/strings';
 import { wagmiConfig } from 'contexts/Web3Provider';
+import { getExplorerBaseUrl } from 'config';
 
 function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   const { appChainId, appMarketId, contractsList } = useAppStore();
@@ -355,7 +356,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
           <a
             className="flex items-center gap-1 whitespace-nowrap pl-2 text-center text-xs font-bold text-gray-600 hover:text-brand-500 dark:text-white"
             target="__blank"
-            href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS}/${info.row.original.termAddress}`}
+            href={`${getExplorerBaseUrl(appChainId)}/address/${info.row.original.termAddress}`}
           >
             {info.row.original.termName}
             <MdOpenInNew />

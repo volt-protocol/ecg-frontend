@@ -9,6 +9,7 @@ import { useAppStore } from 'store';
 import { formatDecimal } from 'utils/numbers';
 import moment from 'moment';
 import { MdOpenInNew } from 'react-icons/md';
+import { getExplorerBaseUrl } from 'config';
 
 export default function ModalAuctionChart({
   setOpenAuction,
@@ -19,7 +20,7 @@ export default function ModalAuctionChart({
   openAuction: Auction | null;
   auctionHouses: AuctionHouse[];
 }) {
-  const { appMarketId, coinDetails, contractsList } = useAppStore();
+  const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
   const auctionHouse = auctionHouses.find(
     (item) => item.address.toLowerCase() == openAuction?.auctionHouseAddress.toLowerCase()
   );
@@ -53,7 +54,7 @@ export default function ModalAuctionChart({
         <a
           className="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-500"
           target="__blank"
-          href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_TX}/${openAuction.bidTxHash}`}
+          href={`${getExplorerBaseUrl(appChainId)}/tx/${openAuction.bidTxHash}`}
         >
           Bid: {moment(openAuction.endTime).format('YYYY-MM-DD HH:mm:ss')} @{' '}
           <strong>{formatDecimal(bidPrice, pegTokenDecimalsToDisplay)}</strong> {pegToken.symbol} /{' '}

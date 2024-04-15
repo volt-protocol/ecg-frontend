@@ -30,6 +30,7 @@ import { formatUnits, Address } from 'viem';
 import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
 import { isActivePoll } from './helper';
 import { wagmiConfig } from 'contexts/Web3Provider';
+import { getExplorerBaseUrl } from 'config';
 
 function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   const { appChainId, lendingTerms, contractsList } = useAppStore();
@@ -322,7 +323,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
           <a
             className="flex items-center gap-1 whitespace-nowrap pl-2 text-center text-sm font-bold text-gray-600 hover:text-brand-500 dark:text-white"
             target="__blank"
-            href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS}/${info.getValue()}`}
+            href={`${getExplorerBaseUrl(appChainId)}/address/${info.getValue()}`}
           >
             {generateTermName(lendingTerm.collateral.symbol, lendingTerm.interestRate, lendingTerm.borrowRatio)}
             <MdOpenInNew />

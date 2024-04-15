@@ -14,6 +14,7 @@ import { BLOCK_LENGTH_MILLISECONDS } from 'utils/constants';
 import { VoteLogs } from 'lib/logs/votes';
 import { getLastVoteEventDescription } from '../helper';
 import { TransactionBadge } from 'components/badge/TransactionBadge';
+import { useAppStore } from 'store';
 
 export default function LastVotes({
   userAddress,
@@ -24,6 +25,8 @@ export default function LastVotes({
   data: any;
   currentBlock: BigInt;
 }) {
+  const { appChainId } = useAppStore();
+
   /* Create Table */
   const columnHelper = createColumnHelper<VoteLogs>();
 
@@ -74,7 +77,7 @@ export default function LastVotes({
       id: 'txHash',
       header: 'Transaction',
       enableSorting: true,
-      cell: (info) => <TransactionBadge txHash={info.getValue()} />
+      cell: (info) => <TransactionBadge txHash={info.getValue()} appChainId={appChainId} />
     })
   ];
 

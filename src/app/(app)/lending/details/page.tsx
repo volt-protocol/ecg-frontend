@@ -23,11 +23,9 @@ import clsx from 'clsx';
 import { Abi, formatUnits, erc20Abi, Address } from 'viem';
 import { eq, generateTermName } from 'utils/strings';
 import { formatDecimal, toLocaleString } from 'utils/numbers';
-import { coinsList, getPegTokenLogo } from 'config';
 import { wagmiConfig } from 'contexts/Web3Provider';
-import { lendingTermConfig } from 'config';
+import { lendingTermConfig, getPegTokenLogo, getExplorerBaseUrl } from 'config';
 import { ToggleCredit } from 'components/switch/ToggleCredit';
-import { marketsConfig } from 'config';
 import Image from 'next/image';
 
 const LendingDetails = () => {
@@ -265,7 +263,7 @@ const LendingDetails = () => {
             </h3>
             <a
               target="_blank"
-              href={process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS + '/' + termAddress}
+              href={getExplorerBaseUrl(appChainId) + '/address/' + termAddress}
               type="button"
               className="flex items-center gap-1 rounded-md bg-stone-100 px-2 py-1.5 text-xs transition-all duration-150 ease-in-out  dark:bg-navy-700 dark:text-stone-300 dark:ring-navy-600 dark:hover:text-stone-100 "
             >

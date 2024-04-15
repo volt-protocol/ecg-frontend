@@ -286,7 +286,7 @@ function ActiveLoans({
       enableSorting: true,
       cell: (info) => (
         <div className="flex justify-center">
-          <AddressBadge address={info.getValue()} />
+          <AddressBadge address={info.getValue()} appChainId={appChainId} />
         </div>
       )
     }),

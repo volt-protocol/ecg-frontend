@@ -15,6 +15,7 @@ import { useAccount, useReadContracts } from 'wagmi';
 import { AlertMessage } from 'components/message/AlertMessage';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
+import { getExplorerBaseUrl } from 'config';
 
 export type ProposedTerm = {
   termAddress: Address;
@@ -166,7 +167,7 @@ export default function Propose() {
                       <dd className="mt-1 leading-6  sm:col-span-2 sm:mt-0">
                         <a
                           className="flex items-center gap-1 transition-all duration-150 ease-in-out hover:text-brand-500"
-                          href={process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS + '/' + selectedTerm?.termAddress}
+                          href={getExplorerBaseUrl(appChainId) + '/address/' + selectedTerm?.termAddress}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
@@ -182,9 +183,7 @@ export default function Propose() {
                         {' · '}
                         <a
                           className="flex items-center gap-1 transition-all duration-150 ease-in-out hover:text-brand-500"
-                          href={
-                            process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS + '/' + selectedTerm?.collateralToken
-                          }
+                          href={getExplorerBaseUrl(appChainId) + '/address/' + selectedTerm?.collateralToken}
                           target="_blank"
                           rel="noopener noreferrer"
                         >

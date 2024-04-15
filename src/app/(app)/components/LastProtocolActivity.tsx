@@ -26,13 +26,10 @@ export type LastActivitiesLogs = MintRedeemLogs | VoteLogs;
 export type Category = 'mintRedeem' | 'vote';
 
 export const LastProtocolActivity = ({ data, currentBlock }: { data: LastActivitiesLogs[]; currentBlock: bigint }) => {
-  const { appMarketId, lendingTerms, coinDetails, historicalData, contractsList } = useAppStore();
+  const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
 
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
-  );
-  const creditToken = coinDetails.find(
-    (item) => item.address.toLowerCase() === contractsList.marketContracts[appMarketId].creditAddress.toLowerCase()
   );
 
   const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
@@ -70,7 +67,7 @@ export const LastProtocolActivity = ({ data, currentBlock }: { data: LastActivit
       header: 'Wallet',
       cell: (info) => (
         <div className="flex justify-center">
-          <AddressBadge address={info.getValue()} />
+          <AddressBadge address={info.getValue()} appChainId={appChainId} />
         </div>
       )
     }),
@@ -92,7 +89,7 @@ export const LastProtocolActivity = ({ data, currentBlock }: { data: LastActivit
       cell: (info) =>
         info.getValue() ? (
           <div className="flex justify-center">
-            <AddressBadge address={info.getValue() as Address} />
+            <AddressBadge address={info.getValue() as Address} appChainId={appChainId} />
           </div>
         ) : (
           '-'
@@ -131,7 +128,7 @@ export const LastProtocolActivity = ({ data, currentBlock }: { data: LastActivit
       enableSorting: true,
       cell: (info) => (
         <div className="flex justify-center">
-          <TransactionBadge txHash={info.getValue()} />
+          <TransactionBadge txHash={info.getValue()} appChainId={appChainId} />
         </div>
       )
     })

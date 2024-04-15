@@ -13,7 +13,7 @@ import ButtonPrimary from 'components/button/ButtonPrimary';
 import { AlertMessage } from 'components/message/AlertMessage';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
-import { getPegTokenLogo, marketsConfig } from 'config';
+import { getPegTokenLogo, marketsConfig, getExplorerBaseUrl } from 'config';
 import Image from 'next/image';
 import { MdOpenInNew } from 'react-icons/md';
 
@@ -260,7 +260,7 @@ function MintOrRedeem({
           <a
             className="block p-1 text-center text-gray-500"
             target="__blank"
-            href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS}/${address}`}
+            href={`${getExplorerBaseUrl(appChainId)}/address/${address}`}
           >
             Your balances <MdOpenInNew className="inline" />
           </a>
@@ -447,7 +447,7 @@ function MintOrRedeem({
                     <a
                       className="text-sm font-medium text-gray-700 dark:text-gray-300"
                       target="__blank"
-                      href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS}/${psmAddress}`}
+                      href={`${getExplorerBaseUrl(appChainId)}/address/${psmAddress}`}
                     >
                       PSM Balance (max. redeemable) :{' '}
                       <Image

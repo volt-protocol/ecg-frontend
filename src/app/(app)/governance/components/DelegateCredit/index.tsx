@@ -25,7 +25,7 @@ import DefiInputBox from 'components/box/DefiInputBox';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { AlertMessage } from 'components/message/AlertMessage';
 import { useAppStore } from 'store';
-import { getPegTokenLogo, marketsConfig } from 'config';
+import { getPegTokenLogo, marketsConfig, getExplorerBaseUrl } from 'config';
 
 interface Delegatee {
   address: string;
@@ -218,7 +218,7 @@ function DelegateCredit({
         <a
           className="flex items-center gap-1 pl-3 text-center text-sm font-bold text-gray-600 hover:text-brand-500 dark:text-gray-200"
           target="__blank"
-          href={`${process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_ADDRESS}/${info.getValue()}`}
+          href={`${getExplorerBaseUrl(appChainId)}/address/${info.getValue()}`}
         >
           {info.getValue() == address ? 'Yourself' : info.getValue().slice(0, 4) + '...' + info.getValue().slice(-4)}{' '}
           <MdOpenInNew />

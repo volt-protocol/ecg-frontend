@@ -95,6 +95,7 @@ export const DebtCeiling = ({
       series.columns.template.setAll({
         width: am5.p100,
         strokeOpacity: 0.1,
+        opacity: 0.7,
         tooltipHTML: '<strong>{categoryX}</strong><br/>{name}<br/>{valueY} ' + pegTokenSymbol
       });
 

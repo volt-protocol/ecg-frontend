@@ -4,7 +4,7 @@ import { readContract } from '@wagmi/core';
 import { UseChainIdParameters, useReadContracts } from 'wagmi';
 import { useAppStore } from 'store';
 import { Abi, Address, formatUnits, erc20Abi } from 'viem';
-import { coinsList, getPegTokenLogo } from 'config';
+import { getPegTokenLogo } from 'config';
 import { ProfitManagerABI, GuildABI, CreditABI, TermABI } from 'lib/contracts';
 import { useEffect, useState } from 'react';
 import { getActiveLoanLogs, getCloseLoanLogs, getOpenLoanLogs } from 'lib/logs/loans';
@@ -179,7 +179,10 @@ const GlobalDashboard = () => {
             debtCeiling: Number(formatUnits(debtCeiling as bigint, 18)) * data?.creditMultiplier
           };
         })
-    );
+    ).then(function (data) {
+      console.log('getDebtCeilingData', data);
+      return data;
+    });
   };
 
   const getFirstLossCapital = async () => {

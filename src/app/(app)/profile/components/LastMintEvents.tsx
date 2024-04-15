@@ -134,7 +134,7 @@ export default function LastMintEvents({
       id: 'txHash',
       header: 'Transaction',
       enableSorting: true,
-      cell: (info) => <TransactionBadge txHash={info.getValue()} />
+      cell: (info) => <TransactionBadge txHash={info.getValue()} appChainId={appChainId} />
     })
   ];
 

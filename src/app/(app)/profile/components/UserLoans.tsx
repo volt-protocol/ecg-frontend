@@ -15,7 +15,7 @@ import { useAccount } from 'wagmi';
 import { Address } from 'viem';
 import { useAppStore } from 'store';
 import Image from 'next/image';
-import { getPegTokenLogo, marketsConfig } from 'config';
+import { getPegTokenLogo, marketsConfig, getExplorerBaseUrl } from 'config';
 import { getCreditTokenSymbol } from 'utils/strings';
 
 export default function UserLoan({ userAddress, data }: { userAddress: Address; data: any }) {
@@ -119,10 +119,7 @@ export default function UserLoan({ userAddress, data }: { userAddress: Address; 
       cell: (info) => {
         return (
           <div className="flex min-w-[150px] cursor-pointer items-center justify-center text-sm text-brand-500 hover:text-brand-400">
-            <a
-              href={process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_TX + '/' + info.row.original.txHashOpen}
-              target="_blank"
-            >
+            <a href={getExplorerBaseUrl(appChainId) + '/tx/' + info.row.original.txHashOpen} target="_blank">
               {moment.unix(Number(info.getValue())).format('YYYY-MM-DD HH:mm')}
             </a>
             <MdOpenInNew className="ml-1" />
@@ -142,10 +139,7 @@ export default function UserLoan({ userAddress, data }: { userAddress: Address; 
               'flex min-w-[150px] cursor-pointer items-center justify-center text-sm'
             )}
           >
-            <a
-              href={process.env.NEXT_PUBLIC_ETHERSCAN_BASE_URL_TX + '/' + info.row.original.txHashClose}
-              target="_blank"
-            >
+            <a href={getExplorerBaseUrl(appChainId) + '/tx/' + info.row.original.txHashClose} target="_blank">
               {info.getValue() != 0 ? moment.unix(Number(info.getValue())).format('YYYY-MM-DD HH:mm') : '-'}
             </a>
             {info.getValue() != 0 && <MdOpenInNew className="ml-1" />}

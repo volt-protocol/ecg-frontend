@@ -12,7 +12,6 @@ import { LendingTermFactoryABI } from 'lib/contracts';
 import { toastError } from 'components/toast';
 import { Step } from 'components/stepLoader/stepType';
 import { Address, encodeAbiParameters, parseEther } from 'viem';
-import { SECONDS_IN_YEAR } from 'utils/constants';
 import { MdCheckCircle, MdClose } from 'react-icons/md';
 import { formatNumberDecimal } from 'utils/numbers';
 import getToken from 'lib/getToken';
@@ -115,20 +114,20 @@ export default function Create() {
         maxDelayBetweenPartialRepay = 0;
         break;
       case 'Weekly':
-        minPartialRepayPercent = Math.round(Number(interestRate) / 52);
-        maxDelayBetweenPartialRepay = 7 * 24 * 3600;
+        minPartialRepayPercent = interestRate / BigInt(52);
+        maxDelayBetweenPartialRepay = BigInt(7 * 24 * 3600);
         break;
       case 'Monthly':
-        minPartialRepayPercent = Math.round(Number(interestRate) / 12);
-        maxDelayBetweenPartialRepay = SECONDS_IN_YEAR / 12;
+        minPartialRepayPercent = interestRate / BigInt(12);
+        maxDelayBetweenPartialRepay = BigInt(31557600) / BigInt(12);
         break;
       case 'Quarterly':
-        minPartialRepayPercent = Math.round(Number(interestRate) / 4);
-        maxDelayBetweenPartialRepay = SECONDS_IN_YEAR / 4;
+        minPartialRepayPercent = interestRate / BigInt(4);
+        maxDelayBetweenPartialRepay = BigInt(31557600) / BigInt(4);
         break;
       case 'Yearly':
         minPartialRepayPercent = interestRate;
-        maxDelayBetweenPartialRepay = SECONDS_IN_YEAR;
+        maxDelayBetweenPartialRepay = BigInt(31557600);
         break;
     }
 
@@ -222,11 +221,10 @@ export default function Create() {
             <label htmlFor="collateralToken" className="text-md block font-medium leading-6 sm:pt-1.5">
               Collateral Token
               {collateralToken && collateralToken.address ? (
-                  <MdCheckCircle className="ml-1 inline text-green-500" />
-              )
-: (
-                  <MdClose className="ml-1 inline text-red-500" />
-                )}
+                <MdCheckCircle className="ml-1 inline text-green-500" />
+              ) : (
+                <MdClose className="ml-1 inline text-red-500" />
+              )}
             </label>
             <div className="mt-2 sm:col-span-2 sm:mt-0">
               <div className="relative">
@@ -341,11 +339,11 @@ export default function Create() {
           </div>
           <ErrorMessage title={formState.errors.borrowRatio?.message} variant="error" />
           <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">
-          <TooltipHorizon
+            <TooltipHorizon
               extra=""
               trigger={
                 <label htmlFor="periodicPayments" className="text-md block font-medium leading-6 sm:pt-1.5">
-              Periodic Payments <BiInfoCircle className="ml-1 inline" />
+                  Periodic Payments <BiInfoCircle className="ml-1 inline" />
                 </label>
               }
               content={<p>If a borrower misses a periodic payment, their loan will be called.</p>}

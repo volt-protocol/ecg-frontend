@@ -118,72 +118,80 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
     });
 
     const activeVotes = await Promise.all(
-      logs.map(async (log) => {
-        //Get term name
-        const term = termsCreated.find(
-          (term) => term.termAddress.toLowerCase() === extractTermAddress(log.args.description).toLowerCase()
-        );
+      logs
+        .filter(function (log) {
+          // filter out proposals for terms that are in a different market
+          const term = termsCreated.find(
+            (term) => term?.termAddress.toLowerCase() === extractTermAddress(log.args.description).toLowerCase()
+          );
+          return term != undefined;
+        })
+        .map(async (log) => {
+          //Get term name
+          const term = termsCreated.find(
+            (term) => term?.termAddress.toLowerCase() === extractTermAddress(log.args.description).toLowerCase()
+          );
 
-        //Get votes for a given proposal id
-        const proposalVoteInfo = await readContracts(wagmiConfig, {
-          contracts: [
-            {
-              address: contractsList.onboardGovernorGuildAddress,
-              abi: OnboardGovernorGuildABI,
-              functionName: 'proposalVotes',
-              args: [log.args.proposalId],
-              chainId: appChainId as any
-            },
-            {
-              address: contractsList.onboardGovernorGuildAddress,
-              abi: OnboardGovernorGuildABI,
-              functionName: 'hasVoted',
-              args: [log.args.proposalId, address],
-              chainId: appChainId as any
-            },
-            {
-              address: contractsList.onboardGovernorGuildAddress,
-              abi: OnboardGovernorGuildABI,
-              functionName: 'quorum',
-              args: [Number(log.args.voteStart)],
-              chainId: appChainId as any
-            },
-            {
-              address: contractsList.onboardGovernorGuildAddress,
-              abi: OnboardGovernorGuildABI,
-              functionName: 'state',
-              args: [log.args.proposalId],
-              chainId: appChainId as any
-            },
-            {
-              address: contractsList.onboardGovernorGuildAddress,
-              abi: OnboardGovernorGuildABI,
-              functionName: 'proposalEta',
-              args: [log.args.proposalId],
-              chainId: appChainId as any
-            }
-          ]
-        });
+          //Get votes for a given proposal id
+          const proposalVoteInfo = await readContracts(wagmiConfig, {
+            contracts: [
+              {
+                address: contractsList.onboardGovernorGuildAddress,
+                abi: OnboardGovernorGuildABI,
+                functionName: 'proposalVotes',
+                args: [log.args.proposalId],
+                chainId: appChainId as any
+              },
+              {
+                address: contractsList.onboardGovernorGuildAddress,
+                abi: OnboardGovernorGuildABI,
+                functionName: 'hasVoted',
+                args: [log.args.proposalId, address],
+                chainId: appChainId as any
+              },
+              {
+                address: contractsList.onboardGovernorGuildAddress,
+                abi: OnboardGovernorGuildABI,
+                functionName: 'quorum',
+                args: [Number(log.args.voteStart)],
+                chainId: appChainId as any
+              },
+              {
+                address: contractsList.onboardGovernorGuildAddress,
+                abi: OnboardGovernorGuildABI,
+                functionName: 'state',
+                args: [log.args.proposalId],
+                chainId: appChainId as any
+              },
+              {
+                address: contractsList.onboardGovernorGuildAddress,
+                abi: OnboardGovernorGuildABI,
+                functionName: 'proposalEta',
+                args: [log.args.proposalId],
+                chainId: appChainId as any
+              }
+            ]
+          });
 
-        return {
-          termAddress: term.termAddress,
-          termName: term.termName,
-          collateralTokenSymbol: term.collateralTokenSymbol,
-          interestRate: term.interestRate,
-          borrowRatio: term.borrowRatio,
-          quorum: proposalVoteInfo[1].status == 'success' && formatUnits(proposalVoteInfo[2].result as bigint, 18),
-          proposalId: BigInt(log.args.proposalId),
-          proposer: log.args.proposer as Address,
-          votes: proposalVoteInfo[0].status == 'success' && proposalVoteInfo[0].result,
-          hasVoted: proposalVoteInfo[1].status == 'success' && proposalVoteInfo[1].result,
-          voteStart: Number(log.args.voteStart),
-          voteEnd: Number(log.args.voteEnd),
-          isActive: Number(currentBlockData) < Number(log.args.voteEnd),
-          proposalState: proposalVoteInfo[3].status == 'success' && proposalVoteInfo[3].result,
-          proposeArgs: [log.args.targets, log.args.values, log.args.calldatas, log.args.description],
-          queueEnd: Number(proposalVoteInfo[3].status == 'success' && proposalVoteInfo[4].result)
-        };
-      })
+          return {
+            termAddress: term.termAddress,
+            termName: term.termName,
+            collateralTokenSymbol: term.collateralTokenSymbol,
+            interestRate: term.interestRate,
+            borrowRatio: term.borrowRatio,
+            quorum: proposalVoteInfo[1].status == 'success' && formatUnits(proposalVoteInfo[2].result as bigint, 18),
+            proposalId: BigInt(log.args.proposalId),
+            proposer: log.args.proposer as Address,
+            votes: proposalVoteInfo[0].status == 'success' && proposalVoteInfo[0].result,
+            hasVoted: proposalVoteInfo[1].status == 'success' && proposalVoteInfo[1].result,
+            voteStart: Number(log.args.voteStart),
+            voteEnd: Number(log.args.voteEnd),
+            isActive: Number(currentBlockData) < Number(log.args.voteEnd),
+            proposalState: proposalVoteInfo[3].status == 'success' && proposalVoteInfo[3].result,
+            proposeArgs: [log.args.targets, log.args.values, log.args.calldatas, log.args.description],
+            queueEnd: Number(proposalVoteInfo[3].status == 'success' && proposalVoteInfo[4].result)
+          };
+        })
     );
 
     setLoading(false);

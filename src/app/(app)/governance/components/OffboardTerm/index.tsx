@@ -113,6 +113,11 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
             user: log.args.user as Address
           };
         })
+        .filter(function (log) {
+          const isMarketTerm =
+            lendingTerms.find((term) => term.address.toLowerCase() === log.term.toLowerCase()) != null;
+          return isMarketTerm;
+        })
         .reduce((acc, item) => {
           const existing = acc.find((i) => i.snapshotBlock === item.snapshotBlock && i.term === item.term);
           if (existing) {
@@ -318,7 +323,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
       header: 'Term',
       enableSorting: true,
       cell: (info) => {
-        const lendingTerm = lendingTerms.find((term) => term.address === info.getValue());
+        const lendingTerm = lendingTerms.find((term) => term.address.toLowerCase() === info.getValue().toLowerCase());
         return (
           <a
             className="flex items-center gap-1 whitespace-nowrap pl-2 text-center text-sm font-bold text-gray-600 hover:text-brand-500 dark:text-white"

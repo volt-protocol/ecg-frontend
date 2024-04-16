@@ -119,10 +119,14 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
 
           return {
             ...item,
-            termAddress: term.termAddress,
-            termName: term.termName,
+            termAddress: term?.termAddress,
+            termName: term?.termName,
             proposalId: proposalId
           };
+        })
+        .filter((item) => {
+          // filter out votes that are for terms in other markets
+          return item.termAddress != undefined;
         })
         .map(async (item) => {
           //get proposal votes

@@ -48,14 +48,14 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
   } = useReadContracts({
     contracts: [
       {
-        address: contractsList?.marketContracts[appMarketId].creditAddress,
+        address: contractsList?.marketContracts[appMarketId]?.creditAddress,
         abi: CreditABI,
         functionName: 'totalSupply',
         args: [],
         chainId: appChainId
       },
       {
-        address: contractsList?.marketContracts[appMarketId].profitManagerAddress,
+        address: contractsList?.marketContracts[appMarketId]?.profitManagerAddress,
         abi: ProfitManagerABI as Abi,
         functionName: 'creditMultiplier',
         chainId: appChainId
@@ -73,10 +73,10 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
   /* End Smart contract reads */
 
   const pegToken = coinDetails.find(
-    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
+    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
   const pegTokenSymbol = pegToken?.symbol;
-  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken?.price * 100)), 0);
 
   useEffect(() => {
     async function fetchDataForTerms() {
@@ -188,9 +188,9 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
       cell: (info: any) => {
         const collateralAddress = info.row.original.collateral.address.toLowerCase();
         const collateralToken = coinDetails.find((item) => item.address.toLowerCase() === collateralAddress);
-        const priceRatio = pegToken.price / (collateralToken.price || 1);
+        const priceRatio = pegToken?.price / (collateralToken.price || 1);
         const decimalsToDisplay = Math.max(Math.ceil(Math.log10(priceRatio * 100)), 0);
-        const ltv = (info.row.original.borrowRatio * pegToken.price) / (collateralToken.price || 1);
+        const ltv = (info.row.original.borrowRatio * pegToken?.price) / (collateralToken.price || 1);
 
         return (
           <div>
@@ -212,8 +212,8 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
                     <i>&nbsp;(DefiLlama)</i>
                   </p>
                   <p>
-                    Current {pegToken.symbol} price:{' $'}
-                    <span className="font-semibold">{pegToken.price}</span>
+                    Current {pegToken?.symbol} price:{' $'}
+                    <span className="font-semibold">{pegToken?.price}</span>
                     <i>&nbsp;(DefiLlama)</i>
                   </p>
                   <p>
@@ -228,7 +228,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
                     <br />
                     <i>
                       LTV detail : {formatDecimal(info.getValue() / contractData?.creditMultiplier, decimalsToDisplay)}{' '}
-                      * {pegToken.price || '?'} / {collateralToken.price || '?'} = {ltv ? formatDecimal(ltv, 3) : '?'}
+                      * {pegToken?.price || '?'} / {collateralToken.price || '?'} = {ltv ? formatDecimal(ltv, 3) : '?'}
                     </i>
                   </p>
                 </div>

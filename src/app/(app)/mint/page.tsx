@@ -34,17 +34,16 @@ function MintAndSaving() {
 
   const [steps, setSteps] = useState<Step[]>(createSteps());
 
-  const profitManagerAddress = contractsList?.marketContracts[appMarketId].profitManagerAddress;
-  const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
-  const pegTokenAddress = contractsList?.marketContracts[appMarketId].pegTokenAddress;
-  const psmAddress = contractsList?.marketContracts[appMarketId].psmAddress;
+  const profitManagerAddress = contractsList?.marketContracts[appMarketId]?.profitManagerAddress;
+  const creditAddress = contractsList?.marketContracts[appMarketId]?.creditAddress;
+  const pegTokenAddress = contractsList?.marketContracts[appMarketId]?.pegTokenAddress;
+  const psmAddress = contractsList?.marketContracts[appMarketId]?.psmAddress;
 
   const pegToken = coinDetails.find(
-    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
+    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
-  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = 'g' + pegToken?.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
-  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
 
   /* Smart contract reads */
   const { data, isError, isLoading, refetch } = useReadContracts({
@@ -242,9 +241,9 @@ function MintAndSaving() {
                   />{' '}
                   {creditTokenSymbol} then redeem them for{' '}
                   <Image className="inline-block" src={pegTokenLogo} width={20} height={20} alt="logo" />{' '}
-                  {pegToken.symbol} (leveraging up on collateral tokens and shorting{' '}
+                  {pegToken?.symbol} (leveraging up on collateral tokens and shorting{' '}
                   <Image className="inline-block" src={pegTokenLogo} width={20} height={20} alt="logo" />{' '}
-                  {pegToken.symbol}), as being a rebasing address (and delegating voting power to be able to veto) will
+                  {pegToken?.symbol}), as being a rebasing address (and delegating voting power to be able to veto) will
                   increase the gas cost of doing{' '}
                   <Image
                     className="inline-block"
@@ -269,7 +268,7 @@ function MintAndSaving() {
                   {creditTokenSymbol} tokens are not intended to be very liquid on-chain, they act as a receipt token
                   for lending in this ECG market, and can be redeemed in the PSM to inherit the liquidity of the peg
                   token, <Image className="inline-block" src={pegTokenLogo} width={20} height={20} alt="logo" />{' '}
-                  {pegToken.symbol}, when there is liquidity. Loans can be called to increase PSM liquidity.
+                  {pegToken?.symbol}, when there is liquidity. Loans can be called to increase PSM liquidity.
                 </p>
               </div>
             </div>

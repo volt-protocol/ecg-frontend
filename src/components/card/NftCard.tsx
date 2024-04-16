@@ -15,9 +15,7 @@ const NftCard = (props: {
   const { title, author, price, image, bidders, extra } = props;
   const [heart, setHeart] = useState(true);
   return (
-    <Card
-      extra={`flex flex-col w-full h-full !p-4 3xl:p-![18px] bg-white ${extra}`}
-    >
+    <Card extra={`flex flex-col w-full h-full !p-4 3xl:p-![18px] bg-white ${extra}`}>
       <div className="h-full w-full">
         <div className="relative w-full">
           {/* <Image 
@@ -39,24 +37,15 @@ const NftCard = (props: {
             className="absolute right-3 top-3 flex items-center justify-center rounded-full bg-white p-2 text-brand-500 hover:cursor-pointer"
           >
             <div className="flex h-full w-full items-center justify-center rounded-full text-xl hover:bg-gray-50 dark:text-navy-900">
-              {heart ? (
-                <IoHeartOutline />
-              ) : (
-                <IoHeart className="text-brand-500" />
-              )}
+              {heart ? <IoHeartOutline /> : <IoHeart className="text-brand-500" />}
             </div>
           </button>
         </div>
 
         <div className="mb-3 flex items-center justify-between px-1 md:flex-col md:items-start lg:flex-row lg:justify-between xl:flex-col xl:items-start 3xl:flex-row 3xl:justify-between">
           <div className="mb-2">
-            <p className="text-lg font-bold text-navy-700 dark:text-white">
-              {' '}
-              {title}{' '}
-            </p>
-            <p className="mt-1 text-sm font-medium text-gray-600 md:mt-2">
-              By {author}{' '}
-            </p>
+            <p className="text-lg font-bold text-navy-700 dark:text-white"> {title} </p>
+            <p className="mt-1 text-sm font-medium text-gray-600 md:mt-2">By {author} </p>
           </div>
 
           <div className="flex flex-row-reverse md:mt-2 lg:mt-0">
@@ -64,17 +53,8 @@ const NftCard = (props: {
               +5
             </span>
             {bidders.map((avt, key) => (
-              <span
-                key={key}
-                className="-mr-3 h-8 w-8 rounded-full border border-white dark:!border-navy-800"
-              >
-                <Image
-                  width="2"
-                  height="20"
-                  className="h-full w-full rounded-full object-cover"
-                  src={avt}
-                  alt=""
-                />
+              <span key={key} className="-mr-3 h-8 w-8 rounded-full border border-white dark:!border-navy-800">
+                <Image width="2" height="20" className="h-full w-full rounded-full object-cover" src={avt} alt="" />
               </span>
             ))}
           </div>

@@ -1,35 +1,35 @@
-import React, { Dispatch, SetStateAction, useEffect } from "react"
-import { Step } from "./stepType"
-import Spinner from "components/spinner"
-import { camelCasetoString } from "utils/strings"
+import React, { Dispatch, SetStateAction, useEffect } from 'react';
+import { Step } from './stepType';
+import Spinner from 'components/spinner';
+import { camelCasetoString } from 'utils/strings';
 
 function StepModal({
   steps,
   close,
   initialStep,
-  setSteps,
+  setSteps
 }: {
-  steps: Step[]
-  close: Dispatch<SetStateAction<boolean>>
-  initialStep?: () => Step[]
-  setSteps: Dispatch<SetStateAction<Step[]>>
+  steps: Step[];
+  close: Dispatch<SetStateAction<boolean>>;
+  initialStep?: () => Step[];
+  setSteps: Dispatch<SetStateAction<Step[]>>;
 }) {
-  const [showCloseButton, setShowCloseButton] = React.useState(false)
+  const [showCloseButton, setShowCloseButton] = React.useState(false);
 
   useEffect(() => {
-    const hasError = steps.some((step) => step.status.toLowerCase().includes("error"))
-    const allSuccess = steps.every((step) => step.status === "Success")
+    const hasError = steps.some((step) => step.status.toLowerCase().includes('error'));
+    const allSuccess = steps.every((step) => step.status === 'Success');
     if (hasError || allSuccess) {
-      setShowCloseButton(true)
+      setShowCloseButton(true);
     }
-  }, [steps])
+  }, [steps]);
 
   const handleClose = () => {
     if (showCloseButton) {
-      initialStep && setSteps(initialStep())
-      close(false)
+      initialStep && setSteps(initialStep());
+      close(false);
     }
-  }
+  };
 
   return (
     <div className="text-black fixed inset-0 z-[100] flex items-center justify-center bg-gray-500 bg-opacity-75 transition-opacity dark:bg-navy-900/90">
@@ -39,16 +39,16 @@ function StepModal({
         <div className="flex flex-col space-y-4">
           {steps.map((step, index) => (
             <div key={step.name} className="flex items-center">
-              {step.status === "In Progress" && <Spinner />}
+              {step.status === 'In Progress' && <Spinner />}
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-white ${
-                  step.status === "In Progress" ? "absolute" : ""
+                  step.status === 'In Progress' ? 'absolute' : ''
                 }  ${
-                  step.status.toLowerCase().includes("success")
-                    ? "border-brand-500 bg-brand-500"
-                    : step.status.toLowerCase().includes("error")
-                    ? "border-red-500 bg-red-500"
-                    : ""
+                  step.status.toLowerCase().includes('success')
+                    ? 'border-brand-500 bg-brand-500'
+                    : step.status.toLowerCase().includes('error')
+                    ? 'border-red-500 bg-red-500'
+                    : ''
                 }`}
               >
                 {index + 1}
@@ -61,12 +61,11 @@ function StepModal({
                   <ul>
                     {step.description &&
                       step.description.map((item, index) => (
-                        <li
-                          key={index}
-                          className="list-inside list-disc text-sm text-gray-500 dark:text-gray-300"
-                        >
-                          {item.functionName == "callExternal"
-                            ? camelCasetoString(item.functionName)+' -> '+ camelCasetoString(item.args[1].functionName)
+                        <li key={index} className="list-inside list-disc text-sm text-gray-500 dark:text-gray-300">
+                          {item.functionName == 'callExternal'
+                            ? camelCasetoString(item.functionName) +
+                              ' -> ' +
+                              camelCasetoString(item.args[1].functionName)
                             : camelCasetoString(item.functionName)}
                         </li>
                       ))}
@@ -89,7 +88,7 @@ function StepModal({
         )}
       </div>
     </div>
-  )
+  );
 }
 
-export default StepModal
+export default StepModal;

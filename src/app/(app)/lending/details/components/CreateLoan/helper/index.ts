@@ -1,6 +1,6 @@
-import { CurrencyTypes } from "components/switch/ToggleCredit"
-import { formatDecimal } from "utils/numbers"
-import { formatUnits } from "viem"
+import { CurrencyTypes } from 'components/switch/ToggleCredit';
+import { formatDecimal } from 'utils/numbers';
+import { formatUnits } from 'viem';
 
 export const getTitleDisabled = (
   collateralAmount: number,
@@ -12,22 +12,22 @@ export const getTitleDisabled = (
   withLeverage: boolean
 ): string => {
   if (!collateralAmount || collateralAmount <= 0) {
-    return "Enter collateral amount"
+    return 'Enter collateral amount';
   }
 
   if (collateralAmount > collateralBalance) {
-    return "Not enough collateral"
+    return 'Not enough collateral';
   }
 
   if (borrowAmount > maxDebt) {
-    return "Cannot exceed available debt"
+    return 'Cannot exceed available debt';
   }
 
   if (!withLeverage && borrowAmount > maxBorrow) {
-    return "Cannot exceed available borrowing power"
+    return 'Cannot exceed available borrowing power';
   }
 
   if (borrowAmount < minBorrow) {
-    return "Borrow minimum USDC amount"
+    return 'Borrow minimum USDC amount';
   }
-}
+};

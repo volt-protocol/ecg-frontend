@@ -1,13 +1,8 @@
-import { ReactJSXElement } from "@emotion/react/types/jsx-namespace"
-import Card from "components/card"
+import { ReactJSXElement } from '@emotion/react/types/jsx-namespace';
+import Card from 'components/card';
 
-const Widget = (props: {
-  icon: JSX.Element
-  title: string
-  subtitle: string | number
-  extra?: ReactJSXElement
-}) => {
-  const { icon, title, subtitle, extra } = props
+const Widget = (props: { icon: JSX.Element; title: string; subtitle: string | number; extra?: ReactJSXElement }) => {
+  const { icon, title, subtitle, extra } = props;
 
   return (
     <Card extra="!flex-row flex-grow items-center rounded-[20px] px-3 py-1 gap-2 h-[80px] ">
@@ -18,16 +13,14 @@ const Widget = (props: {
       </div>
 
       <div className="flex w-auto flex-col justify-center">
-        <p className="font-dm font-semilight text-sm text-gray-600 dark:text-gray-200">
-          {title}
-        </p>
+        <p className="font-dm font-semilight text-sm text-gray-600 dark:text-gray-200">{title}</p>
         <div className="flex flex-row items-center space-x-1">
           <h4 className="text-xl font-bold text-gray-700 dark:text-white">{subtitle}</h4>
           {extra}
         </div>
       </div>
     </Card>
-  )
-}
+  );
+};
 
-export default Widget
+export default Widget;

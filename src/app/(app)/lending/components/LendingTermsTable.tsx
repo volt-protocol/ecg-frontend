@@ -1,80 +1,91 @@
-"use client"
+'use client';
 
-import React, { useEffect } from "react"
-import Image from "next/image"
+import React, { useEffect } from 'react';
+import ImageWithFallback from 'components/image/ImageWithFallback';
 import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
   SortingState,
-  useReactTable,
-} from "@tanstack/react-table"
-import { toLocaleString } from "utils/numbers"
-import { secondsToAppropriateUnit } from "utils/date"
-import { LendingTerms } from "types/lending"
-import Progress from "components/progress"
-import { TooltipHorizon, QuestionMarkIcon } from "components/tooltip"
-import { CreditABI, GuildABI, ProfitManagerABI, TermABI } from "lib/contracts"
-import { readContracts } from "@wagmi/core"
-import { formatDecimal, formatNumberDecimal, formatCurrencyValue } from "utils/numbers"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { FaSort, FaSortDown, FaSortUp } from "react-icons/fa"
-import { Abi, formatUnits, Address } from "viem"
-import { useReadContracts } from "wagmi"
-import { wagmiConfig } from "contexts/Web3Provider"
-import { useAppStore } from "store"
+  useReactTable
+} from '@tanstack/react-table';
+import { toLocaleString } from 'utils/numbers';
+import { secondsToAppropriateUnit } from 'utils/date';
+import { LendingTerms } from 'types/lending';
+import Progress from 'components/progress';
+import { TooltipHorizon, QuestionMarkIcon } from 'components/tooltip';
+import { CreditABI, GuildABI, ProfitManagerABI, TermABI } from 'lib/contracts';
+import { readContracts } from '@wagmi/core';
+import { formatDecimal } from 'utils/numbers';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { FaSort, FaSortDown, FaSortUp } from 'react-icons/fa';
+import { Abi, formatUnits, Address } from 'viem';
+import { useReadContracts } from 'wagmi';
+import { wagmiConfig } from 'contexts/Web3Provider';
+import { useAppStore } from 'store';
+import { MdVisibility, MdVisibilityOff } from 'react-icons/md';
 
-export default function LendingTermsTable(props: { tableData: LendingTerms[] }) {
-  const { contractsList } = useAppStore()
-  const { tableData } = props
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const columnHelper = createColumnHelper<LendingTerms>()
-  const [data, setData] = React.useState<LendingTerms[]>([])
+export default function LendingTermsTable(props: { tableData: LendingTerms[]; showFilters?: boolean }) {
+  const { appChainId, appMarketId, contractsList, coinDetails } = useAppStore();
+  const { tableData } = props;
+  const [showNoDebtCeilingTerms, setShowNoDebtCeilingTerms] = React.useState<boolean>(false);
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const columnHelper = createColumnHelper<LendingTerms>();
+  const [data, setData] = React.useState<LendingTerms[]>([]);
+  const [filteredData, setFilteredData] = React.useState<LendingTerms[] | null>(null);
 
-  const router = useRouter()
+  const router = useRouter();
 
   useEffect(() => {
-    setData([...tableData])
-  }, [tableData])
+    setData([...tableData]);
+  }, [tableData]);
 
   /* Smart contract reads */
   const {
     data: contractData,
     isError,
     isLoading,
-    refetch,
+    refetch
   } = useReadContracts({
     contracts: [
       {
-        address: contractsList.creditAddress,
+        address: contractsList?.marketContracts[appMarketId]?.creditAddress,
         abi: CreditABI,
-        functionName: "totalSupply",
+        functionName: 'totalSupply',
         args: [],
+        chainId: appChainId
       },
       {
-        address: contractsList?.profitManagerAddress,
+        address: contractsList?.marketContracts[appMarketId]?.profitManagerAddress,
         abi: ProfitManagerABI as Abi,
-        functionName: "creditMultiplier",
-      },
+        functionName: 'creditMultiplier',
+        chainId: appChainId
+      }
     ],
     query: {
       select: (contractData) => {
         return {
           creditTotalSupply: Number(formatUnits(contractData[0].result as bigint, 18)),
-          creditMultiplier: Number(formatUnits(contractData[1].result as bigint, 18)),
-        }
-      },
-    },
-  })
+          creditMultiplier: Number(formatUnits(contractData[1].result as bigint, 18))
+        };
+      }
+    }
+  });
   /* End Smart contract reads */
+
+  const pegToken = coinDetails.find(
+    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
+  );
+  const pegTokenSymbol = pegToken?.symbol;
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken?.price * 100)), 0);
 
   useEffect(() => {
     async function fetchDataForTerms() {
       const enrichedTableData = await Promise.all(
         tableData.map(async (term) => {
-          const extraData = await getExtraTermData(term)
+          const extraData = await getExtraTermData(term);
           // Add these values to your term
           return {
             ...term,
@@ -82,14 +93,25 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
             totalWeight: Number(formatUnits(extraData[1].result, 18)),
             creditTotalSupply: contractData.creditTotalSupply,
             currentDebt: Number(formatUnits(extraData[2].result, 18)),
-            debtCeiling: Number(formatUnits(extraData[3].result, 18)),
-          }
+            debtCeiling: Number(formatUnits(extraData[3].result, 18))
+          };
         })
-      )
-      setData(enrichedTableData)
+      );
+      setData(enrichedTableData);
     }
-    tableData && contractData && fetchDataForTerms()
-  }, [tableData, contractData])
+    tableData && contractData && fetchDataForTerms();
+  }, [tableData, contractData]);
+
+  useEffect(() => {
+    setFilteredData(
+      (data || []).filter(function (term: any) {
+        if (showNoDebtCeilingTerms || !props.showFilters) {
+          return true;
+        }
+        return term.debtCeiling != 0;
+      })
+    );
+  }, [showNoDebtCeilingTerms, data]);
 
   async function getExtraTermData(term: LendingTerms): Promise<any> {
     const result = await readContracts(wagmiConfig, {
@@ -97,110 +119,92 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
         {
           address: contractsList.guildAddress,
           abi: GuildABI,
-          functionName: "getGaugeWeight",
+          functionName: 'getGaugeWeight',
           args: [term.address], // Assuming each term has a unique contractAddress
+          chainId: appChainId as any
         },
         {
           address: contractsList.guildAddress,
           abi: GuildABI,
-          functionName: "totalTypeWeight",
-          args: [1],
+          functionName: 'totalTypeWeight',
+          args: [appMarketId],
+          chainId: appChainId as any
         },
         {
           address: term.address as Address,
           abi: TermABI as Abi,
-          functionName: "issuance",
+          functionName: 'issuance',
+          chainId: appChainId as any
         },
         {
           address: term.address as Address,
           abi: TermABI as Abi,
-          functionName: "debtCeiling",
-        },
-      ],
-    })
+          functionName: 'debtCeiling',
+          chainId: appChainId as any
+        }
+      ]
+    });
 
-    return result
+    return result;
   }
 
   /* eslint-disable */
   const columns = [
-    columnHelper.accessor("collateral.symbol", {
-      id: "collateral",
+    columnHelper.accessor('collateral.symbol', {
+      id: 'collateral',
       enableSorting: true,
       header: () => (
         <div>
           <a href="#" className="group inline-flex">
-            <p className="text-center text-sm font-medium text-gray-500 dark:text-white">
-              Collateral Token
-            </p>
+            <p className="text-center text-sm font-medium text-gray-500 dark:text-white">Collateral Token</p>
           </a>
         </div>
       ),
       cell: (info: any) => (
         <div className="ml-3 flex items-center gap-2 text-center">
-          <Image
+          <ImageWithFallback
             src={info.row.original.collateral.logo}
+            fallbackSrc="/img/crypto-logos/unk.png"
             width={32}
             height={32}
-            alt={"logo"}
+            alt={'logo'}
           />
-          <p className="text-sm font-bold text-gray-700 dark:text-white">
-            {info.getValue()}
-          </p>
+          <p className="text-sm font-bold text-gray-700 dark:text-white">{info.getValue()}</p>
         </div>
-      ),
+      )
     }),
-    columnHelper.accessor("interestRate", {
-      id: "interestRate",
+    columnHelper.accessor('interestRate', {
+      id: 'interestRate',
       enableSorting: true,
       header: () => (
         <div>
           <a href="#" className="group inline-flex">
-            <p className="ml-3 text-center text-sm font-medium text-gray-500 dark:text-white">
-              Interest Rate
-            </p>
+            <p className="ml-3 text-center text-sm font-medium text-gray-500 dark:text-white">Interest Rate</p>
           </a>
         </div>
       ),
       cell: (info: any) => (
         <div className="ml-3 text-center">
-          <p className="text-sm font-bold text-gray-700 dark:text-white">
-            {(info.getValue() * 100).toFixed(2)}%
-          </p>
+          <p className="text-sm font-bold text-gray-700 dark:text-white">{(info.getValue() * 100).toFixed(2)}%</p>
         </div>
-      ),
+      )
     }),
-    columnHelper.accessor("borrowRatio", {
-      id: "borrowRatio",
+    columnHelper.accessor('borrowRatio', {
+      id: 'borrowRatio',
       enableSorting: true,
       header: () => (
         <div>
           <a href="#" className="group inline-flex">
-            <p className="ml-3 text-center text-sm font-medium text-gray-500 dark:text-white">
-              Borrow Ratio
-            </p>
+            <p className="ml-3 text-center text-sm font-medium text-gray-500 dark:text-white">Borrow Ratio</p>
           </a>
         </div>
-      ),
-      cell: (info: any) => (
-        <div className="ml-3 text-center">
-          <p className="text-sm font-bold text-gray-700 dark:text-white">
-            {toLocaleString(
-              formatDecimal(info.getValue() / contractData?.creditMultiplier, 2)
-            )}
-          </p>
-        </div>
-      ),
-    }),
-    {
-      id: "usage",
-      header: () => (
-        <p className="text-center text-sm font-medium text-gray-500 dark:text-white">
-          Utilization
-        </p>
       ),
       cell: (info: any) => {
-        const debtCeilling = info.row.original.debtCeiling
+        const collateralAddress = info.row.original.collateral.address.toLowerCase();
+        const collateralToken = coinDetails.find((item) => item.address.toLowerCase() === collateralAddress);
+        const priceRatio = pegToken?.price / (collateralToken.price || 1);
+        const decimalsToDisplay = Math.max(Math.ceil(Math.log10(priceRatio * 100)), 0);
+        const ltv = (info.row.original.borrowRatio * pegToken?.price) / (collateralToken.price || 1);
 
         return (
           <div>
@@ -209,28 +213,95 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
               content={
                 <div className="text-gray-700 dark:text-white">
                   <p>
-                    Debt Ceiling:{" "}
+                    LTV (Loan-to-Value):{' '}
                     <span className="font-semibold">
-                      {formatCurrencyValue(debtCeilling)}
+                      {collateralToken.price ? formatDecimal(100 * ltv, 1) : '-.--'}
+                      {'%'}
                     </span>
                   </p>
                   <p>
-                    Current Debt:{" "}
-                    <span className="font-semibold">
-                      {" "}
-                      {formatCurrencyValue(info.row.original.currentDebt)}
-                    </span>
+                    <br />
+                    Current {collateralToken.symbol} price:{' $'}
+                    <span className="font-semibold">{collateralToken.price}</span>
+                    <i>&nbsp;(DefiLlama)</i>
                   </p>
                   <p>
-                    Available Debt:{" "}
+                    Current {pegToken?.symbol} price:{' $'}
+                    <span className="font-semibold">{pegToken?.price}</span>
+                    <i>&nbsp;(DefiLlama)</i>
+                  </p>
+                  <p>
+                    <br />
+                    <i>
+                      Price info & LTV provided on this front-end for information only.
+                      <br />
+                      The set of lending terms and liquidation thresholds are not based
+                      <br />
+                      on real-time price feeds in the Ethereum Credit Guild.
+                    </i>
+                    <br />
+                    <i>
+                      LTV detail : {formatDecimal(info.getValue() / contractData?.creditMultiplier, decimalsToDisplay)}{' '}
+                      * {pegToken?.price || '?'} / {collateralToken.price || '?'} = {ltv ? formatDecimal(ltv, 3) : '?'}
+                    </i>
+                  </p>
+                </div>
+              }
+              trigger={
+                <div className="ml-3 text-center">
+                  <p className="text-sm font-bold text-gray-700 dark:text-white">
+                    {formatDecimal(info.getValue() / contractData?.creditMultiplier, decimalsToDisplay)}
+                  </p>
+                </div>
+              }
+              placement="top"
+            />
+          </div>
+        );
+      }
+    }),
+    {
+      id: 'usage',
+      header: () => <p className="text-center text-sm font-medium text-gray-500 dark:text-white">Utilization</p>,
+      cell: (info: any) => {
+        const debtCeilling = info.row.original.debtCeiling;
+
+        return (
+          <div>
+            <TooltipHorizon
+              extra=""
+              content={
+                <div className="text-gray-700 dark:text-white">
+                  <p>
+                    Debt Ceiling:{' '}
                     <span className="font-semibold">
-                      {" "}
-                      {formatCurrencyValue(
-                        debtCeilling - info.row.original.currentDebt > 0
-                          ? debtCeilling - info.row.original.currentDebt
-                          : 0
+                      {formatDecimal(debtCeilling * contractData?.creditMultiplier, pegTokenDecimalsToDisplay)}
+                    </span>{' '}
+                    <span className="text-sm font-medium text-gray-600 dark:text-white">{pegTokenSymbol}</span>
+                  </p>
+                  <p>
+                    Current Debt:{' '}
+                    <span className="font-semibold">
+                      {' '}
+                      {formatDecimal(
+                        info.row.original.currentDebt * contractData?.creditMultiplier,
+                        pegTokenDecimalsToDisplay
                       )}
-                    </span>
+                    </span>{' '}
+                    <span className="text-sm font-medium text-gray-600 dark:text-white">{pegTokenSymbol}</span>
+                  </p>
+                  <p>
+                    Available Debt:{' '}
+                    <span className="font-semibold">
+                      {' '}
+                      {formatDecimal(
+                        debtCeilling - info.row.original.currentDebt > 0
+                          ? (debtCeilling - info.row.original.currentDebt) * contractData?.creditMultiplier
+                          : 0,
+                        pegTokenDecimalsToDisplay
+                      )}
+                    </span>{' '}
+                    <span className="text-sm font-medium text-gray-600 dark:text-white">{pegTokenSymbol}</span>
                   </p>
                 </div>
               }
@@ -246,6 +317,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
                           : (info.row.original.currentDebt / debtCeilling) * 100
                         : 0
                     }
+                    max={debtCeilling}
                   />
                   <div className="ml-1">
                     <QuestionMarkIcon />
@@ -255,92 +327,81 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
               placement="top"
             />
           </div>
-        )
-      },
+        );
+      }
     },
 
-    columnHelper.accessor("currentDebt", {
-      id: "currentDebt",
+    columnHelper.accessor('currentDebt', {
+      id: 'currentDebt',
       enableSorting: true,
       header: () => (
         <div className="text-center">
           <a href="#" className="group inline-flex">
-            <p className="ml-8 text-center text-sm font-medium text-gray-500 dark:text-white">
-              Current Debt
-            </p>
+            <p className="ml-8 text-center text-sm font-medium text-gray-500 dark:text-white">Current Debt</p>
           </a>
         </div>
       ),
       cell: (info) => (
         <div className="flex items-center justify-center gap-1">
           <p className="ml-3 text-center text-sm font-bold text-gray-600 dark:text-white">
-            {toLocaleString(formatDecimal(info.getValue(), 2))}
+            {formatDecimal(info.getValue() * contractData?.creditMultiplier, pegTokenDecimalsToDisplay)}
           </p>
-          <span className="text-sm font-medium text-gray-600 dark:text-white">gUSDC</span>
+          <span className="text-sm font-medium text-gray-600 dark:text-white">{pegTokenSymbol}</span>
         </div>
-      ),
+      )
     }),
 
-    columnHelper.accessor("openingFee", {
-      id: "openingFee",
+    columnHelper.accessor('openingFee', {
+      id: 'openingFee',
       enableSorting: true,
       header: () => (
         <div className="text-center">
           <a href="#" className="group inline-flex">
-            <p className="ml-8 text-center text-sm font-medium text-gray-500 dark:text-white">
-              Opening Fee
-            </p>
+            <p className="ml-8 text-center text-sm font-medium text-gray-500 dark:text-white">Opening Fee</p>
           </a>
         </div>
       ),
       cell: (info) => (
         <p className="ml-3 text-center text-sm font-bold text-gray-600 dark:text-white">
-          {formatNumberDecimal(info.getValue() * 100)}%
+          {formatDecimal(info.getValue() * 100, 2)}%
         </p>
-      ),
+      )
     }),
 
-    columnHelper.accessor("maxDelayBetweenPartialRepay", {
-      id: "maxDelayBetweenPartialRepay",
+    columnHelper.accessor('maxDelayBetweenPartialRepay', {
+      id: 'maxDelayBetweenPartialRepay',
       enableSorting: true,
       header: () => (
         <div className="text-center">
           <a href="#" className="group inline-flex">
-            <p className="ml-8 text-center text-sm font-medium text-gray-500 dark:text-white">
-              Periodic Payments
-            </p>
+            <p className="ml-8 text-center text-sm font-medium text-gray-500 dark:text-white">Periodic Payments</p>
           </a>
         </div>
       ),
       cell: (info) => (
-        <p className="ml-3 text-center text-sm font-bold text-gray-600 dark:text-white">
+        <div className="ml-3 text-center text-sm font-bold text-gray-600 dark:text-white">
           {info.getValue() != 0 ? (
             <div className="flex items-center justify-center gap-1">
-              Yes{" "}
+              Yes{' '}
               <TooltipHorizon
                 extra=""
                 content={
                   <div className="text-gray-700 dark:text-white">
                     <p>
-                      Periodic Payment minimum size :{" "}
+                      Periodic Payment minimum size :{' '}
                       <span className="font-semibold">
                         {formatDecimal(info.row.original.minPartialRepayPercent, 4)}%
                       </span>
                     </p>
                     <p>
-                      Periodic Payment maximum interval :{" "}
+                      Periodic Payment maximum interval :{' '}
                       <span className="font-semibold">
-                        {secondsToAppropriateUnit(
-                          info.row.original.maxDelayBetweenPartialRepay
-                        )}
+                        {secondsToAppropriateUnit(info.row.original.maxDelayBetweenPartialRepay)}
                       </span>
                     </p>
                     <p>
                       <br />
-                      <i>
-                        As a borrower, if you miss Periodic Payments, your loan will be
-                        called.
-                      </i>
+                      <i>As a borrower, if you miss Periodic Payments, your loan will be called.</i>
                     </p>
                   </div>
                 }
@@ -353,17 +414,17 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
               />
             </div>
           ) : (
-            "No"
+            'No'
           )}
-        </p>
-      ),
+        </div>
+      )
     }),
     {
-      id: "action",
+      id: 'action',
       header: () => <></>,
       enableSorting: false,
       cell: (info) => (
-        <p className="text-center font-medium text-gray-600 dark:text-white">
+        <div className="text-center font-medium text-gray-600 dark:text-white">
           <Link href={`/lending/details?term=${info.row.original.address}`}>
             <button
               type="button"
@@ -372,26 +433,49 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
               Details
             </button>
           </Link>
-        </p>
-      ),
-    },
-  ]
+        </div>
+      )
+    }
+  ];
   /* eslint-enable */
 
   const table = useReactTable({
-    data,
+    data: filteredData || data,
     columns,
     state: {
-      sorting,
+      sorting
     },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    debugTable: true,
-  })
+    debugTable: true
+  });
 
   return (
     <div className="mt-4 overflow-auto">
+      {props.showFilters ? (
+        <div style={{ position: 'absolute', right: '1em', top: '1em' }}>
+          {showNoDebtCeilingTerms ? (
+            <button
+              onClick={() => setShowNoDebtCeilingTerms(false)}
+              type="button"
+              className="mr-2 inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm text-stone-600 shadow-sm transition-all duration-150 ease-in-out hover:bg-brand-100/30 hover:text-stone-800 dark:bg-navy-700 dark:text-stone-200 dark:hover:bg-navy-600"
+            >
+              <span className="hidden lg:block">Show terms with 0 Debt Ceiling</span>
+              <MdVisibility className="-ml-0.5 h-5 w-5" aria-hidden="true" />
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowNoDebtCeilingTerms(true)}
+              type="button"
+              className="mr-2 inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm text-stone-600 shadow-sm transition-all duration-150 ease-in-out hover:bg-brand-100/30 hover:text-stone-800 dark:bg-navy-700 dark:text-stone-200 dark:hover:bg-navy-600"
+            >
+              <span className="hidden lg:block">Hide terms with 0 Debt Ceiling</span>
+              <MdVisibilityOff className="-ml-0.5 h-5 w-5" aria-hidden="true" />
+            </button>
+          )}
+        </div>
+      ) : null}
       <table className="w-full">
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -411,13 +495,13 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
                           {{
                             asc: <FaSortDown />,
                             desc: <FaSortUp />,
-                            null: <FaSort />,
+                            null: <FaSort />
                           }[header.column.getIsSorted() as string] ?? <FaSort />}
                         </span>
                       )}
                     </div>
                   </th>
-                )
+                );
               })}
             </tr>
           ))}
@@ -429,32 +513,26 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
             .map((row) => {
               return (
                 <tr
-                  onClick={() =>
-                    router.push(`/lending/details?term=${row.original.address}`)
-                  }
+                  onClick={() => router.push(`/lending/details?term=${row.original.address}`)}
                   key={row.id}
                   className="border-b border-gray-100 transition-all duration-200 ease-in-out last:border-none hover:cursor-pointer hover:bg-stone-100/80 dark:border-gray-500 dark:hover:bg-navy-700"
                 >
                   {row.getVisibleCells().map((cell) => {
                     return (
-                      <td
-                        key={cell.id}
-                        className="relative min-w-[150px] border-white/0 py-5"
-                      >
-                        {cell.column.id != "usage" &&
-                        cell.column.id != "maxDelayBetweenPartialRepay" ? (
+                      <td key={cell.id} className="relative min-w-[150px] border-white/0 py-5">
+                        {cell.column.id != 'usage' && cell.column.id != 'maxDelayBetweenPartialRepay' ? (
                           <>{flexRender(cell.column.columnDef.cell, cell.getContext())}</>
                         ) : (
                           flexRender(cell.column.columnDef.cell, cell.getContext())
                         )}
                       </td>
-                    )
+                    );
                   })}
                 </tr>
-              )
+              );
             })}
         </tbody>
       </table>
     </div>
-  )
+  );
 }

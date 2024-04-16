@@ -1,17 +1,12 @@
-import Image from "next/image"
-import notConnectedImage from "/public/img/not-connected.png"
-import { ConnectWeb3Button } from "components/button/ConnectWeb3Button"
+import Image from 'next/image';
+import notConnectedImage from '/public/img/not-connected.png';
+import { ConnectWeb3Button } from 'components/button/ConnectWeb3Button';
 
 export default function Disconnected() {
   return (
     <>
       <main className="flex min-h-full flex-col items-center justify-center rounded-md bg-white px-6 py-24 dark:bg-navy-800 sm:py-32 lg:px-8">
-        <Image
-          src={notConnectedImage}
-          alt="Wallet not connected"
-          width={200}
-          height={200}
-        />
+        <Image src={notConnectedImage} alt="Wallet not connected" width={200} height={200} />
         <h1 className="mt-4 text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
           Please, connect your wallet
         </h1>
@@ -28,5 +23,5 @@ export default function Disconnected() {
         </div>
       </main>
     </>
-  )
+  );
 }

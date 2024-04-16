@@ -1,16 +1,16 @@
-"use client"
-import { useState } from "react"
-import DefiInputBox from "components/box/DefiInputBox"
-import ButtonPrimary from "components/button/ButtonPrimary"
-import { MdArrowDownward } from "react-icons/md"
-import { RangeSlider } from "components/rangeSlider/RangeSlider"
+'use client';
+import { useState } from 'react';
+import DefiInputBox from 'components/box/DefiInputBox';
+import ButtonPrimary from 'components/button/ButtonPrimary';
+import { MdArrowDownward } from 'react-icons/md';
+import { RangeSlider } from 'components/rangeSlider/RangeSlider';
 
 export default function CreatePosition({}: {}) {
-  const [payValue, setPayValue] = useState<string>("")
-  const [longValue, setLongValue] = useState<string>("")
-  const [withLeverage, setWithLeverage] = useState<boolean>(false)
-  const [leverageValue, setLeverageValue] = useState<number>(0)
-  const [slippageValue, setSlippageValue] = useState<number>(0)
+  const [payValue, setPayValue] = useState<string>('');
+  const [longValue, setLongValue] = useState<string>('');
+  const [withLeverage, setWithLeverage] = useState<boolean>(false);
+  const [leverageValue, setLeverageValue] = useState<number>(0);
+  const [slippageValue, setSlippageValue] = useState<number>(0);
 
   return (
     <div className="flex flex-col gap-4">
@@ -85,7 +85,7 @@ export default function CreatePosition({}: {}) {
             onChange={(value) => setSlippageValue(value)}
           />
         </div>
-        <div className="my-4 w-full px-5 border-t border-gray-200/80" />
+        <div className="my-4 w-full border-t border-gray-200/80 px-5" />
         <div className="px-5">
           <div className="flex justify-between">
             <dt className="text-sm font-medium leading-6 text-gray-700 dark:text-gray-300">Leverage</dt>
@@ -127,5 +127,5 @@ export default function CreatePosition({}: {}) {
         // }
       />
     </div>
-  )
+  );
 }

@@ -1,65 +1,28 @@
-"use client"
+'use client';
 
-import React, { useEffect, useState } from "react"
-import { useAccount, useReadContracts } from "wagmi"
-import Card from "components/card"
-import AuctionsTable from "./components/AuctionsTable"
-import { MdOpenInNew, MdOutlineBalance } from "react-icons/md"
-import { Auction, getAllAuctions } from "lib/logs/auctions"
-import Spinner from "components/spinner"
-import ModalAuctionChart from "./components/ModalAuctionChart"
-import { AuctionHouseABI } from "lib/contracts"
-import { useAppStore } from "store"
+import React, { useEffect, useState } from 'react';
+import { useAccount, useReadContracts } from 'wagmi';
+import Card from 'components/card';
+import AuctionsTable from './components/AuctionsTable';
+import { MdOpenInNew, MdOutlineBalance } from 'react-icons/md';
+import Spinner from 'components/spinner';
+import ModalAuctionChart from './components/ModalAuctionChart';
+import { Auction } from '../../../store/slices/auctions';
+import { useAppStore } from 'store';
 
 const Auctions = () => {
-  const { contractsList, coinDetails } = useAppStore()
-  const [auctions, setAuctions] = useState<Auction[]>([])
-  const [loading, setLoading] = useState(false)
-  const [open, setOpen] = useState<boolean>(false)
-  const [reload, setReload] = useState<boolean>(true)
-
-  const { data, isError, isLoading } = useReadContracts({
-    contracts: [
-      {
-        address: contractsList?.auctionHouseAddress,
-        abi: AuctionHouseABI,
-        functionName: "auctionDuration",
-      },
-      {
-        address: contractsList?.auctionHouseAddress,
-        abi: AuctionHouseABI,
-        functionName: "midPoint",
-      },
-    ],
-    query: {
-      select: (data) => {
-        return {
-          auctionDuration: Number(data[0].result),
-          midPoint: Number(data[1].result),
-        }
-      },
-    },
-  })
+  const { auctionHouses, auctions } = useAppStore();
+  const [loading, setLoading] = useState(false);
+  const [openAuction, setOpenAuction] = useState<Auction | null>(null);
+  const [reload, setReload] = useState<boolean>(true);
 
   useEffect(() => {
-    const getAuctions = async () => {
-      setLoading(true)
-      const auctions = await getAllAuctions(contractsList, coinDetails)
-      setAuctions(auctions)
-      setLoading(false)
-      setReload(false)
-    }
-    reload && contractsList && getAuctions()
-  }, [reload, contractsList])
+    setReload(false);
+  }, [reload]);
 
   return (
     <>
-      <ModalAuctionChart
-        setOpen={setOpen}
-        isOpen={open}
-        midpoint={data?.midPoint}
-        auctionDuration={data?.auctionDuration}
-      />
+      <ModalAuctionChart setOpenAuction={setOpenAuction} openAuction={openAuction} auctionHouses={auctionHouses} />
       <div>
         <div className="mt-3">
           <Card
@@ -90,9 +53,9 @@ const Auctions = () => {
               </div>
             ) : (
               <AuctionsTable
-                tableData={auctions}
-                setOpen={setOpen}
-                auctionDuration={data?.auctionDuration}
+                setOpenAuction={setOpenAuction}
+                auctions={auctions}
+                auctionHouses={auctionHouses}
                 setReload={setReload}
               />
             )}
@@ -100,7 +63,7 @@ const Auctions = () => {
         </div>
       </div>
     </>
-  )
-}
+  );
+};
 
-export default Auctions
+export default Auctions;

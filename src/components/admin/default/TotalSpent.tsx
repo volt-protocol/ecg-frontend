@@ -1,14 +1,7 @@
-import {
-  MdArrowDropUp,
-  MdOutlineCalendarToday,
-  MdBarChart,
-} from "react-icons/md";
-import Card from "components/card";
-import {
-  lineChartDataTotalSpent,
-  lineChartOptionsTotalSpent,
-} from "variables/charts";
-import LineChart from "components/charts/LineChart";
+import { MdArrowDropUp, MdOutlineCalendarToday, MdBarChart } from 'react-icons/md';
+import Card from 'components/card';
+import { lineChartDataTotalSpent, lineChartOptionsTotalSpent } from 'variables/charts';
+import LineChart from 'components/charts/LineChart';
 
 const TotalSpent = () => {
   return (
@@ -25,9 +18,7 @@ const TotalSpent = () => {
 
       <div className="flex h-full w-full flex-row justify-between sm:flex-wrap lg:flex-nowrap 2xl:overflow-hidden">
         <div className="flex flex-col">
-          <p className="mt-[20px] text-3xl font-bold text-navy-700 dark:text-white">
-            $37.5K
-          </p>
+          <p className="mt-[20px] text-3xl font-bold text-navy-700 dark:text-white">$37.5K</p>
           <div className="flex flex-col items-start">
             <p className="mt-2 text-sm text-gray-600">Total Spent</p>
             <div className="flex flex-row items-center justify-center">
@@ -37,10 +28,7 @@ const TotalSpent = () => {
           </div>
         </div>
         <div className="h-full w-full">
-          <LineChart
-            chartOptions={lineChartOptionsTotalSpent}
-            chartData={lineChartDataTotalSpent}
-          />
+          <LineChart chartOptions={lineChartOptionsTotalSpent} chartData={lineChartDataTotalSpent} />
         </div>
       </div>
     </Card>

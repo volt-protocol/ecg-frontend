@@ -1,26 +1,30 @@
-"use client"
-import Disconnected from "components/error/disconnected"
-import React, { useEffect } from "react"
-import Card from "components/card"
-import { GuildABI, CreditABI } from "lib/contracts"
-import { useAccount, useReadContracts } from "wagmi"
-import DelegateGuild from "./components/DelegateGuild"
-import DelegateCredit from "./components/DelegateCredit"
-import OffboardTerm from "./components/OffboardTerm"
-import OnboardNewterm from "./components/OnboardNewTerm"
-import { useAppStore } from "store"
-import Spinner from "components/spinner"
+'use client';
+import Disconnected from 'components/error/disconnected';
+import React, { useEffect } from 'react';
+import Card from 'components/card';
+import { GuildABI, CreditABI } from 'lib/contracts';
+import { useAccount, useReadContracts } from 'wagmi';
+import DelegateGuild from './components/DelegateGuild';
+import DelegateCredit from './components/DelegateCredit';
+import OffboardTerm from './components/OffboardTerm';
+import OnboardNewterm from './components/OnboardNewTerm';
+import { useAppStore } from 'store';
+import Spinner from 'components/spinner';
 
 export type Delegatee = {
-  address: string
-  votes: number
-}
+  address: string;
+  votes: number;
+};
 
 function Governance() {
-  const { contractsList } = useAppStore()
-  const { address, isConnected, isDisconnected } = useAccount()
-  const [reloadGuild, setReloadGuild] = React.useState<boolean>(false)
-  const [reloadCredit, setReloadCredit] = React.useState<boolean>(false)
+  const { appChainId, appMarketId, contractsList, coinDetails } = useAppStore();
+  const { address, isConnected, isDisconnected } = useAccount();
+  const [reloadGuild, setReloadGuild] = React.useState<boolean>(false);
+  const [reloadCredit, setReloadCredit] = React.useState<boolean>(false);
+  const pegToken = coinDetails.find(
+    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
+  );
+  const creditTokenSymbol = 'g' + pegToken?.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
 
   //TODO:  optimize contracts call with useReadContracts
   const { data, isError, isLoading, refetch } = useReadContracts({
@@ -28,43 +32,50 @@ function Governance() {
       {
         address: contractsList.guildAddress,
         abi: GuildABI,
-        functionName: "balanceOf",
+        functionName: 'balanceOf',
         args: [address],
+        chainId: appChainId
       },
       {
         address: contractsList.guildAddress,
         abi: GuildABI,
-        functionName: "freeVotes",
+        functionName: 'freeVotes',
         args: [address],
+        chainId: appChainId
       },
       {
         address: contractsList.guildAddress,
         abi: GuildABI,
-        functionName: "getVotes",
+        functionName: 'getVotes',
         args: [address],
+        chainId: appChainId
       },
       {
-        address: contractsList.creditAddress,
+        address: contractsList.marketContracts[appMarketId]?.creditAddress,
         abi: CreditABI,
-        functionName: "balanceOf",
+        functionName: 'balanceOf',
         args: [address],
+        chainId: appChainId
       },
       {
-        address: contractsList.creditAddress,
+        address: contractsList.marketContracts[appMarketId]?.creditAddress,
         abi: CreditABI,
-        functionName: "freeVotes",
+        functionName: 'freeVotes',
         args: [address],
+        chainId: appChainId
       },
       {
-        address: contractsList.creditAddress,
+        address: contractsList.marketContracts[appMarketId]?.creditAddress,
         abi: CreditABI,
-        functionName: "getVotes",
+        functionName: 'getVotes',
         args: [address],
+        chainId: appChainId
       },
       {
-        address: contractsList.creditAddress,
+        address: contractsList.marketContracts[appMarketId]?.creditAddress,
         abi: CreditABI,
-        functionName: "delegateLockupPeriod",
+        functionName: 'delegateLockupPeriod',
+        chainId: appChainId
       }
     ],
     query: {
@@ -77,37 +88,36 @@ function Governance() {
           creditNotUsed: data[4].result as bigint,
           creditVotingWeight: data[5].result as bigint,
           delegateLockupPeriod: data[6].result as bigint
-        }
-      },
-    },
-  })
+        };
+      }
+    }
+  });
   // TODO : listen to event to update guild and credit values
 
   useEffect(() => {
     if (isConnected && (reloadGuild || reloadCredit)) {
-      refetch()
-      setReloadGuild(false)
-      setReloadCredit(false)
+      refetch();
+      setReloadGuild(false);
+      setReloadCredit(false);
     }
-  }, [isConnected, reloadGuild, reloadCredit])
+  }, [isConnected, reloadGuild, reloadCredit]);
 
-  if (!isConnected) {
-    return <Disconnected />
+  if (!contractsList?.marketContracts[appMarketId]) {
+    return <Spinner />;
   }
 
-  if (isLoading) return <Spinner />
+  if (!isConnected) {
+    return <Disconnected />;
+  }
+
+  if (isLoading) return <Spinner />;
 
   if (data) {
     return (
       <div>
-        <h3 className="mb-4 ml-8 mt-6 text-xl font-semibold text-gray-700 dark:text-white">
-          Delegate
-        </h3>
+        <h3 className="mb-4 ml-8 mt-6 text-xl font-semibold text-gray-700 dark:text-white">Delegate</h3>
         <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-2">
-          <Card
-            title="Delegate GUILD"
-            extra="w-full h-full sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
-          >
+          <Card title="Delegate GUILD" extra="w-full h-full sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
             <DelegateGuild
               reloadGuild={setReloadGuild}
               guildBalance={data?.guildBalance}
@@ -118,7 +128,7 @@ function Governance() {
             />
           </Card>
           <Card
-            title="Delegate gUSDC"
+            title={`Delegate ${creditTokenSymbol}`}
             extra="w-full h-full sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
           >
             <DelegateCredit
@@ -129,32 +139,22 @@ function Governance() {
               userAddress={address}
               isConnected={isConnected}
               delegateLockupPeriod={data?.delegateLockupPeriod}
+              creditTokenSymbol={creditTokenSymbol}
             />
           </Card>
         </div>
-        <h3 className="mb-4 ml-8 mt-6 text-xl font-semibold text-gray-700 dark:text-white">
-          Participate
-        </h3>
+        <h3 className="mb-4 ml-8 mt-6 text-xl font-semibold text-gray-700 dark:text-white">Participate</h3>
         <div className="mb-40 mt-3 grid grid-cols-1 gap-5 md:grid-cols-2">
-          <Card
-            title="Onboard Active Term"
-            extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
-          >
-            <OnboardNewterm
-              guildVotingWeight={data?.guildVotingWeight}
-              creditVotingWeight={data?.creditVotingWeight}
-            />
+          <Card title="Onboard Active Term" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
+            <OnboardNewterm guildVotingWeight={data?.guildVotingWeight} creditVotingWeight={data?.creditVotingWeight} />
           </Card>
-          <Card
-            title="Offboard Active Term"
-            extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
-          >
+          <Card title="Offboard Active Term" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
             <OffboardTerm guildVotingWeight={data?.guildVotingWeight} />
           </Card>
         </div>
       </div>
-    )
+    );
   }
 }
 
-export default Governance
+export default Governance;

@@ -1,8 +1,16 @@
 [
   {
     "inputs": [
-      { "internalType": "address", "name": "_core", "type": "address" },
-      { "internalType": "address", "name": "_guildToken", "type": "address" }
+      {
+        "internalType": "address",
+        "name": "_core",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_guildToken",
+        "type": "address"
+      }
     ],
     "stateMutability": "nonpayable",
     "type": "constructor"
@@ -10,14 +18,24 @@
   {
     "anonymous": false,
     "inputs": [
-      { "indexed": true, "internalType": "uint256", "name": "when", "type": "uint256" },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "when",
+        "type": "uint256"
+      },
       {
         "indexed": true,
         "internalType": "address",
         "name": "auctionHouses",
         "type": "address"
       },
-      { "indexed": false, "internalType": "bool", "name": "allowed", "type": "bool" }
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "allowed",
+        "type": "bool"
+      }
     ],
     "name": "AuctionHouseAllowChanged",
     "type": "event"
@@ -31,7 +49,12 @@
         "name": "oldCore",
         "type": "address"
       },
-      { "indexed": true, "internalType": "address", "name": "newCore", "type": "address" }
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newCore",
+        "type": "address"
+      }
     ],
     "name": "CoreUpdate",
     "type": "event"
@@ -39,14 +62,24 @@
   {
     "anonymous": false,
     "inputs": [
-      { "indexed": true, "internalType": "uint256", "name": "when", "type": "uint256" },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "when",
+        "type": "uint256"
+      },
       {
         "indexed": true,
         "internalType": "address",
         "name": "implementation",
         "type": "address"
       },
-      { "indexed": false, "internalType": "bool", "name": "allowed", "type": "bool" }
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "allowed",
+        "type": "bool"
+      }
     ],
     "name": "ImplementationAllowChanged",
     "type": "event"
@@ -67,40 +100,29 @@
   {
     "anonymous": false,
     "inputs": [
-      { "indexed": true, "internalType": "uint256", "name": "when", "type": "uint256" },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "when",
+        "type": "uint256"
+      },
       {
         "indexed": true,
         "internalType": "uint256",
         "name": "gaugeType",
         "type": "uint256"
       },
-      { "indexed": true, "internalType": "address", "name": "term", "type": "address" },
       {
-        "components": [
-          { "internalType": "address", "name": "collateralToken", "type": "address" },
-          {
-            "internalType": "uint256",
-            "name": "maxDebtPerCollateralToken",
-            "type": "uint256"
-          },
-          { "internalType": "uint256", "name": "interestRate", "type": "uint256" },
-          {
-            "internalType": "uint256",
-            "name": "maxDelayBetweenPartialRepay",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "minPartialRepayPercent",
-            "type": "uint256"
-          },
-          { "internalType": "uint256", "name": "openingFee", "type": "uint256" },
-          { "internalType": "uint256", "name": "hardCap", "type": "uint256" }
-        ],
+        "indexed": true,
+        "internalType": "address",
+        "name": "term",
+        "type": "address"
+      },
+      {
         "indexed": false,
-        "internalType": "struct LendingTerm.LendingTermParams",
+        "internalType": "bytes",
         "name": "params",
-        "type": "tuple"
+        "type": "bytes"
       }
     ],
     "name": "TermCreated",
@@ -121,8 +143,16 @@
   },
   {
     "inputs": [
-      { "internalType": "address", "name": "auctionHouse", "type": "address" },
-      { "internalType": "bool", "name": "allowed", "type": "bool" }
+      {
+        "internalType": "address",
+        "name": "auctionHouse",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "allowed",
+        "type": "bool"
+      }
     ],
     "name": "allowAuctionHouse",
     "outputs": [],
@@ -131,8 +161,16 @@
   },
   {
     "inputs": [
-      { "internalType": "address", "name": "implementation", "type": "address" },
-      { "internalType": "bool", "name": "allowed", "type": "bool" }
+      {
+        "internalType": "address",
+        "name": "implementation",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "allowed",
+        "type": "bool"
+      }
     ],
     "name": "allowImplementation",
     "outputs": [],
@@ -140,53 +178,68 @@
     "type": "function"
   },
   {
-    "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
     "name": "auctionHouses",
-    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "core",
-    "outputs": [{ "internalType": "contract Core", "name": "", "type": "address" }],
+    "outputs": [
+      {
+        "internalType": "contract Core",
+        "name": "",
+        "type": "address"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
-      { "internalType": "uint256", "name": "gaugeType", "type": "uint256" },
-      { "internalType": "address", "name": "implementation", "type": "address" },
-      { "internalType": "address", "name": "auctionHouse", "type": "address" },
       {
-        "components": [
-          { "internalType": "address", "name": "collateralToken", "type": "address" },
-          {
-            "internalType": "uint256",
-            "name": "maxDebtPerCollateralToken",
-            "type": "uint256"
-          },
-          { "internalType": "uint256", "name": "interestRate", "type": "uint256" },
-          {
-            "internalType": "uint256",
-            "name": "maxDelayBetweenPartialRepay",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "minPartialRepayPercent",
-            "type": "uint256"
-          },
-          { "internalType": "uint256", "name": "openingFee", "type": "uint256" },
-          { "internalType": "uint256", "name": "hardCap", "type": "uint256" }
-        ],
-        "internalType": "struct LendingTerm.LendingTermParams",
-        "name": "params",
-        "type": "tuple"
+        "internalType": "uint256",
+        "name": "gaugeType",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "implementation",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "auctionHouse",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes",
+        "name": "lendingTermParams",
+        "type": "bytes"
       }
     ],
     "name": "createTerm",
-    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -194,9 +247,21 @@
     "inputs": [
       {
         "components": [
-          { "internalType": "address", "name": "target", "type": "address" },
-          { "internalType": "uint256", "name": "value", "type": "uint256" },
-          { "internalType": "bytes", "name": "callData", "type": "bytes" }
+          {
+            "internalType": "address",
+            "name": "target",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "value",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bytes",
+            "name": "callData",
+            "type": "bytes"
+          }
         ],
         "internalType": "struct CoreRef.Call[]",
         "name": "calls",
@@ -204,38 +269,97 @@
       }
     ],
     "name": "emergencyAction",
-    "outputs": [{ "internalType": "bytes[]", "name": "returnData", "type": "bytes[]" }],
+    "outputs": [
+      {
+        "internalType": "bytes[]",
+        "name": "returnData",
+        "type": "bytes[]"
+      }
+    ],
     "stateMutability": "payable",
     "type": "function"
   },
   {
-    "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
     "name": "gaugeTypes",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "guildToken",
-    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
     "name": "implementations",
-    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "name": "marketReferences",
     "outputs": [
-      { "internalType": "address", "name": "profitManager", "type": "address" },
-      { "internalType": "address", "name": "creditMinter", "type": "address" },
-      { "internalType": "address", "name": "creditToken", "type": "address" }
+      {
+        "internalType": "address",
+        "name": "profitManager",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "creditMinter",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "creditToken",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "psm",
+        "type": "address"
+      }
     ],
     "stateMutability": "view",
     "type": "function"
@@ -250,12 +374,24 @@
   {
     "inputs": [],
     "name": "paused",
-    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [{ "internalType": "address", "name": "newCore", "type": "address" }],
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newCore",
+        "type": "address"
+      }
+    ],
     "name": "setCore",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -263,12 +399,33 @@
   },
   {
     "inputs": [
-      { "internalType": "uint256", "name": "gaugeType", "type": "uint256" },
+      {
+        "internalType": "uint256",
+        "name": "gaugeType",
+        "type": "uint256"
+      },
       {
         "components": [
-          { "internalType": "address", "name": "profitManager", "type": "address" },
-          { "internalType": "address", "name": "creditMinter", "type": "address" },
-          { "internalType": "address", "name": "creditToken", "type": "address" }
+          {
+            "internalType": "address",
+            "name": "profitManager",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "creditMinter",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "creditToken",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "psm",
+            "type": "address"
+          }
         ],
         "internalType": "struct LendingTermFactory.MarketReferences",
         "name": "references",
@@ -281,9 +438,21 @@
     "type": "function"
   },
   {
-    "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
     "name": "termImplementations",
-    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },

@@ -1,5 +1,5 @@
 export type Step = {
-    name: string;
-    status: string ;
-    description?: any[];
-  };
+  name: string;
+  status: string;
+  description?: any[];
+};

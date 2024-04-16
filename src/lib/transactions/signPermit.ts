@@ -1,30 +1,30 @@
-import { Address, hexToNumber, pad, slice, toHex, TypedDataDomain } from "viem"
-import type { WalletClient } from "viem"
-import { getWalletClient } from "@wagmi/core"
-import { wagmiConfig } from "contexts/Web3Provider"
+import { Address, hexToNumber, pad, slice, toHex, TypedDataDomain } from 'viem';
+import type { WalletClient } from 'viem';
+import { getWalletClient } from '@wagmi/core';
+import { wagmiConfig } from 'contexts/Web3Provider';
 
 export type PermitSignature = {
-  r: Address
-  s: Address
-  v: number
-  deadline: bigint
-}
+  r: Address;
+  s: Address;
+  v: number;
+  deadline: bigint;
+};
 
 export type SignPermitProps = {
-  contractAddress: Address
-  erc20Name: string
-  ownerAddress: Address
-  spenderAddress: Address
-  deadline: bigint
-  chainId: number
-  permitVersion?: string
-  nonce: bigint
-}
+  contractAddress: Address;
+  erc20Name: string;
+  ownerAddress: Address;
+  spenderAddress: Address;
+  deadline: bigint;
+  chainId: number;
+  permitVersion?: string;
+  nonce: bigint;
+};
 
 export type Eip2612Props = SignPermitProps & {
   /** Amount to approve */
-  value: bigint
-}
+  value: bigint;
+};
 
 /**
  * Signs a permit for a given ERC-2612 ERC20 token using the specified parameters.
@@ -50,48 +50,44 @@ export const signPermit = async ({
   deadline,
   nonce,
   chainId,
-  permitVersion,
+  permitVersion
 }: Eip2612Props): Promise<PermitSignature> => {
-  const walletClient = await getWalletClient(wagmiConfig)
-  
+  const walletClient = await getWalletClient(wagmiConfig);
+
   const types = {
     Permit: [
-      { name: "owner", type: "address" },
-      { name: "spender", type: "address" },
-      { name: "value", type: "uint256" },
-      { name: "nonce", type: "uint256" },
-      { name: "deadline", type: "uint256" },
-    ],
-  }
+      { name: 'owner', type: 'address' },
+      { name: 'spender', type: 'address' },
+      { name: 'value', type: 'uint256' },
+      { name: 'nonce', type: 'uint256' },
+      { name: 'deadline', type: 'uint256' }
+    ]
+  };
 
   const domainData = {
     name: erc20Name,
-    version: permitVersion ?? "1",
+    version: permitVersion ?? '1',
     chainId: chainId,
-    verifyingContract: contractAddress,
-  }
+    verifyingContract: contractAddress
+  };
 
   const message = {
     owner: ownerAddress,
     spender: spenderAddress,
     value,
     nonce,
-    deadline,
-  }
+    deadline
+  };
 
   const signature = await walletClient.signTypedData({
     account: ownerAddress,
     message,
     domain: domainData as TypedDataDomain,
-    primaryType: "Permit",
-    types,
-  })
+    primaryType: 'Permit',
+    types
+  });
 
-  const [r, s, v] = [
-    slice(signature, 0, 32),
-    slice(signature, 32, 64),
-    slice(signature, 64, 65),
-  ]
+  const [r, s, v] = [slice(signature, 0, 32), slice(signature, 32, 64), slice(signature, 64, 65)];
 
-  return { r, s, v: hexToNumber(v), deadline: deadline }
-}
+  return { r, s, v: hexToNumber(v), deadline: deadline };
+};

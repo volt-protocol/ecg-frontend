@@ -1,5 +1,5 @@
-import { formatDecimal, gUsdcToUsdc, usdcToGUsdc } from "utils/numbers"
-import { formatUnits, parseUnits } from "viem"
+import { formatDecimal, gUsdcToUsdc, usdcToGUsdc } from 'utils/numbers';
+import { formatUnits, parseUnits } from 'viem';
 
 export const getTitleDisabled = (
   value: string,
@@ -10,18 +10,16 @@ export const getTitleDisabled = (
   match: boolean
 ): string => {
   if (!value || Number(value) <= 0) {
-    return "Enter USDC amount"
+    return 'Enter USDC amount';
   }
 
   if (parseUnits(value, 6) > usdcBalance) {
-    return "Insufficient funds available"
+    return 'Insufficient funds available';
   }
 
-  if (
-    loanDebt - usdcToGUsdc(parseUnits(value, 6), creditMultiplier) < minBorrow && !match
-  ) {
-    return "Cannot let debt below minimum borrow"
+  if (loanDebt - usdcToGUsdc(parseUnits(value, 6), creditMultiplier) < minBorrow && !match) {
+    return 'Cannot let debt below minimum borrow';
   }
 
-  return "Repay"
-}
+  return 'Repay';
+};

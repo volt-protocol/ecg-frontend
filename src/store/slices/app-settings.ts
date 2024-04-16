@@ -1,48 +1,52 @@
-import { Address } from "viem"
-import { StateCreator } from "zustand"
-
-export type SupportedMarket = "usdc" | "usdt"
+import { SupportedMarket, marketsConfig } from 'config';
+import { wagmiConfig } from 'contexts/Web3Provider';
+import { Address } from 'viem';
+import { StateCreator } from 'zustand';
 
 export interface AppSettingsSlice {
-  appMarket: SupportedMarket
-  appChainId: number
-  searchFocused: boolean
-  termsAccepted: boolean
-  searchHistory: Address[]
-  setTermsAccepted: (value: boolean) => void
-  setSearchFocused: (value: boolean) => void
-  addSearchHistory: (value: Address) => void
-  cleanSearchHistory: () => void
-  setAppMarket: (market: SupportedMarket) => void
-  setAppChainId: (chainId: number) => void
+  appMarketId: number;
+  appMarket: SupportedMarket;
+  appChainId: number;
+  searchFocused: boolean;
+  termsAccepted: boolean;
+  searchHistory: Address[];
+  setTermsAccepted: (value: boolean) => void;
+  setSearchFocused: (value: boolean) => void;
+  addSearchHistory: (value: Address) => void;
+  cleanSearchHistory: () => void;
+  setAppMarket: (market: SupportedMarket) => void;
+  setAppChainId: (chainId: number) => void;
 }
 
 export const createAppSettingsSlice: StateCreator<AppSettingsSlice> = (set, get) => ({
-  appMarket: "usdc",
-  appChainId: process.env.NEXT_PUBLIC_APP_ENV === "production" ? 1 : 11155111,
+  appChainId: wagmiConfig.chains[0].id,
+  appMarketId: marketsConfig[wagmiConfig.chains[0].id][0].marketId,
+  appMarket: marketsConfig[wagmiConfig.chains[0].id][0],
   searchFocused: false,
   termsAccepted: false,
   searchHistory: [],
   setAppMarket: (market: SupportedMarket) => {
-    set({ appMarket: market })
+    set({ appMarket: market });
+    set({ appMarketId: market.marketId });
   },
   setAppChainId: (chainId: number) => {
-    set({ appChainId: chainId })
+    const defaultMarket = marketsConfig[chainId][0];
+    set({ appChainId: chainId, appMarket: defaultMarket, appMarketId: defaultMarket.marketId });
   },
   addSearchHistory: (value: Address) => {
-    const history = get().searchHistory
+    const history = get().searchHistory;
     if (history.includes(value)) {
-      return
+      return;
     }
-    set({ searchHistory: [value, ...history] })
+    set({ searchHistory: [value, ...history] });
   },
   cleanSearchHistory: () => {
-    set({ searchHistory: [] })
+    set({ searchHistory: [] });
   },
   setTermsAccepted: () => {
-    set({ termsAccepted: true })
+    set({ termsAccepted: true });
   },
   setSearchFocused: (value: boolean) => {
-    set({ searchFocused: value })
-  },
-})
+    set({ searchFocused: value });
+  }
+});

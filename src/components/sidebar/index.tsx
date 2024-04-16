@@ -1,38 +1,35 @@
 /* eslint-disable */
-import Image from "next/image"
-import { HiX } from "react-icons/hi"
-import Links from "./components/Links"
-import clsx from "clsx"
-import { IRoute } from "types/navigation"
-import DropdownSelect from "components/select/DropdownSelect"
-import NavLink from "components/link/NavLink"
-import { MdOpenInNew } from "react-icons/md"
-import { useSwitchChain } from "wagmi"
-import { useAppStore } from "store"
-import { marketsConfig } from "config"
+import Image from 'next/image';
+import { HiX } from 'react-icons/hi';
+import Links from './components/Links';
+import clsx from 'clsx';
+import { IRoute } from 'types/navigation';
+import DropdownSelect from 'components/select/DropdownSelect';
+import NavLink from 'components/link/NavLink';
+import { MdOpenInNew, MdOutlineWarningAmber } from 'react-icons/md';
+import { useSwitchChain } from 'wagmi';
+import { useAppStore } from 'store';
+import { marketsConfig } from 'config';
 
 function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
-  const { chains } = useSwitchChain()
-  const { appChainId, setAppMarket, appMarket, setAppChainId } = useAppStore()
-  const { routes, open, setOpen } = props
+  const { chains } = useSwitchChain();
+  const { appChainId, setAppMarket, appMarket, setAppChainId } = useAppStore();
+  const { routes, open, setOpen } = props;
 
   return (
     <div
       className={clsx(
-        "sm:none fixed !z-50 flex min-h-full min-w-[260px] flex-col bg-stone-200 pb-5 shadow-2xl shadow-white/5 dark:!bg-navy-800 dark:text-white md:!z-50 lg:!z-50 xl:!z-0",
+        'sm:none fixed !z-50 flex min-h-full min-w-[260px] flex-col bg-stone-200 pb-5 shadow-2xl shadow-white/5 dark:!bg-navy-800 dark:text-white md:!z-50 lg:!z-50 xl:!z-0',
         open
-          ? "transiton-all translate-x-0 duration-150 ease-linear"
-          : "transiton-all -translate-x-96 duration-150 ease-linear xl:translate-x-0"
+          ? 'transiton-all translate-x-0 duration-150 ease-linear'
+          : 'transiton-all -translate-x-96 duration-150 ease-linear xl:translate-x-0'
       )}
     >
-      <span
-        className="absolute right-4 top-4 block cursor-pointer xl:hidden"
-        onClick={() => setOpen(false)}
-      >
+      <span className="absolute right-4 top-4 block cursor-pointer xl:hidden" onClick={() => setOpen(false)}>
         <HiX />
       </span>
 
-      <div className={`px-5 mt-5 flex flex-col items-center justify-center`}>
+      <div className={`mt-5 flex flex-col items-center justify-center px-5`}>
         <div className="font-poppins text-[26px] font-bold uppercase text-gray-800 dark:text-white">
           Credit <span className="font-medium">Guild</span>
         </div>
@@ -42,34 +39,30 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
             selectedOption={appChainId}
             onChange={(option) => setAppChainId(option)}
             getLabel={(option) => {
-              const chainFound = chains.find((chain) => chain.id == option)
+              const chainFound = chains.find((chain) => chain.id == option);
               if (chainFound) {
                 return (
-                  <div className="flex items-center gap-2 font-semibold text-sm">
-                    <Image
-                      src={`/img/chain-logos/${chainFound.id}.svg`}
-                      width={25}
-                      height={25}
-                      alt={chainFound.name}
-                    />
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <Image src={`/img/chain-logos/${chainFound.id}.svg`} width={25} height={25} alt={chainFound.name} />
                     {chainFound.name}
                   </div>
-                )
+                );
               }
-              return "Wrong network"
+              return 'Wrong network';
             }}
             extra="min-w-[180px]"
           />
         </div>
         <div className="mt-2 px-1">
           <DropdownSelect
-            options={marketsConfig}
-            selectedOption={marketsConfig.find((market) => market.key === appMarket)}
-            onChange={(option) => setAppMarket(option.key)}
+            options={marketsConfig[appChainId]}
+            selectedOption={marketsConfig[appChainId].find((market) => market.key === appMarket.key)}
+            onChange={(option) => setAppMarket(option)}
             getLabel={(option) => (
               <div className="flex items-center gap-1 text-sm">
                 <Image src={option.logo} width={25} height={25} alt={option.name} />
                 {option.name}
+                {option.name.indexOf('(test)') != -1 ? <MdOutlineWarningAmber style={{ color: '#FFA000' }} /> : null}
               </div>
             )}
             extra="min-w-[180px]"
@@ -107,8 +100,8 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
         <a href={process.env.NEXT_PUBLIC_DOCS_URL} target="_blank">
           <div
             className={clsx(
-              "relative my-0.5 flex rounded-md py-1 transition-all duration-150 ease-in hover:cursor-pointer",
-              "font-semilight text-sm text-stone-500 hover:text-gray-700 dark:text-gray-300"
+              'relative my-0.5 flex rounded-md py-1 transition-all duration-150 ease-in hover:cursor-pointer',
+              'font-semilight text-sm text-stone-500 hover:text-gray-700 dark:text-gray-300'
             )}
           >
             <li className="my-[3px] flex cursor-pointer items-center px-8">
@@ -119,11 +112,11 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
             </li>
           </div>
         </a>
-        <NavLink key="risk" href={"/risk-statement"}>
+        <NavLink key="risk" href={'/risk-statement'}>
           <div
             className={clsx(
-              "relative my-0.5 flex rounded-md py-1 transition-all duration-150 ease-in hover:cursor-pointer",
-              "font-semilight text-sm text-stone-500 hover:text-gray-700 dark:text-gray-300"
+              'relative my-0.5 flex rounded-md py-1 transition-all duration-150 ease-in hover:cursor-pointer',
+              'font-semilight text-sm text-stone-500 hover:text-gray-700 dark:text-gray-300'
             )}
           >
             <li className="my-[3px] flex cursor-pointer items-center px-8">
@@ -131,11 +124,11 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
             </li>
           </div>
         </NavLink>
-        <NavLink key="terms" href={"/terms-conditions"}>
+        <NavLink key="terms" href={'/terms-conditions'}>
           <div
             className={clsx(
-              "relative my-0.5 flex rounded-md py-1 transition-all duration-150 ease-in hover:cursor-pointer",
-              "font-semilight text-sm text-stone-500 hover:text-gray-700 dark:text-gray-300"
+              'relative my-0.5 flex rounded-md py-1 transition-all duration-150 ease-in hover:cursor-pointer',
+              'font-semilight text-sm text-stone-500 hover:text-gray-700 dark:text-gray-300'
             )}
           >
             <li className="my-[3px] flex cursor-pointer items-center px-8">
@@ -145,7 +138,7 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
         </NavLink>
       </div>
     </div>
-  )
+  );
 }
 
-export default Sidebar
+export default Sidebar;

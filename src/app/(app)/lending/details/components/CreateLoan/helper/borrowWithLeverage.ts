@@ -1,13 +1,7 @@
-import {
-  GatewayABI,
-  PsmUsdcABI,
-  TermABI,
-  UniswapRouterABI,
-  UsdcABI,
-} from "lib/contracts"
-import { LendingTerms } from "types/lending"
-import { Abi, Address, encodeFunctionData, erc20Abi } from "viem"
-import { ContractsList } from "store/slices/contracts-list"
+import { GatewayABI, PsmUsdcABI, TermABI, UniswapRouterABI, UsdcABI } from 'lib/contracts';
+import { LendingTerms } from 'types/lending';
+import { Abi, Address, encodeFunctionData, erc20Abi } from 'viem';
+import { ContractsList } from 'store/slices/contracts-list';
 
 export const borrowWithLeverage = (
   userAddress: Address,
@@ -19,253 +13,249 @@ export const borrowWithLeverage = (
   permitDataCollateral: any | undefined,
   permitDatagUSDC: any,
   deadlineSwap: bigint,
-  contractsList: ContractsList
+  contractsList: ContractsList,
+  appMarketId: number
 ) => {
-  let calls = []
+  const calls = [];
 
   // consume user permit
   if (permitDataCollateral) {
     calls.push(
       encodeFunctionData({
         abi: GatewayABI as Abi,
-        functionName: "consumePermit",
+        functionName: 'consumePermit',
         args: [
           lendingTerm.collateral.address,
           collateralAmount,
           permitDataCollateral.deadline,
           permitDataCollateral.v,
           permitDataCollateral.r,
-          permitDataCollateral.s,
-        ],
+          permitDataCollateral.s
+        ]
       })
-    )
+    );
   }
 
   // consumer user allowance
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "consumeAllowance",
-      args: [lendingTerm.collateral.address, collateralAmount],
+      functionName: 'consumeAllowance',
+      args: [lendingTerm.collateral.address, collateralAmount]
     })
-  )
+  );
 
   // approve on gateway->term for user collateral + flashloaned amount
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "callExternal",
+      functionName: 'callExternal',
       args: [
         lendingTerm.collateral.address,
         encodeFunctionData({
           abi: erc20Abi,
-          functionName: "approve",
-          args: [lendingTerm.address, collateralAmount + flashloanAmount],
-        }),
-      ],
+          functionName: 'approve',
+          args: [lendingTerm.address, collateralAmount + flashloanAmount]
+        })
+      ]
     })
-  )
+  );
 
   // borrow on behalf for user collateral + flashloaned amount
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "callExternal",
+      functionName: 'callExternal',
       args: [
         lendingTerm.address,
         encodeFunctionData({
           abi: TermABI as Abi,
-          functionName: "borrowOnBehalf",
-          args: [debtAmount, collateralAmount + flashloanAmount, userAddress],
-        }),
-      ],
+          functionName: 'borrowOnBehalf',
+          args: [debtAmount, collateralAmount + flashloanAmount, userAddress]
+        })
+      ]
     })
-  )
+  );
 
   // consume the user permit for the debt amount
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "consumePermit",
+      functionName: 'consumePermit',
       args: [
-        contractsList.creditAddress,
+        contractsList.marketContracts[appMarketId].creditAddress,
         debtAmount,
         permitDatagUSDC.deadline,
         permitDatagUSDC.v,
         permitDatagUSDC.r,
-        permitDatagUSDC.s,
-      ],
+        permitDatagUSDC.s
+      ]
     })
-  )
+  );
 
   // consume the user allowance for the debt amount
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "consumeAllowance",
-      args: [contractsList.creditAddress, debtAmount],
+      functionName: 'consumeAllowance',
+      args: [contractsList.marketContracts[appMarketId].creditAddress, debtAmount]
     })
-  )
+  );
 
   // approve gateway->psm for the debt amount of credit token
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "callExternal",
+      functionName: 'callExternal',
       args: [
-        contractsList.creditAddress,
+        contractsList.marketContracts[appMarketId].creditAddress,
         encodeFunctionData({
           abi: erc20Abi as Abi,
-          functionName: "approve",
-          args: [contractsList.psmUsdcAddress, debtAmount],
-        }),
-      ],
+          functionName: 'approve',
+          args: [contractsList.marketContracts[appMarketId].psmAddress, debtAmount]
+        })
+      ]
     })
-  )
+  );
 
   // redeem credit token => USDC to the gateway (not the user !!)
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "callExternal",
+      functionName: 'callExternal',
       args: [
-        contractsList.psmUsdcAddress,
+        contractsList.marketContracts[appMarketId].psmAddress,
         encodeFunctionData({
           abi: PsmUsdcABI as Abi,
-          functionName: "redeem",
-          args: [contractsList.gatewayAddress, debtAmount],
-        }),
-      ],
+          functionName: 'redeem',
+          args: [contractsList.gatewayAddress, debtAmount]
+        })
+      ]
     })
-  )
+  );
 
   // here we have the full value in USDC after redeeming, need to change to sDAI
   // approve uniswap router
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "callExternal",
+      functionName: 'callExternal',
       args: [
-        contractsList.usdcAddress,
+        contractsList.marketContracts[appMarketId].pegTokenAddress,
         encodeFunctionData({
           abi: UsdcABI as Abi,
-          functionName: "approve",
-          args: [contractsList.uniswapRouterAddress, amountUSDC],
-        }),
-      ],
+          functionName: 'approve',
+          args: [contractsList.uniswapRouterAddress, amountUSDC]
+        })
+      ]
     })
-  )
+  );
 
-  const path = [contractsList.usdcAddress, lendingTerm.collateral.address]
+  const path = [contractsList.marketContracts[appMarketId].pegTokenAddress, lendingTerm.collateral.address];
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "callExternal",
+      functionName: 'callExternal',
       args: [
         contractsList.uniswapRouterAddress,
         encodeFunctionData({
           abi: UniswapRouterABI as Abi,
-          functionName: "swapTokensForExactTokens",
-          args: [
-            flashloanAmount,
-            amountUSDC,
-            path,
-            contractsList.gatewayAddress,
-            deadlineSwap,
-          ],
-        }),
-      ],
+          functionName: 'swapTokensForExactTokens',
+          args: [flashloanAmount, amountUSDC, path, contractsList.gatewayAddress, deadlineSwap]
+        })
+      ]
     })
-  )
+  );
 
   // reset approval on the uniswap router
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "callExternal",
+      functionName: 'callExternal',
       args: [
-        contractsList.usdcAddress,
+        contractsList.marketContracts[appMarketId].pegTokenAddress,
         encodeFunctionData({
           abi: UsdcABI as Abi,
-          functionName: "approve",
-          args: [contractsList.uniswapRouterAddress, 0],
-        }),
-      ],
+          functionName: 'approve',
+          args: [contractsList.uniswapRouterAddress, 0]
+        })
+      ]
     })
-  )
+  );
 
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "sweep",
-      args: [contractsList.usdcAddress],
+      functionName: 'sweep',
+      args: [contractsList.marketContracts[appMarketId].pegTokenAddress]
     })
-  )
+  );
 
-  return calls
-}
+  return calls;
+};
 
 export const getPullCollateralCalls = (
   lendingTerm: LendingTerms,
   collateralAmount: bigint, // eg: sDAI
   permitDataCollateral: any | undefined
 ) => {
-  let calls = []
+  const calls = [];
 
   // consume user permit
   if (permitDataCollateral) {
     calls.push(
       encodeFunctionData({
         abi: GatewayABI as Abi,
-        functionName: "consumePermit",
+        functionName: 'consumePermit',
         args: [
           lendingTerm.collateral.address,
           collateralAmount,
           permitDataCollateral.deadline,
           permitDataCollateral.v,
           permitDataCollateral.r,
-          permitDataCollateral.s,
-        ],
+          permitDataCollateral.s
+        ]
       })
-    )
+    );
   }
 
   // consumer user allowance
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "consumeAllowance",
-      args: [lendingTerm.collateral.address, collateralAmount],
+      functionName: 'consumeAllowance',
+      args: [lendingTerm.collateral.address, collateralAmount]
     })
-  )
+  );
 
-  return calls
-}
+  return calls;
+};
 
 export const getAllowBorrowedCreditCall = (
   debtAmount: bigint, //  borrowAmount + flashloanAmount in gUSDC
   permitDatagUSDC: any,
-  contractsList: ContractsList
+  contractsList: ContractsList,
+  appMarketId: number
 ) => {
-  let calls = []
+  const calls = [];
 
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "consumePermit",
+      functionName: 'consumePermit',
       args: [
-        contractsList.creditAddress,
+        contractsList.marketContracts[appMarketId].creditAddress,
         debtAmount,
         permitDatagUSDC.deadline,
         permitDatagUSDC.v,
         permitDatagUSDC.r,
-        permitDatagUSDC.s,
-      ],
+        permitDatagUSDC.s
+      ]
     })
-  )
+  );
 
-  return calls
-}
+  return calls;
+};
 
 // async function borrowGatewayLeverage() {
 //   setShowModal(true)
@@ -342,7 +332,7 @@ export const getAllowBorrowedCreditCall = (
 //     updateStepStatus(`Sign Permit for gUSDC`, "In Progress")
 
 //     signatureGUSDC = await signPermit({
-//       contractAddress: contractsList.creditAddress as Address,
+//       contractAddress: contractsList.marketContracts[appMarketId].creditAddress as Address,
 //       erc20Name: "Ethereum Credit Guild - gUSDC",
 //       ownerAddress: address,
 //       spenderAddress: contractsList.gatewayAddress as Address,
@@ -368,6 +358,7 @@ export const getAllowBorrowedCreditCall = (
 //     ...psmUsdcContract,
 //     functionName: "getRedeemAmountOut",
 //     args: [debtAmount],
+//     chainId: appChainId as any
 //   })
 
 //   const deadlineSwap = BigInt(Number(moment().add(3600, "seconds")))

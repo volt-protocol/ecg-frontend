@@ -9,9 +9,9 @@ export const generateTermName = (collateral: string, interestRate: number, borro
 
 export function getCreditTokenSymbol(coinDetails: CoinSettings[], appMarketId: number, contractsList: ContractsList) {
   const pegToken = coinDetails.find(
-    (item) => item.address.toLowerCase() === contractsList.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
+    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
-  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = 'g' + pegToken?.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
   return creditTokenSymbol;
 }
 

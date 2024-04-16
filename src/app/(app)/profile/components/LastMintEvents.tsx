@@ -34,11 +34,10 @@ export default function LastMintEvents({
   const { address } = useAccount();
   const { contractsList, appMarketId, coinDetails, appChainId } = useAppStore();
 
-  const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
   const pegToken = coinDetails.find(
-    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
+    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
-  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken?.price * 100)), 0);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
 
   const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
@@ -82,7 +81,7 @@ export default function LastMintEvents({
               width={20}
               height={20}
               alt=""
-              title={info.row.original.type == 'Mint' ? pegToken.symbol : creditTokenSymbol}
+              title={info.row.original.type == 'Mint' ? pegToken?.symbol : creditTokenSymbol}
               className="inline align-bottom"
               style={info.row.original.type == 'Mint' ? {} : { borderRadius: '50%', border: '2px solid #3e6b7d' }}
             />{' '}
@@ -102,7 +101,7 @@ export default function LastMintEvents({
               width={20}
               height={20}
               alt=""
-              title={info.row.original.type == 'Redeem' ? pegToken.symbol : creditTokenSymbol}
+              title={info.row.original.type == 'Redeem' ? pegToken?.symbol : creditTokenSymbol}
               className="inline align-bottom"
               style={info.row.original.type == 'Redeem' ? {} : { borderRadius: '50%', border: '2px solid #3e6b7d' }}
             />{' '}

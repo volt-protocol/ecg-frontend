@@ -24,9 +24,9 @@ export default function UserLoan({ userAddress, data }: { userAddress: Address; 
   const { appMarketId, coinDetails, contractsList, lendingTerms, appChainId } = useAppStore();
 
   const pegToken = coinDetails.find(
-    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
+    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
-  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken?.price * 100)), 0);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
 
   /* Create Table */
@@ -42,14 +42,14 @@ export default function UserLoan({ userAddress, data }: { userAddress: Address; 
           (item) => item.address.toLowerCase() == info.row.original.termAddress.toLowerCase()
         );
         const collateralToken = coinDetails.find(
-          (item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase()
+          (item) => item.address.toLowerCase() === lendingTerm?.collateral.address.toLowerCase()
         );
-        const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken.price * 100)), 0);
+        const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken?.price * 100)), 0);
 
         return (
           <>
             <ImageWithFallback
-              src={lendingTerm.collateral.logo}
+              src={lendingTerm?.collateral.logo}
               fallbackSrc="/img/crypto-logos/unk.png"
               width={20}
               height={20}
@@ -59,7 +59,7 @@ export default function UserLoan({ userAddress, data }: { userAddress: Address; 
             <span className="font-semibold">
               {formatDecimal(Number(info.getValue()), collateralTokenDecimalsToDisplay)}
             </span>{' '}
-            <span>{collateralToken.symbol}</span>
+            <span>{collateralToken?.symbol}</span>
           </>
         );
       }
@@ -78,7 +78,7 @@ export default function UserLoan({ userAddress, data }: { userAddress: Address; 
                 pegTokenDecimalsToDisplay
               )}
             </span>{' '}
-            <span>{pegToken.symbol}</span>
+            <span>{pegToken?.symbol}</span>
           </>
         );
       }

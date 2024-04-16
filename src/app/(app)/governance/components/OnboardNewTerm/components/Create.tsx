@@ -219,15 +219,6 @@ export default function Create() {
     <>
       {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
       <div className="px-1">
-        <div className="mb-4 rounded-full px-2.5 py-0.5">
-          <div className="text-center">
-            {`For ${collateralToken.symbol && watchBorrowRatio ? `every ${collateralToken.symbol}, ` : '...'}${
-              watchBorrowRatio && collateralToken.symbol
-                ? `users will be able to borrow ${watchBorrowRatio} ${pegToken.symbol}.`
-                : ''
-            }`}
-          </div>
-        </div>
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="mb-3 sm:grid sm:grid-cols-3 sm:items-start">
             <label htmlFor="collateralToken" className="text-md block font-medium leading-6 sm:pt-1.5">

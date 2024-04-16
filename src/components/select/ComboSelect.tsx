@@ -1,7 +1,7 @@
-import { useState } from "react"
-import { MdCheck, MdUnfoldMore } from "react-icons/md"
-import { Combobox } from "@headlessui/react"
-import clsx from "clsx"
+import { useState } from 'react';
+import { MdCheck, MdUnfoldMore } from 'react-icons/md';
+import { Combobox } from '@headlessui/react';
+import clsx from 'clsx';
 
 export default function ComboSelect<T>({
   options,
@@ -13,34 +13,33 @@ export default function ComboSelect<T>({
   extra,
   placeholder
 }: {
-  options: T[]
-  selectedOption: T
-  onChangeSelect: React.Dispatch<React.SetStateAction<T>>
-  query: string
-  onChangeQuery: React.Dispatch<React.SetStateAction<string>>
-  getLabel: (option: T) => string
-  extra?: string
-  placeholder?: string
+  options: T[];
+  selectedOption: T;
+  onChangeSelect: React.Dispatch<React.SetStateAction<T>>;
+  query: string;
+  onChangeQuery: React.Dispatch<React.SetStateAction<string>>;
+  getLabel: (option: T) => string;
+  extra?: string;
+  placeholder?: string;
 }) {
-
   const filteredOptions =
-    query === ""
+    query === ''
       ? options
       : options.filter((item) => {
           return (
             item?.address.toLowerCase().includes(query.toLowerCase()) ||
             item?.symbol.toLowerCase().includes(query.toLowerCase())
-          )
-        })
+          );
+        });
 
   return (
     <Combobox as="div" value={selectedOption} onChange={onChangeSelect}>
-      <div className={clsx("relative", extra ? extra : "w-[250px]")}>
+      <div className={clsx('relative', extra ? extra : 'w-[250px]')}>
         <Combobox.Input
           placeholder={placeholder}
           className="sm:text-md w-full rounded-md border-0 bg-white py-1.5 pl-3 pr-10 text-gray-600 shadow-sm ring-1 ring-inset ring-gray-200 hover:cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-400/80 dark:bg-navy-700 dark:text-gray-200 dark:ring-navy-600"
           onChange={(event) => {
-            onChangeQuery(event.target.value)
+            onChangeQuery(event.target.value);
           }}
           displayValue={(option) => option.address}
         />
@@ -56,23 +55,21 @@ export default function ComboSelect<T>({
                 className={({ active }) =>
                   clsx(
                     active
-                      ? "rounded-md bg-brand-400/80 text-white transition-all duration-150 ease-in-out hover:cursor-pointer dark:text-gray-200"
-                      : "text-gray-900 dark:text-gray-200",
-                    "relative cursor-default select-none py-2 pl-3 pr-9"
+                      ? 'rounded-md bg-brand-400/80 text-white transition-all duration-150 ease-in-out hover:cursor-pointer dark:text-gray-200'
+                      : 'text-gray-900 dark:text-gray-200',
+                    'relative cursor-default select-none py-2 pl-3 pr-9'
                   )
                 }
               >
                 {({ active, selected }) => (
                   <>
-                    <span className={clsx("block truncate", selected && "font-semibold")}>
-                      {getLabel(item)}
-                    </span>
+                    <span className={clsx('block truncate', selected && 'font-semibold')}>{getLabel(item)}</span>
 
                     {selected && (
                       <span
                         className={clsx(
-                          active ? "text-white" : "text-brand-500",
-                          "absolute inset-y-0 right-0 flex items-center pr-4"
+                          active ? 'text-white' : 'text-brand-500',
+                          'absolute inset-y-0 right-0 flex items-center pr-4'
                         )}
                       >
                         <MdCheck className="h-5 w-5" aria-hidden="true" />
@@ -86,5 +83,5 @@ export default function ComboSelect<T>({
         )}
       </div>
     </Combobox>
-  )
+  );
 }

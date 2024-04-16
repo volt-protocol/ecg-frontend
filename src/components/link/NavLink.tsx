@@ -1,11 +1,6 @@
 'use client';
 import NextLink, { LinkProps as NextLinkProps } from 'next/link';
-import {
-  CSSProperties,
-  ComponentProps,
-  PropsWithChildren,
-  useMemo,
-} from 'react';
+import { CSSProperties, ComponentProps, PropsWithChildren, useMemo } from 'react';
 
 export type NavLinkProps = NextLinkProps &
   PropsWithChildren & {
@@ -17,9 +12,9 @@ function NavLink({ className, children, styles, borderRadius, ...props }: any) {
   const memoizedStyles = useMemo(
     () => ({
       borderRadius: borderRadius || 0,
-      ...styles,
+      ...styles
     }),
-    [borderRadius, styles],
+    [borderRadius, styles]
   );
 
   return (

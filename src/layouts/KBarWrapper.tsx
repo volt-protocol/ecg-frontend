@@ -1,40 +1,40 @@
-"use client"
+'use client';
 
-import { useCallback, useEffect } from "react"
-import { useAppStore } from "store"
+import { useCallback, useEffect } from 'react';
+import { useAppStore } from 'store';
 
 export default function KBarWrapper({ children }: { children: React.ReactNode }) {
-  const { setSearchFocused } = useAppStore()
+  const { setSearchFocused } = useAppStore();
 
   const handleKeyPress = useCallback((event) => {
-    if (event.key === "k" && (event.metaKey || event.ctrlKey)) {
-      setSearchFocused(true)
-      document.getElementById("searchAddressBar").focus()
+    if (event.key === 'k' && (event.metaKey || event.ctrlKey)) {
+      setSearchFocused(true);
+      document.getElementById('searchAddressBar').focus();
     }
-    if (event.key === "Escape") {
-      setSearchFocused(false)
-      document.getElementById("searchAddressBar").blur()
+    if (event.key === 'Escape') {
+      setSearchFocused(false);
+      document.getElementById('searchAddressBar').blur();
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    document.getElementById("searchAddressBar").addEventListener("focus", (event) => {
-      setSearchFocused(true)
-    })
-    document.getElementById("searchAddressBar").addEventListener("blur", (event) => {
-      setSearchFocused(false)
-    })
-  }, [])
+    document.getElementById('searchAddressBar').addEventListener('focus', (event) => {
+      setSearchFocused(true);
+    });
+    document.getElementById('searchAddressBar').addEventListener('blur', (event) => {
+      setSearchFocused(false);
+    });
+  }, []);
 
   useEffect(() => {
     // attach the event listener
-    document.addEventListener("keydown", handleKeyPress)
+    document.addEventListener('keydown', handleKeyPress);
 
     // remove the event listener
     return () => {
-      document.removeEventListener("keydown", handleKeyPress)
-    }
-  }, [handleKeyPress])
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [handleKeyPress]);
 
-  return <>{children}</>
+  return <>{children}</>;
 }

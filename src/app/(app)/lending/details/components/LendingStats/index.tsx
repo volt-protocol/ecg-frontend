@@ -1,17 +1,18 @@
-import { QuestionMarkIcon, TooltipHorizon } from "components/tooltip"
-import Widget from "components/widget/Widget"
-import { AiFillClockCircle } from "react-icons/ai"
-import { BsBank2 } from "react-icons/bs"
-import { GiProgression } from "react-icons/gi"
-import { MdBarChart, MdCurrencyExchange } from "react-icons/md"
-import { TbArrowsExchange } from "react-icons/tb"
-import { LendingTerms } from "types/lending"
-import { formatDecimal, formatNumberDecimal, formatCurrencyValue } from "utils/numbers"
-import { formatUnits } from "viem"
-import { secondsToAppropriateUnit } from "utils/date"
-import { marketsConfig } from "config"
-import { useAppStore } from "store"
-import Image from "next/image"
+import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
+import Widget from 'components/widget/Widget';
+import { AiFillClockCircle } from 'react-icons/ai';
+import { BsBank2 } from 'react-icons/bs';
+import { GiProgression } from 'react-icons/gi';
+import { MdBarChart, MdCurrencyExchange } from 'react-icons/md';
+import { TbArrowsExchange } from 'react-icons/tb';
+import { LendingTerms } from 'types/lending';
+import { formatDecimal, formatNumberDecimal, formatCurrencyValue } from 'utils/numbers';
+import { formatUnits } from 'viem';
+import { secondsToAppropriateUnit } from 'utils/date';
+import { getPegTokenLogo, marketsConfig } from 'config';
+import { useAppStore } from 'store';
+import Image from 'next/image';
+import ImageWithFallback from 'components/image/ImageWithFallback';
 
 export default function LendingStats({
   lendingTermData,
@@ -19,23 +20,26 @@ export default function LendingStats({
   debtCeiling,
   utilization,
   termTotalCollateral,
-  creditMultiplier,
+  creditMultiplier
 }: {
-  lendingTermData: LendingTerms
-  currentDebt: number
-  debtCeiling: number
-  utilization: string
-  termTotalCollateral: number
-  creditMultiplier: bigint
+  lendingTermData: LendingTerms;
+  currentDebt: number;
+  debtCeiling: number;
+  utilization: string;
+  termTotalCollateral: number;
+  creditMultiplier: bigint;
 }) {
-  const { appMarketId, coinDetails, contractsList } = useAppStore()
-  const collateralToken = coinDetails.find((item) => item.address.toLowerCase() === lendingTermData.collateral.address.toLowerCase());
-  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
+  const collateralToken = coinDetails.find(
+    (item) => item.address.toLowerCase() === lendingTermData.collateral.address.toLowerCase()
+  );
+  const pegToken = coinDetails.find(
+    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
+  );
   const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken.price * 100)), 0);
   const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
   const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
-  const pegTokenLogo = marketsConfig.find((item) => item.marketId == appMarketId).logo;
-
+  const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
   const creditMultiplierNumber = Number(formatUnits(creditMultiplier, 18));
 
   return (
@@ -45,30 +49,28 @@ export default function LendingStats({
         content={
           <>
             <p>
-              Total Collateral Amount :{" "}
-              <Image className="inline-block" src={lendingTermData.collateral.logo} width={18} height={18} alt="logo" />
-              {" "}
+              Total Collateral Amount :{' '}
+              <ImageWithFallback
+                className="inline-block"
+                src={lendingTermData.collateral.logo}
+                fallbackSrc="/img/crypto-logos/unk.png"
+                width={18}
+                height={18}
+                alt="logo"
+              />{' '}
               <span className="font-semibold">
                 {formatDecimal(termTotalCollateral, collateralTokenDecimalsToDisplay)}
-              </span>{" "}
+              </span>{' '}
               {lendingTermData.collateral.symbol}
             </p>
             <p>
-              Unit Collateral Price :
-              {" "}
-              <span className="font-semibold">
-                {collateralToken.price}
-              </span>
-              {" "}
-              $ <span className="text-gray-400">(DefiLlama)</span>
+              Unit Collateral Price : <span className="font-semibold">{collateralToken.price}</span> ${' '}
+              <span className="text-gray-400">(DefiLlama)</span>
             </p>
             <p>
-              Total Collateral Value :{" "}
-              <span className="font-semibold">
-                {formatDecimal(termTotalCollateral * collateralToken.price, 2)}
-              </span>
-              {" "}
-              $ <span className="text-gray-400">(DefiLlama)</span>
+              Total Collateral Value :{' '}
+              <span className="font-semibold">{formatDecimal(termTotalCollateral * collateralToken.price, 2)}</span> ${' '}
+              <span className="text-gray-400">(DefiLlama)</span>
             </p>
           </>
         }
@@ -76,15 +78,12 @@ export default function LendingStats({
           <div>
             <Widget
               icon={<BsBank2 className="h-7 w-7" />}
-              title={"TVL"}
+              title={'TVL'}
               subtitle={
                 collateralToken.price === 0
-                  ? "$ -.--"
-                  :  "$ " + formatCurrencyValue(
-                      parseFloat(
-                        formatNumberDecimal(termTotalCollateral * collateralToken.price)
-                      )
-                    )
+                  ? '$ -.--'
+                  : '$ ' +
+                    formatCurrencyValue(parseFloat(formatNumberDecimal(termTotalCollateral * collateralToken.price)))
               }
               extra={<QuestionMarkIcon />}
             />
@@ -97,21 +96,23 @@ export default function LendingStats({
         content={
           <div>
             <p>
-              Current Debt :{" "}
-              <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />
-              {" "}
-              <span className="font-semibold">{formatDecimal(currentDebt * creditMultiplierNumber, creditTokenDecimalsToDisplay)}</span> {pegToken.symbol}
+              Current Debt : <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+              <span className="font-semibold">
+                {formatDecimal(currentDebt * creditMultiplierNumber, creditTokenDecimalsToDisplay)}
+              </span>{' '}
+              {pegToken.symbol}
             </p>
             <p>
-              Debt Ceilling :{" "}
-              <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />
-              {" "}
-              <span className="font-semibold">{formatDecimal(debtCeiling * creditMultiplierNumber, creditTokenDecimalsToDisplay)}</span>{" "}
+              Debt Ceilling : <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+              <span className="font-semibold">
+                {formatDecimal(debtCeiling * creditMultiplierNumber, creditTokenDecimalsToDisplay)}
+              </span>{' '}
               {pegToken.symbol}
             </p>
             <p>
               <br />
-              New borrows increase the Current Debt.<br/>
+              New borrows increase the Current Debt.
+              <br />
               GUILD & {creditTokenSymbol} stake increase the Debt Ceiling.
             </p>
           </div>
@@ -120,12 +121,8 @@ export default function LendingStats({
           <div>
             <Widget
               icon={<GiProgression className="h-6 w-6" />}
-              title={"Utilization"}
-              subtitle={
-                utilization === "NaN"
-                  ? "-.--%"
-                  : formatDecimal((currentDebt / debtCeiling) * 100, 2) + "%"
-              }
+              title={'Utilization'}
+              subtitle={utilization === 'NaN' ? '-.--%' : formatDecimal((currentDebt / debtCeiling) * 100, 2) + '%'}
               extra={<QuestionMarkIcon />}
             />
           </div>
@@ -136,20 +133,15 @@ export default function LendingStats({
         extra="dark:text-gray-200 w-[240px]"
         content={
           <div>
-            <p>
-              The opening fee is added to the interest owed directly after you open a new
-              loan.
-            </p>
+            <p>The opening fee is added to the interest owed directly after you open a new loan.</p>
           </div>
         }
         trigger={
           <div>
             <Widget
               icon={<MdBarChart className="h-7 w-7" />}
-              title={"Opening Fee"}
-              subtitle={
-                formatDecimal(lendingTermData.openingFee * 100, 2).toString() + "%"
-              }
+              title={'Opening Fee'}
+              subtitle={formatDecimal(lendingTermData.openingFee * 100, 2).toString() + '%'}
               extra={<QuestionMarkIcon />}
             />
           </div>
@@ -160,20 +152,15 @@ export default function LendingStats({
         extra="dark:text-gray-200 w-[240px]"
         content={
           <div>
-            <p>
-              Interest rate is non-compounding, and is charged based on a period of ~1
-              year (31557600 seconds).
-            </p>
+            <p>Interest rate is non-compounding, and is charged based on a period of ~1 year (31557600 seconds).</p>
           </div>
         }
         trigger={
           <div>
             <Widget
               icon={<TbArrowsExchange className="h-6 w-6" />}
-              title={"Interest Rate"}
-              subtitle={
-                formatDecimal(lendingTermData.interestRate * 100, 2).toString() + "%"
-              }
+              title={'Interest Rate'}
+              subtitle={formatDecimal(lendingTermData.interestRate * 100, 2).toString() + '%'}
               extra={<QuestionMarkIcon />}
             />
           </div>
@@ -185,17 +172,33 @@ export default function LendingStats({
         content={
           <div>
             <p>
-              This term allows to borrow{" "}
-              <Image className="inline-block" src="/img/crypto-logos/credit.png" width={18} height={18} alt="logo" />
-              {" "}<span className="font-semibold">
-                {formatDecimal(
-                  lendingTermData.borrowRatio / creditMultiplierNumber,
-                  creditTokenDecimalsToDisplay
-                )}
-              </span>
-              {" "}{creditTokenSymbol}{" "}
-              (redeemable for <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />
-              {" "}<span className="font-semibold">{formatDecimal(lendingTermData.borrowRatio, creditTokenDecimalsToDisplay)}</span>{" "}{pegToken.symbol}) per unit of <Image className="inline-block" src={lendingTermData.collateral.logo} width={18} height={18} alt="logo" /> {lendingTermData.collateral.symbol} collateral.
+              This term allows to borrow{' '}
+              <Image
+                className="inline-block"
+                src={pegTokenLogo}
+                style={{ borderRadius: '50%', border: '3px solid #3e6b7d' }}
+                width={18}
+                height={18}
+                alt="logo"
+              />{' '}
+              <span className="font-semibold">
+                {formatDecimal(lendingTermData.borrowRatio / creditMultiplierNumber, creditTokenDecimalsToDisplay)}
+              </span>{' '}
+              {creditTokenSymbol} (redeemable for{' '}
+              <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+              <span className="font-semibold">
+                {formatDecimal(lendingTermData.borrowRatio, creditTokenDecimalsToDisplay)}
+              </span>{' '}
+              {pegToken.symbol}) per unit of{' '}
+              <ImageWithFallback
+                className="inline-block"
+                src={lendingTermData.collateral.logo}
+                fallbackSrc="/img/crypto-logos/unk.png"
+                width={18}
+                height={18}
+                alt="logo"
+              />{' '}
+              {lendingTermData.collateral.symbol} collateral.
             </p>
           </div>
         }
@@ -203,11 +206,8 @@ export default function LendingStats({
           <div>
             <Widget
               icon={<MdCurrencyExchange className="h-7 w-7" />}
-              title={"Borrow Ratio"}
-              subtitle={formatDecimal(
-                lendingTermData.borrowRatio,
-                creditTokenDecimalsToDisplay
-              )}
+              title={'Borrow Ratio'}
+              subtitle={formatDecimal(lendingTermData.borrowRatio, creditTokenDecimalsToDisplay)}
               extra={<QuestionMarkIcon />}
             />
           </div>
@@ -219,13 +219,11 @@ export default function LendingStats({
         content={
           <>
             <p>
-              Periodic Payment minimum size :{" "}
-              <span className="font-semibold">
-                {lendingTermData.minPartialRepayPercent}%
-              </span>
+              Periodic Payment minimum size :{' '}
+              <span className="font-semibold">{lendingTermData.minPartialRepayPercent}%</span>
             </p>
             <p>
-              Periodic Payment maximum interval :{" "}
+              Periodic Payment maximum interval :{' '}
               <span className="font-semibold">
                 {secondsToAppropriateUnit(lendingTermData.maxDelayBetweenPartialRepay)}
               </span>
@@ -240,8 +238,8 @@ export default function LendingStats({
           <div className="">
             <Widget
               icon={<AiFillClockCircle className="h-6 w-6" />}
-              title={"Periodic Payments"}
-              subtitle={lendingTermData.maxDelayBetweenPartialRepay != 0 ? "Yes" : "No"}
+              title={'Periodic Payments'}
+              subtitle={lendingTermData.maxDelayBetweenPartialRepay != 0 ? 'Yes' : 'No'}
               extra={<QuestionMarkIcon />}
             />
           </div>
@@ -249,5 +247,5 @@ export default function LendingStats({
         placement="left"
       />
     </div>
-  )
+  );
 }

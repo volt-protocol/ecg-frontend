@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import dynamic from 'next/dynamic';
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
@@ -16,26 +16,20 @@ class ColumnChart extends React.Component<ChartProps, ChartState> {
     super(props);
     this.state = {
       chartData: [],
-      chartOptions: {},
+      chartOptions: {}
     };
   }
 
   componentDidMount() {
     this.setState({
       chartData: this.props.chartData,
-      chartOptions: this.props.chartOptions,
+      chartOptions: this.props.chartOptions
     });
   }
 
   render() {
     return (
-      <Chart
-        options={this.state.chartOptions}
-        series={this.state.chartData}
-        type="bar"
-        width="100%"
-        height="100%"
-      />
+      <Chart options={this.state.chartOptions} series={this.state.chartData} type="bar" width="100%" height="100%" />
     );
   }
 }

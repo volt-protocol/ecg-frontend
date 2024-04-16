@@ -1,32 +1,32 @@
-import { useState } from "react"
-import { MdContentCopy } from "react-icons/md"
-import { shortenUint } from "utils/strings"
+import { useState } from 'react';
+import { MdContentCopy } from 'react-icons/md';
+import { shortenUint } from 'utils/strings';
 
 export const ItemIdBadge = ({ id }: { id: string }) => {
-  const [isCopied, setIsCopied] = useState<boolean>(false)
+  const [isCopied, setIsCopied] = useState<boolean>(false);
 
   const copyTextToClipboard = async (text: string) => {
-    if ("clipboard" in navigator) {
-      return await navigator.clipboard.writeText(text)
+    if ('clipboard' in navigator) {
+      return await navigator.clipboard.writeText(text);
     } else {
-      return document.execCommand("copy", true, text)
+      return document.execCommand('copy', true, text);
     }
-  }
+  };
 
   const handleCopyClick = () => {
     // Asynchronously call copyTextToClipboard
     copyTextToClipboard(id)
       .then(() => {
         // If successful, update the isCopied state value
-        setIsCopied(true)
+        setIsCopied(true);
         setTimeout(() => {
-          setIsCopied(false)
-        }, 1500)
+          setIsCopied(false);
+        }, 1500);
       })
       .catch((err) => {
-        console.log(err)
-      })
-  }
+        console.log(err);
+      });
+  };
 
   return (
     <div
@@ -34,9 +34,9 @@ export const ItemIdBadge = ({ id }: { id: string }) => {
       onClick={handleCopyClick}
     >
       <span className="flex items-center gap-1 font-mono text-sm font-medium text-gray-600 transition-all duration-150 ease-in-out hover:text-brand-500 dark:text-gray-200">
-        {isCopied ? "Copied!" : shortenUint(id)}
+        {isCopied ? 'Copied!' : shortenUint(id)}
         <MdContentCopy />
       </span>
     </div>
-  )
-}
+  );
+};

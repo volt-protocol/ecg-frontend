@@ -9,13 +9,7 @@ type AvatarImageProps = Partial<
   }
 >;
 
-export function NextAvatar({
-  src,
-  showBorder,
-  alt = '',
-  style,
-  ...props
-}: AvatarImageProps) {
+export function NextAvatar({ src, showBorder, alt = '', style, ...props }: AvatarImageProps) {
   const { colorMode } = useColorMode();
 
   return (
@@ -26,7 +20,7 @@ export function NextAvatar({
       {...(showBorder
         ? {
             border: '2px',
-            borderColor: colorMode === 'dark' ? 'navy.700' : 'white',
+            borderColor: colorMode === 'dark' ? 'navy.700' : 'white'
           }
         : {})}
       alt={alt}
@@ -38,6 +32,5 @@ export function NextAvatar({
 }
 
 export const ChakraNextAvatar = chakra(NextAvatar, {
-  shouldForwardProp: (prop) =>
-    ['width', 'height', 'src', 'alt', 'layout'].includes(prop),
+  shouldForwardProp: (prop) => ['width', 'height', 'src', 'alt', 'layout'].includes(prop)
 });

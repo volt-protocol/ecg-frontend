@@ -1,23 +1,27 @@
-"use client"
+'use client';
 
-import { ApexChartWrapper } from "components/charts/ApexChartWrapper"
-import { Auction, AuctionHouse } from "../../../../store/slices/auctions"
-import { useAppStore } from "store"
-import { formatDecimal } from "utils/numbers"
-import moment from "moment"
+import { ApexChartWrapper } from 'components/charts/ApexChartWrapper';
+import { Auction, AuctionHouse } from '../../../../store/slices/auctions';
+import { useAppStore } from 'store';
+import { formatDecimal } from 'utils/numbers';
+import moment from 'moment';
 
 export function AuctionChart({
   auctionHouse,
   auction
 }: {
-  auctionHouse: AuctionHouse | null,
-  auction: Auction | null
+  auctionHouse: AuctionHouse | null;
+  auction: Auction | null;
 }) {
-  const { appMarketId, coinDetails, contractsList } = useAppStore()
+  const { appMarketId, coinDetails, contractsList } = useAppStore();
   if (!auction || !auctionHouse) return null;
-  const collateralToken = coinDetails.find((item) => item.address.toLowerCase() === auction.collateralTokenAddress.toLowerCase());
+  const collateralToken = coinDetails.find(
+    (item) => item.address.toLowerCase() === auction.collateralTokenAddress.toLowerCase()
+  );
   const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken.price * 100)), 0);
-  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase());
+  const pegToken = coinDetails.find(
+    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
+  );
   const pegTokenSymbol = pegToken?.symbol;
   const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
   const creditMultiplier = Number(auction.callCreditMultiplier) / 1e18;
@@ -26,9 +30,9 @@ export function AuctionChart({
   const midPoint = auctionHouse.midPoint * 1000;
   const startTime = auction.startTime - duration * 0.2;
   const endTime = auction.startTime + duration * 1.2;
-  const maxDebt = creditMultiplier * Number(auction.callDebt) / 1e18;
-  const maxCollateral = Number(auction.collateralAmount) / (10**collateralToken.decimals);
-  const steps = 100;
+  const maxDebt = (creditMultiplier * Number(auction.callDebt)) / 1e18;
+  const maxCollateral = Number(auction.collateralAmount) / 10 ** collateralToken.decimals;
+  const steps = 200;
 
   const xData = [];
   const debtData = [];
@@ -38,8 +42,7 @@ export function AuctionChart({
     if (t <= auction.startTime) {
       debtData.push([t, maxDebt]);
       collData.push([t, 0]);
-    }
-    else if (t >= (auction.startTime + duration)) {
+    } else if (t >= auction.startTime + duration) {
       debtData.push([t, 0]);
       collData.push([t, maxCollateral]);
     } else if (t <= auction.startTime + midPoint) {
@@ -66,8 +69,6 @@ export function AuctionChart({
           color: '#FF5722',
           borderColor: '#FF5722'
         },
-        
-        orientation: 'horizontal',
         text: 'Bid'
       }
     });
@@ -82,15 +83,15 @@ export function AuctionChart({
           color: '#673AB7',
           borderColor: '#673AB7'
         },
-        
         orientation: 'horizontal',
         text: 'Now'
       }
     });
   }
   // point annotation for market price
-  const collateralValue = Number(auction.collateralAmount) / (10**collateralToken.decimals) * collateralToken.price;
-  const debtValue = Number(auction.callDebt) / 1e18 * Number(auction.callCreditMultiplier) / 1e18 * pegToken.price;
+  const collateralValue = (Number(auction.collateralAmount) / 10 ** collateralToken.decimals) * collateralToken.price;
+  const debtValue =
+    (((Number(auction.callDebt) / 1e18) * Number(auction.callCreditMultiplier)) / 1e18) * pegToken.price;
   let marketPriceX;
   let marketPriceY;
   if (collateralValue > debtValue) {
@@ -107,15 +108,15 @@ export function AuctionChart({
   const state = {
     series: [
       {
-        name: "Debt Asked",
+        name: 'Debt Asked',
         type: 'line',
         data: debtData
       },
       {
-        name: "Collateral Offered",
+        name: 'Collateral Offered',
         type: 'line',
-        data: collData,
-      },
+        data: collData
+      }
     ],
     options: {
       annotations: {
@@ -125,7 +126,7 @@ export function AuctionChart({
             x: marketPriceX,
             y: marketPriceY,
             marker: {
-              size: 3,
+              size: 3
             },
             label: {
               text: 'Market Price'
@@ -133,16 +134,16 @@ export function AuctionChart({
           }
         ]
       },
-      colors: ["#bf1111", "#008FFB"],
+      colors: ['#bf1111', '#008FFB'],
       chart: {
         height: 350,
-        type: "line",
+        type: 'line',
         toolbar: {
-          show: false,
+          show: false
         },
         zoom: {
-          enabled: false,
-        },
+          enabled: false
+        }
       },
       legend: {
         show: false
@@ -156,80 +157,89 @@ export function AuctionChart({
 
           return (
             "<div class='custom-apex-tooltip'>" +
-            moment(xData[dataPointIndex]).format('YYYY-MM-DD HH:mm') + 
+            moment(xData[dataPointIndex]).format('YYYY-MM-DD HH:mm') +
             "<hr style='margin:5px 0'/>" +
-            "<ul>" +
-            "<li><b>Collateral Offered</b>: " + formatDecimal(collData[dataPointIndex][1], collateralTokenDecimalsToDisplay) + " " + collateralToken.symbol + "</li>" +
-            "<li><b>Debt Asked</b>: " + formatDecimal(debtData[dataPointIndex][1], pegTokenDecimalsToDisplay) + " " + pegTokenSymbol + "</li>" +
-            "<li><b>Inferred Collateral Price</b>: " + formatDecimal(price, pegTokenDecimalsToDisplay) + " " + pegTokenSymbol + '/' + collateralToken.symbol + "</li>" +
-            "</ul>" +
-            "</div>"
-          )
-        },
+            '<ul>' +
+            '<li><b>Collateral Offered</b>: ' +
+            formatDecimal(collData[dataPointIndex][1], collateralTokenDecimalsToDisplay) +
+            ' ' +
+            collateralToken.symbol +
+            '</li>' +
+            '<li><b>Debt Asked</b>: ' +
+            formatDecimal(debtData[dataPointIndex][1], pegTokenDecimalsToDisplay) +
+            ' ' +
+            pegTokenSymbol +
+            '</li>' +
+            '<li><b>Inferred Collateral Price</b>: ' +
+            formatDecimal(price, pegTokenDecimalsToDisplay) +
+            ' ' +
+            pegTokenSymbol +
+            '/' +
+            collateralToken.symbol +
+            '</li>' +
+            '</ul>' +
+            '</div>'
+          );
+        }
       },
       dataLabels: {
-        enabled: false,
+        enabled: false
       },
       stroke: {
-        curve: "straight",
+        curve: 'straight'
       },
       xaxis: {
-        type: "datetime",
+        type: 'datetime',
         tooltip: {
           enabled: false
         },
         labels: {
-          formatter: function(x) {
+          formatter: function (x) {
             return moment(x).format('YYYY-MM-DD HH:mm');
           }
         }
       },
       yaxis: [
         {
-          seriesName: "Debt Asked",
+          seriesName: 'Debt Asked',
           min: 0,
           max: maxDebt,
           opposite: true,
           title: {
-            text: "Debt Asked",
+            text: 'Debt Asked',
             style: {
-              color: "#bf1111"
+              color: '#bf1111'
             }
           },
           labels: {
-            formatter: function(x) {
+            formatter: function (x) {
               return formatDecimal(x, pegTokenDecimalsToDisplay);
             }
           }
         },
         {
-          seriesName: "Collateral Offered",
+          seriesName: 'Collateral Offered',
           min: 0,
           max: maxCollateral,
           title: {
-            text: "Collateral Offered",
+            text: 'Collateral Offered',
             style: {
-              color: "#008FFB"
+              color: '#008FFB'
             }
           },
           labels: {
-            formatter: function(x) {
+            formatter: function (x) {
               return formatDecimal(x, collateralTokenDecimalsToDisplay);
             }
           }
         }
       ]
-    },
-  }
+    }
+  };
 
   return (
     <div>
-      <ApexChartWrapper
-        options={state.options}
-        series={state.series}
-        type="line"
-        height={350}
-      />
+      <ApexChartWrapper options={state.options} series={state.series} type="line" height={350} />
     </div>
-  )
+  );
 }

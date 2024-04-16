@@ -1,14 +1,13 @@
-"use client"
+'use client';
 
-import { ethers } from "ethers"
-import { useEffect, useState } from "react"
+import { ethers } from 'ethers';
+import { useEffect, useState } from 'react';
 
 function SocketBridge() {
-
   // const [Bridge, setBridge] = useState<any>()
   // const provider = new ethers.BrowserProvider(window.ethereum, "any")
 
-  return null
+  return null;
 
   // //prevent issue with window not defined
   // useEffect(() => {
@@ -35,4 +34,4 @@ function SocketBridge() {
   // )
 }
 
-export default SocketBridge
+export default SocketBridge;

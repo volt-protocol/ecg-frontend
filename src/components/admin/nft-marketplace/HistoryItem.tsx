@@ -16,52 +16,50 @@ const HistoryCard = () => {
       title: 'Colorful Heaven',
       owner: 'Mark Benjamin',
       price: 0.4,
-      time: '30s',
+      time: '30s'
     },
     {
       image: Nft2,
       title: 'Abstract Colors',
       owner: 'Esthera Jackson',
       price: 2.4,
-      time: '50m',
+      time: '50m'
     },
     {
       image: Nft3,
       title: 'ETH AI Brain',
       owner: 'Nick Wilson',
       price: 0.3,
-      time: '20s',
+      time: '20s'
     },
     {
       image: Nft4,
       title: 'Swipe Circles',
       owner: ' Peter Will',
       price: 0.4,
-      time: '4h',
+      time: '4h'
     },
     {
       image: Nft5,
       title: 'Mesh Gradients',
       owner: 'Will Smith',
       price: 0.4,
-      time: '30s',
+      time: '30s'
     },
     {
       image: Nft6,
       title: '3D Cubes Art',
       owner: ' Manny Gates',
       price: 0.4,
-      time: '2m',
-    },
+      time: '2m'
+    }
   ];
 
   return (
     <Card extra={'mt-3 !z-5 overflow-hidden'}>
       {/* HistoryCard Header */}
       <div className="flex items-center justify-between rounded-t-3xl p-3">
-        <div className="text-lg font-bold text-navy-700 dark:text-white">
-          History
-        </div>
+        <div className="text-lg font-bold text-navy-700 dark:text-white">History</div>
         <button className="linear rounded-[20px] bg-lightPrimary px-4 py-2 text-base font-medium text-brand-500 transition duration-200 hover:bg-gray-100 active:bg-gray-200 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 dark:active:bg-white/20">
           See all
         </button>
@@ -76,23 +74,11 @@ const HistoryCard = () => {
         >
           <div className="flex items-center gap-3">
             <div className="flex h-16 w-16 items-center justify-center">
-              <Image
-                width="2"
-                height="20"
-                className="h-full w-full rounded-xl"
-                src={data.image}
-                alt=""
-              />
+              <Image width="2" height="20" className="h-full w-full rounded-xl" src={data.image} alt="" />
             </div>
             <div className="flex flex-col">
-              <h5 className="text-base font-bold text-navy-700 dark:text-white">
-                {' '}
-                {data.title}
-              </h5>
-              <p className="mt-1 text-sm font-normal text-gray-600">
-                {' '}
-                {data.owner}{' '}
-              </p>
+              <h5 className="text-base font-bold text-navy-700 dark:text-white"> {data.title}</h5>
+              <p className="mt-1 text-sm font-normal text-gray-600"> {data.owner} </p>
             </div>
           </div>
 

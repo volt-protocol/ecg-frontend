@@ -1,29 +1,23 @@
-"use client"
+'use client';
 
-import { ApexChartWrapper } from "components/charts/ApexChartWrapper"
+import { ApexChartWrapper } from 'components/charts/ApexChartWrapper';
 
-export const CollateralTypes = ({
-  data,
-  labels,
-}: {
-  data: number[]
-  labels: string[]
-}) => {
+export const CollateralTypes = ({ data, labels }: { data: number[]; labels: string[] }) => {
   const state = {
     series: data,
     options: {
       legend: {
-        show: false,
+        show: false
       },
       tooltip: {
-        colors: ["#50bdae", "f7b924"],
+        colors: ['#50bdae', 'f7b924'],
         y: {
-          formatter: (val) => "$" + val,
-        },
+          formatter: (val) => '$' + val
+        }
       },
       chart: {
         width: 300,
-        type: "pie",
+        type: 'pie'
       },
       labels: labels,
       responsive: [
@@ -31,31 +25,18 @@ export const CollateralTypes = ({
           breakpoint: 480,
           options: {
             chart: {
-              width: "100%",
-            },
-          },
-        },
+              width: '100%'
+            }
+          }
+        }
       ],
-      colors: [
-        "#50bdae",
-        "#f7b924",
-        "#9966CC",
-        "#80BF80",
-        "#F28073",
-        "#B2CCE6",
-        "#800021",
-      ],
-    },
-  }
+      colors: ['#50bdae', '#f7b924', '#9966CC', '#80BF80', '#F28073', '#B2CCE6', '#800021']
+    }
+  };
 
   return (
     <div className="my-auto">
-      <ApexChartWrapper
-        options={state.options}
-        series={state.series}
-        type="pie"
-        height={300}
-      />
+      <ApexChartWrapper options={state.options} series={state.series} type="pie" height={300} />
     </div>
-  )
-}
+  );
+};

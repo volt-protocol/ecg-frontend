@@ -1,9 +1,9 @@
-"use client"
+'use client';
 
-import Card from "components/card"
-import CurrentPosition from "./components/CurrentPositions"
-import CreatePosition from "./components/CreatePosition"
-import Chart from "./components/Chart"
+import Card from 'components/card';
+import CurrentPosition from './components/CurrentPositions';
+import CreatePosition from './components/CreatePosition';
+import Chart from './components/Chart';
 
 function Leverage() {
   return (
@@ -26,7 +26,7 @@ function Leverage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export default Leverage
+export default Leverage;

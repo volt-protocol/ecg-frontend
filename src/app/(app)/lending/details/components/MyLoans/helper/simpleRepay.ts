@@ -1,130 +1,126 @@
-import { GatewayABI, PsmUsdcABI, TermABI, CreditABI, UsdcABI } from "lib/contracts"
-import { ContractsList } from "store/slices/contracts-list"
-import { LendingTerms } from "types/lending"
-import { Abi, encodeFunctionData } from "viem"
+import { GatewayABI, PsmUsdcABI, TermABI, CreditABI, UsdcABI } from 'lib/contracts';
+import { ContractsList } from 'store/slices/contracts-list';
+import { LendingTerms } from 'types/lending';
+import { Abi, encodeFunctionData } from 'viem';
 
 export const simpleRepay = (
-  type: "full" | "partial",
+  type: 'full' | 'partial',
   lendingTerm: LendingTerms,
   loanId: string,
   usdcAmount: bigint, //in USDC
   debtToRepay: bigint, //in gUSDC
   permitDataUSDC: any,
-  contractsList: ContractsList
+  contractsList: ContractsList,
+  pegTokenAddress: string,
+  creditAddress: string,
+  psmAddress: string
 ) => {
-  let calls = []
+  const calls = [];
 
   // pull usdc on gateway
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "consumePermit",
-      args: [
-        contractsList.usdcAddress,
-        usdcAmount,
-        permitDataUSDC.deadline,
-        permitDataUSDC.v,
-        permitDataUSDC.r,
-        permitDataUSDC.s,
-      ],
+      functionName: 'consumePermit',
+      args: [pegTokenAddress, usdcAmount, permitDataUSDC.deadline, permitDataUSDC.v, permitDataUSDC.r, permitDataUSDC.s]
     })
-  )
+  );
 
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "consumeAllowance",
-      args: [contractsList.usdcAddress, usdcAmount],
+      functionName: 'consumeAllowance',
+      args: [pegTokenAddress, usdcAmount]
     })
-  )
+  );
 
   // do psm.mint
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "callExternal",
+      functionName: 'callExternal',
       args: [
-        contractsList.usdcAddress,
+        pegTokenAddress,
         encodeFunctionData({
           abi: UsdcABI,
-          functionName: "approve",
-          args: [contractsList.psmUsdcAddress, usdcAmount],
-        }),
-      ],
+          functionName: 'approve',
+          args: [psmAddress, usdcAmount]
+        })
+      ]
     })
-  )
+  );
 
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "callExternal",
+      functionName: 'callExternal',
       args: [
-        contractsList.psmUsdcAddress,
+        psmAddress,
         encodeFunctionData({
           abi: PsmUsdcABI,
-          functionName: "mint",
-          args: [contractsList.gatewayAddress, usdcAmount],
-        }),
-      ],
+          functionName: 'mint',
+          args: [contractsList.gatewayAddress, usdcAmount]
+        })
+      ]
     })
-  )
+  );
 
   // // do repay or partialRepay
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "callExternal",
+      functionName: 'callExternal',
       args: [
-        contractsList.creditAddress,
+        creditAddress,
         encodeFunctionData({
           abi: CreditABI as Abi,
-          functionName: "approve",
-          args: [lendingTerm.address, debtToRepay],
-        }),
-      ],
+          functionName: 'approve',
+          args: [lendingTerm.address, debtToRepay]
+        })
+      ]
     })
-  )
+  );
 
-  if (type === "full") {
+  if (type === 'full') {
     calls.push(
       encodeFunctionData({
         abi: GatewayABI as Abi,
-        functionName: "callExternal",
+        functionName: 'callExternal',
         args: [
           lendingTerm.address,
           encodeFunctionData({
             abi: TermABI as Abi,
-            functionName: "repay",
-            args: [loanId],
-          }),
-        ],
+            functionName: 'repay',
+            args: [loanId]
+          })
+        ]
       })
-    )
+    );
   } else {
     calls.push(
       encodeFunctionData({
         abi: GatewayABI as Abi,
-        functionName: "callExternal",
+        functionName: 'callExternal',
         args: [
           lendingTerm.address,
           encodeFunctionData({
             abi: TermABI as Abi,
-            functionName: "partialRepay",
-            args: [loanId, debtToRepay],
-          }),
-        ],
+            functionName: 'partialRepay',
+            args: [loanId, debtToRepay]
+          })
+        ]
       })
-    )
+    );
   }
 
   // sweep leftovers
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "sweep",
-      args: [contractsList.creditAddress],
+      functionName: 'sweep',
+      args: [creditAddress]
     })
-  )
+  );
 
-  return calls
-}
+  return calls;
+};

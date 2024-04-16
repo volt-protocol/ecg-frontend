@@ -1,17 +1,10 @@
-import {
-  GatewayABI,
-  PsmUsdcABI,
-  TermABI,
-  CreditABI,
-  UniswapRouterABI,
-  UsdcABI,
-} from "lib/contracts"
-import { LendingTerms } from "types/lending"
-import { ContractsList } from "store/slices/contracts-list"
-import { Abi, encodeFunctionData, erc20Abi } from "viem"
+import { GatewayABI, PsmUsdcABI, TermABI, CreditABI, UniswapRouterABI, UsdcABI } from 'lib/contracts';
+import { LendingTerms } from 'types/lending';
+import { ContractsList } from 'store/slices/contracts-list';
+import { Abi, encodeFunctionData, erc20Abi } from 'viem';
 
 export const repayWithLeverage = (
-  type: "full" | "partial",
+  type: 'full' | 'partial',
   lendingTerm: LendingTerms,
   loanId: string,
   debtToRepay: bigint, //in gUSDC
@@ -22,149 +15,139 @@ export const repayWithLeverage = (
   permitDataCollateral: any | undefined,
   permitDataUSDC: any,
   deadlineSwap: bigint,
-  contractsList: ContractsList
+  contractsList: ContractsList,
+  pegTokenAddress: string,
+  creditTokenAddress: string,
+  psmAddress: string
 ) => {
-  let calls = []
+  const calls = [];
 
   // pull usdc on gateway
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "consumePermit",
-      args: [
-        contractsList.usdcAddress,
-        usdcAmount,
-        permitDataUSDC.deadline,
-        permitDataUSDC.v,
-        permitDataUSDC.r,
-        permitDataUSDC.s,
-      ],
+      functionName: 'consumePermit',
+      args: [pegTokenAddress, usdcAmount, permitDataUSDC.deadline, permitDataUSDC.v, permitDataUSDC.r, permitDataUSDC.s]
     })
-  )
+  );
   // consumer usdc allowance on gateway
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "consumeAllowance",
-      args: [contractsList.usdcAddress, usdcAmount],
+      functionName: 'consumeAllowance',
+      args: [pegTokenAddress, usdcAmount]
     })
-  )
+  );
 
   // swap flashloaned sDAI to USDC
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "callExternal",
+      functionName: 'callExternal',
       args: [
         lendingTerm.collateral.address,
         encodeFunctionData({
           abi: erc20Abi,
-          functionName: "approve",
-          args: [contractsList.uniswapRouterAddress, collateralAmount],
-        }),
-      ],
+          functionName: 'approve',
+          args: [contractsList.uniswapRouterAddress, collateralAmount]
+        })
+      ]
     })
-  )
+  );
 
-  const path = [lendingTerm.collateral.address, contractsList.usdcAddress]
+  const path = [lendingTerm.collateral.address, pegTokenAddress];
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "callExternal",
+      functionName: 'callExternal',
       args: [
         contractsList.uniswapRouterAddress,
         encodeFunctionData({
           abi: UniswapRouterABI as Abi,
-          functionName: "swapExactTokensForTokens",
-          args: [
-            flashloanAmount,
-            flashloanAmountUSDC,
-            path,
-            contractsList.gatewayAddress,
-            deadlineSwap,
-          ],
-        }),
-      ],
+          functionName: 'swapExactTokensForTokens',
+          args: [flashloanAmount, flashloanAmountUSDC, path, contractsList.gatewayAddress, deadlineSwap]
+        })
+      ]
     })
-  )
+  );
 
   // do psm.mint
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "callExternal",
+      functionName: 'callExternal',
       args: [
-        contractsList.usdcAddress,
+        pegTokenAddress,
         encodeFunctionData({
           abi: UsdcABI,
-          functionName: "approve",
-          args: [contractsList.psmUsdcAddress, usdcAmount + flashloanAmountUSDC],
-        }),
-      ],
+          functionName: 'approve',
+          args: [psmAddress, usdcAmount + flashloanAmountUSDC]
+        })
+      ]
     })
-  )
+  );
 
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "callExternal",
+      functionName: 'callExternal',
       args: [
-        contractsList.psmUsdcAddress,
+        psmAddress,
         encodeFunctionData({
           abi: PsmUsdcABI,
-          functionName: "mint",
-          args: [contractsList.gatewayAddress, usdcAmount + flashloanAmountUSDC],
-        }),
-      ],
+          functionName: 'mint',
+          args: [contractsList.gatewayAddress, usdcAmount + flashloanAmountUSDC]
+        })
+      ]
     })
-  )
+  );
 
   // // do repay or partialRepay
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "callExternal",
+      functionName: 'callExternal',
       args: [
-        contractsList.creditAddress,
+        creditTokenAddress,
         encodeFunctionData({
           abi: CreditABI as Abi,
-          functionName: "approve",
-          args: [lendingTerm.address, debtToRepay],
-        }),
-      ],
+          functionName: 'approve',
+          args: [lendingTerm.address, debtToRepay]
+        })
+      ]
     })
-  )
+  );
 
-  if (type === "full") {
+  if (type === 'full') {
     calls.push(
       encodeFunctionData({
         abi: GatewayABI as Abi,
-        functionName: "callExternal",
+        functionName: 'callExternal',
         args: [
           lendingTerm.address,
           encodeFunctionData({
             abi: TermABI as Abi,
-            functionName: "repay",
-            args: [loanId],
-          }),
-        ],
+            functionName: 'repay',
+            args: [loanId]
+          })
+        ]
       })
-    )
+    );
   } else {
     calls.push(
       encodeFunctionData({
         abi: GatewayABI as Abi,
-        functionName: "callExternal",
+        functionName: 'callExternal',
         args: [
           lendingTerm.address,
           encodeFunctionData({
             abi: TermABI as Abi,
-            functionName: "partialRepay",
-            args: [loanId, debtToRepay],
-          }),
-        ],
+            functionName: 'partialRepay',
+            args: [loanId, debtToRepay]
+          })
+        ]
       })
-    )
+    );
   }
 
   // consume user permit
@@ -172,47 +155,47 @@ export const repayWithLeverage = (
     calls.push(
       encodeFunctionData({
         abi: GatewayABI as Abi,
-        functionName: "consumePermit",
+        functionName: 'consumePermit',
         args: [
           lendingTerm.collateral.address,
           collateralAmount,
           permitDataCollateral.deadline,
           permitDataCollateral.v,
           permitDataCollateral.r,
-          permitDataCollateral.s,
-        ],
+          permitDataCollateral.s
+        ]
       })
-    )
+    );
   }
 
   // consumer user allowance
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "consumeAllowance",
-      args: [lendingTerm.collateral.address, collateralAmount],
+      functionName: 'consumeAllowance',
+      args: [lendingTerm.collateral.address, collateralAmount]
     })
-  )
+  );
 
   // sweep leftovers
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "sweep",
-      args: [contractsList.usdcAddress],
+      functionName: 'sweep',
+      args: [pegTokenAddress]
     })
-  )
+  );
 
   calls.push(
     encodeFunctionData({
       abi: GatewayABI as Abi,
-      functionName: "sweep",
-      args: [contractsList.creditAddress],
+      functionName: 'sweep',
+      args: [creditTokenAddress]
     })
-  )
+  );
 
-  return calls
-}
+  return calls;
+};
 
 export const getAllowCollateralTokenCall = (
   lendingTerm: LendingTerms,
@@ -221,14 +204,14 @@ export const getAllowCollateralTokenCall = (
 ) => {
   return encodeFunctionData({
     abi: GatewayABI as Abi,
-    functionName: "consumePermit",
+    functionName: 'consumePermit',
     args: [
       lendingTerm.collateral.address,
       collateralAmount,
       permitDataCollateral.deadline,
       permitDataCollateral.v,
       permitDataCollateral.r,
-      permitDataCollateral.s,
-    ],
-  })
-}
+      permitDataCollateral.s
+    ]
+  });
+};

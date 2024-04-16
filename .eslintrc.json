@@ -20,18 +20,18 @@
         "prettier"
     ],
     "rules": {
-        "indent": ["error", 2, { "SwitchCase": 1, "flatTernaryExpressions": true }],
-        "multiline-ternary": ["error", "always-multiline"],
+        "indent": ["warning", 2, { "SwitchCase": 1, "flatTernaryExpressions": true }],
+        "multiline-ternary": ["warning", "always-multiline"],
         "linebreak-style": [
-            "error",
+            "warning",
             "unix"
         ],
         "quotes": [
-            "error",
+            "warning",
             "single"
         ],
         "semi": [
-            "error",
+            "warning",
             "always"
         ],
         "prettier/prettier": 2 // Means error

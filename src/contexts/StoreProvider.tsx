@@ -4,10 +4,13 @@ import Spinner from 'components/spinner';
 import { useEffect, useState } from 'react';
 import { useAppStore } from 'store';
 import { useAccount, useSwitchChain } from 'wagmi';
+import { useStore } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 const StoreProvider = ({ children }: { children: React.ReactNode }) => {
-  const { isConnected, chainId } = useAccount();
+  window.localStorage.removeItem("app-storage");
 
+  const { isConnected, chainId } = useAccount();
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const {
     fetchAuctions,

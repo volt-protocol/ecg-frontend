@@ -17,7 +17,6 @@ import { useAppStore } from 'store';
 import Image from 'next/image';
 import ImageWithFallback from 'components/image/ImageWithFallback';
 import { getPegTokenLogo, marketsConfig, getExplorerBaseUrl } from 'config';
-import { getCreditTokenSymbol } from 'utils/strings';
 
 export default function UserLoan({ userAddress, data }: { userAddress: Address; data: any }) {
   const { address } = useAccount();

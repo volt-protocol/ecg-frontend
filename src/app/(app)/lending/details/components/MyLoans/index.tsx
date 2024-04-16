@@ -871,7 +871,7 @@ function Myloans({
                 <Image src={pegTokenLogo} width={20} height={20} alt="logo" />{' '}
                 {formatDecimal(
                   ((Number(info.row.original.loanDebt) / 1e18) * Number(creditMultiplier)) / 1e18,
-                  creditTokenDecimalsToDisplay * 2
+                  creditTokenDecimalsToDisplay
                 )}
               </div>
             </p>
@@ -879,7 +879,7 @@ function Myloans({
               ${' '}
               {formatDecimal(
                 (((pegToken.price * Number(info.row.original.loanDebt)) / 1e18) * Number(creditMultiplier)) / 1e18,
-                creditTokenDecimalsToDisplay * 2
+                2
               )}
             </p>
           </div>
@@ -963,13 +963,16 @@ function Myloans({
                   <p>{nextPaymentDue}</p>
                 </div>
                 <p className="text-xs text-gray-700 dark:text-gray-200">
-                  Min. repay:{' '}
+                  <span className="whitespace-nowrap">Min. repay:</span>
+                  <br />
                   <strong>
                     ${' '}
                     {formatDecimal(
-                      Number(formatUnits(info.row.original.borrowAmount, 18)) * lendingTerm.minPartialRepayPercent,
+                      (((Number(info.row.original.loanDebt) / 1e18) * Number(creditMultiplier)) / 1e18) *
+                        lendingTerm.minPartialRepayPercent *
+                        pegToken.price,
                       2
-                    )}
+                    )}{' '}
                   </strong>
                 </p>
               </>
@@ -1017,7 +1020,9 @@ function Myloans({
             >
               {formatDecimal(borrowRatio, 2)} %
             </p>
-            <p className="text-sm text-gray-400 dark:text-gray-200">LTV : {formatDecimal(ltv, 2)} %</p>
+            <p className="whitespace-nowrap text-sm text-gray-400 dark:text-gray-200">
+              LTV : {formatDecimal(ltv, 2)} %
+            </p>
           </div>
         );
       }

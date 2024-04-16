@@ -22,9 +22,9 @@ function Governance() {
   const [reloadGuild, setReloadGuild] = React.useState<boolean>(false);
   const [reloadCredit, setReloadCredit] = React.useState<boolean>(false);
   const pegToken = coinDetails.find(
-    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
+    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
-  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = 'g' + pegToken?.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
 
   //TODO:  optimize contracts call with useReadContracts
   const { data, isError, isLoading, refetch } = useReadContracts({
@@ -51,28 +51,28 @@ function Governance() {
         chainId: appChainId
       },
       {
-        address: contractsList.marketContracts[appMarketId].creditAddress,
+        address: contractsList.marketContracts[appMarketId]?.creditAddress,
         abi: CreditABI,
         functionName: 'balanceOf',
         args: [address],
         chainId: appChainId
       },
       {
-        address: contractsList.marketContracts[appMarketId].creditAddress,
+        address: contractsList.marketContracts[appMarketId]?.creditAddress,
         abi: CreditABI,
         functionName: 'freeVotes',
         args: [address],
         chainId: appChainId
       },
       {
-        address: contractsList.marketContracts[appMarketId].creditAddress,
+        address: contractsList.marketContracts[appMarketId]?.creditAddress,
         abi: CreditABI,
         functionName: 'getVotes',
         args: [address],
         chainId: appChainId
       },
       {
-        address: contractsList.marketContracts[appMarketId].creditAddress,
+        address: contractsList.marketContracts[appMarketId]?.creditAddress,
         abi: CreditABI,
         functionName: 'delegateLockupPeriod',
         chainId: appChainId
@@ -101,6 +101,10 @@ function Governance() {
       setReloadCredit(false);
     }
   }, [isConnected, reloadGuild, reloadCredit]);
+
+  if (!contractsList?.marketContracts[appMarketId]) {
+    return <Spinner />;
+  }
 
   if (!isConnected) {
     return <Disconnected />;

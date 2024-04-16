@@ -27,6 +27,8 @@ import { wagmiConfig } from 'contexts/Web3Provider';
 import { lendingTermConfig, getPegTokenLogo, getExplorerBaseUrl } from 'config';
 import { ToggleCredit } from 'components/switch/ToggleCredit';
 import Image from 'next/image';
+import { MdArrowBack } from 'react-icons/md';
+import Link from 'next/link';
 
 const LendingDetails = () => {
   const { address, isConnected } = useAccount();
@@ -48,14 +50,14 @@ const LendingDetails = () => {
   }, [lendingTerms]);
 
   const pegToken = coinDetails.find(
-    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
+    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
   const guildAddress = contractsList?.guildAddress;
-  const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
-  const profitManagerAddress = contractsList?.marketContracts[appMarketId].profitManagerAddress;
-  const surplusGuildMinterAddress = contractsList?.marketContracts[appMarketId].surplusGuildMinterAddress;
+  const creditAddress = contractsList?.marketContracts[appMarketId]?.creditAddress;
+  const profitManagerAddress = contractsList?.marketContracts[appMarketId]?.profitManagerAddress;
+  const surplusGuildMinterAddress = contractsList?.marketContracts[appMarketId]?.surplusGuildMinterAddress;
 
-  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = 'g' + pegToken?.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
 
   /* Smart contract reads */
@@ -68,7 +70,7 @@ const LendingDetails = () => {
         chainId: appChainId
       },
       {
-        address: pegToken.address,
+        address: pegToken?.address,
         abi: erc20Abi,
         functionName: 'balanceOf',
         args: [address],
@@ -89,7 +91,7 @@ const LendingDetails = () => {
         chainId: appChainId
       },
       {
-        address: pegToken.address,
+        address: pegToken?.address,
         abi: ERC20PermitABI,
         functionName: 'nonces',
         args: [address],
@@ -249,6 +251,29 @@ const LendingDetails = () => {
     return <Disconnected />;
   }
 
+  const isMarketLendingTerm =
+    lendingTerms.find((term) => term.address.toLowerCase() == termAddress.toLowerCase()) != undefined;
+  if (!isMarketLendingTerm) {
+    return (
+      <div>
+        <div className="py-10 text-center text-gray-400" style={{ fontSize: '1.3em' }}>
+          This Lending Term is not part of the selected market.
+          <br />
+          <br />
+          <Link href="/lending">
+            <button
+              type="button"
+              className="inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm text-stone-600 shadow-sm transition-all duration-150 ease-in-out hover:bg-brand-100/30 hover:text-stone-800 dark:bg-navy-700 dark:text-stone-300 dark:hover:text-stone-100"
+            >
+              <MdArrowBack className="-ml-0.5 h-5 w-5" aria-hidden="true" />
+              <span className="hidden sm:block">Go Back</span>
+            </button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (lendingTermData && data) {
     return (
       <div>
@@ -279,10 +304,10 @@ const LendingDetails = () => {
                   <p>
                     Use a Gateway contract instead of interacting with the core protocol directly.
                     <br />
-                    This enables batch actions such as "borrow g{pegToken.symbol} + redeem g{pegToken.symbol} for{' '}
-                    {pegToken.symbol}",
+                    This enables batch actions such as "borrow g{pegToken?.symbol} + redeem g{pegToken?.symbol} for{' '}
+                    {pegToken?.symbol}",
                     <br />
-                    or "mint g{pegToken.symbol} from {pegToken.symbol} + repay debt", or access flashloan/leverage
+                    or "mint g{pegToken?.symbol} from {pegToken?.symbol} + repay debt", or access flashloan/leverage
                     features.
                     <br />
                     This feature is tied to the front-end and not to the core protocol, and is only enabled
@@ -405,7 +430,7 @@ const LendingDetails = () => {
                                 height={18}
                                 alt="logo"
                               />{' '}
-                              {pegToken.symbol} borrow cap).
+                              {pegToken?.symbol} borrow cap).
                             </p>
 
                             <p>
@@ -700,7 +725,7 @@ const LendingDetails = () => {
                                 height={18}
                                 alt="logo"
                               />{' '}
-                              {pegToken.symbol} borrow cap) in this term.
+                              {pegToken?.symbol} borrow cap) in this term.
                             </p>
 
                             <p>

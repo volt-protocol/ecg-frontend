@@ -52,12 +52,12 @@ export default function AuctionsTable({
   const [data, setData] = React.useState<Auction[]>([]);
 
   const pegToken = coinDetails.find(
-    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
+    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
-  const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
-  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditAddress = contractsList?.marketContracts[appMarketId]?.creditAddress;
+  const creditTokenSymbol = 'g' + pegToken?.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
-  const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+  const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken?.price * 100)), 0);
 
   /* Create Modal Steps */
   const createSteps = (): Step[] => {
@@ -256,9 +256,9 @@ export default function AuctionsTable({
       ),
       cell: (info: any) => (
         <div className="flex items-center justify-center gap-1">
-          <p className="ml-3">
+          <div className="ml-3">
             <ItemIdBadge id={info.getValue()} />
-          </p>
+          </div>
         </div>
       )
     }),
@@ -361,7 +361,7 @@ export default function AuctionsTable({
               </p>
             </div>
             <div className="text-center text-sm text-gray-400 dark:text-white">
-              ≈ $ {formatDecimal(callDebtPegToken * pegToken.price, 2)}
+              ≈ $ {formatDecimal(callDebtPegToken * pegToken?.price, 2)}
             </div>
           </>
         );
@@ -433,7 +433,7 @@ export default function AuctionsTable({
 
         return (
           <div className="flex items-center justify-center gap-1">
-            <p className="text-center text-sm text-gray-700 dark:text-white">
+            <div className="text-center text-sm text-gray-700 dark:text-white">
               {!info.getValue() ? (
                 Date.now() > auctionEnd ? (
                   <span className="inline-flex items-center gap-x-1.5 rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-500">
@@ -459,7 +459,7 @@ export default function AuctionsTable({
                   </a>
                 </div>
               )}
-            </p>
+            </div>
           </div>
         );
       }
@@ -488,7 +488,7 @@ export default function AuctionsTable({
       },
       sorting: [
         {
-          id: 'when',
+          id: 'startTime',
           desc: true
         }
       ]

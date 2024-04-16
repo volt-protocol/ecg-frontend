@@ -7,11 +7,11 @@ import AuctionsTable from './components/AuctionsTable';
 import { MdOpenInNew, MdOutlineBalance } from 'react-icons/md';
 import Spinner from 'components/spinner';
 import ModalAuctionChart from './components/ModalAuctionChart';
-import { Auction, AuctionHouse } from '../../../store/slices/auctions';
+import { Auction } from '../../../store/slices/auctions';
 import { useAppStore } from 'store';
 
 const Auctions = () => {
-  const { contractsList, coinDetails, auctionHouses, auctions } = useAppStore();
+  const { auctionHouses, auctions } = useAppStore();
   const [loading, setLoading] = useState(false);
   const [openAuction, setOpenAuction] = useState<Auction | null>(null);
   const [reload, setReload] = useState<boolean>(true);

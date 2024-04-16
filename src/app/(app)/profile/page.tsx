@@ -59,8 +59,8 @@ const UserDashboard = () => {
     const asyncFunc = async () => {
       setLoadingLoans(true);
       setLoadingRecent(true);
-      await getLoans(true);
-      await getRecentHistory(true);
+      await getLoans(false);
+      await getRecentHistory(false);
     };
     lendingTerms && userAddress && asyncFunc();
   }, [userAddress]);

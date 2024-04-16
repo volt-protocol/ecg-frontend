@@ -375,7 +375,6 @@ export default function Create() {
             />
             <div className="mt-2 sm:col-span-2 sm:mt-0">
               <DropdownSelect
-                {...register('interestRate')}
                 options={['None', 'Weekly', 'Monthly', 'Quarterly', 'Yearly']}
                 selectedOption={selectedPeriod}
                 onChange={setSelectedPeriod}

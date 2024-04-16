@@ -4,7 +4,7 @@ import { readContract } from '@wagmi/core';
 import { UseChainIdParameters, useReadContracts } from 'wagmi';
 import { useAppStore } from 'store';
 import { Abi, Address, formatUnits, erc20Abi } from 'viem';
-import { getPegTokenLogo } from 'config';
+import { getApiBaseUrl, getPegTokenLogo } from 'config';
 import { ProfitManagerABI, GuildABI, CreditABI, TermABI } from 'lib/contracts';
 import { useEffect, useState } from 'react';
 import { getActiveLoanLogs, getCloseLoanLogs, getOpenLoanLogs } from 'lib/logs/loans';
@@ -25,6 +25,8 @@ import { wagmiConfig } from 'contexts/Web3Provider';
 import { generateTermName } from 'utils/strings';
 import { GlobalStatCarts } from './components/GlobalStatCarts';
 import { TVLChart } from './components/TVLChart';
+import { HttpGet } from 'utils/HttpHelper';
+import { LastActivity, LastActivityApiResponse } from 'types/activities';
 
 const GlobalDashboard = () => {
   const { appMarketId, appChainId, lendingTerms, coinDetails, historicalData, contractsList } = useAppStore();
@@ -32,9 +34,9 @@ const GlobalDashboard = () => {
   const [debtCeilingData, setDebtCeilingData] = useState([]);
   const [collateralData, setCollateralData] = useState([]);
   const [firstLossData, setFirstLossData] = useState([]);
-  const [lastActivities, setLastActivites] = useState<LastActivitiesLogs[]>([]);
+  const [lastActivities, setLastActivites] = useState<LastActivity[]>([]);
 
-  const { data: currentBlock } = useBlockNumber();
+  const { data: currentBlock } = useBlockNumber({ chainId: appChainId });
 
   let contracts = [];
 
@@ -100,6 +102,7 @@ const GlobalDashboard = () => {
       const firstLossData = await getFirstLossCapital();
       setFirstLossData(firstLossData);
       const lastActivities = await getLastActivities();
+      console.log({ lastActivities });
       setLastActivites(lastActivities);
     };
 
@@ -220,25 +223,14 @@ const GlobalDashboard = () => {
   };
 
   const getLastActivities = async () => {
-    //last loan opening
-    let allOpenLoans = [];
-    for (const term of lendingTerms) {
-      const openLoans = await getOpenLoanLogs(term.address as Address, undefined, BLOCK_PER_WEEK);
-      const closeLoans = await getCloseLoanLogs(term.address as Address, BLOCK_PER_WEEK);
-      allOpenLoans.push(...openLoans, ...closeLoans);
+    if (!appChainId || !appMarketId) {
+      return [];
     }
+    const apiUrl = getApiBaseUrl(appChainId) + `/markets/${appMarketId}/activity`;
+    console.log({ apiUrl });
+    const activities = await HttpGet<LastActivityApiResponse>(apiUrl);
 
-    // psm mint/redeem
-    const lastMintRedeem = await getAllMintRedeemLogs(
-      appMarketId,
-      contractsList,
-      coinDetails,
-      undefined,
-      BLOCK_PER_WEEK
-    );
-    const lastVotes = await getAllVotes(contractsList, undefined, BLOCK_PER_WEEK);
-
-    return [...lastMintRedeem, ...lastVotes, ...allOpenLoans];
+    return activities.activities;
   };
 
   /***** End get dashboard data *****/

@@ -138,6 +138,16 @@ export function getExplorerBaseUrl(chainId: number) {
   }
 }
 
+export function getBlockLengthMs(chainId: number) {
+  switch (chainId) {
+    default:
+    case 11155111:
+      return 12000;
+    case 42161:
+      return 250;
+  }
+}
+
 export function getPegTokenLogo(chainId: number, marketId: number) {
   return marketsConfig[chainId].find((item) => item.marketId == marketId).logo;
 }

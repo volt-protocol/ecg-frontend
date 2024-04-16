@@ -20,20 +20,22 @@ import { AddressBadge } from 'components/badge/AddressBadge';
 import { Address } from 'viem';
 import { TransactionBadge } from 'components/badge/TransactionBadge';
 import { useAppStore } from 'store';
-
-export type LastActivitiesLogs = MintRedeemLogs | VoteLogs;
+import { LastActivity } from 'types/activities';
+import { getBlockLengthMs } from 'config';
 
 export type Category = 'mintRedeem' | 'vote';
 
-export const LastProtocolActivity = ({ data, currentBlock }: { data: LastActivitiesLogs[]; currentBlock: bigint }) => {
+export const LastProtocolActivity = ({ data, currentBlock }: { data: LastActivity[]; currentBlock: bigint }) => {
   const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
 
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
   );
 
+  console.log({ currentBlock });
+
   const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
-  const getDescription = (event: LastActivitiesLogs): any => {
+  const getDescription = (event: LastActivity): any => {
     if (event.category === 'mintRedeem') {
       return (
         <div className="ml-4 inline-flex items-center gap-1 text-sm">
@@ -59,7 +61,7 @@ export const LastProtocolActivity = ({ data, currentBlock }: { data: LastActivit
   };
 
   /* Create Table */
-  const columnHelper = createColumnHelper<LastActivitiesLogs>();
+  const columnHelper = createColumnHelper<LastActivity>();
 
   const columns = [
     columnHelper.accessor('userAddress', {
@@ -67,7 +69,7 @@ export const LastProtocolActivity = ({ data, currentBlock }: { data: LastActivit
       header: 'Wallet',
       cell: (info) => (
         <div className="flex justify-center">
-          <AddressBadge address={info.getValue()} appChainId={appChainId} />
+          <AddressBadge address={info.getValue() as Address} appChainId={appChainId} />
         </div>
       )
     }),
@@ -113,7 +115,7 @@ export const LastProtocolActivity = ({ data, currentBlock }: { data: LastActivit
             {fromNow(
               Number(
                 moment().subtract(
-                  (Number(currentBlock) - Number(info.getValue())) * BLOCK_LENGTH_MILLISECONDS,
+                  (Number(currentBlock) - Number(info.getValue())) * getBlockLengthMs(appChainId),
                   'milliseconds'
                 )
               )

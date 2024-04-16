@@ -59,7 +59,7 @@ export const marketsConfig: { [chainId: number]: SupportedMarket[] } = {
     {
       key: 'usdc-test',
       pegToken: 'USDC',
-      name: 'USDC-test',
+      name: 'USDC (test)',
       marketId: 999999999,
       networkId: 42161,
       logo: '/img/crypto-logos/usdc.png'
@@ -67,7 +67,7 @@ export const marketsConfig: { [chainId: number]: SupportedMarket[] } = {
     {
       key: 'weth-test',
       pegToken: 'WETH',
-      name: 'WETH-test',
+      name: 'WETH (test)',
       marketId: 999999998,
       networkId: 42161,
       logo: '/img/crypto-logos/weth.png'
@@ -77,7 +77,7 @@ export const marketsConfig: { [chainId: number]: SupportedMarket[] } = {
     {
       key: 'USDC-sepolia',
       pegToken: 'USDC',
-      name: 'USDC-sepolia',
+      name: 'USDC (test)',
       marketId: 42,
       networkId: 11155111,
       logo: '/img/crypto-logos/usdc.png'
@@ -85,7 +85,7 @@ export const marketsConfig: { [chainId: number]: SupportedMarket[] } = {
     {
       key: 'MEME-sepolia',
       pegToken: 'WBTC',
-      name: 'MEME-sepolia',
+      name: 'WBTC (test)',
       marketId: 420,
       networkId: 11155111,
       logo: '/img/crypto-logos/wbtc.png'
@@ -135,6 +135,16 @@ export function getExplorerBaseUrl(chainId: number) {
       return 'https://sepolia.etherscan.io';
     case 42161:
       return 'https://arbiscan.io';
+  }
+}
+
+export function getBlockLengthMs(chainId: number) {
+  switch (chainId) {
+    default:
+    case 11155111:
+      return 12000;
+    case 42161:
+      return 250;
   }
 }
 

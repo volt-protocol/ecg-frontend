@@ -32,7 +32,7 @@ const Lending = () => {
 
       <div className="mt-3">
         <Card title="Currently Active Lending Terms" extra="w-full h-full sm:overflow-auto px-6 py-4">
-          <LendingTermsTable tableData={lendingTerms.filter((loan) => loan.status == 'live')} />
+          <LendingTermsTable showFilters={true} tableData={lendingTerms.filter((loan) => loan.status == 'live')} />
         </Card>
       </div>
       {lendingTerms.filter((loan) => loan.status == 'deprecated').length != 0 && (

@@ -5,6 +5,7 @@ import { getActiveLoanLogs, getCloseLoanLogsbyUser } from 'lib/logs/loans';
 import { MintRedeemLogs } from 'lib/logs/mint-redeem';
 import { VoteLogs } from 'lib/logs/votes';
 import { MdOutlineThumbDown, MdOutlineThumbUp, MdRemove } from 'react-icons/md';
+import { LastActivity } from 'types/activities';
 import { LendingTerms, LoansObj } from 'types/lending';
 import { Address, formatUnits } from 'viem';
 
@@ -14,9 +15,9 @@ export const getUserLoans = async (
   lendingTerms: LendingTerms[],
   termAddress: Address,
   borrower: Address,
-  appChainId: Number
+  appChainId: number
 ): Promise<LoansObj[]> => {
-  let loans: LoansObj[] = [];
+  const loans: LoansObj[] = [];
 
   //get user active loans logs
   const activeLogs = await getActiveLoanLogs(termAddress, borrower);
@@ -63,20 +64,20 @@ export const getUserLevel = (loans: LoansObj[], lastMints: MintRedeemLogs[], las
   return 'dragon_egg';
 };
 
-export const getLastVoteEventDescription = (event: VoteLogs): any => {
+export const getLastVoteEventDescription = (event: LastActivity): any => {
   let suffix: any;
   switch (event.type) {
     case 'LendingTermOnboarding':
-      suffix = ` Lending Term Onboarding`;
+      suffix = ' Lending Term Onboarding';
       break;
     case 'LendingTermOffboarding':
-      suffix = ` Lending Term Offboarding`;
+      suffix = ' Lending Term Offboarding';
       break;
     case 'VetoGovernor':
-      suffix = ` Governance Proposal Veto`;
+      suffix = ' Governance Proposal Veto';
       break;
     case 'Governor':
-      suffix = ` Governance Proposal`;
+      suffix = ' Governance Proposal';
       break;
   }
 

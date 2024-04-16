@@ -25,13 +25,16 @@ import { Abi, formatUnits, Address } from 'viem';
 import { useReadContracts } from 'wagmi';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
+import { MdVisibility, MdVisibilityOff } from 'react-icons/md';
 
-export default function LendingTermsTable(props: { tableData: LendingTerms[] }) {
+export default function LendingTermsTable(props: { tableData: LendingTerms[]; showFilters?: boolean }) {
   const { appChainId, appMarketId, contractsList, coinDetails } = useAppStore();
   const { tableData } = props;
+  const [showNoDebtCeilingTerms, setShowNoDebtCeilingTerms] = React.useState<boolean>(false);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const columnHelper = createColumnHelper<LendingTerms>();
   const [data, setData] = React.useState<LendingTerms[]>([]);
+  const [filteredData, setFilteredData] = React.useState<LendingTerms[] | null>(null);
 
   const router = useRouter();
 
@@ -98,6 +101,17 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
     }
     tableData && contractData && fetchDataForTerms();
   }, [tableData, contractData]);
+
+  useEffect(() => {
+    setFilteredData(
+      (data || []).filter(function (term: any) {
+        if (showNoDebtCeilingTerms || !props.showFilters) {
+          return true;
+        }
+        return term.debtCeiling != 0;
+      })
+    );
+  }, [showNoDebtCeilingTerms, data]);
 
   async function getExtraTermData(term: LendingTerms): Promise<any> {
     const result = await readContracts(wagmiConfig, {
@@ -426,7 +440,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
   /* eslint-enable */
 
   const table = useReactTable({
-    data,
+    data: filteredData || data,
     columns,
     state: {
       sorting
@@ -439,6 +453,29 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[] }) 
 
   return (
     <div className="mt-4 overflow-auto">
+      {props.showFilters ? (
+        <div style={{ position: 'absolute', right: '1em', top: '1em' }}>
+          {showNoDebtCeilingTerms ? (
+            <button
+              onClick={() => setShowNoDebtCeilingTerms(false)}
+              type="button"
+              className="mr-2 inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm text-stone-600 shadow-sm transition-all duration-150 ease-in-out hover:bg-brand-100/30 hover:text-stone-800 dark:bg-navy-700 dark:text-stone-200 dark:hover:bg-navy-600"
+            >
+              <span className="hidden lg:block">Show terms with 0 Debt Ceiling</span>
+              <MdVisibility className="-ml-0.5 h-5 w-5" aria-hidden="true" />
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowNoDebtCeilingTerms(true)}
+              type="button"
+              className="mr-2 inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm text-stone-600 shadow-sm transition-all duration-150 ease-in-out hover:bg-brand-100/30 hover:text-stone-800 dark:bg-navy-700 dark:text-stone-200 dark:hover:bg-navy-600"
+            >
+              <span className="hidden lg:block">Hide terms with 0 Debt Ceiling</span>
+              <MdVisibilityOff className="-ml-0.5 h-5 w-5" aria-hidden="true" />
+            </button>
+          )}
+        </div>
+      ) : null}
       <table className="w-full">
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (

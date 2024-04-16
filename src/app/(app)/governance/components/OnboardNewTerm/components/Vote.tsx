@@ -25,7 +25,6 @@ import { fromNow } from 'utils/date';
 import moment from 'moment';
 import { formatUnits, keccak256, stringToBytes, Address } from 'viem';
 import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
-import { BLOCK_LENGTH_MILLISECONDS } from 'utils/constants';
 import { getVotableTerms } from './helper';
 import VoteStatusBar from 'components/bar/VoteStatusBar';
 import { extractTermAddress } from 'utils/strings';

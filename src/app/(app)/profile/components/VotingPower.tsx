@@ -23,11 +23,11 @@ export default function VotingPower({ userAddress }: { userAddress: Address }) {
   const [guildChart, setGuildChart] = useState<any>(undefined);
   const [creditChart, setCreditChart] = useState<any>(undefined);
 
-  const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
+  const creditAddress = contractsList?.marketContracts[appMarketId]?.creditAddress;
   const pegToken = coinDetails.find(
-    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
+    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
-  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken?.price * 100)), 0);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
 
   const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);

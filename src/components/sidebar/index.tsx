@@ -6,7 +6,7 @@ import clsx from 'clsx';
 import { IRoute } from 'types/navigation';
 import DropdownSelect from 'components/select/DropdownSelect';
 import NavLink from 'components/link/NavLink';
-import { MdOpenInNew } from 'react-icons/md';
+import { MdOpenInNew, MdOutlineWarningAmber } from 'react-icons/md';
 import { useSwitchChain } from 'wagmi';
 import { useAppStore } from 'store';
 import { marketsConfig } from 'config';
@@ -62,6 +62,7 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
               <div className="flex items-center gap-1 text-sm">
                 <Image src={option.logo} width={25} height={25} alt={option.name} />
                 {option.name}
+                {option.name.indexOf('(test)') != -1 ? <MdOutlineWarningAmber style={{ color: '#FFA000' }} /> : null}
               </div>
             )}
             extra="min-w-[180px]"

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { LendingTermsSlice, createLendingTermsSlice } from './slices/lending-terms';
+import { LoansSlice, createLoansSlice } from './slices/loans';
 import { AuctionsSlice, createAuctionsSlice } from './slices/auctions';
 import { CoinDetailsSlice, createCoinDetailsSlice } from './slices/coin-details';
 import { ContractsListSlice, createContractsListSlice } from './slices/contracts-list';
@@ -9,6 +10,7 @@ import { DashboardSlice, createDashboardSlice } from './slices/dashboard';
 import { persist } from 'zustand/middleware';
 
 type StoreState = LendingTermsSlice &
+  LoansSlice &
   AuctionsSlice &
   CoinDetailsSlice &
   AppSettingsSlice &
@@ -19,6 +21,7 @@ type TosState = TosSlice;
 
 export const useAppStore = create<StoreState, any>((...a) => ({
   ...createLendingTermsSlice(...a),
+  ...createLoansSlice(...a),
   ...createAuctionsSlice(...a),
   ...createCoinDetailsSlice(...a),
   ...createAppSettingsSlice(...a),

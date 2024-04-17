@@ -15,6 +15,7 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   const {
     fetchAuctions,
     fetchLendingTerms,
+    fetchLoans,
     fetchCoins,
     fetchHistoricalData,
     fetchContractsList,
@@ -32,6 +33,7 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
         fetchCoins(appMarketId, appChainId),
         fetchHistoricalData(appMarketId, appChainId),
         fetchLendingTerms(appMarketId, appChainId),
+        fetchLoans(appMarketId, appChainId),
         fetchAuctions(appMarketId, appChainId)
       ]);
       console.log('store provider end loading');

@@ -80,6 +80,12 @@ export interface LendingTermsResponse {
   terms: LendingTerms[];
 }
 
+export interface LoansResponse {
+  updated: number;
+  updatedHuman: string;
+  loans: LoanObj[];
+}
+
 export type userData = {
   address: string;
   isConnected: boolean;

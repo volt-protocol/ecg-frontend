@@ -8,6 +8,7 @@ import { AppSettingsSlice, createAppSettingsSlice } from './slices/app-settings'
 import { TosSlice, createTosSlice } from './slices/tos';
 import { DashboardSlice, createDashboardSlice } from './slices/dashboard';
 import { persist } from 'zustand/middleware';
+import { ProtocolDataSlice, createProtocolDataSlice } from './slices/protocol-data';
 
 type StoreState = LendingTermsSlice &
   LoansSlice &
@@ -15,7 +16,8 @@ type StoreState = LendingTermsSlice &
   CoinDetailsSlice &
   AppSettingsSlice &
   DashboardSlice &
-  ContractsListSlice;
+  ContractsListSlice &
+  ProtocolDataSlice;
 
 type TosState = TosSlice;
 
@@ -26,7 +28,8 @@ export const useAppStore = create<StoreState, any>((...a) => ({
   ...createCoinDetailsSlice(...a),
   ...createAppSettingsSlice(...a),
   ...createDashboardSlice(...a),
-  ...createContractsListSlice(...a)
+  ...createContractsListSlice(...a),
+  ...createProtocolDataSlice(...a)
 }));
 
 export const useTosStore = create<TosState, any>(

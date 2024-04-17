@@ -19,6 +19,7 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
     fetchCoins,
     fetchHistoricalData,
     fetchContractsList,
+    fetchProtocolData,
     appMarketId,
     appChainId
   } = useAppStore();
@@ -27,13 +28,14 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const asyncFunc = async () => {
       setIsLoading(true);
+      const contractsList = await fetchContractsList(appChainId);
       await Promise.all([
-        fetchContractsList(appChainId),
         fetchCoins(appMarketId, appChainId),
         fetchHistoricalData(appMarketId, appChainId),
         fetchLendingTerms(appMarketId, appChainId),
         fetchLoans(appMarketId, appChainId),
-        fetchAuctions(appMarketId, appChainId)
+        fetchAuctions(appMarketId, appChainId),
+        fetchProtocolData(appMarketId, appChainId, contractsList)
       ]);
       setIsLoading(false);
     };

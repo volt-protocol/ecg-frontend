@@ -16,6 +16,7 @@ export type LoansObj = {
   txHashOpen: string;
   txHashClose: string;
   termAddress: Address;
+  loanDebt: number;
 };
 
 export type loanObjCall = {

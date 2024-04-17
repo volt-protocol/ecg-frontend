@@ -29,7 +29,17 @@ import { HttpGet } from 'utils/HttpHelper';
 import { LastActivity, LastActivityApiResponse } from 'types/activities';
 
 const GlobalDashboard = () => {
-  const { appMarketId, appChainId, lendingTerms, coinDetails, historicalData, contractsList } = useAppStore();
+  const {
+    appMarketId,
+    appChainId,
+    lendingTerms,
+    coinDetails,
+    historicalData,
+    contractsList,
+    creditMultiplier,
+    creditSupply,
+    totalWeight
+  } = useAppStore();
   const [totalActiveLoans, setTotalActiveLoans] = useState<number>();
   const [debtCeilingData, setDebtCeilingData] = useState([]);
   const [collateralData, setCollateralData] = useState([]);
@@ -38,56 +48,17 @@ const GlobalDashboard = () => {
 
   const { data: currentBlock } = useBlockNumber({ chainId: appChainId });
 
-  let contracts = [];
-
-  const guildAddress = contractsList.guildAddress;
-  const profitManagerAddress = contractsList?.marketContracts[appMarketId]?.profitManagerAddress;
-
-  const creditAddress = contractsList?.marketContracts[appMarketId]?.creditAddress;
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
   const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10((pegToken ? pegToken.price : 0) * 100)), 0);
 
-  if (contractsList && contractsList.marketContracts[appMarketId]) {
-    contracts = [
-      {
-        address: guildAddress,
-        abi: GuildABI,
-        functionName: 'totalTypeWeight',
-        args: [appMarketId],
-        chainId: appChainId as any
-      },
-      {
-        address: profitManagerAddress,
-        abi: ProfitManagerABI as Abi,
-        functionName: 'creditMultiplier',
-        chainId: appChainId as any
-      },
-      {
-        address: creditAddress,
-        abi: CreditABI,
-        functionName: 'totalSupply',
-        chainId: appChainId as any
-      }
-    ];
-  }
-
-  /* Read contracts */
-  const { data, isError, isLoading } = useReadContracts({
-    contracts,
-    allowFailure: true,
-    query: {
-      select: (data) => {
-        return {
-          totalWeight: Number(formatUnits(data[0].result as bigint, 18)),
-          creditMultiplier: Number(formatUnits(data[1].result as bigint, 18)),
-          creditTotalSupply: Number(formatUnits(data[2].result as bigint, 18))
-        };
-      }
-    }
-  });
+  const data = {
+    totalWeight: Number(formatUnits(totalWeight, 18)),
+    creditMultiplier: Number(formatUnits(creditMultiplier, 18)),
+    creditTotalSupply: Number(formatUnits(creditSupply, 18))
+  };
 
   /* End Read Contract data  */
 
@@ -105,8 +76,8 @@ const GlobalDashboard = () => {
       setLastActivites(lastActivities);
     };
 
-    !isLoading && data?.creditMultiplier && lendingTerms.length && asyncFunc();
-  }, [data, isLoading, lendingTerms]);
+    lendingTerms.length && asyncFunc();
+  }, [lendingTerms]);
 
   if (!contractsList?.marketContracts[appMarketId]) {
     return (
@@ -213,8 +184,6 @@ const GlobalDashboard = () => {
   };
 
   /***** End get dashboard data *****/
-
-  if (isLoading) return <Spinner />;
 
   return (
     <div>

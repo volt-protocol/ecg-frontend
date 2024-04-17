@@ -38,10 +38,6 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[]; sh
 
   const router = useRouter();
 
-  useEffect(() => {
-    setData([...tableData]);
-  }, [tableData]);
-
   /* Smart contract reads */
   const {
     data: contractData,

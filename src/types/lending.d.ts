@@ -66,10 +66,10 @@ export type LendingTerms = {
   maxDelayBetweenPartialRepay: number;
   status: 'deprecated' | 'live';
   label: string;
-  gaugeWeight: string;
-  totalTypeWeight: string;
-  issuance: string;
-  debtCeiling: string;
+  gaugeWeight: number;
+  totalTypeWeight: number;
+  issuance: number;
+  debtCeiling: number;
 };
 
 export interface LendingTermsResponse {

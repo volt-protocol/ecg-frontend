@@ -102,7 +102,6 @@ const GlobalDashboard = () => {
       const firstLossData = await getFirstLossCapital();
       setFirstLossData(firstLossData);
       const lastActivities = await getLastActivities();
-      console.log({ lastActivities });
       setLastActivites(lastActivities);
     };
 
@@ -208,7 +207,6 @@ const GlobalDashboard = () => {
       return [];
     }
     const apiUrl = getApiBaseUrl(appChainId) + `/markets/${appMarketId}/activity`;
-    console.log({ apiUrl });
     const activities = await HttpGet<LastActivityApiResponse>(apiUrl);
 
     return activities.activities;

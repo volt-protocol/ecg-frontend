@@ -190,23 +190,16 @@ const GlobalDashboard = () => {
   };
 
   const getAllTimePnl = async () => {
-    // compute sum auction debt recovered minus sum borrowed
-    let totalRecoveredPegToken = 0;
-    for (const auction of auctions.filter((_) => _.status == AuctionStatus.CLOSED)) {
-      const normRecovered = Number(formatUnits(BigInt(auction.debtRecovered), 18));
-      const normCreditMultiplier = Number(formatUnits(BigInt(auction.callCreditMultiplier), 18));
-      totalRecoveredPegToken += normRecovered * normCreditMultiplier;
-    }
-
-    let totalBorrowedpegToken = 0;
+    let totalBorrowedPegToken = 0;
+    let totalRepaidPegToken = 0;
     for (const loan of loans.filter((_) => _.closeTime != 0)) {
-      console.log({ loan });
       const normBorrowed = loan.borrowAmount;
       const normCreditMultiplier = loan.borrowCreditMultiplier;
-      totalBorrowedpegToken += normBorrowed * normCreditMultiplier;
+      totalBorrowedPegToken += normBorrowed * normCreditMultiplier;
+      totalRepaidPegToken += loan.debtRepaid * normCreditMultiplier;
     }
 
-    const pnl = (totalRecoveredPegToken - totalBorrowedpegToken) * pegToken.price;
+    const pnl = (totalRepaidPegToken - totalBorrowedPegToken) * pegToken.price;
     console.log(`All time pnl: $${pnl}`);
     return pnl;
   };

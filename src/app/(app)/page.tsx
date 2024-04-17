@@ -185,23 +185,13 @@ const GlobalDashboard = () => {
       chainId: appChainId as any
     });
 
-    const termsArray = await Promise.all(
-      lendingTerms
-        .filter((term) => term.status == 'live')
-        .map(async (term) => {
-          const termSurplusBuffer = await readContract(wagmiConfig, {
-            address: contractsList.marketContracts[appMarketId].profitManagerAddress,
-            abi: ProfitManagerABI as Abi,
-            functionName: 'termSurplusBuffer',
-            args: [term.address],
-            chainId: appChainId as any
-          });
-          return {
-            term: term.collateral.symbol,
-            value: Number(formatUnits(termSurplusBuffer as bigint, 18))
-          };
-        })
-    );
+    const termsArray: { term: string; value: number }[] = [];
+    for (const t of lendingTerms.filter((_) => _.status == 'live')) {
+      termsArray.push({
+        term: t.collateral.symbol,
+        value: t.termSurplusBuffer
+      });
+    }
 
     termsArray.push({
       term: 'Global',

@@ -9,7 +9,7 @@ import { persist } from 'zustand/middleware';
 
 const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   // remove old app-storage if any
-  window.localStorage.removeItem("app-storage");
+  window.localStorage.removeItem('app-storage');
   const { isConnected, chainId } = useAccount();
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const {

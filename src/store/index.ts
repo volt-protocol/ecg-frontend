@@ -15,26 +15,24 @@ type StoreState = LendingTermsSlice &
   DashboardSlice &
   ContractsListSlice;
 
-type TosState = TosSlice
+type TosState = TosSlice;
 
-export const useAppStore = create<StoreState, any>(
-    (...a) => ({
-      ...createLendingTermsSlice(...a),
-      ...createAuctionsSlice(...a),
-      ...createCoinDetailsSlice(...a),
-      ...createAppSettingsSlice(...a),
-      ...createDashboardSlice(...a),
-      ...createContractsListSlice(...a)
-    })
-);
+export const useAppStore = create<StoreState, any>((...a) => ({
+  ...createLendingTermsSlice(...a),
+  ...createAuctionsSlice(...a),
+  ...createCoinDetailsSlice(...a),
+  ...createAppSettingsSlice(...a),
+  ...createDashboardSlice(...a),
+  ...createContractsListSlice(...a)
+}));
 
 export const useTosStore = create<TosState, any>(
   persist(
     (...a) => ({
-      ...createTosSlice(...a),
+      ...createTosSlice(...a)
     }),
     {
       name: 'tos-storage' // name of the item in the storage (must be unique)
     }
-  ),
+  )
 );

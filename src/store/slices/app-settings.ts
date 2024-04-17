@@ -8,9 +8,7 @@ export interface AppSettingsSlice {
   appMarket: SupportedMarket;
   appChainId: number;
   searchFocused: boolean;
-  termsAccepted: boolean;
   searchHistory: Address[];
-  setTermsAccepted: (value: boolean) => void;
   setSearchFocused: (value: boolean) => void;
   addSearchHistory: (value: Address) => void;
   cleanSearchHistory: () => void;
@@ -23,7 +21,6 @@ export const createAppSettingsSlice: StateCreator<AppSettingsSlice> = (set, get)
   appMarketId: marketsConfig[wagmiConfig.chains[0].id][0].marketId,
   appMarket: marketsConfig[wagmiConfig.chains[0].id][0],
   searchFocused: false,
-  termsAccepted: false,
   searchHistory: [],
   setAppMarket: (market: SupportedMarket) => {
     set({ appMarket: market });
@@ -42,9 +39,6 @@ export const createAppSettingsSlice: StateCreator<AppSettingsSlice> = (set, get)
   },
   cleanSearchHistory: () => {
     set({ searchHistory: [] });
-  },
-  setTermsAccepted: () => {
-    set({ termsAccepted: true });
   },
   setSearchFocused: (value: boolean) => {
     set({ searchFocused: value });

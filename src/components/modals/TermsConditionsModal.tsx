@@ -2,13 +2,13 @@ import { Fragment, useState } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { MdCheck } from 'react-icons/md';
 import ButtonPrimary from 'components/button/ButtonPrimary';
-import { useAppStore } from 'store';
+import { useAppStore, useTosStore } from 'store';
 
 export default function TermsConditionsModal() {
   const [open, setOpen] = useState<boolean>(true);
   const [checkedTerms, isCheckedTerms] = useState<boolean>(false);
   const [checkedRisks, isCheckedRisks] = useState<boolean>(false);
-  const { setTermsAccepted } = useAppStore();
+  const { setTermsAccepted } = useTosStore();
 
   const handleAcceptterms = () => {
     setTermsAccepted(true);

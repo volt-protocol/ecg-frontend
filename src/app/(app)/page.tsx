@@ -127,10 +127,12 @@ const GlobalDashboard = () => {
 
   /**** Get Dashboard data ****/
   const getTotalActiveLoans = async () => {
-    const promises = lendingTerms.map((term) => getActiveLoanLogs(term.address as Address));
-    const results = await Promise.all(promises);
-    const total = results.reduce((acc, activeLoans) => acc + activeLoans.length, 0);
-    return total;
+    let activeLoans = 0;
+    for (const t of lendingTerms) {
+      activeLoans += t.activeLoans;
+    }
+
+    return activeLoans;
   };
 
   const getCollateralData = async () => {

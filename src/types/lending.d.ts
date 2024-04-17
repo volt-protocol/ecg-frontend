@@ -71,6 +71,7 @@ export type LendingTerms = {
   issuance: number;
   debtCeiling: number;
   termSurplusBuffer: number;
+  activeLoans: number;
 };
 
 export interface LendingTermsResponse {

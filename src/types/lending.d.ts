@@ -70,6 +70,8 @@ export type LendingTerms = {
   totalTypeWeight: number;
   issuance: number;
   debtCeiling: number;
+  termSurplusBuffer: number;
+  activeLoans: number;
 };
 
 export interface LendingTermsResponse {

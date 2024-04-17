@@ -127,10 +127,12 @@ const GlobalDashboard = () => {
 
   /**** Get Dashboard data ****/
   const getTotalActiveLoans = async () => {
-    const promises = lendingTerms.map((term) => getActiveLoanLogs(term.address as Address));
-    const results = await Promise.all(promises);
-    const total = results.reduce((acc, activeLoans) => acc + activeLoans.length, 0);
-    return total;
+    let activeLoans = 0;
+    for (const t of lendingTerms) {
+      activeLoans += t.activeLoans;
+    }
+
+    return activeLoans;
   };
 
   const getCollateralData = async () => {
@@ -161,31 +163,20 @@ const GlobalDashboard = () => {
   };
 
   const getDebtCeilingData = async () => {
-    return await Promise.all(
-      lendingTerms
-        .filter((term) => term.status == 'live')
-        .map(async (term) => {
-          const debtCeiling = await readContract(wagmiConfig, {
-            address: term.address as Address,
-            abi: TermABI as Abi,
-            functionName: 'debtCeiling',
-            chainId: appChainId as any
-          });
+    const debtCeilingData: { collateral: string; currentDebt: number; debtCeiling: number }[] = [];
+    for (const term of lendingTerms.filter((_) => _.status == 'live')) {
+      debtCeilingData.push({
+        collateral: generateTermName(
+          term.collateral.symbol,
+          term.interestRate,
+          term.borrowRatio / data?.creditMultiplier
+        ),
+        currentDebt: term.currentDebt * data?.creditMultiplier,
+        debtCeiling: term.debtCeiling * data?.creditMultiplier
+      });
+    }
 
-          return {
-            collateral: generateTermName(
-              term.collateral.symbol,
-              term.interestRate,
-              term.borrowRatio / data?.creditMultiplier
-            ),
-            currentDebt: term.currentDebt * data?.creditMultiplier,
-            debtCeiling: Number(formatUnits(debtCeiling as bigint, 18)) * data?.creditMultiplier
-          };
-        })
-    ).then(function (data) {
-      console.log('getDebtCeilingData', data);
-      return data;
-    });
+    return debtCeilingData;
   };
 
   const getFirstLossCapital = async () => {
@@ -196,23 +187,13 @@ const GlobalDashboard = () => {
       chainId: appChainId as any
     });
 
-    const termsArray = await Promise.all(
-      lendingTerms
-        .filter((term) => term.status == 'live')
-        .map(async (term) => {
-          const termSurplusBuffer = await readContract(wagmiConfig, {
-            address: contractsList.marketContracts[appMarketId].profitManagerAddress,
-            abi: ProfitManagerABI as Abi,
-            functionName: 'termSurplusBuffer',
-            args: [term.address],
-            chainId: appChainId as any
-          });
-          return {
-            term: term.collateral.symbol,
-            value: Number(formatUnits(termSurplusBuffer as bigint, 18))
-          };
-        })
-    );
+    const termsArray: { term: string; value: number }[] = [];
+    for (const t of lendingTerms.filter((_) => _.status == 'live')) {
+      termsArray.push({
+        term: t.collateral.symbol,
+        value: t.termSurplusBuffer
+      });
+    }
 
     termsArray.push({
       term: 'Global',

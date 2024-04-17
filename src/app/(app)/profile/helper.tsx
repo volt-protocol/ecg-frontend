@@ -11,49 +11,8 @@ import { Address, formatUnits } from 'viem';
 
 type UserLevel = 'dragon_egg' | 'baby_dragon' | 'teenage_dragon' | 'adult_dragon';
 
-export const getUserLoans = async (
-  lendingTerms: LendingTerms[],
-  termAddress: Address,
-  borrower: Address,
-  appChainId: number
-): Promise<LoansObj[]> => {
-  const loans: LoansObj[] = [];
-
-  //get user active loans logs
-  const activeLogs = await getActiveLoanLogs(termAddress, borrower);
-  const closeLogs = await getCloseLoanLogsbyUser(termAddress, borrower);
-
-  const allLogs = [...activeLogs, ...closeLogs];
-
-  for (const log of allLogs) {
-    const loan = await readContract(wagmiConfig, {
-      ...termContract(termAddress),
-      functionName: 'getLoan',
-      args: [log.loanId],
-      chainId: appChainId as any
-    });
-
-    const lendingTerm = lendingTerms.find((term) => term.address === termAddress);
-
-    loans.push({
-      borrowAmount: Number(formatUnits(loan.borrowAmount, 18)),
-      borrowCreditMultiplier: Number(formatUnits(loan.borrowCreditMultiplier, 18)),
-      borrowTime: Number(loan.borrowTime.toString()),
-      borrower: loan.borrower as Address,
-      callDebt: Number(formatUnits(loan.callDebt, 18)),
-      callTime: Number(loan.callTime.toString()),
-      closeTime: Number(loan.closeTime.toString()),
-      collateralAmount: Number(formatUnits(loan.collateralAmount, lendingTerm.collateral.decimals)),
-      id: log.loanId as Address,
-      txHashOpen: log.txHashOpen,
-      txHashClose: loan.closeTime ? log.txHashClose : '',
-      collateral: lendingTerm.collateral.symbol,
-      interestRate: lendingTerm.interestRate,
-      borrowRatio: lendingTerm.borrowRatio,
-      termAddress: termAddress as Address
-    });
-  }
-  return loans;
+export const getUserLoans = async (loans: LoansObj[], termAddress: Address, borrower: Address): Promise<LoansObj[]> => {
+  return loans.filter((_) => _.termAddress == termAddress && _.borrower == borrower);
 };
 
 //get user level

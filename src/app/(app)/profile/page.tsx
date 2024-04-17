@@ -37,7 +37,8 @@ const UserDashboard = () => {
     userData,
     addLastVotes,
     addLastMints,
-    contractsList
+    contractsList,
+    loans
   } = useAppStore();
   const [userLoansData, setUserLoansData] = useState<LoansObj[]>([]);
   const [lastUpdated, setLastUpdated] = useState<number>();
@@ -86,7 +87,7 @@ const UserDashboard = () => {
       setLastUpdated(data.lastUpdated);
     } else {
       for (const term of lendingTerms) {
-        const data = await getUserLoans(lendingTerms, term.address as Address, userAddress, appChainId);
+        const data = await getUserLoans(loans, term.address as Address, userAddress);
         loans.push(...data);
       }
 

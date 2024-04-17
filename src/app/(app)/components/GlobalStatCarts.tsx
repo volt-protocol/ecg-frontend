@@ -9,12 +9,14 @@ export const GlobalStatCarts = ({
   lendingTerms,
   data,
   collateralData,
-  totalActiveLoans
+  totalActiveLoans,
+  allTimePnL
 }: {
   lendingTerms: LendingTerms[];
   data: any;
   collateralData: any;
   totalActiveLoans: number;
+  allTimePnL: number;
 }) => {
   return (
     <>
@@ -37,9 +39,11 @@ export const GlobalStatCarts = ({
         title={'GUILD Staked'}
         subtitle={`${toLocaleString(formatDecimal(data?.totalWeight, 2))}`}
       />
-      <div className="opacity-40">
-        <Widget icon={<IoMdHome className="h-6 w-6" />} title={'All Time P&L'} subtitle={'$ 2433'} />
-      </div>
+      <Widget
+        icon={<IoMdHome className="h-6 w-6" />}
+        title={'All Time P&L'}
+        subtitle={`$ ${toLocaleString(formatDecimal(allTimePnL, 2))}`}
+      />
     </>
   );
 };

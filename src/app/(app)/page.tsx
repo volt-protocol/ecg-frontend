@@ -15,7 +15,7 @@ import { FirstLossCapital } from './components/FirstLossCapital';
 import { AverageInterestRate } from './components/AverageInterestRate';
 import { CreditTotalSupply } from './components/CreditTotalSupply';
 import Spinner from 'components/spinner';
-import { LastActivitiesLogs, LastProtocolActivity } from './components/LastProtocolActivity';
+import { LastProtocolActivity } from './components/LastProtocolActivity';
 import { formatCurrencyValue, formatDecimal } from 'utils/numbers';
 import { useBlockNumber } from 'wagmi';
 import { getAllMintRedeemLogs } from 'lib/logs/mint-redeem';
@@ -27,6 +27,7 @@ import { GlobalStatCarts } from './components/GlobalStatCarts';
 import { TVLChart } from './components/TVLChart';
 import { HttpGet } from 'utils/HttpHelper';
 import { LastActivity, LastActivityApiResponse } from 'types/activities';
+import { AuctionStatus } from 'store/slices/auctions';
 
 const GlobalDashboard = () => {
   const {
@@ -38,13 +39,16 @@ const GlobalDashboard = () => {
     contractsList,
     creditMultiplier,
     creditSupply,
-    totalWeight
+    totalWeight,
+    auctions,
+    loans
   } = useAppStore();
   const [totalActiveLoans, setTotalActiveLoans] = useState<number>();
   const [debtCeilingData, setDebtCeilingData] = useState([]);
   const [collateralData, setCollateralData] = useState([]);
   const [firstLossData, setFirstLossData] = useState([]);
   const [lastActivities, setLastActivites] = useState<LastActivity[]>([]);
+  const [allTimePnl, setAllTimePnl] = useState<number>(0);
 
   const { data: currentBlock } = useBlockNumber({ chainId: appChainId });
 
@@ -74,6 +78,8 @@ const GlobalDashboard = () => {
       setFirstLossData(firstLossData);
       const lastActivities = await getLastActivities();
       setLastActivites(lastActivities);
+      const allTimePnl = await getAllTimePnl();
+      setAllTimePnl(allTimePnl);
     };
 
     lendingTerms.length && asyncFunc();
@@ -183,6 +189,28 @@ const GlobalDashboard = () => {
     return activities.activities;
   };
 
+  const getAllTimePnl = async () => {
+    // compute sum auction debt recovered minus sum borrowed
+    let totalRecoveredPegToken = 0;
+    for (const auction of auctions.filter((_) => _.status == AuctionStatus.CLOSED)) {
+      const normRecovered = Number(formatUnits(BigInt(auction.debtRecovered), 18));
+      const normCreditMultiplier = Number(formatUnits(BigInt(auction.callCreditMultiplier), 18));
+      totalRecoveredPegToken += normRecovered * normCreditMultiplier;
+    }
+
+    let totalBorrowedpegToken = 0;
+    for (const loan of loans.filter((_) => _.closeTime != 0)) {
+      console.log({ loan });
+      const normBorrowed = loan.borrowAmount;
+      const normCreditMultiplier = loan.borrowCreditMultiplier;
+      totalBorrowedpegToken += normBorrowed * normCreditMultiplier;
+    }
+
+    const pnl = (totalRecoveredPegToken - totalBorrowedpegToken) * pegToken.price;
+    console.log(`All time pnl: $${pnl}`);
+    return pnl;
+  };
+
   /***** End get dashboard data *****/
 
   return (
@@ -194,6 +222,7 @@ const GlobalDashboard = () => {
           data={data}
           collateralData={collateralData}
           totalActiveLoans={totalActiveLoans}
+          allTimePnL={allTimePnl}
         />
       </div>
 

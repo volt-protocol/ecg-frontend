@@ -33,14 +33,10 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[]; sh
   const [showNoDebtCeilingTerms, setShowNoDebtCeilingTerms] = React.useState<boolean>(false);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const columnHelper = createColumnHelper<LendingTerms>();
-  const [data, setData] = React.useState<LendingTerms[]>([]);
+  const [data, setData] = React.useState<LendingTerms[]>(tableData);
   const [filteredData, setFilteredData] = React.useState<LendingTerms[] | null>(null);
 
   const router = useRouter();
-
-  useEffect(() => {
-    setData([...tableData]);
-  }, [tableData]);
 
   /* Smart contract reads */
   const {
@@ -82,27 +78,6 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[]; sh
   const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken?.price * 100)), 0);
 
   useEffect(() => {
-    async function fetchDataForTerms() {
-      const enrichedTableData = await Promise.all(
-        tableData.map(async (term) => {
-          const extraData = await getExtraTermData(term);
-          // Add these values to your term
-          return {
-            ...term,
-            gaugeWeight: Number(formatUnits(extraData[0].result, 18)),
-            totalWeight: Number(formatUnits(extraData[1].result, 18)),
-            creditTotalSupply: contractData.creditTotalSupply,
-            currentDebt: Number(formatUnits(extraData[2].result, 18)),
-            debtCeiling: Number(formatUnits(extraData[3].result, 18))
-          };
-        })
-      );
-      setData(enrichedTableData);
-    }
-    tableData && contractData && fetchDataForTerms();
-  }, [tableData, contractData]);
-
-  useEffect(() => {
     setFilteredData(
       (data || []).filter(function (term: any) {
         if (showNoDebtCeilingTerms || !props.showFilters) {
@@ -112,41 +87,6 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[]; sh
       })
     );
   }, [showNoDebtCeilingTerms, data]);
-
-  async function getExtraTermData(term: LendingTerms): Promise<any> {
-    const result = await readContracts(wagmiConfig, {
-      contracts: [
-        {
-          address: contractsList.guildAddress,
-          abi: GuildABI,
-          functionName: 'getGaugeWeight',
-          args: [term.address], // Assuming each term has a unique contractAddress
-          chainId: appChainId as any
-        },
-        {
-          address: contractsList.guildAddress,
-          abi: GuildABI,
-          functionName: 'totalTypeWeight',
-          args: [appMarketId],
-          chainId: appChainId as any
-        },
-        {
-          address: term.address as Address,
-          abi: TermABI as Abi,
-          functionName: 'issuance',
-          chainId: appChainId as any
-        },
-        {
-          address: term.address as Address,
-          abi: TermABI as Abi,
-          functionName: 'debtCeiling',
-          chainId: appChainId as any
-        }
-      ]
-    });
-
-    return result;
-  }
 
   /* eslint-disable */
   const columns = [

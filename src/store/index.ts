@@ -4,6 +4,7 @@ import { AuctionsSlice, createAuctionsSlice } from './slices/auctions';
 import { CoinDetailsSlice, createCoinDetailsSlice } from './slices/coin-details';
 import { ContractsListSlice, createContractsListSlice } from './slices/contracts-list';
 import { AppSettingsSlice, createAppSettingsSlice } from './slices/app-settings';
+import { TosSlice, createTosSlice } from './slices/tos';
 import { DashboardSlice, createDashboardSlice } from './slices/dashboard';
 import { persist } from 'zustand/middleware';
 
@@ -14,8 +15,9 @@ type StoreState = LendingTermsSlice &
   DashboardSlice &
   ContractsListSlice;
 
+type TosState = TosSlice
+
 export const useAppStore = create<StoreState, any>(
-  persist(
     (...a) => ({
       ...createLendingTermsSlice(...a),
       ...createAuctionsSlice(...a),
@@ -23,9 +25,16 @@ export const useAppStore = create<StoreState, any>(
       ...createAppSettingsSlice(...a),
       ...createDashboardSlice(...a),
       ...createContractsListSlice(...a)
+    })
+);
+
+export const useTosStore = create<TosState, any>(
+  persist(
+    (...a) => ({
+      ...createTosSlice(...a),
     }),
     {
-      name: 'app-storage' // name of the item in the storage (must be unique)
+      name: 'tos-storage' // name of the item in the storage (must be unique)
     }
-  )
+  ),
 );

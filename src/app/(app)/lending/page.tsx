@@ -24,7 +24,10 @@ const Lending = () => {
             {lastUpdatedTerms ? fromNow(lastUpdatedTerms) : '-'}
           </span>
           {/* TODO: update data on demand */}
-          <a className="cursor-pointer text-gray-400 dark:text-gray-100" onClick={() => fetchLendingTerms(appMarketId, appChainId)}>
+          <a
+            className="cursor-pointer text-gray-400 dark:text-gray-100"
+            onClick={() => fetchLendingTerms(appMarketId, appChainId)}
+          >
             <MdCached className={clsx('h-3 w-3', false && 'animate-spin')} />
           </a>
         </div>

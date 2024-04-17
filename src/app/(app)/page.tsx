@@ -161,31 +161,20 @@ const GlobalDashboard = () => {
   };
 
   const getDebtCeilingData = async () => {
-    return await Promise.all(
-      lendingTerms
-        .filter((term) => term.status == 'live')
-        .map(async (term) => {
-          const debtCeiling = await readContract(wagmiConfig, {
-            address: term.address as Address,
-            abi: TermABI as Abi,
-            functionName: 'debtCeiling',
-            chainId: appChainId as any
-          });
+    const debtCeilingData: { collateral: string; currentDebt: number; debtCeiling: number }[] = [];
+    for (const term of lendingTerms.filter((_) => _.status == 'live')) {
+      debtCeilingData.push({
+        collateral: generateTermName(
+          term.collateral.symbol,
+          term.interestRate,
+          term.borrowRatio / data?.creditMultiplier
+        ),
+        currentDebt: term.currentDebt * data?.creditMultiplier,
+        debtCeiling: term.debtCeiling * data?.creditMultiplier
+      });
+    }
 
-          return {
-            collateral: generateTermName(
-              term.collateral.symbol,
-              term.interestRate,
-              term.borrowRatio / data?.creditMultiplier
-            ),
-            currentDebt: term.currentDebt * data?.creditMultiplier,
-            debtCeiling: Number(formatUnits(debtCeiling as bigint, 18)) * data?.creditMultiplier
-          };
-        })
-    ).then(function (data) {
-      console.log('getDebtCeilingData', data);
-      return data;
-    });
+    return debtCeilingData;
   };
 
   const getFirstLossCapital = async () => {

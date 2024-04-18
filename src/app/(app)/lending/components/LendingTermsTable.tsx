@@ -6,6 +6,7 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
   SortingState,
   useReactTable
@@ -25,10 +26,10 @@ import { Abi, formatUnits, Address } from 'viem';
 import { useReadContracts } from 'wagmi';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
-import { MdVisibility, MdVisibilityOff } from 'react-icons/md';
+import { MdChevronLeft, MdChevronRight, MdVisibility, MdVisibilityOff } from 'react-icons/md';
 
 export default function LendingTermsTable(props: { tableData: LendingTerms[]; showFilters?: boolean }) {
-  const { appChainId, appMarketId, contractsList, coinDetails } = useAppStore();
+  const { appChainId, appMarketId, contractsList, coinDetails, creditSupply, creditMultiplier } = useAppStore();
   const { tableData } = props;
   const [showNoDebtCeilingTerms, setShowNoDebtCeilingTerms] = React.useState<boolean>(false);
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -38,37 +39,11 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[]; sh
 
   const router = useRouter();
 
-  /* Smart contract reads */
-  const {
-    data: contractData,
-    isError,
-    isLoading,
-    refetch
-  } = useReadContracts({
-    contracts: [
-      {
-        address: contractsList?.marketContracts[appMarketId]?.creditAddress,
-        abi: CreditABI,
-        functionName: 'totalSupply',
-        args: [],
-        chainId: appChainId
-      },
-      {
-        address: contractsList?.marketContracts[appMarketId]?.profitManagerAddress,
-        abi: ProfitManagerABI as Abi,
-        functionName: 'creditMultiplier',
-        chainId: appChainId
-      }
-    ],
-    query: {
-      select: (contractData) => {
-        return {
-          creditTotalSupply: Number(formatUnits(contractData[0].result as bigint, 18)),
-          creditMultiplier: Number(formatUnits(contractData[1].result as bigint, 18))
-        };
-      }
-    }
-  });
+  const contractData = {
+    creditTotalSupply: Number(formatUnits(creditSupply, 18)),
+    creditMultiplier: Number(formatUnits(creditMultiplier, 18))
+  };
+
   /* End Smart contract reads */
 
   const pegToken = coinDetails.find(
@@ -382,97 +357,137 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[]; sh
   const table = useReactTable({
     data: filteredData || data,
     columns,
-    state: {
-      sorting
+    initialState: {
+      pagination: {
+        pageSize: 10
+      },
+      sorting: [
+        {
+          id: 'startTime',
+          desc: true
+        }
+      ]
     },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     debugTable: true
   });
 
   return (
-    <div className="mt-4 overflow-auto">
-      {props.showFilters ? (
-        <div style={{ position: 'absolute', right: '1em', top: '1em' }}>
-          {showNoDebtCeilingTerms ? (
-            <button
-              onClick={() => setShowNoDebtCeilingTerms(false)}
-              type="button"
-              className="mr-2 inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm text-stone-600 shadow-sm transition-all duration-150 ease-in-out hover:bg-brand-100/30 hover:text-stone-800 dark:bg-navy-700 dark:text-stone-200 dark:hover:bg-navy-600"
-            >
-              <span className="hidden lg:block">Show terms with 0 Debt Ceiling</span>
-              <MdVisibility className="-ml-0.5 h-5 w-5" aria-hidden="true" />
-            </button>
-          ) : (
-            <button
-              onClick={() => setShowNoDebtCeilingTerms(true)}
-              type="button"
-              className="mr-2 inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm text-stone-600 shadow-sm transition-all duration-150 ease-in-out hover:bg-brand-100/30 hover:text-stone-800 dark:bg-navy-700 dark:text-stone-200 dark:hover:bg-navy-600"
-            >
-              <span className="hidden lg:block">Hide terms with 0 Debt Ceiling</span>
-              <MdVisibilityOff className="-ml-0.5 h-5 w-5" aria-hidden="true" />
-            </button>
-          )}
-        </div>
-      ) : null}
-      <table className="w-full">
-        <thead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id} className="!border-px !border-gray-400 ">
-              {headerGroup.headers.map((header) => {
+    <>
+      <div className="mt-4 overflow-auto">
+        {props.showFilters ? (
+          <div style={{ position: 'absolute', right: '1em', top: '1em' }}>
+            {showNoDebtCeilingTerms ? (
+              <button
+                onClick={() => setShowNoDebtCeilingTerms(false)}
+                type="button"
+                className="mr-2 inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm text-stone-600 shadow-sm transition-all duration-150 ease-in-out hover:bg-brand-100/30 hover:text-stone-800 dark:bg-navy-700 dark:text-stone-200 dark:hover:bg-navy-600"
+              >
+                <span className="hidden lg:block">Show terms with 0 Debt Ceiling</span>
+                <MdVisibility className="-ml-0.5 h-5 w-5" aria-hidden="true" />
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowNoDebtCeilingTerms(true)}
+                type="button"
+                className="mr-2 inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm text-stone-600 shadow-sm transition-all duration-150 ease-in-out hover:bg-brand-100/30 hover:text-stone-800 dark:bg-navy-700 dark:text-stone-200 dark:hover:bg-navy-600"
+              >
+                <span className="hidden lg:block">Hide terms with 0 Debt Ceiling</span>
+                <MdVisibilityOff className="-ml-0.5 h-5 w-5" aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        ) : null}
+        <table className="w-full">
+          <thead>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id} className="!border-px !border-gray-400 ">
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <th
+                      key={header.id}
+                      colSpan={header.colSpan}
+                      onClick={header.column.getToggleSortingHandler()}
+                      className="cursor-pointer border-b-[1px] border-gray-200 pb-2 pt-4 text-start dark:border-gray-400"
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {header.column.columnDef.enableSorting && (
+                          <span className="text-sm text-gray-400">
+                            {{
+                              asc: <FaSortDown />,
+                              desc: <FaSortUp />,
+                              null: <FaSort />
+                            }[header.column.getIsSorted() as string] ?? <FaSort />}
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  );
+                })}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {table
+              .getRowModel()
+              .rows.slice(0, 20)
+              .map((row) => {
                 return (
-                  <th
-                    key={header.id}
-                    colSpan={header.colSpan}
-                    onClick={header.column.getToggleSortingHandler()}
-                    className="cursor-pointer border-b-[1px] border-gray-200 pb-2 pt-4 text-start dark:border-gray-400"
+                  <tr
+                    onClick={() => router.push(`/lending/details?term=${row.original.address}`)}
+                    key={row.id}
+                    className="border-b border-gray-100 transition-all duration-200 ease-in-out last:border-none hover:cursor-pointer hover:bg-stone-100/80 dark:border-gray-500 dark:hover:bg-navy-700"
                   >
-                    <div className="flex items-center justify-center gap-1">
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                      {header.column.columnDef.enableSorting && (
-                        <span className="text-sm text-gray-400">
-                          {{
-                            asc: <FaSortDown />,
-                            desc: <FaSortUp />,
-                            null: <FaSort />
-                          }[header.column.getIsSorted() as string] ?? <FaSort />}
-                        </span>
-                      )}
-                    </div>
-                  </th>
+                    {row.getVisibleCells().map((cell) => {
+                      return (
+                        <td key={cell.id} className="relative min-w-[150px] border-white/0 py-5">
+                          {cell.column.id != 'usage' && cell.column.id != 'maxDelayBetweenPartialRepay' ? (
+                            <>{flexRender(cell.column.columnDef.cell, cell.getContext())}</>
+                          ) : (
+                            flexRender(cell.column.columnDef.cell, cell.getContext())
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
                 );
               })}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table
-            .getRowModel()
-            .rows.slice(0, 20)
-            .map((row) => {
-              return (
-                <tr
-                  onClick={() => router.push(`/lending/details?term=${row.original.address}`)}
-                  key={row.id}
-                  className="border-b border-gray-100 transition-all duration-200 ease-in-out last:border-none hover:cursor-pointer hover:bg-stone-100/80 dark:border-gray-500 dark:hover:bg-navy-700"
-                >
-                  {row.getVisibleCells().map((cell) => {
-                    return (
-                      <td key={cell.id} className="relative min-w-[150px] border-white/0 py-5">
-                        {cell.column.id != 'usage' && cell.column.id != 'maxDelayBetweenPartialRepay' ? (
-                          <>{flexRender(cell.column.columnDef.cell, cell.getContext())}</>
-                        ) : (
-                          flexRender(cell.column.columnDef.cell, cell.getContext())
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-        </tbody>
-      </table>
-    </div>
+          </tbody>
+        </table>
+      </div>
+      <nav
+        className="flex w-full items-center justify-between border-t border-gray-200 px-2 py-3 text-gray-400"
+        aria-label="Pagination"
+      >
+        <div className="hidden sm:block">
+          <p className="text-sm ">
+            Showing page <span className="font-medium">{table.getState().pagination.pageIndex + 1}</span> of{' '}
+            <span className="font-semibold">{table.getPageCount()}</span>
+          </p>
+        </div>
+        <div className="flex flex-1 justify-between sm:justify-end">
+          <button
+            onClick={() => table.previousPage()}
+            className="relative inline-flex items-center rounded-md px-1.5 py-1 text-sm  hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-gray-100/0"
+            disabled={!table.getCanPreviousPage()}
+          >
+            <MdChevronLeft />
+            Previous
+          </button>
+          <button
+            onClick={() => table.nextPage()}
+            className="relative ml-3 inline-flex items-center rounded-md px-1.5 py-1 text-sm  hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-gray-100/0"
+            disabled={!table.getCanNextPage()}
+          >
+            Next
+            <MdChevronRight />
+          </button>
+        </div>
+      </nav>
+    </>
   );
 }

@@ -72,7 +72,7 @@ const UserDashboard = () => {
 
   /* Get Dashboard data */
   const getLoans = async (useCache: boolean) => {
-    let loans = [];
+    let fetchedLoans = [];
 
     const existingUserData = userData.find((user) => user.address == userAddress);
     //check if user loan are already stored and lastUpdated is less than 2 hours
@@ -83,20 +83,20 @@ const UserDashboard = () => {
       existingUserData.lastUpdated > Date.now() - 1000 * 60 * 120
     ) {
       const data = userData.find((user) => user.address == userAddress);
-      loans = data.loans;
+      fetchedLoans = data.loans;
       setLastUpdated(data.lastUpdated);
     } else {
       for (const term of lendingTerms) {
         const data = await getUserLoans(loans, term.address as Address, userAddress);
-        loans.push(...data);
+        fetchedLoans.push(...data);
       }
 
       //save user loan in store
-      addUserLoans(userAddress, loans);
+      addUserLoans(userAddress, fetchedLoans);
       setLastUpdated(Date.now());
     }
 
-    setUserLoansData(loans);
+    setUserLoansData(fetchedLoans);
     setLoadingLoans(false);
   };
 

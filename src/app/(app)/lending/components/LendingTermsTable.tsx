@@ -66,6 +66,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[]; sh
     columnHelper.accessor('collateral.symbol', {
       id: 'collateral',
       enableSorting: true,
+      sortingFn: 'alphanumeric',
       header: () => (
         <div>
           <a href="#" className="group inline-flex">
@@ -355,16 +356,8 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[]; sh
   const table = useReactTable({
     data: filteredData || data,
     columns,
-    initialState: {
-      pagination: {
-        pageSize: 10
-      },
-      sorting: [
-        {
-          id: 'startTime',
-          desc: true
-        }
-      ]
+    state: {
+      sorting,
     },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),

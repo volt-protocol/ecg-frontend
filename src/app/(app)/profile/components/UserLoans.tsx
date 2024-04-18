@@ -177,7 +177,7 @@ export default function UserLoan({ userAddress, data }: { userAddress: Address; 
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    debugTable: true,
+    debugTable: false,
     initialState: {
       pagination: {
         pageSize: 8

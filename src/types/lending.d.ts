@@ -16,6 +16,8 @@ export type LoansObj = {
   txHashOpen: string;
   txHashClose: string;
   termAddress: Address;
+  loanDebt: number;
+  debtRepaid: number;
 };
 
 export type loanObjCall = {
@@ -78,6 +80,12 @@ export interface LendingTermsResponse {
   updated: number;
   updatedHuman: string;
   terms: LendingTerms[];
+}
+
+export interface LoansResponse {
+  updated: number;
+  updatedHuman: string;
+  loans: LoansObj[];
 }
 
 export type userData = {

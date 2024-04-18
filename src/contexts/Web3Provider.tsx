@@ -17,7 +17,7 @@ const metadata = {
 };
 
 //Add available chains here
-const chains = [arbitrum, sepolia] as const;
+const chains = [arbitrum, sepolia, mainnet] as const;
 // process.env.NEXT_PUBLIC_APP_ENV === "arbitrum" ? ([arbitrum] as const)
 // : process.env.NEXT_PUBLIC_APP_ENV === "production"
 //   ? ([mainnet] as const)

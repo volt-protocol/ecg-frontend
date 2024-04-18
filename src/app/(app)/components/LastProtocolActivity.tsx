@@ -32,8 +32,6 @@ export const LastProtocolActivity = ({ data, currentBlock }: { data: LastActivit
     (item) => item.address.toLowerCase() === contractsList.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
   );
 
-  console.log({ currentBlock });
-
   const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
   const getDescription = (event: LastActivity): any => {
     if (event.category === 'mintRedeem') {

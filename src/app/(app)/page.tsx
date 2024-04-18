@@ -15,7 +15,7 @@ import { FirstLossCapital } from './components/FirstLossCapital';
 import { AverageInterestRate } from './components/AverageInterestRate';
 import { CreditTotalSupply } from './components/CreditTotalSupply';
 import Spinner from 'components/spinner';
-import { LastActivitiesLogs, LastProtocolActivity } from './components/LastProtocolActivity';
+import { LastProtocolActivity } from './components/LastProtocolActivity';
 import { formatCurrencyValue, formatDecimal } from 'utils/numbers';
 import { useBlockNumber } from 'wagmi';
 import { getAllMintRedeemLogs } from 'lib/logs/mint-redeem';
@@ -27,67 +27,42 @@ import { GlobalStatCarts } from './components/GlobalStatCarts';
 import { TVLChart } from './components/TVLChart';
 import { HttpGet } from 'utils/HttpHelper';
 import { LastActivity, LastActivityApiResponse } from 'types/activities';
+import { AuctionStatus } from 'store/slices/auctions';
 
 const GlobalDashboard = () => {
-  const { appMarketId, appChainId, lendingTerms, coinDetails, historicalData, contractsList } = useAppStore();
+  const {
+    appMarketId,
+    appChainId,
+    lendingTerms,
+    coinDetails,
+    historicalData,
+    contractsList,
+    creditMultiplier,
+    creditSupply,
+    totalWeight,
+    auctions,
+    loans
+  } = useAppStore();
   const [totalActiveLoans, setTotalActiveLoans] = useState<number>();
   const [debtCeilingData, setDebtCeilingData] = useState([]);
   const [collateralData, setCollateralData] = useState([]);
   const [firstLossData, setFirstLossData] = useState([]);
-  const [lastActivities, setLastActivites] = useState<LastActivity[]>([]);
+  // const [lastActivities, setLastActivites] = useState<LastActivity[]>([]);
+  const [allTimePnl, setAllTimePnl] = useState<number>(0);
 
   const { data: currentBlock } = useBlockNumber({ chainId: appChainId });
 
-  let contracts = [];
-
-  const guildAddress = contractsList.guildAddress;
-  const profitManagerAddress = contractsList?.marketContracts[appMarketId]?.profitManagerAddress;
-
-  const creditAddress = contractsList?.marketContracts[appMarketId]?.creditAddress;
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
   const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10((pegToken ? pegToken.price : 0) * 100)), 0);
 
-  if (contractsList && contractsList.marketContracts[appMarketId]) {
-    contracts = [
-      {
-        address: guildAddress,
-        abi: GuildABI,
-        functionName: 'totalTypeWeight',
-        args: [appMarketId],
-        chainId: appChainId as any
-      },
-      {
-        address: profitManagerAddress,
-        abi: ProfitManagerABI as Abi,
-        functionName: 'creditMultiplier',
-        chainId: appChainId as any
-      },
-      {
-        address: creditAddress,
-        abi: CreditABI,
-        functionName: 'totalSupply',
-        chainId: appChainId as any
-      }
-    ];
-  }
-
-  /* Read contracts */
-  const { data, isError, isLoading } = useReadContracts({
-    contracts,
-    allowFailure: true,
-    query: {
-      select: (data) => {
-        return {
-          totalWeight: Number(formatUnits(data[0].result as bigint, 18)),
-          creditMultiplier: Number(formatUnits(data[1].result as bigint, 18)),
-          creditTotalSupply: Number(formatUnits(data[2].result as bigint, 18))
-        };
-      }
-    }
-  });
+  const data = {
+    totalWeight: Number(formatUnits(totalWeight, 18)),
+    creditMultiplier: Number(formatUnits(creditMultiplier, 18)),
+    creditTotalSupply: Number(formatUnits(creditSupply, 18))
+  };
 
   /* End Read Contract data  */
 
@@ -101,13 +76,14 @@ const GlobalDashboard = () => {
       setCollateralData(collateralData);
       const firstLossData = await getFirstLossCapital();
       setFirstLossData(firstLossData);
-      const lastActivities = await getLastActivities();
-      console.log({ lastActivities });
-      setLastActivites(lastActivities);
+      // const lastActivities = await getLastActivities();
+      // setLastActivites(lastActivities);
+      const allTimePnl = await getAllTimePnl();
+      setAllTimePnl(allTimePnl);
     };
 
-    !isLoading && data?.creditMultiplier && lendingTerms.length && asyncFunc();
-  }, [data, isLoading, lendingTerms]);
+    lendingTerms.length && asyncFunc();
+  }, [lendingTerms]);
 
   if (!contractsList?.marketContracts[appMarketId]) {
     return (
@@ -208,15 +184,27 @@ const GlobalDashboard = () => {
       return [];
     }
     const apiUrl = getApiBaseUrl(appChainId) + `/markets/${appMarketId}/activity`;
-    console.log({ apiUrl });
     const activities = await HttpGet<LastActivityApiResponse>(apiUrl);
 
     return activities.activities;
   };
 
-  /***** End get dashboard data *****/
+  const getAllTimePnl = async () => {
+    let totalBorrowedPegToken = 0;
+    let totalRepaidPegToken = 0;
+    for (const loan of loans.filter((_) => _.closeTime != 0)) {
+      const normBorrowed = loan.borrowAmount;
+      const normCreditMultiplier = loan.borrowCreditMultiplier;
+      totalBorrowedPegToken += normBorrowed * normCreditMultiplier;
+      totalRepaidPegToken += loan.debtRepaid * normCreditMultiplier;
+    }
 
-  if (isLoading) return <Spinner />;
+    const pnl = (totalRepaidPegToken - totalBorrowedPegToken) * pegToken.price;
+    console.log(`All time pnl: $${pnl}`);
+    return pnl;
+  };
+
+  /***** End get dashboard data *****/
 
   return (
     <div>
@@ -227,6 +215,7 @@ const GlobalDashboard = () => {
           data={data}
           collateralData={collateralData}
           totalActiveLoans={totalActiveLoans}
+          allTimePnL={allTimePnl}
         />
       </div>
 
@@ -351,7 +340,7 @@ const GlobalDashboard = () => {
         )}
       </div>
 
-      <div className="mb-10 mt-3 flex">
+      {/* <div className="mb-10 mt-3 flex">
         <Card title="Last Week Activities" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
           {lastActivities.length == 0 ? (
             <div className="flex h-96 items-center justify-center">
@@ -361,7 +350,7 @@ const GlobalDashboard = () => {
             <LastProtocolActivity data={lastActivities} currentBlock={currentBlock} />
           )}
         </Card>
-      </div>
+      </div> */}
     </div>
   );
 };

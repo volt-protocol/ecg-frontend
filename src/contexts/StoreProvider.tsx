@@ -9,15 +9,17 @@ import { persist } from 'zustand/middleware';
 
 const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   // remove old app-storage if any
-  window.localStorage.removeItem("app-storage");
+  window.localStorage.removeItem('app-storage');
   const { isConnected, chainId } = useAccount();
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const {
     fetchAuctions,
     fetchLendingTerms,
+    fetchLoans,
     fetchCoins,
     fetchHistoricalData,
     fetchContractsList,
+    fetchProtocolData,
     appMarketId,
     appChainId
   } = useAppStore();
@@ -26,15 +28,15 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const asyncFunc = async () => {
       setIsLoading(true);
-      console.log('store provider', appChainId);
+      const contractsList = await fetchContractsList(appChainId);
       await Promise.all([
-        fetchContractsList(appChainId),
         fetchCoins(appMarketId, appChainId),
         fetchHistoricalData(appMarketId, appChainId),
         fetchLendingTerms(appMarketId, appChainId),
-        fetchAuctions(appMarketId, appChainId)
+        fetchLoans(appMarketId, appChainId),
+        fetchAuctions(appMarketId, appChainId),
+        fetchProtocolData(appMarketId, appChainId, contractsList)
       ]);
-      console.log('store provider end loading');
       setIsLoading(false);
     };
     asyncFunc();

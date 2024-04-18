@@ -1,6 +1,9 @@
 import { Address } from 'viem';
 import { mainnet, sepolia, arbitrum } from 'wagmi/chains';
 
+import { getPublicClient } from '@wagmi/core';
+import { wagmiConfig } from 'contexts/Web3Provider';
+
 export interface LendingTermConfig {
   termAddress: Address;
   hasLeverage: boolean;
@@ -56,6 +59,14 @@ export type SupportedMarket = {
 // set the available markets here
 export const marketsConfig: { [chainId: number]: SupportedMarket[] } = {
   42161: [
+    {
+      key: 'usdc-1',
+      pegToken: 'USDC',
+      name: '1 - USDC',
+      marketId: 1,
+      networkId: 42161,
+      logo: '/img/crypto-logos/usdc.png'
+    },
     {
       key: 'usdc-test',
       pegToken: 'USDC',
@@ -127,6 +138,8 @@ export function getApiBaseUrl(chainId: number) {
   }
 }
 
+export const SelectableChainId = [42161, 11155111];
+
 export function getExplorerBaseUrl(chainId: number) {
   switch (chainId) {
     default:
@@ -150,4 +163,21 @@ export function getBlockLengthMs(chainId: number) {
 
 export function getPegTokenLogo(chainId: number, marketId: number) {
   return marketsConfig[chainId].find((item) => item.marketId == marketId).logo;
+}
+
+export async function getL1BlockNumber(chainId: number) {
+  let blockNumber = BigInt(0);
+
+  // for arbitrum, fetch mainnet block number
+  if(chainId == arbitrum.id) {
+    blockNumber = await getPublicClient(wagmiConfig, {
+      chainId: 1
+    }).getBlockNumber();
+  } else {
+    blockNumber = await getPublicClient(wagmiConfig, {
+      chainId: chainId as any
+    }).getBlockNumber();
+  }
+
+  return blockNumber;
 }

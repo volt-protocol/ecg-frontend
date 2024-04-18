@@ -57,6 +57,14 @@ export type SupportedMarket = {
 export const marketsConfig: { [chainId: number]: SupportedMarket[] } = {
   42161: [
     {
+      key: 'usdc-1',
+      pegToken: 'USDC',
+      name: '1 - USDC',
+      marketId: 1,
+      networkId: 42161,
+      logo: '/img/crypto-logos/usdc.png'
+    },
+    {
       key: 'usdc-test',
       pegToken: 'USDC',
       name: 'USDC (test)',

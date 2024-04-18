@@ -30,7 +30,7 @@ import { formatUnits, Address } from 'viem';
 import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
 import { isActivePoll } from './helper';
 import { wagmiConfig } from 'contexts/Web3Provider';
-import { getExplorerBaseUrl } from 'config';
+import { getExplorerBaseUrl, getL1BlockNumber } from 'config';
 
 function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   const { appChainId, lendingTerms, contractsList } = useAppStore();
@@ -81,7 +81,8 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   const fetchActiveOffboardingPolls = async () => {
     setLoading(true);
     const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber();
-
+    
+    const l1Block = await getL1BlockNumber(appChainId);
     //logs are returned from oldest to newest
     const logs = await getPublicClient(wagmiConfig).getLogs({
       address: contractsList.lendingTermOffboardingAddress as Address,
@@ -109,7 +110,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
             timestamp: Number(log.args.timestamp),
             userWeight: log.args.userWeight as bigint,
             snapshotBlock: Number(log.args.snapshotBlock),
-            currentBlock: Number(currentBlock),
+            currentBlock: Number(l1Block),
             user: log.args.user as Address
           };
         })
@@ -402,7 +403,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    debugTable: true,
+    debugTable: false,
     initialState: {
       pagination: {
         pageSize: 8
@@ -421,16 +422,13 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
     if (!data || !data.pollDurationBlock || !data.quorum) return null;
 
     //expired and did not pass
-    if (!isActivePoll(item.timestamp, data.pollDurationBlock) && item.userWeight < data.quorum) {
+    if (!isActivePoll(item.snapshotBlock, item.currentBlock, data.pollDurationBlock)) {
       return (
         <div className="flex items-center gap-1">
           <span className="items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-500">Failed</span>
         </div>
       );
-    }
-
-    //vote active and quorum not reached yet
-    if (isActivePoll(item.timestamp, data.pollDurationBlock) && item.userWeight < data.quorum) {
+    } else {
       return (
         <ButtonPrimary
           disabled={!guildVotingWeight}

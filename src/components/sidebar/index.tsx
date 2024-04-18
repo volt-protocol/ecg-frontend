@@ -9,7 +9,7 @@ import NavLink from 'components/link/NavLink';
 import { MdOpenInNew, MdOutlineWarningAmber } from 'react-icons/md';
 import { useSwitchChain } from 'wagmi';
 import { useAppStore } from 'store';
-import { marketsConfig } from 'config';
+import { SelectableChainId, marketsConfig } from 'config';
 
 function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
   const { chains } = useSwitchChain();
@@ -35,7 +35,7 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
         </div>
         <div className="mt-2 px-1">
           <DropdownSelect
-            options={chains.map((chain) => chain.id)}
+            options={chains.filter(_ => SelectableChainId.includes(_.id)).map((chain) => chain.id)}
             selectedOption={appChainId}
             onChange={(option) => setAppChainId(option)}
             getLabel={(option) => {

@@ -35,7 +35,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[]; sh
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const columnHelper = createColumnHelper<LendingTerms>();
   const [data, setData] = React.useState<LendingTerms[]>(tableData);
-  const [filteredData, setFilteredData] = React.useState<LendingTerms[] | null>(null);
+  const [filteredData, setFilteredData] = React.useState<LendingTerms[]>(tableData.filter((_) => _.debtCeiling > 0));
 
   const router = useRouter();
 
@@ -43,8 +43,6 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[]; sh
     creditTotalSupply: Number(formatUnits(creditSupply, 18)),
     creditMultiplier: Number(formatUnits(creditMultiplier, 18))
   };
-
-  /* End Smart contract reads */
 
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()

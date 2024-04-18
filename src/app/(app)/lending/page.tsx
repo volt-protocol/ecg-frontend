@@ -23,7 +23,6 @@ const Lending = () => {
           <span className="font-medium text-gray-500 dark:text-gray-50">
             {lastUpdatedTerms ? fromNow(lastUpdatedTerms) : '-'}
           </span>
-          {/* TODO: update data on demand */}
           <a
             className="cursor-pointer text-gray-400 dark:text-gray-100"
             onClick={() => fetchLendingTerms(appMarketId, appChainId)}
@@ -35,13 +34,13 @@ const Lending = () => {
 
       <div className="mt-3">
         <Card title="Currently Active Lending Terms" extra="w-full h-full sm:overflow-auto px-6 py-4">
-          <LendingTermsTable showFilters={true} tableData={lendingTerms.filter((loan) => loan.status == 'live')} />
+          <LendingTermsTable showFilters={true} tableData={lendingTerms.filter((_) => _.status == 'live')} />
         </Card>
       </div>
       {lendingTerms.filter((loan) => loan.status == 'deprecated').length != 0 && (
         <div className="mt-6">
           <Card title="Deprecated Lending Terms" extra="w-full h-full sm:overflow-auto px-6 py-4">
-            <LendingTermsTable tableData={lendingTerms.filter((loan) => loan.status == 'deprecated')} />
+            <LendingTermsTable tableData={lendingTerms.filter((_) => _.status == 'deprecated')} />
           </Card>
         </div>
       )}

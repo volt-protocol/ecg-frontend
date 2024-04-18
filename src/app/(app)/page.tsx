@@ -47,7 +47,7 @@ const GlobalDashboard = () => {
   const [debtCeilingData, setDebtCeilingData] = useState([]);
   const [collateralData, setCollateralData] = useState([]);
   const [firstLossData, setFirstLossData] = useState([]);
-  const [lastActivities, setLastActivites] = useState<LastActivity[]>([]);
+  // const [lastActivities, setLastActivites] = useState<LastActivity[]>([]);
   const [allTimePnl, setAllTimePnl] = useState<number>(0);
 
   const { data: currentBlock } = useBlockNumber({ chainId: appChainId });
@@ -76,8 +76,8 @@ const GlobalDashboard = () => {
       setCollateralData(collateralData);
       const firstLossData = await getFirstLossCapital();
       setFirstLossData(firstLossData);
-      const lastActivities = await getLastActivities();
-      setLastActivites(lastActivities);
+      // const lastActivities = await getLastActivities();
+      // setLastActivites(lastActivities);
       const allTimePnl = await getAllTimePnl();
       setAllTimePnl(allTimePnl);
     };
@@ -340,7 +340,7 @@ const GlobalDashboard = () => {
         )}
       </div>
 
-      <div className="mb-10 mt-3 flex">
+      {/* <div className="mb-10 mt-3 flex">
         <Card title="Last Week Activities" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
           {lastActivities.length == 0 ? (
             <div className="flex h-96 items-center justify-center">
@@ -350,7 +350,7 @@ const GlobalDashboard = () => {
             <LastProtocolActivity data={lastActivities} currentBlock={currentBlock} />
           )}
         </Card>
-      </div>
+      </div> */}
     </div>
   );
 };

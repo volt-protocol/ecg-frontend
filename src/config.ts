@@ -57,7 +57,7 @@ export type SupportedMarket = {
 };
 
 // set the available markets here
-export const marketsConfig: { [chainId: number]: SupportedMarket[] } = {
+export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
   42161: [
     {
       key: 'usdc-1',
@@ -103,6 +103,33 @@ export const marketsConfig: { [chainId: number]: SupportedMarket[] } = {
     }
   ]
 };
+
+// specific for production
+if(window.location.href.startsWith('https://app.creditguild.org')) {
+// if(window.location.href.startsWith('http://localhost:3000')) {
+  marketsConfig = {
+    42161: [
+      {
+        key: 'usdc-1',
+        pegToken: 'USDC',
+        name: '1 - USDC',
+        marketId: 1,
+        networkId: 42161,
+        logo: '/img/crypto-logos/usdc.png'
+      }
+    ],
+    11155111: [
+      {
+        key: 'USDC-sepolia',
+        pegToken: 'USDC',
+        name: 'USDC (test)',
+        marketId: 42,
+        networkId: 11155111,
+        logo: '/img/crypto-logos/usdc.png'
+      }
+    ]
+  };
+}
 
 // set the available contracts for each chain here
 /*

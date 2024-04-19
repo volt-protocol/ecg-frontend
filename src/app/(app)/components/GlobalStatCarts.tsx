@@ -4,19 +4,22 @@ import { MdBarChart, MdDashboard } from 'react-icons/md';
 import Widget from 'components/widget/Widget';
 import { formatDecimal, toLocaleString } from 'utils/numbers';
 import { LendingTerms } from 'types/lending';
+import { CoinSettings } from 'store/slices/coin-details';
 
 export const GlobalStatCarts = ({
   lendingTerms,
   data,
   collateralData,
   totalActiveLoans,
-  allTimePnL
+  allTimePnL,
+  pegToken
 }: {
   lendingTerms: LendingTerms[];
   data: any;
   collateralData: any;
   totalActiveLoans: number;
   allTimePnL: number;
+  pegToken: CoinSettings;
 }) => {
   return (
     <>
@@ -29,7 +32,7 @@ export const GlobalStatCarts = ({
         icon={<IoDocuments className="h-6 w-6" />}
         title={'Total Debt'}
         subtitle={`$ ${toLocaleString(
-          (lendingTerms?.reduce((a, b) => a + b.currentDebt, 0) * data?.creditMultiplier).toFixed(2)
+          (lendingTerms?.reduce((a, b) => a + b.currentDebt, 0) * data?.creditMultiplier * pegToken.price).toFixed(2)
         )}`}
       />
       <Widget icon={<MdBarChart className="h-7 w-7" />} title={'Lending Terms'} subtitle={lendingTerms.length} />

@@ -1,6 +1,8 @@
 import { Address } from 'viem';
 import { mainnet, sepolia, arbitrum } from 'wagmi/chains';
 
+import {  } from 'next/navigation'
+
 import { getPublicClient } from '@wagmi/core';
 import { wagmiConfig } from 'contexts/Web3Provider';
 
@@ -105,8 +107,7 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
 };
 
 // specific for production
-if(window.location.href.startsWith('https://app.creditguild.org')) {
-// if(window.location.href.startsWith('http://localhost:3000')) {
+if(process.env.NEXT_PUBLIC_APP_ENV.toLowerCase() == 'production') {
   marketsConfig = {
     42161: [
       {

@@ -60,7 +60,7 @@ function CheckTable(props: { tableData: any }) {
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    debugTable: true
+    debugTable: false
   });
   return (
     <Card extra={'w-full h-full sm:overflow-auto px-6'}>

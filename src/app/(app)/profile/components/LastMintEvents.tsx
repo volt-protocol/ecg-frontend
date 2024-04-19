@@ -143,7 +143,7 @@ export default function LastMintEvents({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    debugTable: true,
+    debugTable: false,
     initialState: {
       pagination: {
         pageSize: 8

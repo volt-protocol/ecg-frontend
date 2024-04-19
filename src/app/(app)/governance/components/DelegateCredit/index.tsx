@@ -255,7 +255,7 @@ function DelegateCredit({
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    debugTable: true
+    debugTable: false
   });
   /* End Table */
 

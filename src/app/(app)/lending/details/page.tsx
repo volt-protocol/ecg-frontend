@@ -251,6 +251,20 @@ const LendingDetails = () => {
     return <Disconnected />;
   }
 
+  function getPercentageAllocation(alreadyAllocated: bigint, totalBalance: bigint) {
+    const total = Number(formatUnits(totalBalance, 18)) + Number(formatUnits(alreadyAllocated, 18));
+    if(total == 0) {
+      return '0';
+    }
+
+    return formatDecimal(
+      (Number(formatUnits(alreadyAllocated, 18)) /
+        (Number(formatUnits(totalBalance, 18)) +
+          Number(formatUnits(alreadyAllocated, 18)))) *
+        100,
+      2)
+  }
+
   const isMarketLendingTerm =
     lendingTerms.find((term) => term.address.toLowerCase() == termAddress.toLowerCase()) != undefined;
   if (!isMarketLendingTerm) {
@@ -393,12 +407,8 @@ const LendingDetails = () => {
                         <div className="inline-flex items-baseline rounded-full bg-green-100 px-2.5 py-0.5 text-sm font-medium text-green-800 md:mt-2 lg:mt-0">
                           {data?.guildUserGaugeWeight != undefined &&
                             data?.guildBalance != undefined &&
-                            formatDecimal(
-                              (Number(formatUnits(data?.guildUserGaugeWeight, 18)) /
-                                Number(formatUnits(data?.guildBalance, 18))) *
-                                100,
-                              2
-                            )}
+                            getPercentageAllocation(data?.guildUserGaugeWeight, data?.guildBalance)
+                          }
                           %
                         </div>
                       </dd>
@@ -656,13 +666,8 @@ const LendingDetails = () => {
                         <div className="inline-flex items-baseline rounded-full bg-green-100 px-2.5 py-0.5 text-sm font-medium text-green-800 md:mt-2 lg:mt-0">
                           {data?.creditAllocated != undefined &&
                             data?.creditBalance != undefined &&
-                            formatDecimal(
-                              (Number(formatUnits(data?.creditAllocated, 18)) /
-                                (Number(formatUnits(data?.creditBalance, 18)) +
-                                  Number(formatUnits(data?.creditAllocated, 18)))) *
-                                100,
-                              2
-                            )}
+                            getPercentageAllocation(data?.creditAllocated, data?.creditBalance)
+                            }
                           %
                         </div>
                       </dd>

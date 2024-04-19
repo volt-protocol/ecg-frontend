@@ -79,6 +79,7 @@ export type LendingTerms = {
 export interface LendingTermsResponse {
   updated: number;
   updatedHuman: string;
+  updateBlock: number;
   terms: LendingTerms[];
 }
 

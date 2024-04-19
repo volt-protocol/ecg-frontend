@@ -342,7 +342,7 @@ function MintOrRedeem({
                       </p>
                       <button
                         className="text-sm font-medium text-brand-500 hover:text-brand-400"
-                        onClick={(e) => setValue(formatDecimal(pegTokenBalanceNumber, pegToken.decimals))}
+                        onClick={(e) => setValue(formatUnits(pegTokenBalance, pegToken.decimals))}
                       >
                         Max
                       </button>
@@ -435,7 +435,7 @@ function MintOrRedeem({
                       </p>
                       <button
                         className="text-sm font-medium text-brand-500 hover:text-brand-400"
-                        onClick={(e) => setValue(creditTokenBalanceNumber.toString())}
+                        onClick={(e) => setValue(formatUnits(creditTokenBalance, 18))}
                       >
                         Max
                       </button>

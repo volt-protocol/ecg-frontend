@@ -218,6 +218,7 @@ const GlobalDashboard = () => {
           collateralData={collateralData}
           totalActiveLoans={totalActiveLoans}
           allTimePnL={allTimePnl}
+          pegToken={pegToken}
         />
       </div>
 

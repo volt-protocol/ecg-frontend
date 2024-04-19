@@ -20,17 +20,31 @@ export const formatDecimal = (value: number, decimals: number): string => {
   return (Math.round(value * factor) / factor).toFixed(decimals);
 };
 
-export const formatCurrencyValue = (value: number): string => {
-  if (isNaN(value)) {
-    // Gérez l'erreur ou retournez une valeur par défaut
-    //console.error("La valeur est undefined")
+export const formatCurrencyValue = (num: number): string => {
+  if (isNaN(num)) {
     return '';
   }
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
-  if (value < 1000) return `${value.toFixed(2)}`;
-  if (value < 10 ** -6) return `${value.toFixed(0)}`;
-  return value.toString();
+
+  if (num == 0) {
+    return '0';
+  }
+
+  if (num > 1e9) {
+    return `${roundTo(num / 1e9, 2)}B`;
+  } else if (num > 1e6) {
+    return `${roundTo(num / 1e6, 2)}M`;
+  } else if (num > 1e3) {
+    return `${roundTo(num / 1e3, 2)}K`;
+  } else if (num < 1 / 1e3) {
+    return num.toExponential();
+  } else {
+    return `${roundTo(num, 4).toString()}`;
+  }
+};
+
+export const roundTo = (num: number, dec: number): number => {
+  const pow = Math.pow(10, dec);
+  return Math.round((num + Number.EPSILON) * pow) / pow;
 };
 
 // Convert USDC to gUSDC (1 USDC = 1e30 * gUSDC / creditMultiplier)

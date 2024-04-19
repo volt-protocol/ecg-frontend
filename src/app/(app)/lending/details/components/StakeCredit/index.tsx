@@ -212,14 +212,6 @@ function StakeCredit({
   }
 
   async function getDebtCeilingDelta(value) {
-    if (
-      (Number(value) > Number(formatUnits(creditBalance, 18)) && textButton === 'Stake') ||
-      (Number(value) > Number(formatUnits(creditAllocated, 18)) && textButton === 'Unstake')
-    ) {
-      setDebtDelta(0);
-      return;
-    }
-
     let amount: bigint;
 
     if (textButton == 'Stake') {

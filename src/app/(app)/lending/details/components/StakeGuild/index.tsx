@@ -169,15 +169,6 @@ function StakeGuild({
   }
   /** Setters and Getters **/
   async function getDebtCeilingDelta(value) {
-    if (
-      (Number(value) > Number(formatUnits(guildBalance, 18)) - Number(formatUnits(guildUserWeight, 18)) &&
-        textButton == 'Stake') ||
-      (Number(value) > Number(formatUnits(guildUserGaugeWeight, 18)) && textButton == 'Unstake')
-    ) {
-      setDebtDelta(0);
-      return;
-    }
-
     let amount: bigint;
 
     if (textButton == 'Stake') {

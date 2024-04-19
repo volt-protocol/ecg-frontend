@@ -181,6 +181,13 @@ const LendingDetails = () => {
         abi: ProfitManagerABI,
         functionName: 'getProfitSharingConfig',
         chainId: appChainId
+      },
+      {
+        address: profitManagerAddress,
+        abi: ProfitManagerABI,
+        functionName: 'termSurplusBuffer',
+        args: [termAddress],
+        chainId: appChainId
       }
     ],
     query: {
@@ -207,7 +214,8 @@ const LendingDetails = () => {
             creditSplit: formatDecimal(Number(formatUnits(data[17].result[1] as bigint, 18)) * 100, 2),
             guildSplit: formatDecimal(Number(formatUnits(data[17].result[2] as bigint, 18)) * 100, 2),
             surplusBufferSplit: formatDecimal(Number(formatUnits(data[17].result[0] as bigint, 18)) * 100, 2)
-          }
+          },
+          termSurplusBuffer: Number(formatUnits(data[18].result as bigint, 18)),
         };
       }
     }
@@ -695,6 +703,18 @@ const LendingDetails = () => {
                           )}
                       </span>
                     </div>
+
+                    
+                    <div key="guildStaking" className="border-r border-gray-100 px-4 py-3 dark:border-navy-800">
+                      <dt className="text-base font-medium text-gray-900 dark:text-gray-100">Total {creditTokenSymbol} staked</dt>
+                      <dd className="mt-1 flex items-baseline justify-between gap-6 md:block lg:flex">
+                        <div className="flex items-baseline text-2xl font-semibold text-brand-500">
+                          {data?.termSurplusBuffer != undefined &&
+                            formatDecimal(data?.termSurplusBuffer, 2)}
+                        </div>
+                      </dd>
+                    </div>
+
                     <div className="mx-auto flex flex-col items-center justify-center px-4 text-center">
                       <TooltipHorizon
                         extra="z-10 !w-[450px] dark:text-white"

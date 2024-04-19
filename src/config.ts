@@ -64,10 +64,18 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
     {
       key: 'usdc-1',
       pegToken: 'USDC',
-      name: '1 - USDC',
+      name: 'USDC',
       marketId: 1,
       networkId: 42161,
       logo: '/img/crypto-logos/usdc.png'
+    },
+    {
+      key: 'weth-3',
+      pegToken: 'WETH',
+      name: 'WETH',
+      marketId: 3,
+      networkId: 42161,
+      logo: '/img/crypto-logos/weth.png'
     },
     {
       key: 'usdc-test',
@@ -113,10 +121,18 @@ if(process.env.NEXT_PUBLIC_APP_ENV.toLowerCase() == 'production') {
       {
         key: 'usdc-1',
         pegToken: 'USDC',
-        name: '1 - USDC',
+        name: 'USDC',
         marketId: 1,
         networkId: 42161,
         logo: '/img/crypto-logos/usdc.png'
+      },
+      {
+        key: 'weth-3',
+        pegToken: 'WETH',
+        name: 'WETH',
+        marketId: 3,
+        networkId: 42161,
+        logo: '/img/crypto-logos/weth.png'
       }
     ],
     11155111: [

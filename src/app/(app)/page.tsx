@@ -70,7 +70,9 @@ const GlobalDashboard = () => {
     const asyncFunc = async () => {
       const total = await getTotalActiveLoans();
       setTotalActiveLoans(total);
-      const ceilingData = await getDebtCeilingData();
+      const ceilingData = (await getDebtCeilingData()).filter(function(e) {
+        return e.debtCeiling != 0; // remove empty debt ceiling terms from the chart
+      });
       setDebtCeilingData(ceilingData);
       const collateralData = await getCollateralData();
       setCollateralData(collateralData);

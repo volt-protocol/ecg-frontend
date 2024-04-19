@@ -32,7 +32,7 @@ import Link from 'next/link';
 
 const LendingDetails = () => {
   const { address, isConnected } = useAccount();
-  const { appMarketId, coinDetails, lendingTerms, contractsList, appChainId } = useAppStore();
+  const { appMarketId, coinDetails, lendingTerms, contractsList, appChainId, fetchLendingTerms } = useAppStore();
   const searchParams = useSearchParams();
   const termAddress = searchParams.get('term');
   const [lendingTermData, setLendingTermData] = useState<LendingTerms>();
@@ -242,6 +242,10 @@ const LendingDetails = () => {
   }, [lendingTermData, data?.creditTotalSupply, data?.gaugeWeight, data?.totalWeight]);
 
   useEffect(() => {
+    if(!reload) {
+      return;
+    }
+
     async function getEventLoans(): Promise<Object> {
       setIsLoadingEventLoans(true);
       const loansCall = await getActiveLoanDetails(termAddress as Address);
@@ -251,6 +255,7 @@ const LendingDetails = () => {
     }
 
     getEventLoans();
+    fetchLendingTerms(appMarketId, appChainId);
     refetch(); //refect onchain data (!important for signatures)
     setReload(false);
   }, [reload]);

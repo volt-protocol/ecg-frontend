@@ -363,7 +363,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[]; sh
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    debugTable: true
+    debugTable: false
   });
 
   return (

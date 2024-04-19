@@ -212,14 +212,6 @@ function StakeCredit({
   }
 
   async function getDebtCeilingDelta(value) {
-    if (
-      (Number(value) > Number(formatUnits(creditBalance, 18)) && textButton === 'Stake') ||
-      (Number(value) > Number(formatUnits(creditAllocated, 18)) && textButton === 'Unstake')
-    ) {
-      setDebtDelta(0);
-      return;
-    }
-
     let amount: bigint;
 
     if (textButton == 'Stake') {
@@ -366,7 +358,7 @@ function StakeCredit({
                       placement="top"
                     ></TooltipHorizon>
                     <br />
-                    Your stake will increase borrow cap by{' '}
+                    Your stake will increase debt ceiling by{' '}
                     <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
                     <span className="font-bold">
                       {formatDecimal(debtDelta * creditMultiplierNumber, creditTokenDecimalsToDisplay)}
@@ -377,7 +369,7 @@ function StakeCredit({
               ) : (
                 <>
                   <p>
-                    Your unstake will decrease borrow cap by{' '}
+                    Your unstake will decrease debt ceiling by{' '}
                     <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
                     <span className="font-bold">
                       {formatDecimal(debtDelta * creditMultiplierNumber, creditTokenDecimalsToDisplay)}

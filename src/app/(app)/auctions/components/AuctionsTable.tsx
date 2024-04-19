@@ -481,7 +481,7 @@ export default function AuctionsTable({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    debugTable: true,
+    debugTable: false,
     initialState: {
       pagination: {
         pageSize: 15

@@ -140,7 +140,7 @@ export const LastProtocolActivity = ({ data, currentBlock }: { data: LastActivit
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    debugTable: true,
+    debugTable: false,
     initialState: {
       pagination: {
         pageSize: 8

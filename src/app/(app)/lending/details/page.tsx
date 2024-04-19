@@ -32,7 +32,7 @@ import Link from 'next/link';
 
 const LendingDetails = () => {
   const { address, isConnected } = useAccount();
-  const { appMarketId, coinDetails, lendingTerms, contractsList, appChainId } = useAppStore();
+  const { appMarketId, coinDetails, lendingTerms, contractsList, appChainId, fetchLendingTerms } = useAppStore();
   const searchParams = useSearchParams();
   const termAddress = searchParams.get('term');
   const [lendingTermData, setLendingTermData] = useState<LendingTerms>();
@@ -181,6 +181,13 @@ const LendingDetails = () => {
         abi: ProfitManagerABI,
         functionName: 'getProfitSharingConfig',
         chainId: appChainId
+      },
+      {
+        address: profitManagerAddress,
+        abi: ProfitManagerABI,
+        functionName: 'termSurplusBuffer',
+        args: [termAddress],
+        chainId: appChainId
       }
     ],
     query: {
@@ -207,7 +214,8 @@ const LendingDetails = () => {
             creditSplit: formatDecimal(Number(formatUnits(data[17].result[1] as bigint, 18)) * 100, 2),
             guildSplit: formatDecimal(Number(formatUnits(data[17].result[2] as bigint, 18)) * 100, 2),
             surplusBufferSplit: formatDecimal(Number(formatUnits(data[17].result[0] as bigint, 18)) * 100, 2)
-          }
+          },
+          termSurplusBuffer: Number(formatUnits(data[18].result as bigint, 18)),
         };
       }
     }
@@ -234,6 +242,10 @@ const LendingDetails = () => {
   }, [lendingTermData, data?.creditTotalSupply, data?.gaugeWeight, data?.totalWeight]);
 
   useEffect(() => {
+    if(!reload) {
+      return;
+    }
+
     async function getEventLoans(): Promise<Object> {
       setIsLoadingEventLoans(true);
       const loansCall = await getActiveLoanDetails(termAddress as Address);
@@ -243,12 +255,27 @@ const LendingDetails = () => {
     }
 
     getEventLoans();
+    fetchLendingTerms(appMarketId, appChainId);
     refetch(); //refect onchain data (!important for signatures)
     setReload(false);
   }, [reload]);
 
   if (!isConnected) {
     return <Disconnected />;
+  }
+
+  function getPercentageAllocation(alreadyAllocated: bigint, totalBalance: bigint) {
+    const total = Number(formatUnits(totalBalance, 18)) + Number(formatUnits(alreadyAllocated, 18));
+    if(total == 0) {
+      return '0';
+    }
+
+    return formatDecimal(
+      (Number(formatUnits(alreadyAllocated, 18)) /
+        (Number(formatUnits(totalBalance, 18)) +
+          Number(formatUnits(alreadyAllocated, 18)))) *
+        100,
+      2)
   }
 
   const isMarketLendingTerm =
@@ -393,12 +420,8 @@ const LendingDetails = () => {
                         <div className="inline-flex items-baseline rounded-full bg-green-100 px-2.5 py-0.5 text-sm font-medium text-green-800 md:mt-2 lg:mt-0">
                           {data?.guildUserGaugeWeight != undefined &&
                             data?.guildBalance != undefined &&
-                            formatDecimal(
-                              (Number(formatUnits(data?.guildUserGaugeWeight, 18)) /
-                                Number(formatUnits(data?.guildBalance, 18))) *
-                                100,
-                              2
-                            )}
+                            getPercentageAllocation(data?.guildUserGaugeWeight, data?.guildBalance)
+                          }
                           %
                         </div>
                       </dd>
@@ -408,6 +431,17 @@ const LendingDetails = () => {
                           toLocaleString(formatDecimal(Number(formatUnits(data?.guildBalance, 18)), 2))}
                       </span>
                     </div>
+                    
+                    <div key="guildStaking" className="border-r border-gray-100 px-4 py-3 dark:border-navy-800">
+                      <dt className="text-base font-medium text-gray-900 dark:text-gray-100">Total GUILD staked</dt>
+                      <dd className="mt-1 flex items-baseline justify-between gap-6 md:block lg:flex">
+                        <div className="flex items-baseline text-2xl font-semibold text-brand-500">
+                          {data?.gaugeWeight != undefined &&
+                            formatDecimal(data?.gaugeWeight, 2)}
+                        </div>
+                      </dd>
+                    </div>
+
                     <div className="mx-auto flex flex-col items-center justify-center px-4 text-center">
                       <TooltipHorizon
                         extra="z-10 !w-[450px] dark:text-gray-100"
@@ -656,13 +690,8 @@ const LendingDetails = () => {
                         <div className="inline-flex items-baseline rounded-full bg-green-100 px-2.5 py-0.5 text-sm font-medium text-green-800 md:mt-2 lg:mt-0">
                           {data?.creditAllocated != undefined &&
                             data?.creditBalance != undefined &&
-                            formatDecimal(
-                              (Number(formatUnits(data?.creditAllocated, 18)) /
-                                (Number(formatUnits(data?.creditBalance, 18)) +
-                                  Number(formatUnits(data?.creditAllocated, 18)))) *
-                                100,
-                              2
-                            )}
+                            getPercentageAllocation(data?.creditAllocated, data?.creditBalance)
+                            }
                           %
                         </div>
                       </dd>
@@ -679,6 +708,18 @@ const LendingDetails = () => {
                           )}
                       </span>
                     </div>
+
+                    
+                    <div key="guildStaking" className="border-r border-gray-100 px-4 py-3 dark:border-navy-800">
+                      <dt className="text-base font-medium text-gray-900 dark:text-gray-100">Total {creditTokenSymbol} staked</dt>
+                      <dd className="mt-1 flex items-baseline justify-between gap-6 md:block lg:flex">
+                        <div className="flex items-baseline text-2xl font-semibold text-brand-500">
+                          {data?.termSurplusBuffer != undefined &&
+                            formatDecimal(data?.termSurplusBuffer, 2)}
+                        </div>
+                      </dd>
+                    </div>
+
                     <div className="mx-auto flex flex-col items-center justify-center px-4 text-center">
                       <TooltipHorizon
                         extra="z-10 !w-[450px] dark:text-white"

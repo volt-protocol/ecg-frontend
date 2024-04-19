@@ -74,7 +74,7 @@ export default function ComplexTable(props: { tableData: any }) {
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    debugTable: true
+    debugTable: false
   });
   return (
     <Card extra={'w-full h-full px-6 pb-6 sm:overflow-x-auto'}>

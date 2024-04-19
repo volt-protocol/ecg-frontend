@@ -19,6 +19,15 @@ export const DebtCeiling = ({
   const dataProcessed = useMemo(() => {
     return data.map((item) => {
       return [Number(item.currentDebt), Number(item.debtCeiling) - Number(item.currentDebt)];
+    }).filter(function(d) {
+      // exclude terms with 0 data from the chart
+      return d[0] !== 0 || d[1] !== 0;
+    }).map((item) => {
+      // prevent type(uint256).max from breaking the chart
+      if (item[1] > 999_999_999_999) {
+        item[1] = 999_999_999_999;
+      }
+      return item;
     });
   }, [data]);
 

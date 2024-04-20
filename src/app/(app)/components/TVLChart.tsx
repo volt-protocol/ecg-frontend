@@ -85,7 +85,7 @@ export const TVLChart = ({ tvl }: { tvl: any }) => {
 
   return (
     <Card
-      title="TVL"
+      title="Total Collateral Value"
       extra="w-full min-h-[300px] md:col-span-2 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
       rightText={getTimelineButton({ timeline, updateData })}
     >

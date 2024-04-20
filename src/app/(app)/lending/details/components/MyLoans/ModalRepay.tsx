@@ -238,7 +238,7 @@ export default function ModalRepay({
                         titleDisabled={getTitleDisabled(
                           value,
                           rowData.loanDebt,
-                          pegTokenBalance,
+                          currencyType == 'pegToken' ? pegTokenBalance : creditBalance,
                           creditMultiplier,
                           minBorrow,
                           match
@@ -246,7 +246,9 @@ export default function ModalRepay({
                         extra="w-full !rounded-xl"
                         disabled={
                           !value ||
-                          parseUnits(value, pegToken.decimals) > pegTokenBalance ||
+                          (currencyType == 'pegToken'
+                            ? parseUnits(value, pegToken.decimals) > pegTokenBalance
+                            : parseUnits(value, 18) > creditBalance) ||
                           (!match &&
                             rowData.loanDebt - (parseUnits(value, pegToken.decimals) * normalizer) / creditMultiplier <
                               minBorrow)

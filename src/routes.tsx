@@ -44,7 +44,7 @@ const routes = [
   //   show: true,
   // },
   {
-    name: 'Mint & Saving',
+    name: 'Lend or Redeem',
     layout: '/',
     icon: <MdOutlineSavings className="h-6 w-6" />,
     path: 'mint',

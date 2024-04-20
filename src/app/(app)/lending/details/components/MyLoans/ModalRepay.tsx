@@ -261,7 +261,7 @@ export default function ModalRepay({
                           <p>
                             You do not have enough {creditTokenSymbol}. Go to{' '}
                             <Link href="/mint" className="font-bold">
-                              Mint & Saving
+                              Lend or Redeem
                             </Link>{' '}
                             to mint more with {pegToken.symbol}.
                           </p>

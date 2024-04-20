@@ -78,7 +78,7 @@ export default function LendingStats({
           <div>
             <Widget
               icon={<BsBank2 className="h-7 w-7" />}
-              title={'TVL'}
+              title={'Total Collateral'}
               subtitle={
                 collateralToken.price === 0
                   ? '$ -.--'

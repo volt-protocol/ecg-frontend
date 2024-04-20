@@ -12,7 +12,8 @@ export const GlobalStatCarts = ({
   collateralData,
   totalActiveLoans,
   allTimePnL,
-  pegToken
+  pegToken,
+  liquidityData
 }: {
   lendingTerms: LendingTerms[];
   data: any;
@@ -20,6 +21,7 @@ export const GlobalStatCarts = ({
   totalActiveLoans: number;
   allTimePnL: number;
   pegToken: CoinSettings;
+  liquidityData: number;
 }) => {
   return (
     <>
@@ -32,11 +34,25 @@ export const GlobalStatCarts = ({
         icon={<IoDocuments className="h-6 w-6" />}
         title={'Total Debt'}
         subtitle={`$ ${formatCurrencyValue(
-          (lendingTerms?.reduce((a, b) => a + b.currentDebt, 0) * data?.creditMultiplier * pegToken.price)
+          lendingTerms?.reduce((a, b) => a + b.currentDebt, 0) * data?.creditMultiplier * pegToken.price
         )}`}
       />
-      <Widget icon={<MdBarChart className="h-7 w-7" />} title={'Lending Terms'} subtitle={lendingTerms.length} />
-      <Widget icon={<MdDashboard className="h-6 w-6" />} title={'Active Loans'} subtitle={totalActiveLoans ?? '-'} />
+      <Widget
+        icon={<MdBarChart className="h-7 w-7" />}
+        title={'Borrowable Liquidity'}
+        subtitle={`$ ${formatCurrencyValue(liquidityData)}`}
+      />
+      <Widget
+        icon={<MdBarChart className="h-7 w-7" />}
+        title={lendingTerms.length + ' terms'}
+        subtitle={totalActiveLoans ? totalActiveLoans + ' loans' : '-'}
+      />
+      {false ? (
+        <Widget icon={<MdBarChart className="h-7 w-7" />} title={'Lending Terms'} subtitle={lendingTerms.length} />
+      ) : null}
+      {false ? (
+        <Widget icon={<MdDashboard className="h-6 w-6" />} title={'Active Loans'} subtitle={totalActiveLoans ?? '-'} />
+      ) : null}
       <Widget
         icon={<MdBarChart className="h-7 w-7" />}
         title={'GUILD Staked'}

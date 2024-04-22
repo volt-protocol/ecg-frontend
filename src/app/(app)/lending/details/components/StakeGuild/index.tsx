@@ -89,7 +89,7 @@ function StakeGuild({
       return;
     }
     if (textButton === 'Stake') {
-      if (Number(value) > Number(formatUnits(guildBalance, 18)) - Number(formatUnits(guildUserWeight, 18))) {
+      if (Number(value) > Number(formatUnits(guildBalance - guildUserWeight, 18))) {
         toastError('Not enough guild');
         return;
       } else {
@@ -100,7 +100,7 @@ function StakeGuild({
             address: contractsList.guildAddress,
             abi: GuildABI,
             functionName: 'incrementGauge',
-            args: [smartContractAddress, parseEther(value.toString())]
+            args: [smartContractAddress, parseEther(value)]
           });
           const checkAllocate = await waitForTransactionReceipt(wagmiConfig, {
             hash: hash
@@ -190,7 +190,7 @@ function StakeGuild({
 
   const setMax = () => {
     if (textButton == 'Stake') {
-      setValue((Number(formatUnits(guildBalance, 18)) - Number(formatUnits(guildUserWeight, 18))).toString());
+      setValue(formatUnits(guildBalance - guildUserWeight, 18));
     } else {
       setValue(formatUnits(guildUserGaugeWeight, 18));
     }

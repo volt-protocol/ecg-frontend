@@ -81,7 +81,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   const fetchActiveOffboardingPolls = async () => {
     setLoading(true);
     const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber();
-    
+
     const l1Block = await getL1BlockNumber(appChainId);
     //logs are returned from oldest to newest
     const logs = await getPublicClient(wagmiConfig).getLogs({

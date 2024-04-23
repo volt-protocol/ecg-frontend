@@ -17,6 +17,7 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
     fetchHistoricalData,
     fetchContractsList,
     fetchProtocolData,
+    fetchProposals,
     appMarketId,
     appChainId
   } = useAppStore();
@@ -32,6 +33,7 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
         fetchLendingTerms(appMarketId, appChainId),
         fetchLoans(appMarketId, appChainId),
         fetchAuctions(appMarketId, appChainId),
+        fetchProposals(appMarketId, appChainId),
         fetchProtocolData(appMarketId, appChainId, contractsList)
       ]);
       setIsLoading(false);

@@ -5,7 +5,7 @@ import StepModal from 'components/stepLoader';
 import { Step } from 'components/stepLoader/stepType';
 import { useEffect, useState } from 'react';
 import { Address, formatUnits } from 'viem';
-import { formatNumberDecimal } from 'utils/numbers';
+import { formatDecimal, formatNumberDecimal } from 'utils/numbers';
 import { toastError } from 'components/toast';
 import { getProposableTerms } from './helper';
 import ButtonPrimary from 'components/button/ButtonPrimary';
@@ -16,6 +16,7 @@ import { AlertMessage } from 'components/message/AlertMessage';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
 import { getExplorerBaseUrl } from 'config';
+import { SECONDS_IN_DAY } from 'utils/constants';
 
 export type ProposedTerm = {
   termAddress: Address;
@@ -31,7 +32,7 @@ export type ProposedTerm = {
 };
 
 export default function Propose() {
-  const { appChainId, appMarketId, contractsList, lendingTerms } = useAppStore();
+  const { appChainId, appMarketId, contractsList, lendingTerms, proposals } = useAppStore();
   const { address } = useAccount();
   const [showModal, setShowModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
@@ -73,7 +74,7 @@ export default function Propose() {
 
   useEffect(() => {
     fetchProposableTerms();
-  }, []);
+  }, [proposals]);
 
   useEffect(() => {
     if (reload) {
@@ -86,7 +87,34 @@ export default function Propose() {
   const fetchProposableTerms = async () => {
     setLoading(true);
 
-    const terms = await getProposableTerms(contractsList, lendingTerms, appMarketId);
+    const terms: {
+      termAddress: `0x${string}`;
+      collateralTokenSymbol: any;
+      termName: string;
+      collateralToken: `0x${string}`;
+      openingFee: number;
+      interestRate: string;
+      borrowRatio: number;
+      maxDelayBetweenPartialRepay: string;
+      minPartialRepayPercent: string;
+      hardCap: string;
+    }[] = [];
+
+    for (const p of proposals.filter((_) => _.status == 'created')) {
+      terms.push({
+        termAddress: p.termAddress as Address,
+        collateralTokenSymbol: p.collateralTokenSymbol,
+        termName: p.termName,
+        collateralToken: p.collateralTokenAddress as Address,
+        openingFee: Number(formatUnits(BigInt(p.openingFee), 18)),
+        interestRate: (Number(formatUnits(BigInt(p.interestRate), 18)) * 100).toFixed(1),
+        borrowRatio: p.borrowRatio,
+        maxDelayBetweenPartialRepay: formatDecimal(p.maxDelayBetweenPartialRepay / SECONDS_IN_DAY, 1),
+        minPartialRepayPercent: formatDecimal(p.minPartialRepayPercent * 100, 4),
+        hardCap: p.hardCap
+      });
+    }
+    // const terms = await getProposableTerms(contractsList, lendingTerms, appMarketId);
 
     setLoading(false);
     setSelectedTerm(terms[0]);

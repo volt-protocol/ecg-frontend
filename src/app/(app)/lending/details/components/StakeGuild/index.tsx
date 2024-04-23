@@ -68,7 +68,7 @@ function StakeGuild({
     const inputValue = e.target.value;
 
     // Vérifier si la valeur saisie ne contient que des numéros
-    if (/^\d*$/.test(inputValue)) {
+    if (/^[0-9]*\.?[0-9]*$/i.test(inputValue)) {
       setValue(inputValue as string);
 
       await getDebtCeilingDelta(inputValue);
@@ -89,7 +89,7 @@ function StakeGuild({
       return;
     }
     if (textButton === 'Stake') {
-      if (Number(value) > Number(formatUnits(guildBalance, 18)) - Number(formatUnits(guildUserWeight, 18))) {
+      if (Number(value) > Number(formatUnits(guildBalance - guildUserWeight, 18))) {
         toastError('Not enough guild');
         return;
       } else {
@@ -100,7 +100,7 @@ function StakeGuild({
             address: contractsList.guildAddress,
             abi: GuildABI,
             functionName: 'incrementGauge',
-            args: [smartContractAddress, parseEther(value.toString())]
+            args: [smartContractAddress, parseEther(value)]
           });
 
           const checkAllocate = await waitForTransactionReceipt(wagmiConfig, {
@@ -196,7 +196,7 @@ function StakeGuild({
 
   const setMax = () => {
     if (textButton == 'Stake') {
-      setValue((Number(formatUnits(guildBalance, 18)) - Number(formatUnits(guildUserWeight, 18))).toString());
+      setValue(formatUnits(guildBalance - guildUserWeight, 18));
     } else {
       setValue(formatUnits(guildUserGaugeWeight, 18));
     }

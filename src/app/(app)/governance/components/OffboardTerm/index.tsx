@@ -424,14 +424,16 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   const getActionButton = (item: ActiveOffboardingPolls) => {
     if (!data || !data.pollDurationBlock || !data.quorum) return null;
 
-    //expired and did not pass
-    if (!isActivePoll(item.snapshotBlock, item.currentBlock, data.pollDurationBlock)) {
+    if (!isActivePoll(item.snapshotBlock, item.currentBlock, data.pollDurationBlock) && item.userWeight < data.quorum) {
       return (
         <div className="flex items-center gap-1">
           <span className="items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-500">Failed</span>
         </div>
       );
-    } else {
+    }
+
+    //vote active and quorum not reached yet
+    if (isActivePoll(item.snapshotBlock, item.currentBlock, data.pollDurationBlock) && item.userWeight < data.quorum) {
       return (
         <ButtonPrimary
           disabled={!guildVotingWeight}

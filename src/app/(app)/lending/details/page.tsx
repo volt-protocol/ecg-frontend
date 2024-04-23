@@ -38,7 +38,7 @@ const LendingDetails = () => {
   const [lendingTermData, setLendingTermData] = useState<LendingTerms>();
   const [termTotalCollateral, setTermTotalCollateral] = useState(0);
   const [isLoadingEventLoans, setIsLoadingEventLoans] = useState<boolean>(true);
-  const [reload, setReload] = useState<boolean>(false);
+  const [reload, setReload] = useState<boolean>(true);
   const [utilization, setUtilization] = useState<string>('');
   const [eventLoans, setEventLoans] = useState<loanObj[]>([]);
   const [currencyType, setCurrencyType] = useState<'creditToken' | 'pegToken'>('creditToken');

@@ -58,16 +58,25 @@ export type SupportedMarket = {
   networkId: number;
 };
 
-// set the available markets here
+// set the available chains/ markets here
+export let SelectableChainId = [42161, 11155111];
 export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
   42161: [
     {
       key: 'usdc-1',
       pegToken: 'USDC',
-      name: '1 - USDC',
+      name: 'USDC',
       marketId: 1,
       networkId: 42161,
       logo: '/img/crypto-logos/usdc.png'
+    },
+    {
+      key: 'weth-3',
+      pegToken: 'WETH',
+      name: 'WETH',
+      marketId: 3,
+      networkId: 42161,
+      logo: '/img/crypto-logos/weth.png'
     },
     {
       key: 'usdc-test',
@@ -107,26 +116,25 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
 };
 
 // specific for production
-if (process.env.NEXT_PUBLIC_APP_ENV.toLowerCase() == 'production') {
+if(process.env.NEXT_PUBLIC_APP_ENV.toLowerCase() == 'production') {
+  SelectableChainId = [42161]
   marketsConfig = {
     42161: [
       {
         key: 'usdc-1',
         pegToken: 'USDC',
-        name: '1 - USDC',
+        name: 'USDC',
         marketId: 1,
         networkId: 42161,
         logo: '/img/crypto-logos/usdc.png'
-      }
-    ],
-    11155111: [
+      },
       {
-        key: 'USDC-sepolia',
-        pegToken: 'USDC',
-        name: 'USDC (test)',
-        marketId: 42,
-        networkId: 11155111,
-        logo: '/img/crypto-logos/usdc.png'
+        key: 'weth-3',
+        pegToken: 'WETH',
+        name: 'WETH',
+        marketId: 3,
+        networkId: 42161,
+        logo: '/img/crypto-logos/weth.png'
       }
     ]
   };
@@ -165,8 +173,6 @@ export function getApiBaseUrl(chainId: number) {
       return process.env.NEXT_PUBLIC_BACKEND_API_URL || process.env.NEXT_PUBLIC_ARBITRUM_BACKEND_API_URL;
   }
 }
-
-export const SelectableChainId = [42161, 11155111];
 
 export function getExplorerBaseUrl(chainId: number) {
   switch (chainId) {

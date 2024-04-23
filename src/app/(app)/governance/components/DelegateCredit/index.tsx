@@ -73,7 +73,7 @@ function DelegateCredit({
     const inputValue = e.target.value;
 
     // Vérifier si la valeur saisie ne contient que des numéros
-    if (/^\d*$/.test(inputValue)) {
+    if (/^[0-9]*\.?[0-9]*$/i.test(inputValue)) {
       setValue(inputValue as string);
     }
   };

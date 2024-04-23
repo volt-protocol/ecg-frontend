@@ -5,7 +5,7 @@ import { UseChainIdParameters, useReadContracts } from 'wagmi';
 import { useAppStore } from 'store';
 import { Abi, Address, formatUnits, erc20Abi } from 'viem';
 import { getApiBaseUrl, getPegTokenLogo } from 'config';
-import { ProfitManagerABI, GuildABI, CreditABI, TermABI } from 'lib/contracts';
+import { ProfitManagerABI, GuildABI, CreditABI, TermABI, PsmUsdcABI } from 'lib/contracts';
 import { useEffect, useState } from 'react';
 import { getActiveLoanLogs, getCloseLoanLogs, getOpenLoanLogs } from 'lib/logs/loans';
 import Card from 'components/card';
@@ -46,6 +46,7 @@ const GlobalDashboard = () => {
   const [totalActiveLoans, setTotalActiveLoans] = useState<number>();
   const [debtCeilingData, setDebtCeilingData] = useState([]);
   const [collateralData, setCollateralData] = useState([]);
+  const [liquidityData, setLiquidityData] = useState(0);
   const [firstLossData, setFirstLossData] = useState([]);
   // const [lastActivities, setLastActivites] = useState<LastActivity[]>([]);
   const [allTimePnl, setAllTimePnl] = useState<number>(0);
@@ -70,10 +71,14 @@ const GlobalDashboard = () => {
     const asyncFunc = async () => {
       const total = await getTotalActiveLoans();
       setTotalActiveLoans(total);
-      const ceilingData = await getDebtCeilingData();
+      const ceilingData = (await getDebtCeilingData()).filter(function (e) {
+        return e.debtCeiling != 0; // remove empty debt ceiling terms from the chart
+      });
       setDebtCeilingData(ceilingData);
       const collateralData = await getCollateralData();
       setCollateralData(collateralData);
+      const liquidityData = (await getLiquidityData()) as bigint;
+      setLiquidityData(Number(formatUnits(liquidityData, pegToken.decimals)) * pegToken.price);
       const firstLossData = await getFirstLossCapital();
       setFirstLossData(firstLossData);
       // const lastActivities = await getLastActivities();
@@ -136,6 +141,16 @@ const GlobalDashboard = () => {
           };
         })
     );
+  };
+
+  const getLiquidityData = async () => {
+    return await readContract(wagmiConfig, {
+      address: contractsList.marketContracts[appMarketId]?.psmAddress,
+      abi: PsmUsdcABI as Abi,
+      functionName: 'pegTokenBalance',
+      args: [],
+      chainId: appChainId as any
+    });
   };
 
   const getDebtCeilingData = async () => {
@@ -216,6 +231,8 @@ const GlobalDashboard = () => {
           collateralData={collateralData}
           totalActiveLoans={totalActiveLoans}
           allTimePnL={allTimePnl}
+          pegToken={pegToken}
+          liquidityData={liquidityData}
         />
       </div>
 

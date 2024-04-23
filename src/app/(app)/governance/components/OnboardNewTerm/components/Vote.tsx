@@ -29,10 +29,10 @@ import { getVotableTerms } from './helper';
 import VoteStatusBar from 'components/bar/VoteStatusBar';
 import { extractTermAddress } from 'utils/strings';
 import { wagmiConfig } from 'contexts/Web3Provider';
-import { getExplorerBaseUrl } from 'config';
+import { getExplorerBaseUrl, getL1BlockNumber } from 'config';
 
 function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
-  const { appChainId, appMarketId, contractsList } = useAppStore();
+  const { appChainId, appMarketId, contractsList, proposals, fetchProposalsUntilBlock } = useAppStore();
   const { address } = useAccount();
   const { fetchLendingTerms } = useAppStore();
   const [showModal, setShowModal] = useState(false);
@@ -47,90 +47,18 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
 
   useEffect(() => {
     fetchActiveOnboardingVotes();
-  }, []);
+  }, [proposals]);
 
   /* Getters */
   const fetchActiveOnboardingVotes = async () => {
     setLoading(true);
-    const currentBlockData = await getPublicClient(wagmiConfig).getBlockNumber();
+    const currentBlockData = await getL1BlockNumber(appChainId);
     setCurrentBlock(currentBlockData);
 
-    // get TermCreated logs
-    const termsCreated = await getVotableTerms(contractsList, appMarketId);
-
-    //logs are returned from oldest to newest
-    const logs = await getPublicClient(wagmiConfig).getLogs({
-      address: contractsList.onboardGovernorGuildAddress as Address,
-      event: {
-        type: 'event',
-        name: 'ProposalCreated',
-        inputs: [
-          {
-            indexed: false,
-            name: 'proposalId',
-            type: 'uint256'
-          },
-          {
-            indexed: false,
-            name: 'proposer',
-            type: 'address'
-          },
-          {
-            indexed: false,
-            name: 'targets',
-            type: 'address[]'
-          },
-          {
-            indexed: false,
-            name: 'values',
-            type: 'uint256[]'
-          },
-          {
-            indexed: false,
-            name: 'signatures',
-            type: 'string[]'
-          },
-          {
-            indexed: false,
-            name: 'calldatas',
-            type: 'bytes[]'
-          },
-          {
-            indexed: false,
-            name: 'voteStart',
-            type: 'uint256'
-          },
-          {
-            indexed: false,
-            name: 'voteEnd',
-            type: 'uint256'
-          },
-          {
-            indexed: false,
-            name: 'description',
-            type: 'string'
-          }
-        ]
-      },
-      fromBlock: BigInt(0),
-      toBlock: currentBlockData
-    });
-
     const activeVotes = await Promise.all(
-      logs
-        .filter(function (log) {
-          // filter out proposals for terms that are in a different market
-          const term = termsCreated.find(
-            (term) => term?.termAddress.toLowerCase() === extractTermAddress(log.args.description).toLowerCase()
-          );
-          return term != undefined;
-        })
-        .map(async (log) => {
-          //Get term name
-          const term = termsCreated.find(
-            (term) => term?.termAddress.toLowerCase() === extractTermAddress(log.args.description).toLowerCase()
-          );
-
+      proposals
+        .filter((_) => _.status == 'proposed' || _.status == 'queued')
+        .map(async (proposal) => {
           //Get votes for a given proposal id
           const proposalVoteInfo = await readContracts(wagmiConfig, {
             contracts: [
@@ -138,57 +66,55 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
                 address: contractsList.onboardGovernorGuildAddress,
                 abi: OnboardGovernorGuildABI,
                 functionName: 'proposalVotes',
-                args: [log.args.proposalId],
+                args: [proposal.proposalId],
                 chainId: appChainId as any
               },
               {
                 address: contractsList.onboardGovernorGuildAddress,
                 abi: OnboardGovernorGuildABI,
                 functionName: 'hasVoted',
-                args: [log.args.proposalId, address],
-                chainId: appChainId as any
-              },
-              {
-                address: contractsList.onboardGovernorGuildAddress,
-                abi: OnboardGovernorGuildABI,
-                functionName: 'quorum',
-                args: [Number(log.args.voteStart)],
+                args: [proposal.proposalId, address],
                 chainId: appChainId as any
               },
               {
                 address: contractsList.onboardGovernorGuildAddress,
                 abi: OnboardGovernorGuildABI,
                 functionName: 'state',
-                args: [log.args.proposalId],
+                args: [proposal.proposalId],
                 chainId: appChainId as any
               },
               {
                 address: contractsList.onboardGovernorGuildAddress,
                 abi: OnboardGovernorGuildABI,
                 functionName: 'proposalEta',
-                args: [log.args.proposalId],
+                args: [proposal.proposalId],
                 chainId: appChainId as any
               }
             ]
           });
 
           return {
-            termAddress: term.termAddress,
-            termName: term.termName,
-            collateralTokenSymbol: term.collateralTokenSymbol,
-            interestRate: term.interestRate,
-            borrowRatio: term.borrowRatio,
-            quorum: proposalVoteInfo[1].status == 'success' && formatUnits(proposalVoteInfo[2].result as bigint, 18),
-            proposalId: BigInt(log.args.proposalId),
-            proposer: log.args.proposer as Address,
+            termAddress: proposal.termAddress,
+            termName: proposal.termName,
+            collateralTokenSymbol: proposal.collateralTokenSymbol,
+            interestRate: proposal.interestRate,
+            borrowRatio: proposal.borrowRatio,
+            quorum: proposalVoteInfo[1].status == 'success' && formatUnits(BigInt(proposal.quorum), 18),
+            proposalId: BigInt(proposal.proposalId),
+            proposer: proposal.proposer as Address,
             votes: proposalVoteInfo[0].status == 'success' && proposalVoteInfo[0].result,
             hasVoted: proposalVoteInfo[1].status == 'success' && proposalVoteInfo[1].result,
-            voteStart: Number(log.args.voteStart),
-            voteEnd: Number(log.args.voteEnd),
-            isActive: Number(currentBlockData) < Number(log.args.voteEnd),
-            proposalState: proposalVoteInfo[3].status == 'success' && proposalVoteInfo[3].result,
-            proposeArgs: [log.args.targets, log.args.values, log.args.calldatas, log.args.description],
-            queueEnd: Number(proposalVoteInfo[3].status == 'success' && proposalVoteInfo[4].result)
+            voteStart: Number(proposal.voteStart),
+            voteEnd: Number(proposal.voteEnd),
+            isActive: Number(currentBlockData) < Number(proposal.voteEnd),
+            proposalState: proposalVoteInfo[2].status == 'success' && proposalVoteInfo[2].result,
+            proposeArgs: [
+              proposal.targets,
+              proposal.values.map((_) => BigInt(_)),
+              proposal.calldatas,
+              proposal.description
+            ],
+            queueEnd: Number(proposalVoteInfo[3].status == 'success' && proposalVoteInfo[3].result)
           };
         })
     );
@@ -237,6 +163,10 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         return;
       }
 
+      const minedBlock = tx.blockNumber;
+      updateStepStatus('Vote for Proposal ' + proposalId.toString().slice(0, 6) + '...', 'Waiting confirmation...');
+      await fetchProposalsUntilBlock(minedBlock, appMarketId, appChainId);
+
       updateStepStatus('Vote for Proposal ' + proposalId.toString().slice(0, 6) + '...', 'Success');
       await fetchActiveOnboardingVotes();
     } catch (e: any) {
@@ -282,6 +212,13 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         updateStepStatus('Queue Proposal ' + proposal.proposalId.toString().slice(0, 6) + '...', 'Error');
         return;
       }
+
+      const minedBlock = tx.blockNumber;
+      updateStepStatus(
+        'Queue Proposal ' + proposal.proposalId.toString().slice(0, 6) + '...',
+        'Waiting confirmation...'
+      );
+      await fetchProposalsUntilBlock(minedBlock, appMarketId, appChainId);
 
       updateStepStatus('Queue Proposal ' + proposal.proposalId.toString().slice(0, 6) + '...', 'Success');
       await fetchActiveOnboardingVotes();

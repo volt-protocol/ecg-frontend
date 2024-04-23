@@ -32,7 +32,7 @@ export type ProposedTerm = {
 };
 
 export default function Propose() {
-  const { appChainId, appMarketId, contractsList, lendingTerms, proposals } = useAppStore();
+  const { appChainId, appMarketId, contractsList, lendingTerms, proposals, fetchProposalsUntilBlock } = useAppStore();
   const { address } = useAccount();
   const [showModal, setShowModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
@@ -149,6 +149,10 @@ export default function Propose() {
         updateStepStatus('Propose Onboard', 'Error');
         return;
       }
+
+      const minedBlock = tx.blockNumber;
+      updateStepStatus('Propose Onboard', 'Waiting confirmation...');
+      await fetchProposalsUntilBlock(minedBlock, appMarketId, appChainId);
 
       updateStepStatus('Propose Onboard', 'Success');
       setReload(true);

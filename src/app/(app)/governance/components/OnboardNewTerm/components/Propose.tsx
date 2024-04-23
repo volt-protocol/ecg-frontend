@@ -114,7 +114,6 @@ export default function Propose() {
         hardCap: p.hardCap
       });
     }
-    // const terms = await getProposableTerms(contractsList, lendingTerms, appMarketId);
 
     setLoading(false);
     setSelectedTerm(terms[0]);

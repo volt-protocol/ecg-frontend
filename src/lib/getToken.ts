@@ -1,9 +1,9 @@
-import { readContracts } from '@wagmi/core';
+import { multicall } from '@wagmi/core';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { erc20Abi, Address } from 'viem';
 
 const getToken = async (tokenAddress: string): Promise<any> => {
-  return await readContracts(wagmiConfig, {
+  return await multicall(wagmiConfig, {
     contracts: [
       {
         address: tokenAddress as Address,

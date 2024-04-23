@@ -116,8 +116,8 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
 };
 
 // specific for production
-if(process.env.NEXT_PUBLIC_APP_ENV.toLowerCase() == 'production') {
-  SelectableChainId = [42161]
+if (process.env.NEXT_PUBLIC_APP_ENV.toLowerCase() == 'production') {
+  SelectableChainId = [42161];
   marketsConfig = {
     42161: [
       {

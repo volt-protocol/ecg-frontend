@@ -17,15 +17,17 @@ export const DebtCeiling = ({
   pegTokenSymbol: string;
 }) => {
   const dataProcessed = useMemo(() => {
-    return data.map((item) => {
-      return [Number(item.currentDebt), Number(item.debtCeiling) - Number(item.currentDebt)];
-    }).map((item) => {
-      // prevent type(uint256).max from breaking the chart
-      if (item[1] > 999_999_999_999) {
-        item[1] = 999_999_999_999;
-      }
-      return item;
-    });
+    return data
+      .map((item) => {
+        return [Number(item.currentDebt), Number(item.debtCeiling) - Number(item.currentDebt)];
+      })
+      .map((item) => {
+        // prevent type(uint256).max from breaking the chart
+        if (item[1] > 999_999_999_999) {
+          item[1] = 999_999_999_999;
+        }
+        return item;
+      });
   }, [data]);
 
   function generateDatas(count, index) {

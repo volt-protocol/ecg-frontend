@@ -24,10 +24,10 @@ export const onboardNewTermTabs: OnboardNewTermTabs[] = [
     key: 'vote',
     title: 'Vote',
     content: <Vote />
+  },
+  {
+    key: 'veto',
+    title: 'Veto',
+    content: <Veto />
   }
-  // {
-  //   key: 'veto',
-  //   title: 'Veto',
-  //   content: <Veto />
-  // }
 ];

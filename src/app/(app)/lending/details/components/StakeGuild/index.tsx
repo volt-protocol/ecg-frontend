@@ -38,7 +38,7 @@ function StakeGuild({
   creditMultiplier: bigint;
   reload: Dispatch<SetStateAction<boolean>>;
 }) {
-  const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
+  const { appMarketId, appChainId, coinDetails, contractsList, fetchLendingTermsUntilBlock } = useAppStore();
   const [value, setValue] = useState<string>('');
   const { isConnected } = useAccount();
   const [showModal, setShowModal] = useState(false);
@@ -102,6 +102,7 @@ function StakeGuild({
             functionName: 'incrementGauge',
             args: [smartContractAddress, parseEther(value)]
           });
+
           const checkAllocate = await waitForTransactionReceipt(wagmiConfig, {
             hash: hash
           });
@@ -109,6 +110,11 @@ function StakeGuild({
             updateStepStatus('Stake', 'Error');
             return;
           }
+
+          const minedBlock = checkAllocate.blockNumber;
+
+          updateStepStatus('Stake', 'Waiting confirmation...');
+          await fetchLendingTermsUntilBlock(minedBlock, appMarketId, appChainId);
         } catch (e) {
           if (e instanceof ContractFunctionExecutionError) {
             console.log(e.shortMessage, 'error');

@@ -33,7 +33,7 @@ import { wagmiConfig } from 'contexts/Web3Provider';
 import { getExplorerBaseUrl, getL1BlockNumber } from 'config';
 
 function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
-  const { appChainId, lendingTerms, contractsList } = useAppStore();
+  const { appChainId, lendingTerms, contractsList, fetchLendingTermsUntilBlock, appMarketId } = useAppStore();
   const [selectedTerm, setSelectedTerm] = useState<LendingTerms>(undefined);
   const [showModal, setShowModal] = useState(false);
   const [activeOffboardingPolls, setActiveOffboardingPolls] = useState<ActiveOffboardingPolls[]>([]);
@@ -261,8 +261,11 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         return;
       }
 
-      updateStepStatus('Offboard Term', 'Success');
+      const minedBlock = tx.blockNumber;
+      updateStepStatus('Offboard Term', 'Waiting confirmation...');
+      await fetchLendingTermsUntilBlock(minedBlock, appMarketId, appChainId);
       await fetchActiveOffboardingPolls();
+      updateStepStatus('Offboard Term', 'Success');
     } catch (e: any) {
       console.log(e);
       updateStepStatus('Offboard Term', 'Error');

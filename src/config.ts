@@ -1,7 +1,7 @@
 import { Address } from 'viem';
 import { mainnet, sepolia, arbitrum } from 'wagmi/chains';
 
-import {  } from 'next/navigation'
+import {} from 'next/navigation';
 
 import { getPublicClient } from '@wagmi/core';
 import { wagmiConfig } from 'contexts/Web3Provider';
@@ -203,7 +203,7 @@ export async function getL1BlockNumber(chainId: number) {
   let blockNumber = BigInt(0);
 
   // for arbitrum, fetch mainnet block number
-  if(chainId == arbitrum.id) {
+  if (chainId == arbitrum.id) {
     blockNumber = await getPublicClient(wagmiConfig, {
       chainId: 1
     }).getBlockNumber();

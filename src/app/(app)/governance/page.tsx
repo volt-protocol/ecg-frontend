@@ -148,9 +148,9 @@ function Governance() {
           <Card title="Onboard Active Term" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
             <OnboardNewterm guildVotingWeight={data?.guildVotingWeight} creditVotingWeight={data?.creditVotingWeight} />
           </Card>
-          <Card title="Offboard Active Term" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
+          {/* <Card title="Offboard Active Term" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
             <OffboardTerm guildVotingWeight={data?.guildVotingWeight} />
-          </Card>
+          </Card> */}
         </div>
       </div>
     );

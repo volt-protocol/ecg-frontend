@@ -1,3 +1,4 @@
+import { multicall } from '@wagmi/core';
 import React, { useEffect, useState } from 'react';
 import { getPublicClient, readContracts, waitForTransactionReceipt, writeContract } from '@wagmi/core';
 import { toastError } from 'components/toast';
@@ -30,6 +31,7 @@ import VoteStatusBar from 'components/bar/VoteStatusBar';
 import { extractTermAddress } from 'utils/strings';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { getExplorerBaseUrl, getL1BlockNumber } from 'config';
+import { BiInfoCircle } from 'react-icons/bi';
 
 function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   const { appChainId, appMarketId, contractsList, proposals, fetchProposalsUntilBlock } = useAppStore();
@@ -60,7 +62,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         .filter((_) => _.status == 'proposed' || _.status == 'queued')
         .map(async (proposal) => {
           //Get votes for a given proposal id
-          const proposalVoteInfo = await readContracts(wagmiConfig, {
+          const proposalVoteInfo = await multicall(wagmiConfig, {
             contracts: [
               {
                 address: contractsList.onboardGovernorGuildAddress,
@@ -163,10 +165,6 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         return;
       }
 
-      const minedBlock = tx.blockNumber;
-      updateStepStatus('Vote for Proposal ' + proposalId.toString().slice(0, 6) + '...', 'Waiting confirmation...');
-      await fetchProposalsUntilBlock(minedBlock, appMarketId, appChainId);
-
       updateStepStatus('Vote for Proposal ' + proposalId.toString().slice(0, 6) + '...', 'Success');
       await fetchActiveOnboardingVotes();
     } catch (e: any) {
@@ -265,6 +263,13 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         updateStepStatus('Execute Proposal ' + proposal.proposalId.toString().slice(0, 6) + '...', 'Error');
         return;
       }
+
+      const minedBlock = tx.blockNumber;
+      updateStepStatus(
+        'Execute Proposal ' + proposal.proposalId.toString().slice(0, 6) + '...',
+        'Waiting confirmation...'
+      );
+      await fetchProposalsUntilBlock(minedBlock, appMarketId, appChainId);
 
       updateStepStatus('Execute Proposal ' + proposal.proposalId.toString().slice(0, 6) + '...', 'Success');
       await fetchActiveOnboardingVotes();
@@ -446,6 +451,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   /* End Handlers */
 
   const getActionButton = (proposal: ActiveOnboardingVotes) => {
+    console.log({ proposal });
     if (proposal.hasVoted && proposal.isActive)
       return (
         <span className="items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
@@ -460,9 +466,16 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
 
     if (proposal.proposalState === ProposalState.Queued && Number(moment().unix()) < proposal.queueEnd) {
       return (
-        <span className="items-center rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-600">
-          Queued
-        </span>
+        <TooltipHorizon
+          extra=""
+          trigger={
+            <span className="items-center rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-600">
+              Queued
+            </span>
+          }
+          content={<p>Can execute {moment(proposal.queueEnd * 1000).fromNow()}</p>}
+          placement="top"
+        />
       );
     }
 

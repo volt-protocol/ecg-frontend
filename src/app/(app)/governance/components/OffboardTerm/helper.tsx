@@ -5,6 +5,5 @@ import { Address } from 'viem';
 
 export const isActivePoll = (snapshotBlock: number, currentBlock: number, pollDurationBlock: number): boolean => {
   const isActive = snapshotBlock + pollDurationBlock > currentBlock;
-  // console.log('isActivePoll:', {isActive}, {snapshotBlock}, {currentBlock}, {pollDurationBlock})
   return isActive;
 };

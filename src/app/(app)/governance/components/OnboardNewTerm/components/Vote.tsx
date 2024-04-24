@@ -63,34 +63,31 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         .map(async (proposal) => {
           //Get votes for a given proposal id
           const proposalVoteInfo = await multicall(wagmiConfig, {
+            chainId: appChainId as any,
             contracts: [
               {
                 address: contractsList.onboardGovernorGuildAddress,
                 abi: OnboardGovernorGuildABI,
                 functionName: 'proposalVotes',
                 args: [proposal.proposalId],
-                chainId: appChainId as any
               },
               {
                 address: contractsList.onboardGovernorGuildAddress,
                 abi: OnboardGovernorGuildABI,
                 functionName: 'hasVoted',
                 args: [proposal.proposalId, address],
-                chainId: appChainId as any
               },
               {
                 address: contractsList.onboardGovernorGuildAddress,
                 abi: OnboardGovernorGuildABI,
                 functionName: 'state',
                 args: [proposal.proposalId],
-                chainId: appChainId as any
               },
               {
                 address: contractsList.onboardGovernorGuildAddress,
                 abi: OnboardGovernorGuildABI,
                 functionName: 'proposalEta',
                 args: [proposal.proposalId],
-                chainId: appChainId as any
               }
             ]
           });
@@ -451,7 +448,6 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   /* End Handlers */
 
   const getActionButton = (proposal: ActiveOnboardingVotes) => {
-    console.log({ proposal });
     if (proposal.hasVoted && proposal.isActive)
       return (
         <span className="items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">

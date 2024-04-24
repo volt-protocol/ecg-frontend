@@ -68,7 +68,7 @@ export default function Create() {
 
   async function getTokenDetails(tokenAddress: Address): Promise<void> {
     try {
-      const result = await getToken(tokenAddress);
+      const result = await getToken(tokenAddress, appChainId);
 
       if (result[0].status == 'failure' || result[1].status == 'failure') {
         toastError('Collateral address is not a valid ERC20 token');

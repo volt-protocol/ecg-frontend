@@ -457,11 +457,6 @@ function Myloans({
   //     )
   //   )
   //   const collateralAmount = calculateCollateralAmount(debtToRepay)
-  //   console.log("usdcAmount", usdcAmount)
-  //   console.log("usdcAmountFlashloan", usdcAmountFlashloan)
-  //   console.log("debtToRepay", debtToRepay)
-  //   console.log("flashloanCollateralAmount", flashloanCollateralAmount)
-  //   console.log("collateralAmount", collateralAmount)
 
   //   setShowModal(true)
 

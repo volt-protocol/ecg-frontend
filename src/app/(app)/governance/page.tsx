@@ -17,7 +17,7 @@ export type Delegatee = {
 };
 
 function Governance() {
-  const { appChainId, appMarketId, contractsList, coinDetails } = useAppStore();
+  const { appChainId, appMarketId, contractsList, coinDetails, delegateLockupPeriod } = useAppStore();
   const { address, isConnected, isDisconnected } = useAccount();
   const [reloadGuild, setReloadGuild] = React.useState<boolean>(false);
   const [reloadCredit, setReloadCredit] = React.useState<boolean>(false);
@@ -33,7 +33,7 @@ function Governance() {
         address: contractsList.guildAddress,
         abi: GuildABI,
         functionName: 'balanceOf',
-        args: [address],
+        args: [address.toString()],
         chainId: appChainId
       },
       {
@@ -70,12 +70,6 @@ function Governance() {
         functionName: 'getVotes',
         args: [address],
         chainId: appChainId
-      },
-      {
-        address: contractsList.marketContracts[appMarketId]?.creditAddress,
-        abi: CreditABI,
-        functionName: 'delegateLockupPeriod',
-        chainId: appChainId
       }
     ],
     query: {
@@ -87,7 +81,7 @@ function Governance() {
           creditBalance: data[3].result as bigint,
           creditNotUsed: data[4].result as bigint,
           creditVotingWeight: data[5].result as bigint,
-          delegateLockupPeriod: data[6].result as bigint
+          delegateLockupPeriod: delegateLockupPeriod
         };
       }
     }

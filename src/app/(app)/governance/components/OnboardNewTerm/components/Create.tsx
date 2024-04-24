@@ -40,7 +40,7 @@ export interface CreateTermForm {
 }
 
 export default function Create() {
-  const { contractsList, appMarketId, coinDetails } = useAppStore();
+  const { contractsList, appMarketId, coinDetails, appChainId, fetchProposalsUntilBlock } = useAppStore();
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedPeriod, setSelectedPeriod] = useState<string>('None');
   const { register, handleSubmit, watch, reset, formState } = useForm({
@@ -68,7 +68,7 @@ export default function Create() {
 
   async function getTokenDetails(tokenAddress: Address): Promise<void> {
     try {
-      const result = await getToken(tokenAddress);
+      const result = await getToken(tokenAddress, appChainId);
 
       if (result[0].status == 'failure' || result[1].status == 'failure') {
         toastError('Collateral address is not a valid ERC20 token');
@@ -203,6 +203,10 @@ export default function Create() {
         updateStepStatus('Create New Term', 'Error');
         return;
       }
+
+      const minedBlock = tx.blockNumber;
+      updateStepStatus('Create New Term', 'Waiting confirmation...');
+      await fetchProposalsUntilBlock(minedBlock, appMarketId, appChainId);
 
       updateStepStatus('Create New Term', 'Success');
       reset(); // reset form

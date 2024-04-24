@@ -3,9 +3,6 @@
 import Spinner from 'components/spinner';
 import { useEffect, useState } from 'react';
 import { useAppStore } from 'store';
-import { useAccount, useSwitchChain } from 'wagmi';
-import { useStore } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   // remove old app-storage if any
@@ -20,6 +17,7 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
     fetchHistoricalData,
     fetchContractsList,
     fetchProtocolData,
+    fetchProposals,
     appMarketId,
     appChainId
   } = useAppStore();
@@ -35,6 +33,7 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
         fetchLendingTerms(appMarketId, appChainId),
         fetchLoans(appMarketId, appChainId),
         fetchAuctions(appMarketId, appChainId),
+        fetchProposals(appMarketId, appChainId),
         fetchProtocolData(appMarketId, appChainId, contractsList)
       ]);
       setIsLoading(false);

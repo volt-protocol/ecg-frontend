@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { RadioGroup } from '@headlessui/react';
-import { getPublicClient, readContracts, waitForTransactionReceipt, writeContract } from '@wagmi/core';
+import { getPublicClient, readContracts, waitForTransactionReceipt, writeContract, multicall } from '@wagmi/core';
 import { toastError } from 'components/toast';
 import { OnboardVetoCreditABI, OnboardVetoGuildABI, GuildABI, OnboardTimelockABI } from 'lib/contracts';
 import { FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
@@ -28,10 +28,11 @@ import Progress from 'components/progress';
 import clsx from 'clsx';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
-import { getExplorerBaseUrl } from 'config';
+import { getExplorerBaseUrl, getL1BlockNumber } from 'config';
+import { SECONDS_IN_DAY } from 'utils/constants';
 
 function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: bigint; guildVotingWeight: bigint }) {
-  const { contractsList, coinDetails, appMarketId, appChainId } = useAppStore();
+  const { contractsList, coinDetails, appMarketId, appChainId, proposals, fetchProposalsUntilBlock } = useAppStore();
   const { address } = useAccount();
   const [showModal, setShowModal] = useState(false);
   const [activeVetoVotes, setActiveVetoVotes] = useState<ActivOnboardingVetoVotes[]>([]);
@@ -45,14 +46,15 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
 
   useEffect(() => {
     address && fetchActiveOnboardingVetoVotes();
-  }, [address]);
+  }, [address, proposals]);
 
   /* Getters */
   const fetchActiveOnboardingVetoVotes = async () => {
     setLoading(true);
+    const l1BlockNumber = await getL1BlockNumber(appChainId);
     const currentBlockNumber = await getPublicClient(wagmiConfig).getBlockNumber();
 
-    setCurrentBlock(currentBlockNumber);
+    setCurrentBlock(l1BlockNumber);
 
     //logs are returned from oldest to newest
     const logs = await getPublicClient(wagmiConfig).getLogs({
@@ -74,7 +76,34 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
       toBlock: currentBlockNumber
     });
 
-    const termsCreated = await getVotableTerms(contractsList, appMarketId);
+    const termsCreated: {
+      termAddress: Address;
+      collateralTokenSymbol: any;
+      termName: string;
+      collateralToken: Address;
+      openingFee: number;
+      interestRate: string;
+      borrowRatio: number;
+      maxDelayBetweenPartialRepay: string;
+      minPartialRepayPercent: string;
+      hardCap: string;
+    }[] = proposals
+      .filter((_) => _.status == 'queued')
+      .map((p) => {
+        return {
+          termAddress: p.termAddress as Address,
+          collateralTokenSymbol: p.collateralTokenSymbol,
+          termName: p.termName,
+          collateralToken: p.collateralTokenAddress as Address,
+          openingFee: Number(formatUnits(BigInt(p.openingFee), 18)),
+          interestRate: (Number(formatUnits(BigInt(p.interestRate), 18)) * 100).toFixed(1),
+          borrowRatio: p.borrowRatio,
+          maxDelayBetweenPartialRepay: formatDecimal(p.maxDelayBetweenPartialRepay / SECONDS_IN_DAY, 1),
+          minPartialRepayPercent: formatDecimal(p.minPartialRepayPercent * 100, 4),
+          hardCap: p.hardCap
+        };
+      });
+
     const activeVetoVotes = await Promise.all(
       logs
         .map((log) => {
@@ -101,7 +130,7 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
           }
           return acc;
         }, [] as { timelockId: string; targets: Address[]; datas: string[]; scheduleBlockNumber: number }[])
-        .filter((item) => checkVetoVoteValidity(contractsList, item.targets, item.datas))
+        // .filter((item) => checkVetoVoteValidity(contractsList, item.targets, item.datas))
         .map((item) => {
           //TODO : get term name decoding data[0]
           const { functionName, args } = decodeFunctionData({
@@ -128,91 +157,80 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
         })
         .map(async (item) => {
           //get proposal votes
-          const data = await readContracts(wagmiConfig, {
+          const data = await multicall(wagmiConfig, {
+            chainId: appChainId as any,
             contracts: [
               {
                 address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: 'proposalVotes',
                 args: [item.proposalId],
-                chainId: appChainId as any
               },
               {
                 address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: 'quorum',
                 args: [item.scheduleBlockNumber],
-                chainId: appChainId as any
               },
               {
                 address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: 'state',
                 args: [item.proposalId],
-                chainId: appChainId as any
               },
               {
                 address: contractsList.onboardVetoGuildAddress,
                 abi: OnboardVetoGuildABI,
                 functionName: 'proposalVotes',
                 args: [item.proposalId],
-                chainId: appChainId as any
               },
               {
                 address: contractsList.onboardVetoGuildAddress,
                 abi: OnboardVetoGuildABI,
                 functionName: 'quorum',
                 args: [item.scheduleBlockNumber],
-                chainId: appChainId as any
               },
               {
                 address: contractsList.onboardVetoGuildAddress,
                 abi: OnboardVetoGuildABI,
                 functionName: 'state',
                 args: [item.proposalId],
-                chainId: appChainId as any
               },
               {
                 address: contractsList.onboardTimelockAddress,
                 abi: OnboardTimelockABI,
                 functionName: 'isOperationPending',
                 args: [item.timelockId],
-                chainId: appChainId as any
               },
               {
                 address: contractsList.onboardTimelockAddress,
                 abi: OnboardTimelockABI,
                 functionName: 'isOperationReady',
                 args: [item.timelockId],
-                chainId: appChainId as any
               },
               {
                 address: contractsList.onboardTimelockAddress,
                 abi: OnboardTimelockABI,
                 functionName: 'isOperationDone',
                 args: [item.timelockId],
-                chainId: appChainId as any
               },
               {
                 address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: 'hasVoted',
                 args: [item.proposalId, address],
-                chainId: appChainId as any
               },
               {
                 address: contractsList.onboardVetoGuildAddress,
                 abi: OnboardVetoGuildABI,
                 functionName: 'hasVoted',
                 args: [item.proposalId, address],
-                chainId: appChainId as any
               },
               {
                 address: contractsList.onboardTimelockAddress,
                 abi: OnboardTimelockABI,
                 functionName: 'getTimestamp',
                 args: [item.timelockId],
-                chainId: appChainId as any
               }
             ]
           });
@@ -244,6 +262,7 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
     setLoading(false);
     setActiveVetoVotes(activeVetoVotes);
   };
+
   /* End Getters*/
 
   /* Smart Contract Writes */

@@ -18,7 +18,7 @@ export const TVLChart = ({ tvl }: { tvl: any }) => {
     const state = {
       series: [
         {
-          name: 'TVL',
+          name: 'TCV',
           data: tvl.values,
           color: '#50bdae'
         }

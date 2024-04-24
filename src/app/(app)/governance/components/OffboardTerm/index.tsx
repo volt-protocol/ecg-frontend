@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getPublicClient, waitForTransactionReceipt, writeContract, readContracts } from '@wagmi/core';
+import { getPublicClient, waitForTransactionReceipt, writeContract, readContracts, multicall } from '@wagmi/core';
 import { toastError } from 'components/toast';
 import { GuildABI, OffboardGovernorGuildABI, termContract } from 'lib/contracts';
 import { FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
@@ -33,45 +33,17 @@ import { wagmiConfig } from 'contexts/Web3Provider';
 import { getExplorerBaseUrl, getL1BlockNumber } from 'config';
 
 function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
-  const { appChainId, lendingTerms, contractsList } = useAppStore();
+  const { appChainId, lendingTerms, contractsList, fetchLendingTermsUntilBlock, appMarketId, offboardQuorum, offboardDurationBlock, deprecatedGauges } = useAppStore();
   const [selectedTerm, setSelectedTerm] = useState<LendingTerms>(undefined);
   const [showModal, setShowModal] = useState(false);
   const [activeOffboardingPolls, setActiveOffboardingPolls] = useState<ActiveOffboardingPolls[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
-  /* Multicall Onchain reads */
-  const { data, isError, isLoading } = useReadContracts({
-    contracts: [
-      {
-        address: contractsList.lendingTermOffboardingAddress,
-        abi: OffboardGovernorGuildABI,
-        functionName: 'quorum',
-        chainId: appChainId
-      },
-      {
-        address: contractsList.lendingTermOffboardingAddress,
-        abi: OffboardGovernorGuildABI,
-        functionName: 'POLL_DURATION_BLOCKS',
-        chainId: appChainId
-      },
-      {
-        address: contractsList.guildAddress,
-        abi: GuildABI,
-        functionName: 'deprecatedGauges',
-        chainId: appChainId
-      }
-    ],
-    query: {
-      select: (data) => {
-        return {
-          quorum: Number(formatUnits(data[0].result, 18)),
-          pollDurationBlock: Number(data[1].result),
-          deprecatedTerms: data[2].result
-        };
-      }
-    }
-  });
-  /* End Get Onchain desgin */
+  const data = {
+    quorum: Number(formatUnits(offboardQuorum, 18)),
+    pollDurationBlock: Number(offboardDurationBlock),
+    deprecatedTerms: deprecatedGauges
+  }
 
   useEffect(() => {
     fetchActiveOffboardingPolls();
@@ -81,7 +53,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   const fetchActiveOffboardingPolls = async () => {
     setLoading(true);
     const currentBlock = await getPublicClient(wagmiConfig).getBlockNumber();
-    
+
     const l1Block = await getL1BlockNumber(appChainId);
     //logs are returned from oldest to newest
     const logs = await getPublicClient(wagmiConfig).getLogs({
@@ -129,19 +101,18 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
           return acc;
         }, [] as ActiveOffboardingPolls[])
         .map(async (item) => {
-          const termInfo = await readContracts(wagmiConfig, {
+          const termInfo = await multicall(wagmiConfig, {
+            chainId: appChainId as any,
             contracts: [
               {
                 ...termContract(item.term as Address),
                 functionName: 'issuance',
-                chainId: appChainId as any
               },
               {
                 address: contractsList.lendingTermOffboardingAddress,
                 abi: OffboardGovernorGuildABI,
                 functionName: 'canOffboard',
                 args: [item.term as Address],
-                chainId: appChainId as any
               }
             ]
           });
@@ -261,8 +232,11 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         return;
       }
 
-      updateStepStatus('Offboard Term', 'Success');
+      const minedBlock = tx.blockNumber;
+      updateStepStatus('Offboard Term', 'Waiting confirmation...');
+      await fetchLendingTermsUntilBlock(minedBlock, appMarketId, appChainId);
       await fetchActiveOffboardingPolls();
+      updateStepStatus('Offboard Term', 'Success');
     } catch (e: any) {
       console.log(e);
       updateStepStatus('Offboard Term', 'Error');
@@ -514,7 +488,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
           <p>Active Offboarding polls: </p>
         </div>
         <div>
-          {loading || isLoading ? (
+          {loading ? (
             <div className="mt-4 flex flex-grow flex-col items-center justify-center gap-2">
               <Spinner />
             </div>

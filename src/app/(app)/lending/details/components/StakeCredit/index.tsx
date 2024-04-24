@@ -43,7 +43,8 @@ function StakeCredit({
   creditMultiplier: bigint;
   reload: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const { appMarketId, appChainId, coinDetails, lendingTerms, contractsList } = useAppStore();
+  const { appMarketId, appChainId, coinDetails, lendingTerms, contractsList, fetchLendingTermsUntilBlock } =
+    useAppStore();
   const [value, setValue] = useState<string>('');
   const { address, isConnected } = useAccount();
   const [showModal, setShowModal] = useState<boolean>(false);
@@ -154,6 +155,11 @@ function StakeCredit({
             updateStepStatus('Stake', 'Error');
             return;
           }
+
+          const minedBlock = checkStake.blockNumber;
+
+          updateStepStatus('Stake', 'Waiting confirmation...');
+          await fetchLendingTermsUntilBlock(minedBlock, appMarketId, appChainId);
         } catch (e) {
           if (e instanceof ContractFunctionExecutionError) {
             console.log(e.shortMessage, 'error');

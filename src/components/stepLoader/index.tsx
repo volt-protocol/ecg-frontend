@@ -39,7 +39,7 @@ function StepModal({
         <div className="flex flex-col space-y-4">
           {steps.map((step, index) => (
             <div key={step.name} className="flex items-center">
-              {step.status === 'In Progress' && <Spinner />}
+              {(step.status === 'In Progress' || step.status === 'Waiting confirmation...') && <Spinner />}
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-white ${
                   step.status === 'In Progress' ? 'absolute' : ''

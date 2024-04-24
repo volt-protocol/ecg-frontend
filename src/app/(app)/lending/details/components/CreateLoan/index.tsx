@@ -557,9 +557,7 @@ function CreateLoan({
     //max borrow of gUSDC given the collateral amount in wallet
     /*const maxBorrow =
       (Number(data?.collateralBalance) * lendingTerm.borrowRatio) /
-      Number(formatUnits(creditMultiplier, 18))
-
-    console.log('maxBorrow', maxBorrow);*/
+      Number(formatUnits(creditMultiplier, 18))*/
 
     setCollateralAmount(data?.collateralBalance.toString());
 

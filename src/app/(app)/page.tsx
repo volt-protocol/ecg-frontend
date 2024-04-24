@@ -51,8 +51,6 @@ const GlobalDashboard = () => {
   // const [lastActivities, setLastActivites] = useState<LastActivity[]>([]);
   const [allTimePnl, setAllTimePnl] = useState<number>(0);
 
-  const { data: currentBlock } = useBlockNumber({ chainId: appChainId });
-
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
@@ -64,8 +62,6 @@ const GlobalDashboard = () => {
     creditMultiplier: Number(formatUnits(creditMultiplier, 18)),
     creditTotalSupply: Number(formatUnits(creditSupply, 18))
   };
-
-  /* End Read Contract data  */
 
   useEffect(() => {
     const asyncFunc = async () => {
@@ -215,7 +211,6 @@ const GlobalDashboard = () => {
     }
 
     const pnl = (totalRepaidPegToken - totalBorrowedPegToken) * pegToken.price;
-    console.log(`All time pnl: $${pnl}`);
     return pnl;
   };
 

@@ -3,7 +3,15 @@ import { StateCreator } from 'zustand';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { ContractsList } from './contracts-list';
 import { multicall } from '@wagmi/core';
-import { CreditABI, GuildABI, OffboardGovernorGuildABI, ProfitManagerABI, PsmABI, PsmUsdcABI } from 'lib/contracts';
+import {
+  CreditABI,
+  GuildABI,
+  OffboardGovernorGuildABI,
+  ProfitManagerABI,
+  PsmABI,
+  PsmUsdcABI,
+  SurplusGuildMinterABI
+} from 'lib/contracts';
 import { Abi } from 'viem';
 
 export interface ProtocolDataSlice {
@@ -15,6 +23,7 @@ export interface ProtocolDataSlice {
   deprecatedGauges: string[];
   delegateLockupPeriod: bigint;
   psmPegTokenBalance: bigint;
+  minimumCreditStake: bigint;
   fetchProtocolData: (marketId: number, chainId: number, contractsList: ContractsList) => Promise<void>;
 }
 
@@ -27,53 +36,60 @@ export const createProtocolDataSlice: StateCreator<ProtocolDataSlice> = (set, ge
   deprecatedGauges: [],
   delegateLockupPeriod: BigInt(0),
   psmPegTokenBalance: BigInt(0),
+  minimumCreditStake: BigInt(0),
   fetchProtocolData: async (marketId: number, chainId: number, contractsList: ContractsList) => {
     const profitManagerAddress = contractsList.marketContracts[marketId].profitManagerAddress;
     const guildAddress = contractsList.guildAddress;
     const creditAddress = contractsList.marketContracts[marketId].creditAddress;
     const psmAddress = contractsList?.marketContracts[marketId].psmAddress;
+    const surplusGuildMinterAddress = contractsList?.marketContracts[marketId].surplusGuildMinterAddress;
 
     const contracts = [
       {
         address: profitManagerAddress,
         abi: ProfitManagerABI as Abi,
-        functionName: 'creditMultiplier',
+        functionName: 'creditMultiplier'
       },
       {
         address: creditAddress,
         abi: CreditABI as Abi,
-        functionName: 'totalSupply',
+        functionName: 'totalSupply'
       },
       {
         address: guildAddress,
         abi: GuildABI as Abi,
         functionName: 'totalTypeWeight',
-        args: [marketId],
+        args: [marketId]
       },
       {
         address: contractsList.lendingTermOffboardingAddress,
         abi: OffboardGovernorGuildABI as Abi,
-        functionName: 'quorum',
+        functionName: 'quorum'
       },
       {
         address: contractsList.lendingTermOffboardingAddress,
         abi: OffboardGovernorGuildABI as Abi,
-        functionName: 'POLL_DURATION_BLOCKS',
+        functionName: 'POLL_DURATION_BLOCKS'
       },
       {
         address: contractsList.guildAddress,
         abi: GuildABI as Abi,
-        functionName: 'deprecatedGauges',
+        functionName: 'deprecatedGauges'
       },
       {
         address: creditAddress,
         abi: CreditABI as Abi,
-        functionName: 'delegateLockupPeriod',
+        functionName: 'delegateLockupPeriod'
       },
       {
         address: psmAddress,
         abi: PsmABI as Abi,
-        functionName: 'pegTokenBalance',
+        functionName: 'pegTokenBalance'
+      },
+      {
+        address: surplusGuildMinterAddress,
+        abi: SurplusGuildMinterABI as Abi,
+        functionName: 'MIN_STAKE'
       }
     ];
 
@@ -92,6 +108,7 @@ export const createProtocolDataSlice: StateCreator<ProtocolDataSlice> = (set, ge
       deprecatedGauges: protocolData[5].result as string[],
       delegateLockupPeriod: protocolData[6].result as bigint,
       psmPegTokenBalance: protocolData[7].result as bigint,
+      minimumCreditStake: protocolData[8].result as bigint
     });
   }
 });

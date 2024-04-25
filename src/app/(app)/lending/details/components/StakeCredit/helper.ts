@@ -1,8 +1,17 @@
 import { formatUnits } from 'viem';
 
-export const getTitleDisabledStake = (value: string, creditBalance: bigint, symbol: string): string => {
+export const getTitleDisabledStake = (
+  value: string,
+  creditBalance: bigint,
+  symbol: string,
+  minimumCreditStake: number
+): string => {
   if (!value || Number(value) <= 0) {
     return `Enter ${symbol} amount`;
+  }
+
+  if (Number(value) < minimumCreditStake) {
+    return `minimum stake is ${minimumCreditStake} ${symbol}`;
   }
 
   if (Number(value) > Number(formatUnits(creditBalance, 18))) {

@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { ChartTimeline } from 'types/charts';
 import Spinner from 'components/spinner';
 import Card from 'components/card';
+import { formatCurrencyValue } from 'utils/numbers';
 
 export const TVLChart = ({ tvl }: { tvl: any }) => {
   const [chartData, setChartData] = useState<any>([]);
@@ -37,7 +38,7 @@ export const TVLChart = ({ tvl }: { tvl: any }) => {
         },
         tooltip: {
           y: {
-            formatter: (val) => '$' + val
+            formatter: (val) => '$' + formatCurrencyValue(val)
           }
         },
         dataLabels: {

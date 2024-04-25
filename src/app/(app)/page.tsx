@@ -5,7 +5,7 @@ import { UseChainIdParameters, useReadContracts } from 'wagmi';
 import { useAppStore } from 'store';
 import { Abi, Address, formatUnits, erc20Abi } from 'viem';
 import { getApiBaseUrl, getPegTokenLogo } from 'config';
-import { ProfitManagerABI, GuildABI, CreditABI, TermABI, PsmUsdcABI } from 'lib/contracts';
+import { ProfitManagerABI, GuildABI, CreditABI, TermABI, PsmUsdcABI, PsmABI } from 'lib/contracts';
 import { useEffect, useState } from 'react';
 import { getActiveLoanLogs, getCloseLoanLogs, getOpenLoanLogs } from 'lib/logs/loans';
 import Card from 'components/card';
@@ -41,7 +41,8 @@ const GlobalDashboard = () => {
     creditSupply,
     totalWeight,
     auctions,
-    loans
+    loans,
+    psmPegTokenBalance
   } = useAppStore();
   const [totalActiveLoans, setTotalActiveLoans] = useState<number>();
   const [debtCeilingData, setDebtCeilingData] = useState([]);
@@ -73,7 +74,7 @@ const GlobalDashboard = () => {
       setDebtCeilingData(ceilingData);
       const collateralData = await getCollateralData();
       setCollateralData(collateralData);
-      const liquidityData = (await getLiquidityData()) as bigint;
+      const liquidityData = psmPegTokenBalance;
       setLiquidityData(Number(formatUnits(liquidityData, pegToken.decimals)) * pegToken.price);
       const firstLossData = await getFirstLossCapital();
       setFirstLossData(firstLossData);
@@ -137,16 +138,6 @@ const GlobalDashboard = () => {
           };
         })
     );
-  };
-
-  const getLiquidityData = async () => {
-    return await readContract(wagmiConfig, {
-      address: contractsList.marketContracts[appMarketId]?.psmAddress,
-      abi: PsmUsdcABI as Abi,
-      functionName: 'pegTokenBalance',
-      args: [],
-      chainId: appChainId as any
-    });
   };
 
   const getDebtCeilingData = async () => {

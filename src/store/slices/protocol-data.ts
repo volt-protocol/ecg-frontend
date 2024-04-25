@@ -3,7 +3,7 @@ import { StateCreator } from 'zustand';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { ContractsList } from './contracts-list';
 import { multicall } from '@wagmi/core';
-import { CreditABI, GuildABI, OffboardGovernorGuildABI, ProfitManagerABI } from 'lib/contracts';
+import { CreditABI, GuildABI, OffboardGovernorGuildABI, ProfitManagerABI, PsmABI, PsmUsdcABI } from 'lib/contracts';
 import { Abi } from 'viem';
 
 export interface ProtocolDataSlice {
@@ -14,6 +14,7 @@ export interface ProtocolDataSlice {
   offboardDurationBlock: bigint;
   deprecatedGauges: string[];
   delegateLockupPeriod: bigint;
+  psmPegTokenBalance: bigint;
   fetchProtocolData: (marketId: number, chainId: number, contractsList: ContractsList) => Promise<void>;
 }
 
@@ -25,10 +26,12 @@ export const createProtocolDataSlice: StateCreator<ProtocolDataSlice> = (set, ge
   offboardDurationBlock: BigInt(0),
   deprecatedGauges: [],
   delegateLockupPeriod: BigInt(0),
+  psmPegTokenBalance: BigInt(0),
   fetchProtocolData: async (marketId: number, chainId: number, contractsList: ContractsList) => {
     const profitManagerAddress = contractsList.marketContracts[marketId].profitManagerAddress;
     const guildAddress = contractsList.guildAddress;
     const creditAddress = contractsList.marketContracts[marketId].creditAddress;
+    const psmAddress = contractsList?.marketContracts[marketId].psmAddress;
 
     const contracts = [
       {
@@ -66,6 +69,11 @@ export const createProtocolDataSlice: StateCreator<ProtocolDataSlice> = (set, ge
         address: creditAddress,
         abi: CreditABI as Abi,
         functionName: 'delegateLockupPeriod',
+      },
+      {
+        address: psmAddress,
+        abi: PsmABI as Abi,
+        functionName: 'pegTokenBalance',
       }
     ];
 
@@ -83,6 +91,7 @@ export const createProtocolDataSlice: StateCreator<ProtocolDataSlice> = (set, ge
       offboardDurationBlock: protocolData[4].result as bigint,
       deprecatedGauges: protocolData[5].result as string[],
       delegateLockupPeriod: protocolData[6].result as bigint,
+      psmPegTokenBalance: protocolData[7].result as bigint,
     });
   }
 });

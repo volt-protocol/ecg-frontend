@@ -38,7 +38,7 @@ export const formatCurrencyValue = (num: number): string => {
   } else if (num < 1 / 1e3) {
     return num.toExponential();
   } else {
-    return `${roundTo(num, 4).toString()}`;
+    return `${roundTo(num, 2).toString()}`;
   }
 };
 

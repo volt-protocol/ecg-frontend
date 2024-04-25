@@ -1,8 +1,9 @@
 'use client';
 
 import { ApexChartWrapper } from 'components/charts/ApexChartWrapper';
+import { formatCurrencyValue } from 'utils/numbers';
 
-export const FirstLossCapital = ({ data, labels }: { data: number[]; labels: string[] }) => {
+export const FirstLossCapital = ({ symbol, data, labels }: { symbol: string; data: number[]; labels: string[] }) => {
   const state = {
     series: data,
     options: {
@@ -11,7 +12,7 @@ export const FirstLossCapital = ({ data, labels }: { data: number[]; labels: str
       },
       tooltip: {
         y: {
-          formatter: (val) => val + ' gUSDC'
+          formatter: (val: number) => formatCurrencyValue(val) + ` ${symbol}`
         }
       },
       chart: {

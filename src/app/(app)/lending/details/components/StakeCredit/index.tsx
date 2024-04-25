@@ -43,8 +43,15 @@ function StakeCredit({
   creditMultiplier: bigint;
   reload: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const { appMarketId, appChainId, coinDetails, lendingTerms, contractsList, fetchLendingTermsUntilBlock } =
-    useAppStore();
+  const {
+    appMarketId,
+    appChainId,
+    coinDetails,
+    lendingTerms,
+    contractsList,
+    fetchLendingTermsUntilBlock,
+    minimumCreditStake
+  } = useAppStore();
   const [value, setValue] = useState<string>('');
   const { address, isConnected } = useAccount();
   const [showModal, setShowModal] = useState<boolean>(false);
@@ -287,7 +294,12 @@ function StakeCredit({
             title={textButton}
             titleDisabled={
               textButton == 'Stake'
-                ? getTitleDisabledStake(value, creditBalance, creditTokenSymbol)
+                ? getTitleDisabledStake(
+                    value,
+                    creditBalance,
+                    creditTokenSymbol,
+                    Number(formatUnits(minimumCreditStake, 18))
+                  )
                 : getTitleDisabledUnstake(value, creditAllocated, creditTokenSymbol)
             }
             extra="w-full !rounded-xl"

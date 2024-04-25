@@ -8,6 +8,7 @@ export { default as PsmUsdcABI } from './abi/PsmUsdcABI.json';
 export { default as PsmABI } from './abi/PsmABI.json';
 export { default as TermABI } from './abi/TermABI.json';
 export { default as UsdcABI } from './abi/UsdcABI.json';
+export { default as erc20ABI } from './abi/ERC20ABI.json';
 export { default as SurplusGuildMinterABI } from './abi/SurplusGuildMinterABI.json';
 export { default as OffboardGovernorGuildABI } from './abi/OffboardGovernorGuildABI.json';
 export { default as DaoGovernorGuildABI } from './abi/DaoGovernorGuildABI.json';

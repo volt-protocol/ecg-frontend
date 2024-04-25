@@ -16,6 +16,7 @@ import { useAppStore } from 'store';
 import { getPegTokenLogo, marketsConfig, getExplorerBaseUrl } from 'config';
 import Image from 'next/image';
 import { MdOpenInNew } from 'react-icons/md';
+import { approvalStepsFlow } from 'utils/approvalHelper';
 
 function MintOrRedeem({
   reloadMintRedeem,
@@ -70,7 +71,8 @@ function MintOrRedeem({
 
   const createSteps = (): Step[] => {
     const baseSteps = [
-      { name: 'Approve', status: 'Not Started' },
+      { name: `Check ${pegToken.symbol} allowance`, status: 'Not Started' },
+      { name: `Approve ${pegToken.symbol}`, status: 'Not Started' },
       { name: 'Mint', status: 'Not Started' }
     ];
 
@@ -90,27 +92,25 @@ function MintOrRedeem({
   async function mint() {
     setShowModal(true);
     try {
-      updateStepStatus('Approve', 'In Progress');
-      // approve collateral first
-      const hash = await writeContract(wagmiConfig, {
-        address: pegTokenAddress,
-        abi: erc20Abi,
-        functionName: 'approve',
-        args: [psmAddress as Address, parseUnits(value.toString(), pegToken.decimals)]
-      });
+      const approvalSuccess = await approvalStepsFlow(
+        address,
+        psmAddress,
+        pegTokenAddress,
+        parseUnits(value.toString(), pegToken.decimals),
+        appChainId,
+        updateStepStatus,
+        `Check ${pegToken.symbol} allowance`,
+        `Approve ${pegToken.symbol}`,
+        wagmiConfig
+      );
 
-      const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
-        hash: hash
-      });
-
-      if (checkApprove.status != 'success') {
-        updateStepStatus('Approve', 'Error');
+      if (!approvalSuccess) {
+        updateStepStatus(`Approve ${pegToken.symbol}`, 'Error');
         return;
       }
-      updateStepStatus('Approve', 'Success');
     } catch (e) {
       console.log(e);
-      updateStepStatus('Approve', 'Error');
+      updateStepStatus(`Approve ${pegToken.symbol}`, 'Error');
       return;
     }
     try {
@@ -140,29 +140,27 @@ function MintOrRedeem({
   async function mintAndEnterRebase() {
     setShowModal(true);
     try {
-      updateStepStatus('Approve', 'In Progress');
       updateStepName('Mint', 'Mint and Enter Rebase');
 
-      // approve collateral first
-      const hash = await writeContract(wagmiConfig, {
-        address: pegTokenAddress,
-        abi: erc20Abi,
-        functionName: 'approve',
-        args: [psmAddress as Address, parseUnits(value.toString(), pegToken.decimals)]
-      });
+      const approvalSuccess = await approvalStepsFlow(
+        address,
+        psmAddress,
+        pegTokenAddress,
+        parseUnits(value.toString(), pegToken.decimals),
+        appChainId,
+        updateStepStatus,
+        `Check ${pegToken.symbol} allowance`,
+        `Approve ${pegToken.symbol}`,
+        wagmiConfig
+      );
 
-      const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
-        hash: hash
-      });
-
-      if (checkApprove.status != 'success') {
-        updateStepStatus('Approve', 'Error');
+      if (!approvalSuccess) {
+        updateStepStatus(`Approve ${pegToken.symbol}`, 'Error');
         return;
       }
-      updateStepStatus('Approve', 'Success');
     } catch (e) {
       console.log(e);
-      updateStepStatus('Approve', 'Error');
+      updateStepStatus(`Approve ${pegToken.symbol}`, 'Error');
       return;
     }
     try {
@@ -192,29 +190,29 @@ function MintOrRedeem({
   async function redeem() {
     try {
       setShowModal(true);
-      updateStepStatus('Approve', 'In Progress');
+      updateStepName(`Check ${pegToken.symbol} allowance`, `Check ${creditTokenSymbol} allowance`);
+      updateStepName(`Approve ${pegToken.symbol}`, `Approve ${creditTokenSymbol}`);
       updateStepName('Mint', 'Redeem');
 
-      // approve collateral first
-      const hash = await writeContract(wagmiConfig, {
-        address: creditAddress,
-        abi: CreditABI,
-        functionName: 'approve',
-        args: [psmAddress as Address, parseUnits(value.toString(), 18)]
-      });
+      const approvalSuccess = await approvalStepsFlow(
+        address,
+        psmAddress,
+        creditAddress,
+        parseUnits(value.toString(), 18),
+        appChainId,
+        updateStepStatus,
+        `Check ${creditTokenSymbol} allowance`,
+        `Approve ${creditTokenSymbol}`,
+        wagmiConfig
+      );
 
-      const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
-        hash: hash
-      });
-
-      if (checkApprove.status != 'success') {
-        updateStepStatus('Approve', 'Error');
+      if (!approvalSuccess) {
+        updateStepStatus(`Approve ${creditTokenSymbol}`, 'Error');
         return;
       }
-      updateStepStatus('Approve', 'Success');
     } catch (e) {
       console.log(e);
-      updateStepStatus('Approve', 'Error');
+      updateStepStatus(`Approve ${creditTokenSymbol}`, 'Error');
       return;
     }
     try {

@@ -34,6 +34,7 @@ import { CurrencyTypes } from 'components/switch/ToggleCredit';
 import CustomTable from 'components/table/CustomTable';
 import { useAppStore } from 'store';
 import { marketsConfig } from 'config';
+import { approvalStepsFlow } from 'utils/approvalHelper';
 
 function Myloans({
   lendingTerm,
@@ -190,9 +191,12 @@ function Myloans({
   /* Smart contract writes */
   async function partialRepay(loanId: string, value: string) {
     setOpen(false);
+    const checkStepName = `Check ${creditTokenSymbol} allowance`;
+    const approveStepName = `Approve ${creditTokenSymbol}`;
     const createSteps = (): Step[] => {
       const baseSteps = [
-        { name: `Approve ${creditTokenSymbol}`, status: 'Not Started' },
+        { name: checkStepName, status: 'Not Started' },
+        { name: approveStepName, status: 'Not Started' },
         { name: 'Partial Repay', status: 'Not Started' }
       ];
       return baseSteps;
@@ -203,27 +207,25 @@ function Myloans({
     const debtToRepay = parseUnits(value, 18);
 
     try {
-      updateStepStatus(`Approve ${creditTokenSymbol}`, 'In Progress');
+      const approvalSuccess = await approvalStepsFlow(
+        address,
+        lendingTerm.address,
+        contractsList?.marketContracts[appMarketId].creditAddress,
+        debtToRepay,
+        appChainId,
+        updateStepStatus,
+        checkStepName,
+        approveStepName,
+        wagmiConfig
+      );
 
-      const hash = await writeContract(wagmiConfig, {
-        address: contractsList?.marketContracts[appMarketId].creditAddress,
-        abi: CreditABI,
-        functionName: 'approve',
-        args: [lendingTerm.address, debtToRepay]
-      });
-
-      const data = await waitForTransactionReceipt(wagmiConfig, {
-        hash: hash
-      });
-
-      if (data.status != 'success') {
-        updateStepStatus(`Approve ${creditTokenSymbol}`, 'Error');
+      if (!approvalSuccess) {
+        updateStepStatus(approveStepName, 'Error');
         return;
       }
-      updateStepStatus(`Approve ${creditTokenSymbol}`, 'Success');
     } catch (e) {
       console.log(e);
-      updateStepStatus(`Approve ${creditTokenSymbol}`, 'Error');
+      updateStepStatus(approveStepName, 'Error');
       return;
     }
 
@@ -254,9 +256,12 @@ function Myloans({
   async function repay(loanId: string) {
     setOpen(false);
 
+    const checkStepName = `Check ${creditTokenSymbol} allowance`;
+    const approveStepName = `Approve ${creditTokenSymbol}`;
     const createSteps = (): Step[] => {
       const baseSteps = [
-        { name: `Approve ${creditTokenSymbol}`, status: 'Not Started' },
+        { name: checkStepName, status: 'Not Started' },
+        { name: approveStepName, status: 'Not Started' },
         { name: 'Repay', status: 'Not Started' }
       ];
       return baseSteps;
@@ -265,30 +270,29 @@ function Myloans({
     setShowModal(true);
 
     try {
-      updateStepStatus(`Approve ${creditTokenSymbol}`, 'In Progress');
       const debtToRepay = tableDataWithDebts.find((item) => item.id == loanId).loanDebt;
       const hourlyFees =
         (parseUnits(lendingTerm.interestRate.toString(), 2) * debtToRepay) / BigInt(100) / BigInt(HOURS_IN_YEAR);
 
-      const hash = await writeContract(wagmiConfig, {
-        address: contractsList?.marketContracts[appMarketId].creditAddress,
-        abi: CreditABI,
-        functionName: 'approve',
-        args: [lendingTerm.address, debtToRepay + hourlyFees]
-      });
+      const approvalSuccess = await approvalStepsFlow(
+        address,
+        lendingTerm.address,
+        contractsList?.marketContracts[appMarketId].creditAddress,
+        debtToRepay + hourlyFees,
+        appChainId,
+        updateStepStatus,
+        checkStepName,
+        approveStepName,
+        wagmiConfig
+      );
 
-      const data = await waitForTransactionReceipt(wagmiConfig, {
-        hash: hash
-      });
-
-      if (data.status != 'success') {
-        updateStepStatus(`Approve ${creditTokenSymbol}`, 'Error');
+      if (!approvalSuccess) {
+        updateStepStatus(approveStepName, 'Error');
         return;
       }
-      updateStepStatus(`Approve ${creditTokenSymbol}`, 'Success');
     } catch (e) {
       console.log(e);
-      updateStepStatus(`Approve ${creditTokenSymbol}`, 'Error');
+      updateStepStatus(approveStepName, 'Error');
       return;
     }
 
@@ -662,23 +666,22 @@ function Myloans({
       }
     } else {
       try {
-        updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, 'In Progress');
+        const approvalSuccess = await approvalStepsFlow(
+          address,
+          contractsList.gatewayAddress,
+          lendingTerm.collateral.address,
+          collateralAmount,
+          appChainId,
+          updateStepStatus,
+          `Check ${lendingTerm.collateral.name} allowance`,
+          `Approve ${lendingTerm.collateral.name}`,
+          wagmiConfig
+        );
 
-        const hash = await writeContract(wagmiConfig, {
-          address: lendingTerm.collateral.address,
-          abi: erc20Abi,
-          functionName: 'approve',
-          args: [contractsList.gatewayAddress as Address, collateralAmount]
-        });
-        const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
-          hash: hash
-        });
-
-        if (checkApprove.status != 'success') {
-          updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, 'Error');
+        if (!approvalSuccess) {
+          updateStepStatus(`Approve ${lendingTerm.collateral.name}`, 'Error');
           return;
         }
-        updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, 'Success');
       } catch (e) {
         console.log(e);
         updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, 'Error');

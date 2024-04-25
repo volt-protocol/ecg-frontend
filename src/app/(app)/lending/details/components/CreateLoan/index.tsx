@@ -1,7 +1,7 @@
 import { readContract, waitForTransactionReceipt, writeContract } from '@wagmi/core';
 import StepModal from 'components/stepLoader';
 import { Step } from 'components/stepLoader/stepType';
-import { ERC20PermitABI, TermABI, UsdcABI, GatewayABI, UniswapRouterABI } from 'lib/contracts';
+import { ERC20PermitABI, TermABI, UsdcABI, GatewayABI, UniswapRouterABI, erc20ABI } from 'lib/contracts';
 import React, { useEffect, useState } from 'react';
 import { erc20Abi, Abi, Address, formatUnits, parseUnits } from 'viem';
 import moment from 'moment';
@@ -26,6 +26,7 @@ import { marketsConfig } from 'config';
 import { secondsToAppropriateUnit } from 'utils/date';
 import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
 import { getPegTokenLogo } from 'config';
+import { approvalStepsFlow } from 'utils/approvalHelper';
 
 function CreateLoan({
   lendingTerm,
@@ -146,9 +147,12 @@ function CreateLoan({
 
   async function borrow() {
     setShowModal(true);
+    const checkStepName = `Check ${lendingTerm.collateral.name} allowance`;
+    const approvalStepName = `Approve ${lendingTerm.collateral.name}`;
     const createSteps = (): Step[] => {
       const baseSteps = [
-        { name: `Approve ${lendingTerm.collateral.name}`, status: 'Not Started' },
+        { name: checkStepName, status: 'Not Started' },
+        { name: approvalStepName, status: 'Not Started' },
         { name: 'Borrow', status: 'Not Started' }
       ];
       return baseSteps;
@@ -156,25 +160,25 @@ function CreateLoan({
     setSteps(createSteps());
 
     try {
-      updateStepStatus(`Approve ${lendingTerm.collateral.name}`, 'In Progress');
-      const hash = await writeContract(wagmiConfig, {
-        address: lendingTerm.collateral.address,
-        abi: UsdcABI,
-        functionName: 'approve',
-        args: [lendingTerm.address, parseUnits(collateralAmount, lendingTerm.collateral.decimals)]
-      });
-      const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
-        hash: hash
-      });
+      const approvalSuccess = await approvalStepsFlow(
+        address,
+        lendingTerm.address,
+        lendingTerm.collateral.address,
+        parseUnits(collateralAmount, lendingTerm.collateral.decimals),
+        appChainId,
+        updateStepStatus,
+        checkStepName,
+        approvalStepName,
+        wagmiConfig
+      );
 
-      if (checkApprove.status != 'success') {
-        updateStepStatus(`Approve ${lendingTerm.collateral.name}`, 'Error');
+      if (!approvalSuccess) {
+        updateStepStatus(approvalStepName, 'Error');
         return;
       }
-      updateStepStatus(`Approve ${lendingTerm.collateral.name}`, 'Success');
     } catch (e) {
       console.log(e);
-      updateStepStatus(`Approve ${lendingTerm.collateral.name}`, 'Error');
+      updateStepStatus(approvalStepName, 'Error');
       return;
     }
 
@@ -208,17 +212,24 @@ function CreateLoan({
 
   async function borrowGateway() {
     setShowModal(true);
+
+    const checkStepName = `Check ${lendingTerm.collateral.symbol} allowance`;
+    const approveStepName = `Approve ${lendingTerm.collateral.symbol}`;
+
     const createSteps = (): Step[] => {
-      const baseSteps = [
-        permitConfig.find((item) => item.collateralAddress === lendingTerm.collateral.address)?.hasPermit
-          ? {
-              name: `Sign Permit for ${lendingTerm.collateral.symbol}`,
-              status: 'Not Started'
-            }
-          : { name: `Approve ${lendingTerm.collateral.symbol}`, status: 'Not Started' },
-        { name: `Sign Permit for gUSDC`, status: 'Not Started' },
-        { name: 'Borrow (Multicall)', status: 'Not Started' }
-      ];
+      const baseSteps: Step[] = [];
+      if (permitConfig.find((item) => item.collateralAddress === lendingTerm.collateral.address)?.hasPermit) {
+        baseSteps.push({
+          name: `Sign Permit for ${lendingTerm.collateral.symbol}`,
+          status: 'Not Started'
+        });
+      } else {
+        baseSteps.push({ name: checkStepName, status: 'Not Started' });
+        baseSteps.push({ name: approveStepName, status: 'Not Started' });
+      }
+
+      baseSteps.push({ name: `Sign Permit for ${creditTokenSymbol}`, status: 'Not Started' });
+      baseSteps.push({ name: 'Borrow (Multicall)', status: 'Not Started' });
 
       return baseSteps;
     };
@@ -256,33 +267,32 @@ function CreateLoan({
       }
     } else {
       try {
-        updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, 'In Progress');
+        const approvalSuccess = await approvalStepsFlow(
+          address,
+          contractsList.gatewayAddress,
+          lendingTerm.collateral.address,
+          parseUnits(collateralAmount, lendingTerm.collateral.decimals),
+          appChainId,
+          updateStepStatus,
+          checkStepName,
+          approveStepName,
+          wagmiConfig
+        );
 
-        const hash = await writeContract(wagmiConfig, {
-          address: lendingTerm.collateral.address,
-          abi: erc20Abi,
-          functionName: 'approve',
-          args: [contractsList.gatewayAddress as Address, parseUnits(collateralAmount, lendingTerm.collateral.decimals)]
-        });
-        const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
-          hash: hash
-        });
-
-        if (checkApprove.status != 'success') {
-          updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, 'Error');
+        if (!approvalSuccess) {
+          updateStepStatus(approveStepName, 'Error');
           return;
         }
-        updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, 'Success');
       } catch (e) {
         console.log(e);
-        updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, 'Error');
+        updateStepStatus(approveStepName, 'Error');
         return;
       }
     }
 
     /* Set allowance for gUSDC token */
     try {
-      updateStepStatus(`Sign Permit for gUSDC`, 'In Progress');
+      updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'In Progress');
 
       signatureGUSDC = await signPermit({
         contractAddress: creditAddress as Address,
@@ -297,13 +307,13 @@ function CreateLoan({
       });
 
       if (!signatureGUSDC) {
-        updateStepStatus(`Sign Permit for gUSDC`, 'Error');
+        updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Error');
         return;
       }
-      updateStepStatus(`Sign Permit for gUSDC`, 'Success');
+      updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Success');
     } catch (e) {
       console.log(e);
-      updateStepStatus(`Sign Permit for gUSDC`, 'Error');
+      updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Error');
       return;
     }
 
@@ -356,20 +366,28 @@ function CreateLoan({
 
   async function borrowGatewayLeverage() {
     setShowModal(true);
+
+    const checkStepName = `Check ${lendingTerm.collateral.symbol} allowance`;
+    const approveStepName = `Approve ${lendingTerm.collateral.symbol}`;
+
     const createSteps = (): Step[] => {
-      const baseSteps = [
-        permitConfig.find((item) => item.collateralAddress === lendingTerm.collateral.address)?.hasPermit
-          ? {
-              name: `Sign Permit for ${lendingTerm.collateral.symbol}`,
-              status: 'Not Started'
-            }
-          : { name: `Approve ${lendingTerm.collateral.symbol}`, status: 'Not Started' },
-        { name: `Sign Permit for gUSDC`, status: 'Not Started' },
-        { name: 'Borrow with Leverage (Multicall)', status: 'Not Started' }
-      ];
+      const baseSteps: Step[] = [];
+      if (permitConfig.find((item) => item.collateralAddress === lendingTerm.collateral.address)?.hasPermit) {
+        baseSteps.push({
+          name: `Sign Permit for ${lendingTerm.collateral.symbol}`,
+          status: 'Not Started'
+        });
+      } else {
+        baseSteps.push({ name: checkStepName, status: 'Not Started' });
+        baseSteps.push({ name: approveStepName, status: 'Not Started' });
+      }
+
+      baseSteps.push({ name: `Sign Permit for ${creditTokenSymbol}`, status: 'Not Started' });
+      baseSteps.push({ name: 'Borrow with Leverage (Multicall)', status: 'Not Started' });
 
       return baseSteps;
     };
+
     setSteps(createSteps());
 
     let signatureCollateral: any;
@@ -405,33 +423,32 @@ function CreateLoan({
       }
     } else {
       try {
-        updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, 'In Progress');
+        const approvalSuccess = await approvalStepsFlow(
+          address,
+          contractsList.gatewayAddress,
+          lendingTerm.collateral.address,
+          parseUnits(collateralAmount, lendingTerm.collateral.decimals),
+          appChainId,
+          updateStepStatus,
+          checkStepName,
+          approveStepName,
+          wagmiConfig
+        );
 
-        const hash = await writeContract(wagmiConfig, {
-          address: lendingTerm.collateral.address,
-          abi: erc20Abi,
-          functionName: 'approve',
-          args: [contractsList.gatewayAddress as Address, parseUnits(collateralAmount, lendingTerm.collateral.decimals)]
-        });
-        const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
-          hash: hash
-        });
-
-        if (checkApprove.status != 'success') {
-          updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, 'Error');
+        if (!approvalSuccess) {
+          updateStepStatus(approveStepName, 'Error');
           return;
         }
-        updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, 'Success');
       } catch (e) {
         console.log(e);
-        updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, 'Error');
+        updateStepStatus(approveStepName, 'Error');
         return;
       }
     }
 
-    /* Set allowance for gUSDC token */
+    /* Set allowance for CREDIT token */
     try {
-      updateStepStatus(`Sign Permit for gUSDC`, 'In Progress');
+      updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'In Progress');
 
       signatureGUSDC = await signPermit({
         contractAddress: creditAddress as Address,
@@ -446,13 +463,13 @@ function CreateLoan({
       });
 
       if (!signatureGUSDC) {
-        updateStepStatus(`Sign Permit for gUSDC`, 'Error');
+        updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Error');
         return;
       }
-      updateStepStatus(`Sign Permit for gUSDC`, 'Success');
+      updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Success');
     } catch (e) {
       console.log(e);
-      updateStepStatus(`Sign Permit for gUSDC`, 'Error');
+      updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Error');
       return;
     }
 

@@ -19,6 +19,7 @@ import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
 import { getPegTokenLogo, marketsConfig } from 'config';
 import Image from 'next/image';
+import { approvalStepsFlow } from 'utils/approvalHelper';
 
 function StakeCredit({
   debtCeiling,
@@ -68,15 +69,16 @@ function StakeCredit({
   const creditMultiplierNumber = Number(formatUnits(creditMultiplier, 18));
 
   const createSteps = (): Step[] => {
-    const baseSteps = [
-      {
+    const baseSteps: Step[] = [];
+    if (textButton === 'Stake') {
+      baseSteps.push({ name: `Check ${creditTokenSymbol} allowance`, status: 'Not Started' });
+      baseSteps.push({ name: `Approve ${creditTokenSymbol}`, status: 'Not Started' });
+      baseSteps.push({ name: textButton, status: 'Not Started' });
+    } else {
+      baseSteps.push({
         name: textButton,
         status: 'Not Started'
-      }
-    ];
-
-    if (textButton === 'Stake') {
-      baseSteps.splice(0, 0, { name: 'Approve', status: 'Not Started' });
+      });
     }
 
     return baseSteps;
@@ -115,35 +117,37 @@ function StakeCredit({
         return;
       } else {
         setShowModal(true);
-        updateStepStatus('Approve', 'In Progress');
         try {
-          const hash = await writeContract(wagmiConfig, {
-            address: creditAddress,
-            abi: CreditABI,
-            functionName: 'approve',
-            args: [surplusGuildMinterAddress, parseEther(value.toString())]
-          });
+          const approvalSuccess = await approvalStepsFlow(
+            address,
+            surplusGuildMinterAddress,
+            creditAddress,
+            parseEther(value.toString()),
+            appChainId,
+            updateStepStatus,
+            `Check ${creditTokenSymbol} allowance`,
+            `Approve ${creditTokenSymbol}`,
+            wagmiConfig
+          );
 
-          const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
-            hash: hash
-          });
-
-          if (checkApprove.status != 'success') {
-            updateStepStatus('Approve', 'Error');
+          if (!approvalSuccess) {
+            updateStepStatus(`Approve ${creditTokenSymbol}`, 'Error');
             return;
           }
         } catch (e) {
           if (e instanceof ContractFunctionExecutionError) {
             console.log(e.shortMessage, 'error');
             console.log(typeof e);
-            updateStepStatus('Approve', e.shortMessage.split(':')[1] + e.shortMessage.split(':')[2]);
+            updateStepStatus(
+              `Approve ${creditTokenSymbol}`,
+              e.shortMessage.split(':')[1] + e.shortMessage.split(':')[2]
+            );
             return;
           } else {
-            updateStepStatus('Approve', 'Error');
+            updateStepStatus(`Approve ${creditTokenSymbol}`, 'Error');
             return;
           }
         }
-        updateStepStatus('Approve', 'Success');
         updateStepStatus('Stake', 'In Progress');
 
         try {

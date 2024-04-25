@@ -134,7 +134,11 @@ function CreateLoan({
     const borrowAmountNorm = Number(formatUnits(borrowAmount, 18)) * Number(formatUnits(creditMultiplier, 18));
     const pegTokenBalanceNorm = Number(formatUnits(psmPegTokenBalance, pegToken.decimals));
     if (borrowAmountNorm > pegTokenBalanceNorm) {
-      setMsgAboveLiquidity(`Borrow amount above PSM ${pegToken.symbol} balance`);
+      setMsgAboveLiquidity(
+        `Only ${formatCurrencyValue(pegTokenBalanceNorm)} ${
+          pegToken.symbol
+        } of liquidity available to redeem, consider borrowing a smaller amount`
+      );
     }
   }, [collateralAmount, overCollateralizationValue, leverageValue]);
 

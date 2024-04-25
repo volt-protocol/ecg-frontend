@@ -1,13 +1,11 @@
 'use client';
 import Image from 'next/image';
 import { readContract } from '@wagmi/core';
-import { UseChainIdParameters, useReadContracts } from 'wagmi';
 import { useAppStore } from 'store';
 import { Abi, Address, formatUnits, erc20Abi } from 'viem';
 import { getApiBaseUrl, getPegTokenLogo } from 'config';
-import { ProfitManagerABI, GuildABI, CreditABI, TermABI, PsmUsdcABI, PsmABI } from 'lib/contracts';
+import { ProfitManagerABI } from 'lib/contracts';
 import { useEffect, useState } from 'react';
-import { getActiveLoanLogs, getCloseLoanLogs, getOpenLoanLogs } from 'lib/logs/loans';
 import Card from 'components/card';
 import { CollateralTypes } from './components/CollateralTypes';
 import { DebtCeiling } from './components/DebtCeiling';
@@ -15,19 +13,13 @@ import { FirstLossCapital } from './components/FirstLossCapital';
 import { AverageInterestRate } from './components/AverageInterestRate';
 import { CreditTotalSupply } from './components/CreditTotalSupply';
 import Spinner from 'components/spinner';
-import { LastProtocolActivity } from './components/LastProtocolActivity';
-import { formatCurrencyValue, formatDecimal } from 'utils/numbers';
-import { useBlockNumber } from 'wagmi';
-import { getAllMintRedeemLogs } from 'lib/logs/mint-redeem';
-import { getAllVotes } from 'lib/logs/votes';
-import { BLOCK_PER_WEEK, BLOCK_PER_DAY } from 'utils/constants';
+import { formatDecimal } from 'utils/numbers';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { generateTermName } from 'utils/strings';
 import { GlobalStatCarts } from './components/GlobalStatCarts';
 import { TVLChart } from './components/TVLChart';
 import { HttpGet } from 'utils/HttpHelper';
-import { LastActivity, LastActivityApiResponse } from 'types/activities';
-import { AuctionStatus } from 'store/slices/auctions';
+import { LastActivityApiResponse } from 'types/activities';
 
 const GlobalDashboard = () => {
   const {
@@ -329,6 +321,7 @@ const GlobalDashboard = () => {
             </div>
           ) : (
             <FirstLossCapital
+              symbol={pegToken.symbol}
               data={firstLossData.map((item) => Number(item.value.toFixed(2)))}
               labels={firstLossData.map((item) => item.term)}
             />

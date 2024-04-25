@@ -50,12 +50,13 @@ function CreateLoan({
   setReload: React.Dispatch<React.SetStateAction<boolean>>;
   currencyType: CurrencyTypes;
 }) {
-  const { contractsList, coinDetails, appMarketId, appChainId } = useAppStore();
+  const { contractsList, coinDetails, appMarketId, appChainId, psmPegTokenBalance } = useAppStore();
   const { address } = useAccount();
   const [borrowAmount, setBorrowAmount] = useState<bigint>(BigInt(0));
   const [collateralAmount, setCollateralAmount] = useState<string>('');
   const [showModal, setShowModal] = useState(false);
   const [minToRepay, setMinToRepay] = useState<string>('');
+  const [msgAboveLiquidity, setMsgAboveLiquidity] = useState<string>('');
   const [withLeverage, setWithLeverage] = useState<boolean>(false);
   const [leverageValue, setLeverageValue] = useState<number>(1);
   const [withOverCollateralization, setWithOverCollateralization] = useState<boolean>(true);
@@ -116,6 +117,7 @@ function CreateLoan({
 
   /* Calculate borrow amount */
   useEffect(() => {
+    setMsgAboveLiquidity('');
     const borrowAmount: bigint = calculateBorrowAmount(collateralAmount);
     const flashLoanBorrowAmount: bigint = calculateBorrowAmount(
       (Number(collateralAmount) * (leverageValue - 1)).toString()
@@ -128,6 +130,12 @@ function CreateLoan({
     setBorrowAmount(borrowAmount);
     setFlashLoanBorrowAmount(flashLoanBorrowAmount);
     setFlashLoanCollateralAmount(flashLoanCollateralAmount);
+
+    const borrowAmountNorm = Number(formatUnits(borrowAmount, 18)) * Number(formatUnits(creditMultiplier, 18));
+    const pegTokenBalanceNorm = Number(formatUnits(psmPegTokenBalance, pegToken.decimals));
+    if (borrowAmountNorm > pegTokenBalanceNorm) {
+      setMsgAboveLiquidity(`Borrow amount above PSM ${pegToken.symbol} balance`);
+    }
   }, [collateralAmount, overCollateralizationValue, leverageValue]);
 
   /****** Smart contract writes *******/
@@ -851,6 +859,8 @@ function CreateLoan({
               }
             />
           )}
+
+          {msgAboveLiquidity && <AlertMessage type="warning" message={<p className="">{msgAboveLiquidity}</p>} />}
         </div>
       </div>
     </>

@@ -1,6 +1,7 @@
 'use client';
 
 import { ApexChartWrapper } from 'components/charts/ApexChartWrapper';
+import { formatCurrencyValue } from 'utils/numbers';
 
 export const CollateralTypes = ({ data, labels }: { data: number[]; labels: string[] }) => {
   const state = {
@@ -12,7 +13,7 @@ export const CollateralTypes = ({ data, labels }: { data: number[]; labels: stri
       tooltip: {
         colors: ['#50bdae', 'f7b924'],
         y: {
-          formatter: (val) => '$' + val
+          formatter: (val) => '$' + formatCurrencyValue(val)
         }
       },
       chart: {

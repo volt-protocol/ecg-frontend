@@ -33,6 +33,7 @@ import { useAppStore } from 'store';
 import { shortenUint } from 'utils/strings';
 import { Auction, AuctionHouse } from '../../../../store/slices/auctions';
 import { getExplorerBaseUrl } from 'config';
+import { approvalStepsFlow } from 'utils/approvalHelper';
 
 export default function AuctionsTable({
   auctions,
@@ -46,7 +47,7 @@ export default function AuctionsTable({
   setReload: (arg: boolean) => void;
 }) {
   const { appMarketId, appChainId, coinDetails, contractsList, lendingTerms } = useAppStore();
-  const { isConnected } = useAccount();
+  const { address, isConnected } = useAccount();
   const columnHelper = createColumnHelper<Auction>();
   const [showModal, setShowModal] = useState(false);
   const [data, setData] = React.useState<Auction[]>([]);
@@ -138,9 +139,12 @@ export default function AuctionsTable({
     const loanId: string = auction.loanId;
     setShowModal(true);
 
+    const checkStepName = `Check ${creditTokenSymbol} allowance`;
+    const approveStepName = `Approve ${creditTokenSymbol}`;
     //Init Steps
     setSteps([
-      { name: `Approve ${creditTokenSymbol}`, status: 'Not Started' },
+      { name: checkStepName, status: 'Not Started' },
+      { name: approveStepName, status: 'Not Started' },
       {
         name: 'Bid for loan ' + shortenUint(loanId),
         status: 'Not Started'
@@ -148,26 +152,25 @@ export default function AuctionsTable({
     ]);
 
     try {
-      updateStepStatus(`Approve ${creditTokenSymbol}`, 'In Progress');
+      const approvalSuccess = await approvalStepsFlow(
+        address,
+        auction.lendingTermAddress,
+        creditAddress,
+        BigInt(auction.callDebt),
+        appChainId,
+        updateStepStatus,
+        checkStepName,
+        approveStepName,
+        wagmiConfig
+      );
 
-      const hash = await writeContract(wagmiConfig, {
-        address: creditAddress,
-        abi: CreditABI,
-        functionName: 'approve',
-        args: [auction.lendingTermAddress, auction.callDebt]
-      });
-      const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
-        hash: hash
-      });
-
-      if (checkApprove.status != 'success') {
-        updateStepStatus(`Approve ${creditTokenSymbol}`, 'Error');
+      if (!approvalSuccess) {
+        updateStepStatus(approveStepName, 'Error');
         return;
       }
-      updateStepStatus(`Approve ${creditTokenSymbol}`, 'Success');
     } catch (e) {
       console.log(e);
-      updateStepStatus(`Approve ${creditTokenSymbol}`, 'Error');
+      updateStepStatus(approveStepName, 'Error');
       return;
     }
 

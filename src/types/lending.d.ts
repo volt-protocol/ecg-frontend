@@ -85,6 +85,7 @@ export interface LendingTermsResponse {
 
 export interface LoansResponse {
   updated: number;
+  updateBlock: number;
   updatedHuman: string;
   loans: LoansObj[];
 }

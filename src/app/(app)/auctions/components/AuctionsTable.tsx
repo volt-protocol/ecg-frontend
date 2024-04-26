@@ -46,7 +46,7 @@ export default function AuctionsTable({
   setOpenAuction: (arg: Auction) => void;
   setReload: (arg: boolean) => void;
 }) {
-  const { appMarketId, appChainId, coinDetails, contractsList, lendingTerms } = useAppStore();
+  const { appMarketId, appChainId, coinDetails, contractsList, lendingTerms, fetchAuctionsUntilBlock } = useAppStore();
   const { address, isConnected } = useAccount();
   const columnHelper = createColumnHelper<Auction>();
   const [showModal, setShowModal] = useState(false);
@@ -191,6 +191,9 @@ export default function AuctionsTable({
         updateStepStatus('Bid for loan ' + shortenUint(loanId), 'Error');
         return;
       }
+      updateStepStatus('Bid for loan ' + shortenUint(loanId), 'Waiting for confirmation...');
+      const minedBlock = tx.blockNumber;
+      await fetchAuctionsUntilBlock(minedBlock, appMarketId, appChainId);
 
       updateStepStatus('Bid for loan ' + shortenUint(loanId), 'Success');
       setTimeout(function () {

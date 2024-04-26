@@ -42,7 +42,8 @@ function ActiveLoans({
   creditMultiplier: bigint;
   reload: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
+  const { appMarketId, appChainId, coinDetails, contractsList, fetchAuctionsUntilBlock, fetchLoansUntilBlock } =
+    useAppStore();
   const [collateralPrice, setCollateralPrice] = useState(0);
   const [pegPrice, setPegPrice] = useState(0);
   const [repays, setRepays] = useState<Record<string, number>>({});
@@ -220,6 +221,15 @@ function ActiveLoans({
         updateStepStatus('Call', 'Error');
         return;
       }
+
+      const minedBlock = checkCall.blockNumber;
+
+      updateStepStatus('Call', 'Waiting confirmation...');
+      // reload loans
+      await fetchLoansUntilBlock(minedBlock, appMarketId, appChainId);
+      // reload auctions
+      await fetchAuctionsUntilBlock(minedBlock, appMarketId, appChainId);
+
       updateStepStatus('Call', 'Success');
       reload(true);
     } catch (e) {

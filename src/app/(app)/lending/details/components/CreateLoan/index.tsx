@@ -51,7 +51,8 @@ function CreateLoan({
   setReload: React.Dispatch<React.SetStateAction<boolean>>;
   currencyType: CurrencyTypes;
 }) {
-  const { contractsList, coinDetails, appMarketId, appChainId, psmPegTokenBalance } = useAppStore();
+  const { contractsList, coinDetails, appMarketId, appChainId, psmPegTokenBalance, fetchLoansUntilBlock } =
+    useAppStore();
   const { address } = useAccount();
   const [borrowAmount, setBorrowAmount] = useState<bigint>(BigInt(0));
   const [collateralAmount, setCollateralAmount] = useState<string>('');
@@ -195,6 +196,11 @@ function CreateLoan({
       });
 
       if (checkBorrow.status === 'success') {
+        const minedBlock = checkBorrow.blockNumber;
+        updateStepStatus('Borrow', 'Waiting confirmation...');
+        // reload loans
+        await fetchLoansUntilBlock(minedBlock, appMarketId, appChainId);
+
         setTimeout(function () {
           setReload(true);
         }, 5000);
@@ -345,11 +351,15 @@ function CreateLoan({
       });
 
       if (checkBorrow.status === 'success') {
+        const minedBlock = checkBorrow.blockNumber;
+        updateStepStatus('Borrow (Multicall)', 'Waiting confirmation...');
+        // reload loans
+        await fetchLoansUntilBlock(minedBlock, appMarketId, appChainId);
+        setBorrowAmount(BigInt(0));
+        setCollateralAmount('');
         setTimeout(function () {
           setReload(true);
         }, 5000);
-        setBorrowAmount(BigInt(0));
-        setCollateralAmount('');
         updateStepStatus('Borrow (Multicall)', 'Success');
         return;
       } else {
@@ -535,11 +545,15 @@ function CreateLoan({
       });
 
       if (checkBorrow.status === 'success') {
+        const minedBlock = checkBorrow.blockNumber;
+        updateStepStatus('Borrow with Leverage (Multicall)', 'Waiting confirmation...');
+        // reload loans
+        await fetchLoansUntilBlock(minedBlock, appMarketId, appChainId);
+        setBorrowAmount(BigInt(0));
+        setCollateralAmount('');
         setTimeout(function () {
           setReload(true);
         }, 5000);
-        setBorrowAmount(BigInt(0));
-        setCollateralAmount('');
         updateStepStatus('Borrow with Leverage (Multicall)', 'Success');
         return;
       } else {

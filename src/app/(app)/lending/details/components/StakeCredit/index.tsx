@@ -309,6 +309,7 @@ function StakeCredit({
             extra="w-full !rounded-xl"
             onClick={handlestake}
             disabled={
+              (Number(value) < Number(formatUnits(minimumCreditStake, 18)) && textButton === 'Stake') || 
               (Number(value) > Number(formatUnits(creditBalance, 18)) && textButton === 'Stake') ||
               (Number(value) > Number(formatUnits(creditAllocated, 18)) && textButton === 'Unstake') ||
               Number(value) <= 0 ||

@@ -11,7 +11,7 @@ export const getTitleDisabledStake = (
   }
 
   if (Number(value) < minimumCreditStake) {
-    return `minimum stake is ${minimumCreditStake} ${symbol}`;
+    return `Minimum stake is ${minimumCreditStake} ${symbol}`;
   }
 
   if (Number(value) > Number(formatUnits(creditBalance, 18))) {

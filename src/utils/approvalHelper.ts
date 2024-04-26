@@ -1,6 +1,7 @@
 import { erc20ABI } from 'lib/contracts';
 import { Address } from 'viem';
 import { readContract, waitForTransactionReceipt, writeContract } from '@wagmi/core';
+import { sleep } from './utils';
 
 /// help function to run the approval steps flow
 /// first checks is there is already a sufficient allowance
@@ -43,6 +44,8 @@ export async function approvalStepsFlow(
       return false;
     }
   }
+
+  await sleep(5000);
 
   updateStepStatus(approvalStepName, 'Success');
   return true;

@@ -33,7 +33,7 @@ function Governance() {
         address: contractsList.guildAddress,
         abi: GuildABI,
         functionName: 'balanceOf',
-        args: [address.toString()],
+        args: [address],
         chainId: appChainId
       },
       {

@@ -24,6 +24,7 @@ import { useRouter } from 'next/navigation';
 import { GuildABI } from 'lib/contracts';
 import { multicall } from '@wagmi/core';
 import { wagmiConfig } from 'contexts/Web3Provider';
+import { CoinSettings } from 'store/slices/coin-details';
 
 interface UserStake {
   collateralSymbol: string;
@@ -43,14 +44,22 @@ export default function UserStakes() {
   const columnHelper = createColumnHelper<UserStake>();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [userStakes, setUserStakes] = useState<UserStake[]>([]);
+  const [pegToken, setPegToken] = useState<CoinSettings | undefined>(undefined);
+  const [pegTokenDecimalsToDisplay, setPegTokenDecimalsToDisplay] = useState<number>(0);
   const router = useRouter();
 
-  const pegToken = coinDetails.find(
-    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
-  );
-  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken?.price * 100)), 0);
-
   useEffect(() => {
+    const pegToken = coinDetails.find(
+      (item) =>
+        item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
+    );
+    if (pegToken) {
+      setPegToken(pegToken);
+      setPegTokenDecimalsToDisplay(Math.max(Math.ceil(Math.log10(pegToken?.price * 100)), 0));
+    } else {
+      setPegTokenDecimalsToDisplay(0);
+    }
+
     const fetchUserStakes = async () => {
       if (lendingTerms.length == 0) {
         setUserStakes([]);
@@ -105,11 +114,6 @@ export default function UserStakes() {
     fetchUserStakes();
   }, []);
 
-  if (!lendingTerms) {
-    return <UserStakeSkeleton />;
-  }
-
-  /* eslint-disable */
   const columns = [
     columnHelper.accessor('collateralSymbol', {
       id: 'collateralSymbol',
@@ -304,7 +308,6 @@ export default function UserStakes() {
       }
     }
   ];
-  /* eslint-enable */
 
   const table = useReactTable({
     data: userStakes,
@@ -324,6 +327,10 @@ export default function UserStakes() {
     getPaginationRowModel: getPaginationRowModel(),
     debugTable: false
   });
+
+  if (!lendingTerms || !pegToken) {
+    return <UserStakeSkeleton />;
+  }
 
   return (
     <>

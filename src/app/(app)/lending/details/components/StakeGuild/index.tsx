@@ -5,7 +5,7 @@ import { toastError } from 'components/toast';
 import { useAccount } from 'wagmi';
 import { Step } from 'components/stepLoader/stepType';
 import StepModal from 'components/stepLoader';
-import { Abi, ContractFunctionExecutionError, formatUnits, parseEther, Address } from 'viem';
+import { Abi, ContractFunctionExecutionError, formatUnits, parseEther, Address, parseUnits } from 'viem';
 import ButtonPrimary from 'components/button/ButtonPrimary';
 import DefiInputBox from 'components/box/DefiInputBox';
 import { formatDecimal, formatCurrencyValue, toLocaleString } from 'utils/numbers';
@@ -204,7 +204,7 @@ function StakeGuild({
 
   const setAvailable = (): string => {
     return textButton == 'Stake'
-      ? formatDecimal(Number(formatUnits(guildBalance, 18)) - Number(formatUnits(guildUserWeight, 18)), 2)
+      ? formatDecimal(Number(formatUnits(guildBalance - guildUserWeight, 18)), 2)
       : formatDecimal(Number(formatUnits(guildUserGaugeWeight, 18)), 2);
   };
 
@@ -249,9 +249,8 @@ function StakeGuild({
           extra="w-full !rounded-xl"
           onClick={handleVote}
           disabled={
-            (Number(value) > Number(formatUnits(guildBalance, 18)) - Number(formatUnits(guildUserWeight, 18)) &&
-              textButton == 'Stake') ||
-            (Number(value) > Number(formatUnits(guildUserGaugeWeight, 18)) && textButton == 'Unstake') ||
+            (parseUnits(value, 18) > guildBalance - guildUserWeight && textButton == 'Stake') ||
+            (parseUnits(value, 18) > guildUserGaugeWeight && textButton == 'Unstake') ||
             Number(value) <= 0 ||
             !value
           }

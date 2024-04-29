@@ -30,6 +30,14 @@ const routes = [
     show: true
   },
   {
+    name: 'Borrow Details',
+    layout: '/',
+    path: 'borrow/details',
+    icon: <MdOutlineHandshake className="h-6 w-6" />,
+    secondary: true,
+    show: false
+  },
+  {
     name: 'Stake',
     layout: '/',
     path: 'stake',
@@ -38,10 +46,10 @@ const routes = [
     show: true
   },
   {
-    name: 'Lending Details',
+    name: 'Stake Details',
     layout: '/',
-    path: 'lending/details',
-    icon: <MdOutlineHandshake className="h-6 w-6" />,
+    path: 'stake/details',
+    icon: <MdAddToPhotos className="h-6 w-6" />,
     secondary: true,
     show: false
   },

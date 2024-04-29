@@ -62,7 +62,6 @@ export default function StakeLendingTermsTable(props: { tableData: LendingTerms[
       ltv
     };
   });
-  console.log('tableDataWithAdditionalInfo', tableDataWithAdditionalInfo);
   const [showNoDebtCeilingTerms, setShowNoDebtCeilingTerms] = React.useState<boolean>(false);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const columnHelper = createColumnHelper<LendingTerms>();

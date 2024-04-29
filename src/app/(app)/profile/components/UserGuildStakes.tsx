@@ -18,7 +18,7 @@ import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
 import { Address, formatUnits } from 'viem';
 import Progress from 'components/progress';
 import { FaSort, FaSortDown, FaSortUp } from 'react-icons/fa';
-import { MdChevronLeft, MdChevronRight } from 'react-icons/md';
+import { MdChevronLeft, MdChevronRight, MdOutlineHandshake } from 'react-icons/md';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { GuildABI } from 'lib/contracts';
@@ -38,8 +38,7 @@ interface UserStake {
   borrowRatio: number;
 }
 
-export default function UserStakes() {
-  const { address } = useAccount();
+export default function UserGuildStakes({ userAddress }: { userAddress: Address }) {
   const { appMarketId, coinDetails, contractsList, lendingTerms, appChainId, creditMultiplier } = useAppStore();
   const columnHelper = createColumnHelper<UserStake>();
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -69,12 +68,13 @@ export default function UserStakes() {
 
       const contractCalls = [];
 
+      console.log({ userAddress });
       for (const term of lendingTerms.filter((_) => _.debtCeiling > 0)) {
         contractCalls.push({
           address: contractsList.guildAddress,
           abi: GuildABI,
           functionName: 'getUserGaugeWeight',
-          args: [address, term.address]
+          args: [userAddress, term.address]
         });
       }
 
@@ -89,17 +89,19 @@ export default function UserStakes() {
       let cursor = 0;
       for (const term of lendingTerms.filter((_) => _.debtCeiling > 0)) {
         const userGaugeWeightNorm = Number(formatUnits(userStakesData[cursor++].result as bigint, 18));
-        stakes.push({
-          collateralAddress: term.collateral.address,
-          collateralSymbol: term.collateral.symbol,
-          debtCeiling: term.debtCeiling,
-          currentDebt: term.currentDebt,
-          termAddress: term.address,
-          userStake: userGaugeWeightNorm,
-          collateralLogo: term.collateral.logo,
-          borrowRatio: term.borrowRatio,
-          interestRate: term.interestRate
-        });
+        if (userGaugeWeightNorm > 0) {
+          stakes.push({
+            collateralAddress: term.collateral.address,
+            collateralSymbol: term.collateral.symbol,
+            debtCeiling: term.debtCeiling,
+            currentDebt: term.currentDebt,
+            termAddress: term.address,
+            userStake: userGaugeWeightNorm,
+            collateralLogo: term.collateral.logo,
+            borrowRatio: term.borrowRatio,
+            interestRate: term.interestRate
+          });
+        }
       }
 
       setUserStakes(stakes);
@@ -332,7 +334,14 @@ export default function UserStakes() {
     return <UserStakeSkeleton />;
   }
 
-  return (
+  return userStakes.length == 0 ? (
+    <div className="mt-20 flex-col items-center justify-center opacity-40">
+      <div className="flex justify-center">
+        <MdOutlineHandshake className="h-10 w-10" />
+      </div>
+      <div className="mt-4 flex justify-center">You do not have any active GUILD stakes</div>
+    </div>
+  ) : (
     <>
       <div className="mt-4 overflow-auto">
         <table className="w-full">

@@ -69,7 +69,7 @@ export default function UserStakes() {
         });
       }
 
-      console.log(`fetchUserStakes: multicall for ${contractCalls} gauges`);
+      // console.log(`fetchUserStakes: multicall for ${contractCalls.length} gauges`);
       // @ts-ignore
       const userStakesData = await multicall(wagmiConfig, {
         chainId: appChainId as any,
@@ -93,8 +93,13 @@ export default function UserStakes() {
         });
       }
 
-      stakes.sort((a, b) => b.userStake - a.userStake);
       setUserStakes(stakes);
+      setSorting([
+        {
+          id: 'userStake',
+          desc: true
+        }
+      ]);
     };
 
     fetchUserStakes();

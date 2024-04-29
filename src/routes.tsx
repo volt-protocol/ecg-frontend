@@ -8,6 +8,7 @@ import {
   MdOutlineAnalytics,
   MdOutlineBalance,
   MdOutlineHandshake,
+  MdAddToPhotos,
   MdOutlineSavings,
   MdPersonOutline
 } from 'react-icons/md';
@@ -21,10 +22,18 @@ const routes = [
     show: true
   },
   {
-    name: 'Lending Terms',
+    name: 'Borrow',
     layout: '/',
-    path: 'lending',
+    path: 'borrow',
     icon: <MdOutlineHandshake className="h-6 w-6" />,
+    secondary: true,
+    show: true
+  },
+  {
+    name: 'Stake',
+    layout: '/',
+    path: 'stake',
+    icon: <MdAddToPhotos className="h-6 w-6" />,
     secondary: true,
     show: true
   },

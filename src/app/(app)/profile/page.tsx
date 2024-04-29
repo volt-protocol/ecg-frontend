@@ -24,6 +24,7 @@ import { shortenAddress, underscoreToString } from 'utils/strings';
 import Disconnected from 'components/error/disconnected';
 import { LoansObj } from 'types/lending';
 import { wagmiConfig } from 'contexts/Web3Provider';
+import UserStakes from './components/UserStakes';
 
 const UserDashboard = () => {
   const searchParams = useSearchParams();
@@ -272,9 +273,8 @@ const UserDashboard = () => {
         </Card>
       </div>
       <div className="my-3 grid grid-cols-1 gap-5 md:grid-cols-2">
-        <Card title="Earnings" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4 opacity-40">
-          <CreditSaving />
-          <p className="text-center text-gray-400">Mocked data. Coming Soon™️ !</p>
+        <Card title="Your stakes" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
+          <UserStakes />
         </Card>
         <Card title="Voting Power" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
           <VotingPower userAddress={userAddress} />

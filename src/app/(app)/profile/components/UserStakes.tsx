@@ -89,17 +89,19 @@ export default function UserStakes() {
       let cursor = 0;
       for (const term of lendingTerms.filter((_) => _.debtCeiling > 0)) {
         const userGaugeWeightNorm = Number(formatUnits(userStakesData[cursor++].result as bigint, 18));
-        stakes.push({
-          collateralAddress: term.collateral.address,
-          collateralSymbol: term.collateral.symbol,
-          debtCeiling: term.debtCeiling,
-          currentDebt: term.currentDebt,
-          termAddress: term.address,
-          userStake: userGaugeWeightNorm,
-          collateralLogo: term.collateral.logo,
-          borrowRatio: term.borrowRatio,
-          interestRate: term.interestRate
-        });
+        if (userGaugeWeightNorm > 0) {
+          stakes.push({
+            collateralAddress: term.collateral.address,
+            collateralSymbol: term.collateral.symbol,
+            debtCeiling: term.debtCeiling,
+            currentDebt: term.currentDebt,
+            termAddress: term.address,
+            userStake: userGaugeWeightNorm,
+            collateralLogo: term.collateral.logo,
+            borrowRatio: term.borrowRatio,
+            interestRate: term.interestRate
+          });
+        }
       }
 
       setUserStakes(stakes);

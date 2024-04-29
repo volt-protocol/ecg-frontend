@@ -18,10 +18,10 @@ import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
 import { Address, formatUnits } from 'viem';
 import Progress from 'components/progress';
 import { FaSort, FaSortDown, FaSortUp } from 'react-icons/fa';
-import { MdChevronLeft, MdChevronRight } from 'react-icons/md';
+import { MdChevronLeft, MdChevronRight, MdOutlineHandshake } from 'react-icons/md';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { GuildABI } from 'lib/contracts';
+import { GuildABI, SurplusGuildMinterABI } from 'lib/contracts';
 import { multicall } from '@wagmi/core';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { CoinSettings } from 'store/slices/coin-details';
@@ -38,8 +38,7 @@ interface UserStake {
   borrowRatio: number;
 }
 
-export default function UserStakes() {
-  const { address } = useAccount();
+export default function UserCreditStakes({ userAddress }: { userAddress: Address }) {
   const { appMarketId, coinDetails, contractsList, lendingTerms, appChainId, creditMultiplier } = useAppStore();
   const columnHelper = createColumnHelper<UserStake>();
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -71,10 +70,10 @@ export default function UserStakes() {
 
       for (const term of lendingTerms.filter((_) => _.debtCeiling > 0)) {
         contractCalls.push({
-          address: contractsList.guildAddress,
-          abi: GuildABI,
-          functionName: 'getUserGaugeWeight',
-          args: [address, term.address]
+          address: contractsList.marketContracts[appMarketId].surplusGuildMinterAddress,
+          abi: SurplusGuildMinterABI,
+          functionName: 'getUserStake',
+          args: [userAddress, term.address]
         });
       }
 
@@ -88,15 +87,18 @@ export default function UserStakes() {
       // re read in the same order
       let cursor = 0;
       for (const term of lendingTerms.filter((_) => _.debtCeiling > 0)) {
-        const userGaugeWeightNorm = Number(formatUnits(userStakesData[cursor++].result as bigint, 18));
-        if (userGaugeWeightNorm > 0) {
+        console.log({ userStakesData });
+        const userStakeNorm =
+          Number(formatUnits(userStakesData[cursor++].result.credit as bigint, 18)) *
+          Number(formatUnits(creditMultiplier, 18));
+        if (userStakeNorm > 0) {
           stakes.push({
             collateralAddress: term.collateral.address,
             collateralSymbol: term.collateral.symbol,
             debtCeiling: term.debtCeiling,
             currentDebt: term.currentDebt,
             termAddress: term.address,
-            userStake: userGaugeWeightNorm,
+            userStake: userStakeNorm,
             collateralLogo: term.collateral.logo,
             borrowRatio: term.borrowRatio,
             interestRate: term.interestRate
@@ -156,7 +158,7 @@ export default function UserStakes() {
           <p className="ml-3 text-center text-sm font-bold text-gray-600 dark:text-white">
             {formatDecimal(info.row.original.userStake, 2)}
           </p>
-          <span className="text-sm font-medium text-gray-600 dark:text-white">GUILD</span>
+          <span className="text-sm font-medium text-gray-600 dark:text-white">{pegToken.symbol}</span>
         </div>
       )
     }),
@@ -334,7 +336,14 @@ export default function UserStakes() {
     return <UserStakeSkeleton />;
   }
 
-  return (
+  return userStakes.length == 0 ? (
+    <div className="mt-20 flex-col items-center justify-center opacity-40">
+      <div className="flex justify-center">
+        <MdOutlineHandshake className="h-10 w-10" />
+      </div>
+      <div className="mt-4 flex justify-center">You do not have any active {pegToken.symbol} stakes</div>
+    </div>
+  ) : (
     <>
       <div className="mt-4 overflow-auto">
         <table className="w-full">

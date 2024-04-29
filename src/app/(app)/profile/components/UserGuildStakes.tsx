@@ -378,7 +378,7 @@ export default function UserGuildStakes({ userAddress }: { userAddress: Address 
             {table.getRowModel().rows.map((row) => {
               return (
                 <tr
-                  onClick={() => router.push(`/lending/details?term=${row.original.termAddress}`)}
+                  onClick={() => router.push(`/stake/details?term=${row.original.termAddress}`)}
                   key={row.id}
                   className="border-b border-gray-100 transition-all duration-200 ease-in-out last:border-none hover:cursor-pointer hover:bg-stone-100/80 dark:border-gray-500 dark:hover:bg-navy-700"
                 >

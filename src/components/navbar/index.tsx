@@ -22,12 +22,17 @@ const Navbar = (props: {
   const { onOpenSidenav, brandText, pathname } = props;
   const [darkmode, setDarkmode] = React.useState(document.body.classList.contains('dark'));
 
+  let previousPath = pathname.split('/');
+  previousPath.pop();
+  const previousPathName = previousPath.join('/') || '/';
+  const isNestedRoute = pathname.match(/\//g).length > 1;
+
   return (
     <nav className="sticky top-0 z-40 bg-white/10 p-2 backdrop-blur-xl dark:bg-[#0b14374d]">
       <div className="ml-[6px] mt-2 flex flex-row items-center justify-between gap-2 text-stone-700 dark:text-white">
         <div className="flex items-center gap-2">
-          {pathname.match(/\//g).length > 1 && (
-            <Link href="/lending">
+          {isNestedRoute ? (
+            <Link href={previousPathName}>
               <button
                 type="button"
                 className="inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm text-stone-600 shadow-sm transition-all duration-150 ease-in-out hover:bg-brand-100/30 hover:text-stone-800 dark:bg-navy-700 dark:text-stone-300 dark:hover:text-stone-100"
@@ -36,7 +41,7 @@ const Navbar = (props: {
                 <span className="hidden sm:block">Go Back</span>
               </button>
             </Link>
-          )}
+          ) : null}
           <NavLink href="#" className="text-2xl font-medium hover:text-stone-700 dark:hover:text-white">
             {brandText}
           </NavLink>

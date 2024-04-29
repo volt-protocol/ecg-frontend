@@ -5,8 +5,7 @@ export const getTitleDisabledStake = (value: string, guildBalance: bigint, guild
     return 'Enter GUILD amount';
   }
 
-  
-  if (parseUnits(value, 18) > (guildBalance - guildUserWeight)) {
+  if (parseUnits(value, 18) > guildBalance - guildUserWeight) {
     return 'Insufficient GUILD available for staking';
   }
 };

@@ -1,4 +1,4 @@
-import { getPublicClient, getWalletClient } from '@wagmi/core';
+import { getPublicClient, getWalletClient, multicall } from '@wagmi/core';
 import { readContract } from '@wagmi/core';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { TermABI } from 'lib/contracts';
@@ -110,25 +110,38 @@ export async function getCloseLoanLogsbyUser(address: Address, borrower: Address
   });
 }
 
-export async function getActiveLoanDetails(address: Address) {
+export async function getActiveLoanDetails(chainId: number, address: Address) {
   const loans: loanObj[] = [];
 
   // Filtre des openLogs pour ne garder que ceux dont le loanId n'est pas dans closeLoanIds
   const uniqueOpenLogs = await getActiveLoanLogs(address);
 
+  const contractCalls = [];
+
   for (const log of uniqueOpenLogs) {
-    const loan = await readContract(wagmiConfig, {
+    contractCalls.push({
       address: address,
       abi: TermABI,
       functionName: 'getLoan',
       args: [log.loanId]
     });
+  }
 
+  // @ts-ignore
+  const getLoanResponses = await multicall(wagmiConfig, {
+    chainId: chainId as any,
+    contracts: contractCalls
+  });
+
+  let cursor = 0;
+  for (const log of uniqueOpenLogs) {
+    const loan = getLoanResponses[cursor++].result;
     loans.push({
       ...(loan as loanObjCall),
       id: log.loanId as Address,
       termAddress: address as Address
     });
   }
+
   return loans;
 }

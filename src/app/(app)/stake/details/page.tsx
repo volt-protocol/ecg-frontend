@@ -244,7 +244,7 @@ const LendingDetails = () => {
 
     async function getEventLoans(): Promise<Object> {
       setIsLoadingEventLoans(true);
-      const loansCall = await getActiveLoanDetails(termAddress as Address);
+      const loansCall = await getActiveLoanDetails(appChainId, termAddress as Address);
       setEventLoans(loansCall);
       setIsLoadingEventLoans(false);
       return loansCall;

@@ -9,6 +9,7 @@ import { useAccount, useConnect } from 'wagmi';
 import SearchBar from './SearchBar';
 import { useRouter } from 'next/navigation';
 import { ConnectWeb3Button } from 'components/button/ConnectWeb3Button';
+import { GetUserPrefs, UpdateUserPrefsDarkMode } from 'utils/UserPrefsHelper';
 
 const Navbar = (props: {
   onOpenSidenav: () => void;
@@ -20,7 +21,18 @@ const Navbar = (props: {
   const { connector: activeConnector, isConnected } = useAccount();
   const router = useRouter();
   const { onOpenSidenav, brandText, pathname } = props;
-  const [darkmode, setDarkmode] = React.useState(document.body.classList.contains('dark'));
+  const userPrefs = GetUserPrefs();
+
+  if (userPrefs.darkMode == undefined) {
+    userPrefs.darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  const [darkmode, setDarkmode] = React.useState(userPrefs.darkMode);
+
+  if (darkmode) {
+    document.body.classList.add('dark');
+  } else {
+    document.body.classList.remove('dark');
+  }
 
   let previousPath = pathname.split('/');
   previousPath.pop();
@@ -85,9 +97,11 @@ const Navbar = (props: {
               if (darkmode) {
                 document.body.classList.remove('dark');
                 setDarkmode(false);
+                UpdateUserPrefsDarkMode(false);
               } else {
                 document.body.classList.add('dark');
                 setDarkmode(true);
+                UpdateUserPrefsDarkMode(true);
               }
             }}
           >

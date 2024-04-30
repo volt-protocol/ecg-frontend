@@ -1,20 +1,15 @@
 import { UserPreferences } from '../types/user-prefs';
 
-let userPrefs: UserPreferences;
 const USER_PREFS_KEY = 'user-prefs';
 export function GetUserPrefs() {
   const userPrefStorage = localStorage.getItem(USER_PREFS_KEY);
   if (!userPrefStorage) {
-    if (!userPrefs) {
-      userPrefs = {
-        darkMode: undefined
-      };
-    }
-
-    SaveUserPrefs(userPrefs);
+    SaveUserPrefs({
+      darkMode: undefined
+    });
     return GetUserPrefs();
   } else {
-    userPrefs = JSON.parse(userPrefStorage);
+    const userPrefs = JSON.parse(userPrefStorage);
     return userPrefs;
   }
 }

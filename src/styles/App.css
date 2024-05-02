@@ -3,3 +3,36 @@
 option {
   color: black;
 }
+
+/* containers who have a tooltip have high zindex */
+*:has(> [role="tooltip"]) {
+  z-index: 100;
+}
+
+/* apex chart legend */
+.apexcharts-legend-text {
+  color: #333 !important;
+}
+.dark .apexcharts-legend-text {
+  color: #ccc !important;
+}
+
+/* apex chart tooltip */
+.apexcharts-tooltip {
+  background: #fafafa !important;
+  color: #333 !important;
+  border-color: #ccc !important;
+}
+.apexcharts-tooltip-title {
+  font-weight: bold;
+  color: #333 !important;
+  background: #e5e5e5 !important;
+}
+
+/* apex chart axes */
+.apexcharts-text {
+  fill: #333 !important;
+}
+.dark .apexcharts-text {
+  fill: #bbb !important;
+}

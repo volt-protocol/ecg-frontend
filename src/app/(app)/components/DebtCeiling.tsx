@@ -6,6 +6,7 @@ import * as am5xy from '@amcharts/amcharts5/xy';
 import am5themes_Animated from '@amcharts/amcharts5/themes/Animated';
 import am5themes_Responsive from '@amcharts/amcharts5/themes/Responsive';
 import { useLayoutEffect, useMemo } from 'react';
+import { GetUserPrefs } from '../../../utils/UserPrefsHelper';
 
 export const DebtCeiling = ({
   data,
@@ -16,6 +17,8 @@ export const DebtCeiling = ({
   labels: string[];
   pegTokenSymbol: string;
 }) => {
+  const userPrefs = GetUserPrefs();
+
   const dataProcessed = useMemo(() => {
     return data
       .map((item) => {
@@ -44,7 +47,17 @@ export const DebtCeiling = ({
   useLayoutEffect(() => {
     let root = am5.Root.new('chartdiv');
 
-    root.setThemes([am5themes_Animated.new(root), am5themes_Responsive.new(root)]);
+    const myTheme = am5.Theme.new(root);
+    myTheme.rule('Grid').setAll({
+      stroke: am5.color(userPrefs.darkMode ? 0xffffff : 0x000000),
+      strokeWidth: 2
+    });
+    myTheme.rule('Label').setAll({
+      fill: am5.color(userPrefs.darkMode ? 0xffffff : 0x000000),
+      opacity: 0.7
+    });
+
+    root.setThemes([am5themes_Animated.new(root), am5themes_Responsive.new(root), myTheme]);
 
     let chart = root.container.children.push(
       am5radar.RadarChart.new(root, {
@@ -54,6 +67,8 @@ export const DebtCeiling = ({
         wheelY: null //"zoomX",
       })
     );
+
+    chart.gridContainer.toFront();
 
     chart.get('colors').set('colors', [
       am5.color(0xff5252), // red
@@ -121,5 +136,5 @@ export const DebtCeiling = ({
     };
   }, []);
 
-  return <div id="chartdiv" style={{ width: '420px', height: '380px' }} className="dark:text-gray-200"></div>;
+  return <div id="chartdiv" style={{ width: '420px', height: '380px' }} className="dark:color-gray-200"></div>;
 };

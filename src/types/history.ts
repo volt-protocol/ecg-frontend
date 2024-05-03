@@ -1,6 +1,6 @@
 export interface HistoricalLoanBorrow {
     timestamps: number[];
-    values:     AprDataValues;
+    values:     LoanBorrowValues;
 }
 
 export interface LoanBorrowValues {
@@ -11,7 +11,7 @@ export interface LoanBorrowValues {
 
 export interface HistoricalAprData {
     timestamps: number[];
-    values:     Values;
+    values:     AprDataValues;
 }
 
 export interface AprDataValues {

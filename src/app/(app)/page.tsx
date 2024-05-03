@@ -106,7 +106,7 @@ const GlobalDashboard = () => {
   };
 
   const getCollateralData = async () => {
-    const collateralData: { collateral: string; collateralValueDollar: number }[] = [];
+    let collateralData: { collateral: string; collateralValueDollar: number }[] = [];
 
     // fetch only live terms
     const liveTerms = lendingTerms.filter((term) => term.status == 'live');
@@ -133,14 +133,23 @@ const GlobalDashboard = () => {
       const exchangeRate = coinDetails.find((_) => _.address == term.collateral.address).price;
 
       collateralData.push({
-        collateral: generateTermName(
-          term.collateral.symbol,
-          term.interestRate,
-          term.borrowRatio / data?.creditMultiplier
-        ),
+        collateral: term.collateral.symbol,
         collateralValueDollar: Number(formatUnits(result as bigint, term.collateral.decimals)) * exchangeRate
       });
     }
+
+    // sum values of terms with same collateral
+    const groupedPerCollateral = collateralData.reduce((acc: any, cur: any) => {
+      acc[cur.collateral] = acc[cur.collateral] || 0;
+      acc[cur.collateral] += cur.collateralValueDollar;
+      return acc;
+    }, {});
+    collateralData = Object.keys(groupedPerCollateral).map((collateral) => {
+      return {
+        collateral,
+        collateralValueDollar: groupedPerCollateral[collateral]
+      };
+    });
 
     return collateralData;
   };
@@ -173,7 +182,7 @@ const GlobalDashboard = () => {
     const termsArray: { term: string; value: number }[] = [];
     for (const t of lendingTerms.filter((_) => _.status == 'live')) {
       termsArray.push({
-        term: t.collateral.symbol,
+        term: generateTermName(t.collateral.symbol, t.interestRate, t.borrowRatio / data?.creditMultiplier),
         value: t.termSurplusBuffer
       });
     }

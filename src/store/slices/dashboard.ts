@@ -2,8 +2,7 @@ import axios, { AxiosResponse } from 'axios';
 import { getApiBaseUrl } from 'config';
 import { MintRedeemLogs } from 'lib/logs/mint-redeem';
 import { VoteLogs } from 'lib/logs/votes';
-import { useAppStore } from 'store';
-import { HistoricalAprData, HistoricalLoanBorrow } from 'types/history';
+import { HistoricalAprData, HistoricalCreditMultiplier, HistoricalLoanBorrow } from 'types/history';
 import { HttpGet } from 'utils/HttpHelper';
 import { formatDecimal } from 'utils/numbers';
 import { Address } from 'viem';
@@ -94,6 +93,12 @@ const GetLoanBorrow = async (marketId: number, chainId: number) => {
   return data;
 };
 
+const GetCreditMultiplier = async (marketId: number, chainId: number) => {
+  const url = getApiBaseUrl(chainId) + `/history/CreditMultiplier?marketId=${marketId}`;
+  const data = await HttpGet<HistoricalCreditMultiplier>(url);
+  return data;
+};
+
 export interface HistoricalData {
   creditSupply: { values: string[]; timestamps: string[] };
   creditTotalIssuance: { values: string[]; timestamps: string[] };
@@ -101,6 +106,7 @@ export interface HistoricalData {
   tvl: { values: string[]; timestamps: string[] };
   aprData: HistoricalAprData;
   loanBorrow: HistoricalLoanBorrow;
+  creditMultiplier: HistoricalCreditMultiplier;
 }
 
 export interface DashboardSlice {
@@ -180,6 +186,7 @@ export const createDashboardSlice: StateCreator<DashboardSlice> = (set, get) => 
     const tvlData = await getTVL(marketId, chainId);
     const aprData = await getAprData(marketId, chainId);
     const loanBorrow = await GetLoanBorrow(marketId, chainId);
+    const creditMultiplier = await GetCreditMultiplier(marketId, chainId);
 
     const data: HistoricalData = {
       creditSupply: creditSupplyData,
@@ -187,7 +194,8 @@ export const createDashboardSlice: StateCreator<DashboardSlice> = (set, get) => 
       averageInterestRate: averageInterestRateData,
       tvl: tvlData,
       aprData: aprData,
-      loanBorrow: loanBorrow
+      loanBorrow: loanBorrow,
+      creditMultiplier: creditMultiplier
     };
 
     set({ historicalData: data });

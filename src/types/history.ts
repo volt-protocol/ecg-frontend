@@ -1,22 +1,22 @@
 export interface HistoricalLoanBorrow {
-    timestamps: number[];
-    values:     LoanBorrowValues;
+  timestamps: number[];
+  values: LoanBorrowValues;
 }
 
 export interface LoanBorrowValues {
-    openLoans:            number[];
-    borrowValue:          number[];
-    totalUnpaidInterests: number[];
+  openLoans: number[];
+  borrowValue: number[];
+  totalUnpaidInterests: number[];
 }
 
 export interface HistoricalAprData {
-    timestamps: number[];
-    values:     AprDataValues;
+  timestamps: number[];
+  values: AprDataValues;
 }
 
 export interface AprDataValues {
-    rebasingSupply:    number[];
-    totalSupply:       number[];
-    targetTotalSupply: number[];
-    sharePrice:        number[];
+  rebasingSupply: number[];
+  totalSupply: number[];
+  targetTotalSupply: number[];
+  sharePrice: number[];
 }

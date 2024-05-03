@@ -148,17 +148,17 @@ export const chainsConfig = [
   {
     id: arbitrum.id,
     jsonUrl:
-      'https://raw.githubusercontent.com/volt-protocol/ethereum-credit-guild/feat/arbitrum-deployment/protocol-configuration/addresses.arbitrum.json'
+      'https://raw.githubusercontent.com/volt-protocol/ethereum-credit-guild/main/protocol-configuration/addresses.arbitrum.json'
   },
   {
     id: mainnet.id,
     jsonUrl:
-      'https://raw.githubusercontent.com/volt-protocol/ethereum-credit-guild/feat/arbitrum-deployment/protocol-configuration/addresses.mainnet.json'
+      'https://raw.githubusercontent.com/volt-protocol/ethereum-credit-guild/main/protocol-configuration/addresses.mainnet.json'
   },
   {
     id: sepolia.id,
     jsonUrl:
-      'https://raw.githubusercontent.com/volt-protocol/ethereum-credit-guild/feat/arbitrum-deployment/protocol-configuration/addresses.sepolia.json'
+      'https://raw.githubusercontent.com/volt-protocol/ethereum-credit-guild/main/protocol-configuration/addresses.sepolia.json'
   }
 ];
 

@@ -344,6 +344,13 @@ function DelegateCredit({
                 <span className="font-bold">
                   {toLocaleString(formatDecimal(Number(delegateLockupPeriod) / 3600, 2))} hours.
                 </span>
+                <br />
+                This means you will not be able to stake {creditTokenSymbol} on lending terms, even if you mint
+                additional tokens, until{' '}
+                <span className="font-bold">
+                  {toLocaleString(formatDecimal(Number(delegateLockupPeriod) / 3600, 2))} hours
+                </span>{' '}
+                pass.
               </p>
             }
           />

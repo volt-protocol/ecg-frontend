@@ -254,9 +254,9 @@ function MintOrRedeem({
       <div>
         {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
 
-        <div className="mb-3 mt-4 rounded-md bg-gray-100 text-sm">
+        <div className="mb-3 mt-4 rounded-md bg-gray-100 text-sm dark:bg-navy-900">
           <a
-            className="block p-1 text-center text-gray-500"
+            className="block p-1 text-center text-gray-500 dark:text-gray-200"
             target="__blank"
             href={`${getExplorerBaseUrl(appChainId)}/address/${address}`}
           >

@@ -156,7 +156,7 @@ export default function UserLoan({ userAddress, data }: { userAddress: Address; 
         return (
           <>
             {!info.row.original.txHashClose && userAddress == address && (
-              <Link href={`/lending/details?term=${info.row.original.termAddress}`}>
+              <Link href={`/borrow/details?term=${info.row.original.termAddress}`}>
                 <button
                   type="button"
                   className="rounded-md bg-gray-100 px-3 py-1.5 text-sm ring-1 ring-inset ring-gray-200 transition-all duration-150 ease-in-out hover:ring-gray-300 dark:bg-navy-700 dark:ring-navy-600"

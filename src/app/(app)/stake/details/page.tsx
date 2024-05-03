@@ -6,17 +6,13 @@ import React, { useEffect, useState } from 'react';
 import Card from 'components/card';
 import { TermABI, ProfitManagerABI, CreditABI, GuildABI, SurplusGuildMinterABI, ERC20PermitABI } from 'lib/contracts';
 import { readContract } from '@wagmi/core';
-import Myloans from './components/MyLoans';
-import CreateLoan from './components/CreateLoan';
 import StakeCredit from './components/StakeCredit';
-import ActiveLoans from './components/ActiveLoans';
 import StakeGuild from './components/StakeGuild';
 import { loanObj, LendingTerms } from 'types/lending';
 import { MdOutlineOpenInNew } from 'react-icons/md';
 import { TooltipHorizon, QuestionMarkIcon } from 'components/tooltip';
 import { getActiveLoanDetails } from 'lib/logs/loans';
 import { useSearchParams } from 'next/navigation';
-import LendingStats from './components/LendingStats';
 import { useAppStore } from 'store';
 import { Tab } from '@headlessui/react';
 import clsx from 'clsx';
@@ -248,7 +244,7 @@ const LendingDetails = () => {
 
     async function getEventLoans(): Promise<Object> {
       setIsLoadingEventLoans(true);
-      const loansCall = await getActiveLoanDetails(termAddress as Address);
+      const loansCall = await getActiveLoanDetails(appChainId, termAddress as Address);
       setEventLoans(loansCall);
       setIsLoadingEventLoans(false);
       return loansCall;
@@ -287,7 +283,7 @@ const LendingDetails = () => {
           This Lending Term is not part of the selected market.
           <br />
           <br />
-          <Link href="/lending">
+          <Link href="/stake">
             <button
               type="button"
               className="inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm text-stone-600 shadow-sm transition-all duration-150 ease-in-out hover:bg-brand-100/30 hover:text-stone-800 dark:bg-navy-700 dark:text-stone-300 dark:hover:text-stone-100"
@@ -323,85 +319,6 @@ const LendingDetails = () => {
               <MdOutlineOpenInNew />
             </a>
           </div>
-          {lendingTermConfig.find((item) => item.termAddress == termAddress)?.useGateway ? (
-            <div className="flex items-center gap-1">
-              <TooltipHorizon
-                extra="dark:text-gray-200 w-[240px]"
-                content={
-                  <p>
-                    Use a Gateway contract instead of interacting with the core protocol directly.
-                    <br />
-                    This enables batch actions such as "borrow g{pegToken?.symbol} + redeem g{pegToken?.symbol} for{' '}
-                    {pegToken?.symbol}",
-                    <br />
-                    or "mint g{pegToken?.symbol} from {pegToken?.symbol} + repay debt", or access flashloan/leverage
-                    features.
-                    <br />
-                    This feature is tied to the front-end and not to the core protocol, and is only enabled
-                    <br />
-                    for some terms by the provider of this web interface.
-                  </p>
-                }
-                trigger={
-                  <div>
-                    <QuestionMarkIcon />
-                  </div>
-                }
-                placement="left"
-              />
-
-              <ToggleCredit
-                selectType={setCurrencyType}
-                pegToken={pegToken}
-                marketId={appMarketId}
-                type={currencyType}
-                disabled={!lendingTermConfig.find((item) => item.termAddress == termAddress)?.useGateway}
-              />
-            </div>
-          ) : null}
-        </div>
-        <LendingStats
-          creditMultiplier={data?.creditMultiplier}
-          lendingTermData={lendingTermData}
-          currentDebt={data?.currentDebt}
-          debtCeiling={data?.debtCeiling}
-          utilization={utilization}
-          termTotalCollateral={termTotalCollateral}
-        />
-        <h3 className="mb-4 ml-8 mt-6 text-xl font-semibold text-gray-700 dark:text-white">Loan</h3>
-        <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-3 ">
-          <Card extra="order-1 w-full h-full sm:overflow-auto px-6 py-4" title="New Loan">
-            <CreateLoan
-              lendingTerm={lendingTermData}
-              availableDebt={data?.debtCeiling - data?.currentDebt > 0 ? data?.debtCeiling - data?.currentDebt : 0}
-              creditMultiplier={data?.creditMultiplier}
-              creditBalance={data?.creditBalance}
-              pegTokenBalance={data?.pegTokenBalance}
-              creditTokenNonces={data?.creditTokenNonces}
-              minBorrow={Number(formatUnits(data?.minBorrow, 18))}
-              setReload={setReload}
-              reload={reload}
-              currencyType={currencyType}
-            />
-          </Card>
-          <Card
-            extra="md:col-span-2 order-2 w-full h-full px-6 py-4 sm:overflow-x-auto relative"
-            title="Your Active Loans"
-          >
-            <Myloans
-              lendingTerm={lendingTermData}
-              isLoadingEventLoans={isLoadingEventLoans}
-              tableData={eventLoans}
-              setReload={setReload}
-              reload={reload}
-              creditMultiplier={data?.creditMultiplier}
-              pegTokenBalance={data?.pegTokenBalance}
-              creditBalance={data?.creditBalance}
-              pegTokenNonces={data?.pegTokenNonces}
-              minBorrow={data?.minBorrow}
-              currencyType={currencyType}
-            />
-          </Card>
         </div>
         <h3 className="mb-4 ml-8 mt-6 text-xl font-semibold text-gray-700 dark:text-white">Stake</h3>
         <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
@@ -410,7 +327,7 @@ const LendingDetails = () => {
               <div className="mt-4 space-y-8">
                 <div className="rounded-md">
                   <dl className="my-5 flex rounded-md bg-gray-50 ring-1 ring-gray-100 dark:bg-navy-600 dark:ring-navy-800">
-                    <div key="guildStaking" className="border-r border-gray-100 px-4 py-3 dark:border-navy-800">
+                    <div className="border-r border-gray-100 px-4 py-3 dark:border-navy-800">
                       <dt className="text-base font-medium text-gray-900 dark:text-gray-100">Your GUILD staked</dt>
                       <dd className="mt-1 flex items-baseline justify-between gap-6 md:block lg:flex">
                         <div className="flex items-baseline text-2xl font-semibold text-brand-500">
@@ -431,7 +348,7 @@ const LendingDetails = () => {
                       </span>
                     </div>
 
-                    <div key="guildStaking" className="border-r border-gray-100 px-4 py-3 dark:border-navy-800">
+                    <div className="border-r border-gray-100 px-4 py-3 dark:border-navy-800">
                       <dt className="text-base font-medium text-gray-900 dark:text-gray-100">Total GUILD staked</dt>
                       <dd className="mt-1 flex items-baseline justify-between gap-6 md:block lg:flex">
                         <div className="flex items-baseline text-2xl font-semibold text-brand-500">
@@ -676,7 +593,7 @@ const LendingDetails = () => {
               <div className="mt-4 space-y-8">
                 <div className="rounded-md ">
                   <dl className="my-5 flex rounded-md bg-gray-50 ring-1 ring-gray-100 dark:bg-navy-600 dark:ring-navy-800">
-                    <div key="guildStaking" className="border-r border-gray-100 px-4 py-3 dark:border-navy-800">
+                    <div className="border-r border-gray-100 px-4 py-3 dark:border-navy-800">
                       <dt className="text-base font-medium text-gray-900 dark:text-gray-100">
                         Your {creditTokenSymbol} staked
                       </dt>
@@ -706,7 +623,7 @@ const LendingDetails = () => {
                       </span>
                     </div>
 
-                    <div key="guildStaking" className="border-r border-gray-100 px-4 py-3 dark:border-navy-800">
+                    <div className="border-r border-gray-100 px-4 py-3 dark:border-navy-800">
                       <dt className="text-base font-medium text-gray-900 dark:text-gray-100">
                         Total {creditTokenSymbol} staked
                       </dt>
@@ -859,7 +776,6 @@ const LendingDetails = () => {
                   <Tab.Group>
                     <Tab.List className="flex space-x-1 rounded-md bg-brand-100/50 p-1 dark:bg-navy-700">
                       <Tab
-                        key="stake-credit"
                         className={({ selected }) =>
                           clsx(
                             'w-full rounded-md px-2 py-1 text-sm leading-5 transition-all duration-150 ease-in-out sm:px-4 sm:py-2 sm:text-base',
@@ -872,7 +788,6 @@ const LendingDetails = () => {
                         Stake
                       </Tab>
                       <Tab
-                        key="unstake-credit"
                         className={({ selected }) =>
                           clsx(
                             'w-full rounded-md px-2 py-1 text-sm leading-5 transition-all duration-150 ease-in-out sm:px-4 sm:py-2 sm:text-base',
@@ -886,7 +801,7 @@ const LendingDetails = () => {
                       </Tab>
                     </Tab.List>
                     <Tab.Panels className="mt-2">
-                      <Tab.Panel key="stake-credit" className={'px-3 py-1'}>
+                      <Tab.Panel className={'px-3 py-1'}>
                         <StakeCredit
                           debtCeiling={data?.debtCeiling}
                           lendingTerm={lendingTermData}
@@ -900,7 +815,7 @@ const LendingDetails = () => {
                           reload={setReload}
                         />
                       </Tab.Panel>
-                      <Tab.Panel key="unstake-credit" className={'px-3 py-1'}>
+                      <Tab.Panel className={'px-3 py-1'}>
                         <StakeCredit
                           debtCeiling={data?.debtCeiling}
                           lendingTerm={lendingTermData}
@@ -919,21 +834,6 @@ const LendingDetails = () => {
                 </div>
               </div>
             </div>
-          </Card>
-        </div>
-        <div className="mb-20">
-          <h3 className="mb-4 ml-8 mt-6 text-xl font-semibold text-gray-700 dark:text-white">Overview</h3>
-          <Card
-            extra="order-5 md:col-span-2 w-full h-full px-6 py-4 overflow-auto sm:overflow-x-auto"
-            title="Active Loans"
-          >
-            <ActiveLoans
-              lendingTerm={lendingTermData}
-              activeLoans={eventLoans}
-              isLoadingEventLoans={isLoadingEventLoans}
-              creditMultiplier={data?.creditMultiplier}
-              reload={setReload}
-            />
           </Card>
         </div>
       </div>

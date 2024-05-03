@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 import Card from 'components/card';
-import LendingTermsTable from './components/LendingTermsTable';
+import BorrowLendingTermsTable from './components/BorrowLendingTermsTable';
 import { fromNow } from 'utils/date';
 import { MdCached } from 'react-icons/md';
 import clsx from 'clsx';
@@ -34,13 +34,13 @@ const Lending = () => {
 
       <div className="mt-3">
         <Card title="Currently Active Lending Terms" extra="w-full h-full sm:overflow-auto px-6 py-4">
-          <LendingTermsTable showFilters={true} tableData={lendingTerms.filter((_) => _.status == 'live')} />
+          <BorrowLendingTermsTable showFilters={true} tableData={lendingTerms.filter((_) => _.status == 'live')} />
         </Card>
       </div>
       {lendingTerms.filter((loan) => loan.status == 'deprecated').length != 0 && (
         <div className="mt-6">
           <Card title="Deprecated Lending Terms" extra="w-full h-full sm:overflow-auto px-6 py-4">
-            <LendingTermsTable tableData={lendingTerms.filter((_) => _.status == 'deprecated')} />
+            <BorrowLendingTermsTable tableData={lendingTerms.filter((_) => _.status == 'deprecated')} />
           </Card>
         </div>
       )}

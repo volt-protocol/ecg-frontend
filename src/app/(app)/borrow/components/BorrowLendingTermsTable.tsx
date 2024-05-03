@@ -28,7 +28,7 @@ import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
 import { MdChevronLeft, MdChevronRight, MdVisibility, MdVisibilityOff } from 'react-icons/md';
 
-export default function LendingTermsTable(props: { tableData: LendingTerms[]; showFilters?: boolean }) {
+export default function BorrowLendingTermsTable(props: { tableData: LendingTerms[]; showFilters?: boolean }) {
   const { appChainId, appMarketId, contractsList, coinDetails, creditSupply, creditMultiplier } = useAppStore();
   const { tableData } = props;
   const [showNoDebtCeilingTerms, setShowNoDebtCeilingTerms] = React.useState<boolean>(false);
@@ -339,7 +339,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[]; sh
       enableSorting: false,
       cell: (info) => (
         <div className="text-center font-medium text-gray-600 dark:text-white">
-          <Link href={`/lending/details?term=${info.row.original.address}`}>
+          <Link href={`/borrow/details?term=${info.row.original.address}`}>
             <button
               type="button"
               className="rounded-md bg-gray-100 px-3 py-1.5 text-sm ring-1 ring-inset ring-gray-200 transition-all duration-150 ease-in-out hover:ring-gray-300 dark:bg-navy-700 dark:ring-navy-600"
@@ -357,7 +357,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[]; sh
     data: filteredData || data,
     columns,
     state: {
-      sorting,
+      sorting
     },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
@@ -429,7 +429,7 @@ export default function LendingTermsTable(props: { tableData: LendingTerms[]; sh
               .map((row) => {
                 return (
                   <tr
-                    onClick={() => router.push(`/lending/details?term=${row.original.address}`)}
+                    onClick={() => router.push(`/borrow/details?term=${row.original.address}`)}
                     key={row.id}
                     className="border-b border-gray-100 transition-all duration-200 ease-in-out last:border-none hover:cursor-pointer hover:bg-stone-100/80 dark:border-gray-500 dark:hover:bg-navy-700"
                   >

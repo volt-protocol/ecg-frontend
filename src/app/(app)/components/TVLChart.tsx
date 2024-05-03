@@ -19,7 +19,7 @@ export const TVLChart = ({ tvl }: { tvl: any }) => {
     const state = {
       series: [
         {
-          name: 'TCV',
+          name: 'TVL',
           data: tvl.values,
           color: '#50bdae'
         }
@@ -86,7 +86,7 @@ export const TVLChart = ({ tvl }: { tvl: any }) => {
 
   return (
     <Card
-      title="Total Collateral Value"
+      title="Market TVL (Collateral + PSM Liquidity)"
       extra="w-full min-h-[300px] md:col-span-2 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
       rightText={getTimelineButton({ timeline, updateData })}
     >

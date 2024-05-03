@@ -1,6 +1,6 @@
 'use client';
 import Image from 'next/image';
-import { readContract } from '@wagmi/core';
+import { readContract, multicall } from '@wagmi/core';
 import { useAppStore } from 'store';
 import { Abi, Address, formatUnits, erc20Abi } from 'viem';
 import { getApiBaseUrl, getPegTokenLogo } from 'config';
@@ -106,30 +106,52 @@ const GlobalDashboard = () => {
   };
 
   const getCollateralData = async () => {
-    return await Promise.all(
-      lendingTerms
-        .filter((term) => term.status == 'live')
-        .map(async (term) => {
-          const result = await readContract(wagmiConfig, {
-            address: term.collateral.address as Address,
-            abi: erc20Abi as Abi,
-            functionName: 'balanceOf',
-            args: [term.address],
-            chainId: appChainId as any
-          });
+    let collateralData: { collateral: string; collateralValueDollar: number }[] = [];
 
-          const exchangeRate = coinDetails.find((_) => _.address == term.collateral.address).price;
+    // fetch only live terms
+    const liveTerms = lendingTerms.filter((term) => term.status == 'live');
+    const contractCalls = [];
+    for (const term of liveTerms) {
+      contractCalls.push({
+        address: term.collateral.address as Address,
+        abi: erc20Abi as Abi,
+        functionName: 'balanceOf',
+        args: [term.address],
+        chainId: appChainId as any
+      });
+    }
 
-          return {
-            collateral: generateTermName(
-              term.collateral.symbol,
-              term.interestRate,
-              term.borrowRatio / data?.creditMultiplier
-            ),
-            collateralValueDollar: Number(formatUnits(result as bigint, term.collateral.decimals)) * exchangeRate
-          };
-        })
-    );
+    // @ts-ignore
+    const balanceOfResponses = await multicall(wagmiConfig, {
+      chainId: appChainId as any,
+      contracts: contractCalls
+    });
+
+    let cursor = 0;
+    for (const term of liveTerms) {
+      const result = balanceOfResponses[cursor++].result;
+      const exchangeRate = coinDetails.find((_) => _.address == term.collateral.address).price;
+
+      collateralData.push({
+        collateral: term.collateral.symbol,
+        collateralValueDollar: Number(formatUnits(result as bigint, term.collateral.decimals)) * exchangeRate
+      });
+    }
+
+    // sum values of terms with same collateral
+    const groupedPerCollateral = collateralData.reduce((acc: any, cur: any) => {
+      acc[cur.collateral] = acc[cur.collateral] || 0;
+      acc[cur.collateral] += cur.collateralValueDollar;
+      return acc;
+    }, {});
+    collateralData = Object.keys(groupedPerCollateral).map((collateral) => {
+      return {
+        collateral,
+        collateralValueDollar: groupedPerCollateral[collateral]
+      };
+    });
+
+    return collateralData;
   };
 
   const getDebtCeilingData = async () => {
@@ -160,7 +182,7 @@ const GlobalDashboard = () => {
     const termsArray: { term: string; value: number }[] = [];
     for (const t of lendingTerms.filter((_) => _.status == 'live')) {
       termsArray.push({
-        term: t.collateral.symbol,
+        term: generateTermName(t.collateral.symbol, t.interestRate, t.borrowRatio / data?.creditMultiplier),
         value: t.termSurplusBuffer
       });
     }

@@ -24,6 +24,8 @@ import { shortenAddress, underscoreToString } from 'utils/strings';
 import Disconnected from 'components/error/disconnected';
 import { LoansObj } from 'types/lending';
 import { wagmiConfig } from 'contexts/Web3Provider';
+import UserGuildStakes from './components/UserGuildStakes';
+import UserCreditStakes from './components/UserCreditStakes';
 
 const UserDashboard = () => {
   const searchParams = useSearchParams();
@@ -146,7 +148,7 @@ const UserDashboard = () => {
 
   /* End get dashboard data */
 
-  if (!isConnected) {
+  if (!isConnected || !userAddress) {
     return <Disconnected />;
   }
 
@@ -272,12 +274,20 @@ const UserDashboard = () => {
         </Card>
       </div>
       <div className="my-3 grid grid-cols-1 gap-5 md:grid-cols-2">
+        <Card title="GUILD staked" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
+          <UserGuildStakes userAddress={userAddress} />
+        </Card>
+        <Card title="CREDIT staked" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
+          <UserCreditStakes userAddress={userAddress} />
+        </Card>
+      </div>
+      <div className="my-3 grid grid-cols-1 gap-5 md:grid-cols-2">
+        <Card title="Voting Power" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
+          <VotingPower userAddress={userAddress} />
+        </Card>
         <Card title="Earnings" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4 opacity-40">
           <CreditSaving />
           <p className="text-center text-gray-400">Mocked data. Coming Soon™️ !</p>
-        </Card>
-        <Card title="Voting Power" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
-          <VotingPower userAddress={userAddress} />
         </Card>
       </div>
       <div className="my-3 grid grid-cols-1 gap-5 md:grid-cols-2">

@@ -10,16 +10,16 @@ export interface AirdropData {
 }
 
 export interface AirdropDataSlice {
-  airdropData: AirdropDataSlice;
+  rebasingSupplyUsd: number;
+  termSurplusBufferUsd: number;
+  totalIssuanceUsd: number;
   fetchAirdropData: (chainId: number) => Promise<void>;
 }
 
 export const createAirdropDataSlice: StateCreator<AirdropDataSlice> = (set, get) => ({
-  airdropData: {
-    rebasingSupplyUsd: 0,
-    termSurplusBufferUsd: 0,
-    totalIssuanceUsd: 0
-  },
+  rebasingSupplyUsd: 0,
+  termSurplusBufferUsd: 0,
+  totalIssuanceUsd: 0,
   fetchAirdropData: async (chainId: number) => {
     const apiUrl = getApiBaseUrl(chainId) + `/protocol/airdropdata`;
     const res = await HttpGet<any>(apiUrl);

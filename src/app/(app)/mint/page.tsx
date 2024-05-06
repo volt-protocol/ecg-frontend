@@ -33,8 +33,6 @@ function MintAndSaving() {
   const [fdv, setFdv] = useState(0);
   const [chartData, setChartData] = useState<any>([]);
 
-  console.log('airdropData', airdropData);
-
   const createSteps = (): Step[] => {
     const baseSteps = [{ name: 'Rebasing', status: 'Not Started' }];
     return baseSteps;
@@ -365,13 +363,12 @@ function MintAndSaving() {
             </p>
           </Card>
           <Card
-            title="Rewards"
+            title="Current daily GUILD rewards"
             extra="order-2 w-full h-full sm:overflow-auto px-6 py-4 lg:col-span-2 2xl:col-span-2 3xl:col-span-2 xs:col-span-1"
           >
             <div className="text-center">
-              <div className="mb-3 text-sm">Current daily GUILD rewards</div>
               <Image
-                className="mt-1 inline-block"
+                className="mt-3 inline-block"
                 src="/img/crypto-logos/guild.png"
                 width={85}
                 height={85}

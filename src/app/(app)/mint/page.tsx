@@ -4,10 +4,9 @@ import Disconnected from 'components/error/disconnected';
 import React, { useEffect, useState } from 'react';
 import Card from 'components/card';
 import { useAccount, useReadContracts } from 'wagmi';
-import { toLocaleString } from 'utils/numbers';
 import { ProfitManagerABI, CreditABI } from 'lib/contracts';
 import { waitForTransactionReceipt, writeContract } from '@wagmi/core';
-import { formatDecimal } from 'utils/numbers';
+import { formatCurrencyValue, formatDecimal } from 'utils/numbers';
 import { toastError } from 'components/toast';
 import MintOrRedeem from './components/MintOrRedeem';
 import { Step } from 'components/stepLoader/stepType';
@@ -20,12 +19,19 @@ import { useAppStore } from 'store';
 import Spinner from 'components/spinner';
 import { getPegTokenLogo, marketsConfig } from 'config';
 import Image from 'next/image';
+import { TooltipHorizon, QuestionMarkIcon } from 'components/tooltip';
+import { BsBank2 } from 'react-icons/bs';
+import Widget from 'components/widget/Widget';
+import { ApexChartWrapper } from 'components/charts/ApexChartWrapper';
 
 function MintAndSaving() {
-  const { appMarketId, appChainId, contractsList, coinDetails } = useAppStore();
+  const { appMarketId, appChainId, contractsList, coinDetails, historicalData, airdropData } = useAppStore();
   const { address, isConnected } = useAccount();
   const [reload, setReload] = React.useState<boolean>(false);
   const [showModal, setShowModal] = useState(false);
+  const [editingFdv, setEditingFdv] = useState(false);
+  const [fdv, setFdv] = useState(0);
+  const [chartData, setChartData] = useState<any>([]);
 
   const createSteps = (): Step[] => {
     const baseSteps = [{ name: 'Rebasing', status: 'Not Started' }];
@@ -42,8 +48,123 @@ function MintAndSaving() {
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10((pegToken ? pegToken.price : 0) * 100)), 0);
   const creditTokenSymbol = 'g' + pegToken?.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
+
+  // airdrop computations
+  const fdvSupply = 1e9; // 1B GUILD max supply
+  const airdropPercent = 0.01; // 1% supply
+  const airdropSize = airdropPercent * fdvSupply;
+  const dailyGuild = airdropSize / 30; // monthly periods
+  const dailyGuildToLenders = dailyGuild * 0.6; // 60% to lenders
+  const currentDailyGuildPerDollarLent = dailyGuildToLenders / airdropData.rebasingSupplyUsd;
+  const lenderApr = (365 * currentDailyGuildPerDollarLent * fdv) / 1e9;
+
+  useEffect(() => {
+    if (!historicalData) return;
+
+    const interpolatingRebaseRewards: number[] = [];
+    const unpaidInterestPerUnit: number[] = [];
+    historicalData.aprData.timestamps.forEach((t, i) => {
+      // compute unpaid interest per unit of credit token
+      const unpaidInterest =
+        historicalData.loanBorrow.values.totalUnpaidInterests[i] /
+        (historicalData.aprData.values.rebasingSupply[i] * historicalData.creditMultiplier.values[i]);
+      unpaidInterestPerUnit.push(
+        isNaN(unpaidInterest) ? 0 : Number(formatDecimal(unpaidInterest, pegTokenDecimalsToDisplay * 2))
+      );
+
+      // compute interpolating rebase rewards
+      const nInterpolatingRewards =
+        historicalData.aprData.values.targetTotalSupply[i] - historicalData.aprData.values.totalSupply[i];
+      const interpolatingRewardsPerCredit = nInterpolatingRewards / historicalData.aprData.values.rebasingSupply[i];
+      interpolatingRebaseRewards.push(
+        Number(formatDecimal(interpolatingRewardsPerCredit, pegTokenDecimalsToDisplay * 2))
+      );
+    });
+
+    const seriesData = [
+      {
+        name: 'Principal losses',
+        data: historicalData.creditMultiplier.values.map((e, i) =>
+          Number(formatDecimal(e - 1, pegTokenDecimalsToDisplay * 2))
+        ),
+        color: '#212121'
+      },
+      {
+        name: 'Pending Interest',
+        data: unpaidInterestPerUnit,
+        color: '#757575'
+      },
+      {
+        name: 'Distributed through rebase',
+        data: historicalData.aprData.values.sharePrice.map((e) =>
+          Number(formatDecimal(e - 1, pegTokenDecimalsToDisplay * 2))
+        ),
+        color: '#388E3C'
+      },
+      {
+        name: 'Interpolating rebase rewards',
+        data: interpolatingRebaseRewards,
+        color: '#4CAF50'
+      }
+    ];
+
+    const state = {
+      series: seriesData,
+      options: {
+        chart: {
+          id: 'creditGrowthChart',
+          stacked: true,
+          toolbar: {
+            show: false
+          },
+          height: 350,
+          type: 'area',
+          zoom: {
+            autoScaleYaxis: true
+          }
+        },
+        legend: {
+          show: true,
+          floating: false,
+          fontSize: '14px',
+          fontFamily: 'Inter',
+          fontWeight: 400,
+          offsetY: 3
+        },
+        dataLabels: {
+          enabled: false
+        },
+        stroke: {
+          curve: 'straight',
+          width: 0
+        },
+        xaxis: {
+          type: 'datetime',
+          tickAmount: 6,
+          labels: {
+            datetimeFormatter: {
+              year: 'yyyy',
+              month: "MMM 'yy",
+              day: 'dd MMM',
+              hour: 'HH:mm'
+            }
+          },
+          min: new Date(historicalData.aprData.timestamps[0] * 1000).getTime(),
+          categories: historicalData.aprData.timestamps.map((e) => e * 1000)
+        },
+        fill: {
+          colors: seriesData.map((e) => e.color),
+          type: 'solid',
+          opacity: 1
+        }
+      }
+    };
+
+    setChartData(state);
+  }, [historicalData]);
 
   /* Smart contract reads */
   const { data, isError, isLoading, refetch } = useReadContracts({
@@ -154,10 +275,224 @@ function MintAndSaving() {
 
   if (data) {
     return (
-      <div className="space-y-10">
+      <div>
         {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
 
-        <div className=" mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
+        {true ? null : (
+          <div className="mt-3 grid grid-cols-1 gap-5 opacity-50 xs:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 3xl:grid-cols-6">
+            <TooltipHorizon
+              extra="dark:text-gray-200"
+              content={
+                <>
+                  <p>
+                    Lent : <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                    <span className="font-semibold">{formatDecimal(123.456789, pegTokenDecimalsToDisplay)}</span>{' '}
+                    {pegToken?.symbol}
+                  </p>
+                  <p>
+                    Unit Price : <span className="font-semibold">{pegToken.price}</span> ${' '}
+                    <span className="text-gray-400">(DefiLlama)</span>
+                  </p>
+                  <p>
+                    Total Lent : <span className="font-semibold">{formatDecimal(123.456789 * pegToken.price, 2)}</span>{' '}
+                    $ <span className="text-gray-400">(DefiLlama)</span>
+                  </p>
+                </>
+              }
+              trigger={
+                <div>
+                  <Widget
+                    icon={<BsBank2 className="h-7 w-7" />}
+                    title={'Total Lent'}
+                    subtitle={
+                      pegToken.price === 0
+                        ? '$ -.--'
+                        : '$ ' + formatCurrencyValue(parseFloat(formatDecimal(123.456789 * pegToken.price, 2)))
+                    }
+                    extra={<QuestionMarkIcon />}
+                  />
+                </div>
+              }
+              placement="bottom"
+            />
+
+            <Widget icon={<BsBank2 className="h-7 w-7" />} title={'Lenders'} subtitle={'Soon™️'} />
+
+            <Widget icon={<BsBank2 className="h-7 w-7" />} title={'Utilization'} subtitle={'Soon™️'} />
+
+            <Widget icon={<BsBank2 className="h-7 w-7" />} title={'Current APR'} subtitle={'Soon™️'} />
+
+            <Widget icon={<BsBank2 className="h-7 w-7" />} title={'Future APR (est)'} subtitle={'Soon™️'} />
+
+            <Widget icon={<BsBank2 className="h-7 w-7" />} title={'All-time P&L'} subtitle={'Soon™️'} />
+          </div>
+        )}
+
+        <div className="mt-3 grid grid-cols-1 gap-5 xs:grid-cols-1 lg:grid-cols-6 2xl:grid-cols-6 3xl:grid-cols-6">
+          <Card
+            title="Earnings over time"
+            extra="order-1 w-full h-full sm:overflow-auto px-6 py-4 lg:col-span-4 2xl:col-span-4 3xl:col-span-4 xs:col-span-1"
+          >
+            <p className="text-sm opacity-70">
+              Hypothetical earnings of 1{' '}
+              <Image
+                className="inline-block align-text-bottom"
+                src={pegTokenLogo}
+                width={16}
+                height={16}
+                alt={pegToken?.symbol}
+              />{' '}
+              {pegToken?.symbol} lent since market launch.
+            </p>
+            <div>
+              {chartData.length === 0 ? (
+                <div className="flex h-96 items-center justify-center">
+                  <Spinner />
+                </div>
+              ) : (
+                <div>
+                  <ApexChartWrapper options={chartData.options} series={chartData.series} type="area" height={270} />
+                </div>
+              )}
+            </div>
+            <p className="text-xs italic opacity-70">
+              Unlike most lending protocols, profit in the Credit Guild is accounted only when borrowers pay their
+              interests, once we know the loans did not create bad debt. When borrowers pay interests, the profit is
+              distributed to lenders through a rebase interpolation over 30 days (your balance slowly goes up over
+              time).
+            </p>
+          </Card>
+          <Card
+            title="Current daily GUILD rewards"
+            extra="order-2 w-full h-full sm:overflow-auto px-6 py-4 lg:col-span-2 2xl:col-span-2 3xl:col-span-2 xs:col-span-1"
+          >
+            <div className="text-center">
+              <Image
+                className="mt-3 inline-block"
+                src="/img/crypto-logos/guild.png"
+                width={85}
+                height={85}
+                alt="logo"
+              />
+              {fdv ? (
+                <div className="mt-2 text-2xl">
+                  <span className="font-bold">{formatDecimal(lenderApr * 100, 0)}%</span>*
+                  <div className="text-xs font-normal">
+                    *APR assuming ${formatCurrencyValue(fdv)} FDV, GUILD is not transferable yet
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2 text-2xl font-bold">
+                  {formatDecimal(currentDailyGuildPerDollarLent * 1000, 0)} GUILD / 1k$
+                </div>
+              )}
+
+              {editingFdv ? (
+                <div className="mt-1 cursor-pointer text-xs">
+                  $
+                  <input
+                    className="border-gray-300 bg-brand-100/0 px-2 py-1 text-gray-800 focus:border-brand-400/80 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-50"
+                    type="text"
+                    value={fdv}
+                    onChange={(e) => {
+                      if (/^[0-9]*\.?[0-9]*$/i.test(e.target.value)) {
+                        let num = Number(e.target.value);
+                        if (!isNaN(num)) {
+                          setFdv(Number(e.target.value));
+                        }
+                      }
+                    }}
+                  />
+                  <span
+                    className="mr-2 cursor-pointer rounded-sm bg-brand-500 px-1 py-1 text-xs font-semibold text-white no-underline hover:bg-brand-400 dark:bg-brand-800 dark:hover:bg-brand-700"
+                    onClick={async () => {
+                      setEditingFdv(false);
+                    }}
+                  >
+                    Set Custom
+                  </span>
+                  <span
+                    className="mr-2 cursor-pointer rounded-sm bg-brand-500 px-1 py-1 text-xs font-semibold text-white no-underline hover:bg-brand-400 dark:bg-brand-800 dark:hover:bg-brand-700"
+                    onClick={async () => {
+                      setFdv(50e6);
+                      setEditingFdv(false);
+                    }}
+                  >
+                    Set to $50M
+                  </span>
+                  <span
+                    className="mr-2 cursor-pointer rounded-sm bg-gray-500 px-1 py-1 text-xs font-semibold text-white no-underline hover:bg-gray-400 dark:bg-gray-800 dark:hover:bg-gray-700"
+                    onClick={async () => {
+                      setFdv(0);
+                      setEditingFdv(false);
+                    }}
+                  >
+                    Clear
+                  </span>
+                </div>
+              ) : (
+                <div
+                  className="text-bold mt-1 cursor-pointer text-xs underline"
+                  onClick={() => {
+                    setEditingFdv(true);
+                  }}
+                >
+                  Set FDV to {fdv ? 'update' : 'display'} APY
+                </div>
+              )}
+
+              <p className="mt-3 text-xs opacity-50">
+                In addition to {pegToken?.symbol} yield, you will be earning GUILD tokens as a reward for helping to
+                bootstrap the protocol. GUILD rewards are computed per epoch of ~1 month, and airdropped directly in
+                your wallet. Current epoch is running between 19th of april to 19th of may, and a total of 10M GUILD
+                tokens will be distributed. Distribution will go 60% to lenders, 20% to borrowers, 15% to first-loss
+                capital providers (GUILD and {creditTokenSymbol}), and 5% towards liquidators, proportional to the value
+                and time spent in the protocol. Rewards are shared between all markets.
+              </p>
+              <TooltipHorizon
+                extra="dark:text-gray-200"
+                content={
+                  <>
+                    <p>
+                      GUILD airdrop : <span className="font-semibold">10M</span>
+                    </p>
+                    <p>
+                      Period duration : <span className="font-semibold">30 days</span>
+                    </p>
+                    <p>
+                      GUILD to lenders : <span className="font-semibold">60%</span>
+                    </p>
+                    <p>
+                      Daily GUILD to lenders :{' '}
+                      <span className="font-semibold">{formatCurrencyValue(dailyGuildToLenders)}</span>
+                    </p>
+                    <p>
+                      Total lent (across all markets) :{' '}
+                      <span className="font-semibold">{formatCurrencyValue(airdropData.rebasingSupplyUsd)}</span> $
+                    </p>
+                    <p>
+                      Current daily GUILD per $ lent :{' '}
+                      <span className="font-semibold">{formatDecimal(currentDailyGuildPerDollarLent, 2)}</span>
+                    </p>
+                    <p className="mt-3 italic">
+                      All values are estimates and the final result depends on the behavior
+                      <br />
+                      of protocol users between now and the end of the period.
+                    </p>
+                  </>
+                }
+                trigger={
+                  <div className="mt-3 cursor-help text-center text-xs italic opacity-50">
+                    Hover to view airdrop details
+                  </div>
+                }
+                placement="bottom"
+              />
+            </div>
+          </Card>
+        </div>
+
+        <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-2">
           <Card
             title="Savings Rate"
             extra="w-full h-full sm:overflow-auto px-6 py-4"
@@ -273,6 +608,7 @@ function MintAndSaving() {
               </div>
             </div>
           </Card>
+
           <Card title="Mint / Redeem" extra="order-1 w-full h-full sm:overflow-auto px-6 py-4">
             <MintOrRedeem
               reloadMintRedeem={setReload}

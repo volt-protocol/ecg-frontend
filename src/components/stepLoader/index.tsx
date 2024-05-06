@@ -72,6 +72,34 @@ function StepModal({
                   </ul>
                 </div>
               </div>
+
+              {step.status.toLowerCase().includes('error') ? (
+                <div className="ml-4">
+                  {step.action ? (
+                    <span
+                      className="mr-2 cursor-pointer rounded-sm bg-brand-500 px-1 py-1 text-xs font-semibold text-white hover:bg-brand-400 dark:bg-brand-800 dark:hover:bg-brand-700"
+                      onClick={async () => {
+                        await step.action();
+                      }}
+                    >
+                      Retry
+                    </span>
+                  ) : null}
+                  {step.skip ? (
+                    <span
+                      className="mr-2 cursor-pointer rounded-sm bg-brand-500 px-1 py-1 text-xs font-semibold text-white hover:bg-brand-400 dark:bg-brand-800 dark:hover:bg-brand-700"
+                      onClick={async () => {
+                        await step.skip();
+                        if (steps[index + 1]?.action) {
+                          await steps[index + 1]?.action();
+                        }
+                      }}
+                    >
+                      Skip
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ))}
         </div>

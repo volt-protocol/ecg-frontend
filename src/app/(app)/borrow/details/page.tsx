@@ -20,7 +20,7 @@ import { Tab } from '@headlessui/react';
 import clsx from 'clsx';
 import { Abi, formatUnits, erc20Abi, Address } from 'viem';
 import { eq, generateTermName } from 'utils/strings';
-import { formatDecimal, toLocaleString } from 'utils/numbers';
+import { formatDecimal, formatCurrencyValue } from 'utils/numbers';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { lendingTermConfig, getPegTokenLogo, getExplorerBaseUrl } from 'config';
 import { ToggleCredit } from 'components/switch/ToggleCredit';
@@ -30,7 +30,8 @@ import Link from 'next/link';
 
 const LendingDetails = () => {
   const { address, isConnected } = useAccount();
-  const { appMarketId, coinDetails, lendingTerms, contractsList, appChainId, fetchLendingTerms } = useAppStore();
+  const { appMarketId, coinDetails, lendingTerms, contractsList, appChainId, fetchLendingTerms, airdropData } =
+    useAppStore();
   const searchParams = useSearchParams();
   const termAddress = searchParams.get('term');
   const [lendingTermData, setLendingTermData] = useState<LendingTerms>();
@@ -40,6 +41,8 @@ const LendingDetails = () => {
   const [utilization, setUtilization] = useState<string>('');
   const [eventLoans, setEventLoans] = useState<loanObj[]>([]);
   const [currencyType, setCurrencyType] = useState<'creditToken' | 'pegToken'>('creditToken');
+  const [editingFdv, setEditingFdv] = useState(false);
+  const [fdv, setFdv] = useState(0);
 
   useEffect(() => {
     if (lendingTerms && termAddress) {
@@ -57,6 +60,15 @@ const LendingDetails = () => {
 
   const creditTokenSymbol = 'g' + pegToken?.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
+
+  // airdrop computations
+  const fdvSupply = 1e9; // 1B GUILD max supply
+  const airdropPercent = 0.01; // 1% supply
+  const airdropSize = airdropPercent * fdvSupply;
+  const dailyGuild = airdropSize / 30; // monthly periods
+  const dailyGuildToBorrowers = dailyGuild * 0.2; // 20% to lenders
+  const currentDailyGuildPerDollar = dailyGuildToBorrowers / airdropData.totalIssuanceUsd;
+  const borrowerApr = (365 * currentDailyGuildPerDollar * fdv) / 1e9;
 
   /* Smart contract reads */
   const { data, isError, isLoading, refetch } = useReadContracts({
@@ -358,15 +370,159 @@ const LendingDetails = () => {
             </div>
           ) : null}
         </div>
-        <LendingStats
-          creditMultiplier={data?.creditMultiplier}
-          lendingTermData={lendingTermData}
-          currentDebt={data?.currentDebt}
-          debtCeiling={data?.debtCeiling}
-          utilization={utilization}
-          termTotalCollateral={termTotalCollateral}
-        />
-        <h3 className="mb-4 ml-8 mt-6 text-xl font-semibold text-gray-700 dark:text-white">Loan</h3>
+        <div className="mt-3 grid gap-5 xs:grid-cols-1 lg:grid-cols-6 2xl:grid-cols-6 3xl:grid-cols-6">
+          <LendingStats
+            creditMultiplier={data?.creditMultiplier}
+            lendingTermData={lendingTermData}
+            currentDebt={data?.currentDebt}
+            debtCeiling={data?.debtCeiling}
+            utilization={utilization}
+            termTotalCollateral={termTotalCollateral}
+          />
+          <Card
+            title="Current GUILD rewards"
+            extra="order-2 w-full h-full sm:overflow-auto px-6 py-4 lg:col-span-2 2xl:col-span-2 3xl:col-span-2 xs:col-span-1"
+          >
+            <div className="text-center">
+              {fdv ? (
+                <div className="mt-3 text-xl">
+                  <Image
+                    className="mr-1 inline-block align-text-top"
+                    src="/img/crypto-logos/guild.png"
+                    width={28}
+                    height={28}
+                    alt="logo"
+                  />
+                  <span className="font-bold">{formatDecimal(borrowerApr * 100, 0)}%</span> *
+                  <div className="mt-1 text-xs font-normal opacity-50">
+                    * APR assuming ${formatCurrencyValue(fdv)} FDV, GUILD is not transferable yet
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-5 text-2xl font-bold">
+                  <Image
+                    className="mr-1 inline-block align-text-top"
+                    src="/img/crypto-logos/guild.png"
+                    width={28}
+                    height={28}
+                    alt="logo"
+                  />
+                  {formatDecimal(currentDailyGuildPerDollar * 1000, 0)} GUILD / 1k$
+                </div>
+              )}
+
+              {editingFdv ? (
+                <div className="mt-1 cursor-pointer text-xs">
+                  $
+                  <input
+                    className="border-gray-300 bg-brand-100/0 px-2 py-1 text-gray-800 focus:border-brand-400/80 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-50"
+                    type="text"
+                    style={{ width: '100px' }}
+                    value={fdv}
+                    onChange={(e) => {
+                      if (/^[0-9]*\.?[0-9]*$/i.test(e.target.value)) {
+                        let num = Number(e.target.value);
+                        if (!isNaN(num)) {
+                          setFdv(Number(e.target.value));
+                        }
+                      }
+                    }}
+                  />
+                  <span
+                    className="mr-2 cursor-pointer rounded-sm bg-brand-500 px-1 py-1 text-xs font-semibold text-white no-underline hover:bg-brand-400 dark:bg-brand-800 dark:hover:bg-brand-700"
+                    onClick={async () => {
+                      setEditingFdv(false);
+                    }}
+                  >
+                    Set Custom
+                  </span>
+                  <span
+                    className="mr-2 cursor-pointer rounded-sm bg-brand-500 px-1 py-1 text-xs font-semibold text-white no-underline hover:bg-brand-400 dark:bg-brand-800 dark:hover:bg-brand-700"
+                    onClick={async () => {
+                      setFdv(50e6);
+                      setEditingFdv(false);
+                    }}
+                  >
+                    Set to $50M
+                  </span>
+                  <span
+                    className="mr-2 cursor-pointer rounded-sm bg-gray-500 px-1 py-1 text-xs font-semibold text-white no-underline hover:bg-gray-400 dark:bg-gray-800 dark:hover:bg-gray-700"
+                    onClick={async () => {
+                      setFdv(0);
+                      setEditingFdv(false);
+                    }}
+                  >
+                    Clear
+                  </span>
+                </div>
+              ) : (
+                <div
+                  className="text-bold mt-1 cursor-pointer text-xs underline"
+                  onClick={() => {
+                    setEditingFdv(true);
+                  }}
+                >
+                  Set FDV to {fdv ? 'update' : 'display'} APY
+                </div>
+              )}
+              <TooltipHorizon
+                extra="dark:text-gray-200"
+                content={
+                  <>
+                    <p className="mb-3 text-xs opacity-70">
+                      When borrowing, you pay interest but will be earning GUILD tokens as a reward for helping to
+                      <br />
+                      bootstrap the protocol. GUILD rewards are computed per epoch of ~1 month, and airdropped
+                      <br />
+                      directly in your wallet. Current epoch is running between 19th of april to 19th of may, and a
+                      total
+                      <br />
+                      of 10M GUILD tokens will be distributed. Distribution will go 60% to lenders, 20% to borrowers,
+                      <br />
+                      15% to first-loss capital providers (GUILD and {creditTokenSymbol}), and 5% towards liquidators,
+                      proportional
+                      <br />
+                      to the value and time spent in the protocol. Rewards are shared between all markets.
+                    </p>
+                    <p>
+                      GUILD airdrop : <span className="font-semibold">10M</span>
+                    </p>
+                    <p>
+                      Period duration : <span className="font-semibold">30 days</span>
+                    </p>
+                    <p>
+                      GUILD to borrowers : <span className="font-semibold">20%</span>
+                    </p>
+                    <p>
+                      Daily GUILD to borrowers :{' '}
+                      <span className="font-semibold">{formatCurrencyValue(dailyGuildToBorrowers)}</span>
+                    </p>
+                    <p>
+                      Total borrowed (across all markets) :{' '}
+                      <span className="font-semibold">{formatCurrencyValue(airdropData.totalIssuanceUsd)}</span> $
+                    </p>
+                    <p>
+                      Current daily GUILD per $ borrowed :{' '}
+                      <span className="font-semibold">{formatDecimal(currentDailyGuildPerDollar, 2)}</span>
+                    </p>
+                    <p className="mt-3 italic">
+                      All values are estimates and the final result depends on the behavior
+                      <br />
+                      of protocol users between now and the end of the period.
+                    </p>
+                  </>
+                }
+                trigger={
+                  <div className="mt-3 cursor-help text-center text-xs italic opacity-50">
+                    Hover to view airdrop details
+                  </div>
+                }
+                placement="left"
+              />
+            </div>
+          </Card>
+        </div>
+        <h3 className="mb-4 ml-8 mt-5 text-xl font-semibold text-gray-700 dark:text-white">Loan</h3>
         <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-3 ">
           <Card extra="order-1 w-full h-full sm:overflow-auto px-6 py-4" title="New Loan">
             <CreateLoan

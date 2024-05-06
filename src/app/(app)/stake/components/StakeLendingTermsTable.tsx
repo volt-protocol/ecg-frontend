@@ -39,18 +39,13 @@ export default function StakeLendingTermsTable(props: { tableData: LendingTerms[
   );
   const creditMultiplierNumber = Number(formatUnits(creditMultiplier, 18));
   const pegTokenSymbol = pegToken?.symbol;
-  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken?.price * 100)), 0);
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken?.price)), 0);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
   const tableDataWithAdditionalInfo = tableData.map((term) => {
     const collateralAddress = term.collateral.address.toLowerCase();
     const collateralToken = coinDetails.find((item) => item.address.toLowerCase() === collateralAddress);
     const ltv = (term.borrowRatio * pegToken?.price) / (collateralToken.price || 1);
     const debtCeilling = term.debtCeiling;
-    const utilization = debtCeilling
-      ? term.currentDebt > debtCeilling
-        ? 100
-        : (term.currentDebt / debtCeilling) * 100
-      : 0;
     const annualInterest = term.issuance * term.interestRate * pegToken.price * creditMultiplierNumber;
     const guildPerCredit = term.gaugeWeight / (annualInterest || 0.00000000000001);
 
@@ -58,7 +53,6 @@ export default function StakeLendingTermsTable(props: { tableData: LendingTerms[
       ...term,
       annualInterest,
       guildPerCredit,
-      utilization,
       ltv
     };
   });
@@ -103,7 +97,7 @@ export default function StakeLendingTermsTable(props: { tableData: LendingTerms[
             height={32}
             alt={'logo'}
           />
-          <p className="text-sm font-bold text-gray-700 dark:text-white">
+          <p className="whitespace-nowrap text-sm font-bold text-gray-700 dark:text-white">
             {generateTermName(
               info.row.original.collateral.symbol,
               info.row.original.interestRate,
@@ -165,26 +159,42 @@ export default function StakeLendingTermsTable(props: { tableData: LendingTerms[
         );
       }
     }),
-    columnHelper.accessor('utilization', {
-      id: 'utilization',
+    columnHelper.accessor('currentDebt', {
+      id: 'currentDebt',
       enableSorting: true,
       header: () => (
-        <a href="#" className="text-center text-sm font-medium text-gray-500 dark:text-white">
-          Utilization
+        <a href="#" className="text-left text-sm font-medium text-gray-500 dark:text-white">
+          Current Debt
         </a>
       ),
       cell: (info: any) => {
-        const getColor = (value) => {
-          if (value >= 95) return 'text-red-700 dark:text-red-700';
-          if (value >= 70) return 'text-orange-700 dark:text-orange-700';
-          return 'text-green-700 dark:text-green-700';
-        };
-
         return (
-          <div className={`text-center text-sm font-bold ${getColor(info.row.original.utilization)}`}>
-            {info.row.original.utilization == 100 ? '≥' : ''}
-            {formatDecimal(info.row.original.utilization, 1)} %
-          </div>
+          <TooltipHorizon
+            extra=""
+            content={
+              <div className="text-gray-700 dark:text-white">
+                Debt Ceiling: <Image src={pegTokenLogo} width={22} height={22} alt={''} className="mr-1 inline-block" />
+                <span className="font-semibold">
+                  {info.row.original.debtCeiling > 999e9
+                    ? '∞'
+                    : formatDecimal(
+                        (info.row.original.debtCeiling - info.row.original.currentDebt) * creditMultiplierNumber,
+                        pegTokenDecimalsToDisplay
+                      )}
+                </span>
+                <p className="mt-2 text-sm">
+                  <i>Debt Ceiling increases as more GUILD is staked.</i>
+                </p>
+              </div>
+            }
+            trigger={
+              <div className={`text-left text-sm font-bold`}>
+                <Image src={pegTokenLogo} width={22} height={22} alt={''} className="mr-1 inline-block" />
+                {formatDecimal(info.row.original.currentDebt * creditMultiplierNumber, pegTokenDecimalsToDisplay)}
+              </div>
+            }
+            placement="top"
+          />
         );
       }
     }),
@@ -228,7 +238,7 @@ export default function StakeLendingTermsTable(props: { tableData: LendingTerms[
       id: 'guildPerCredit',
       enableSorting: true,
       header: () => (
-        <a href="#" className="block pl-5 text-left text-sm font-medium text-gray-500 dark:text-white">
+        <a href="#" className="block pl-5 text-center text-sm font-medium text-gray-500 dark:text-white">
           Stake / Interest
         </a>
       ),
@@ -279,7 +289,7 @@ export default function StakeLendingTermsTable(props: { tableData: LendingTerms[
             </div>
           }
           trigger={
-            <div className="text-left text-sm font-bold">
+            <div className="text-center text-sm font-bold">
               {info.row.original.guildPerCredit > 10e9 ? '∞' : formatCurrencyValue(info.row.original.guildPerCredit)}
             </div>
           }

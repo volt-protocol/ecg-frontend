@@ -9,6 +9,7 @@ import { TosSlice, createTosSlice } from './slices/tos';
 import { DashboardSlice, createDashboardSlice } from './slices/dashboard';
 import { persist } from 'zustand/middleware';
 import { ProtocolDataSlice, createProtocolDataSlice } from './slices/protocol-data';
+import { AirdropDataSlice, createAirdropDataSlice } from './slices/airdrop-data';
 import { ProposalsSlice, createProposalsSlice } from './slices/proposals';
 
 type StoreState = LendingTermsSlice &
@@ -19,6 +20,7 @@ type StoreState = LendingTermsSlice &
   DashboardSlice &
   ContractsListSlice &
   ProtocolDataSlice &
+  AirdropDataSlice &
   ProposalsSlice;
 
 type TosState = TosSlice;
@@ -32,6 +34,7 @@ export const useAppStore = create<StoreState, any>((...a) => ({
   ...createDashboardSlice(...a),
   ...createContractsListSlice(...a),
   ...createProtocolDataSlice(...a),
+  ...createAirdropDataSlice(...a),
   ...createProposalsSlice(...a)
 }));
 

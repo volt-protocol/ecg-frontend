@@ -72,8 +72,68 @@ function MintOrRedeem({
   const createSteps = (): Step[] => {
     const baseSteps = [
       { name: `Check ${pegToken.symbol} allowance`, status: 'Not Started' },
-      { name: `Approve ${pegToken.symbol}`, status: 'Not Started' },
-      { name: 'Mint', status: 'Not Started' }
+      {
+        name: `Approve ${pegToken.symbol}`,
+        status: 'Not Started',
+        action: async function () {
+          try {
+            const approvalSuccess = await approvalStepsFlow(
+              address,
+              psmAddress,
+              pegTokenAddress,
+              parseUnits(value.toString(), pegToken.decimals),
+              appChainId,
+              updateStepStatus,
+              `Check ${pegToken.symbol} allowance`,
+              `Approve ${pegToken.symbol}`,
+              wagmiConfig
+            );
+
+            if (!approvalSuccess) {
+              updateStepStatus(`Approve ${pegToken.symbol}`, 'Error');
+              return false;
+            }
+            return true;
+          } catch (e) {
+            console.log(e);
+            updateStepStatus(`Approve ${pegToken.symbol}`, 'Error');
+            return false;
+          }
+        },
+        skip: async function () {
+          updateStepStatus(`Approve ${pegToken.symbol}`, 'Success');
+          return true;
+        }
+      },
+      {
+        name: 'Mint',
+        status: 'Not Started',
+        action: async function () {
+          try {
+            updateStepStatus('Mint', 'In Progress');
+            const hash = await writeContract(wagmiConfig, {
+              __mode: 'prepared',
+              address: psmAddress,
+              abi: PsmUsdcABI,
+              functionName: 'mint',
+              args: [address, parseUnits(value.toString(), pegToken.decimals)]
+            });
+            const checkmint = await waitForTransactionReceipt(wagmiConfig, {
+              hash: hash
+            });
+
+            if (checkmint.status === 'success') {
+              updateStepStatus('Mint', 'Success');
+              reloadMintRedeem(true);
+              setValue('');
+              return;
+            } else updateStepStatus('Mint', 'Error');
+          } catch (e) {
+            updateStepStatus('Mint', 'Error');
+            console.log(e);
+          }
+        }
+      }
     ];
 
     return baseSteps;
@@ -81,6 +141,9 @@ function MintOrRedeem({
 
   const [steps, setSteps] = useState<Step[]>(createSteps());
 
+  const getStep = (stepName: string) => {
+    return steps.findLast((x) => x.name == stepName);
+  };
   const updateStepStatus = (stepName: string, status: Step['status']) => {
     setSteps((prevSteps) => prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step)));
   };
@@ -91,50 +154,8 @@ function MintOrRedeem({
   /* Smart contract writes */
   async function mint() {
     setShowModal(true);
-    try {
-      const approvalSuccess = await approvalStepsFlow(
-        address,
-        psmAddress,
-        pegTokenAddress,
-        parseUnits(value.toString(), pegToken.decimals),
-        appChainId,
-        updateStepStatus,
-        `Check ${pegToken.symbol} allowance`,
-        `Approve ${pegToken.symbol}`,
-        wagmiConfig
-      );
-
-      if (!approvalSuccess) {
-        updateStepStatus(`Approve ${pegToken.symbol}`, 'Error');
-        return;
-      }
-    } catch (e) {
-      console.log(e);
-      updateStepStatus(`Approve ${pegToken.symbol}`, 'Error');
-      return;
-    }
-    try {
-      updateStepStatus('Mint', 'In Progress');
-      const hash = await writeContract(wagmiConfig, {
-        address: psmAddress,
-        abi: PsmUsdcABI,
-        functionName: 'mint',
-        args: [address, parseUnits(value.toString(), pegToken.decimals)]
-      });
-      const checkmint = await waitForTransactionReceipt(wagmiConfig, {
-        hash: hash
-      });
-
-      if (checkmint.status === 'success') {
-        updateStepStatus('Mint', 'Success');
-        reloadMintRedeem(true);
-        setValue('');
-        return;
-      } else updateStepStatus('Mint', 'Error');
-    } catch (e) {
-      updateStepStatus('Mint', 'Error');
-      console.log(e);
-    }
+    if (!(await steps[1].action())) return;
+    if (!(await steps[2].action())) return;
   }
 
   async function mintAndEnterRebase() {

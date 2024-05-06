@@ -43,7 +43,7 @@ export default function LendingStats({
   const creditMultiplierNumber = Number(formatUnits(creditMultiplier, 18));
 
   return (
-    <div className="mt-3 grid grid-cols-1 gap-5 xs:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 3xl:grid-cols-6">
+    <div className="order-1 grid h-full w-full grid-cols-1 gap-5 xs:col-span-1 xs:grid-cols-2 sm:overflow-auto lg:col-span-4 lg:grid-cols-2 2xl:col-span-4 2xl:grid-cols-2 3xl:col-span-4 3xl:grid-cols-3">
       <TooltipHorizon
         extra="dark:text-gray-200"
         content={

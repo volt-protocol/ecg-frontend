@@ -2,7 +2,8 @@ import axios, { AxiosResponse } from 'axios';
 import { getApiBaseUrl } from 'config';
 import { MintRedeemLogs } from 'lib/logs/mint-redeem';
 import { VoteLogs } from 'lib/logs/votes';
-import { useAppStore } from 'store';
+import { HistoricalAprData, HistoricalCreditMultiplier, HistoricalLoanBorrow } from 'types/history';
+import { HttpGet } from 'utils/HttpHelper';
 import { formatDecimal } from 'utils/numbers';
 import { Address } from 'viem';
 import { StateCreator } from 'zustand';
@@ -80,11 +81,32 @@ const getTVL = async (marketId: number, chainId: number) => {
   };
 };
 
+const getAprData = async (marketId: number, chainId: number) => {
+  const url = getApiBaseUrl(chainId) + `/history/APR?marketId=${marketId}`;
+  const data = await HttpGet<HistoricalAprData>(url);
+  return data;
+};
+
+const GetLoanBorrow = async (marketId: number, chainId: number) => {
+  const url = getApiBaseUrl(chainId) + `/history/LoanBorrow?marketId=${marketId}`;
+  const data = await HttpGet<HistoricalLoanBorrow>(url);
+  return data;
+};
+
+const GetCreditMultiplier = async (marketId: number, chainId: number) => {
+  const url = getApiBaseUrl(chainId) + `/history/CreditMultiplier?marketId=${marketId}`;
+  const data = await HttpGet<HistoricalCreditMultiplier>(url);
+  return data;
+};
+
 export interface HistoricalData {
   creditSupply: { values: string[]; timestamps: string[] };
   creditTotalIssuance: { values: string[]; timestamps: string[] };
   averageInterestRate: { values: string[]; timestamps: string[] };
   tvl: { values: string[]; timestamps: string[] };
+  aprData: HistoricalAprData;
+  loanBorrow: HistoricalLoanBorrow;
+  creditMultiplier: HistoricalCreditMultiplier;
 }
 
 export interface DashboardSlice {
@@ -162,12 +184,18 @@ export const createDashboardSlice: StateCreator<DashboardSlice> = (set, get) => 
     const creditTotalIssuanceData = await getCreditTotalIssuance(marketId, chainId);
     const averageInterestRateData = await getAverageInterestRate(marketId, chainId);
     const tvlData = await getTVL(marketId, chainId);
+    const aprData = await getAprData(marketId, chainId);
+    const loanBorrow = await GetLoanBorrow(marketId, chainId);
+    const creditMultiplier = await GetCreditMultiplier(marketId, chainId);
 
-    const data = {
+    const data: HistoricalData = {
       creditSupply: creditSupplyData,
       creditTotalIssuance: creditTotalIssuanceData,
       averageInterestRate: averageInterestRateData,
-      tvl: tvlData
+      tvl: tvlData,
+      aprData: aprData,
+      loanBorrow: loanBorrow,
+      creditMultiplier: creditMultiplier
     };
 
     set({ historicalData: data });

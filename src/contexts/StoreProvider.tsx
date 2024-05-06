@@ -17,6 +17,7 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
     fetchHistoricalData,
     fetchContractsList,
     fetchProtocolData,
+    fetchAirdropData,
     fetchProposals,
     appMarketId,
     appChainId
@@ -34,7 +35,8 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
         fetchLoans(appMarketId, appChainId),
         fetchAuctions(appMarketId, appChainId),
         fetchProposals(appMarketId, appChainId),
-        fetchProtocolData(appMarketId, appChainId, contractsList)
+        fetchProtocolData(appMarketId, appChainId, contractsList),
+        fetchAirdropData(appChainId)
       ]);
       setIsLoading(false);
     };

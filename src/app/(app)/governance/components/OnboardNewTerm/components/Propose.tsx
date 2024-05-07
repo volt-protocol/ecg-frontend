@@ -29,6 +29,7 @@ export type ProposedTerm = {
   collateralToken: Address;
   maxDelayBetweenPartialRepay: string;
   minPartialRepayPercent: string;
+  auctionHouse: string;
 };
 
 export default function Propose() {
@@ -87,18 +88,7 @@ export default function Propose() {
   const fetchProposableTerms = async () => {
     setLoading(true);
 
-    const terms: {
-      termAddress: `0x${string}`;
-      collateralTokenSymbol: any;
-      termName: string;
-      collateralToken: `0x${string}`;
-      openingFee: number;
-      interestRate: string;
-      borrowRatio: number;
-      maxDelayBetweenPartialRepay: string;
-      minPartialRepayPercent: string;
-      hardCap: string;
-    }[] = [];
+    const terms: ProposedTerm[] = [];
 
     for (const p of proposals.filter((_) => _.status == 'created')) {
       terms.push({
@@ -111,7 +101,8 @@ export default function Propose() {
         borrowRatio: p.borrowRatio,
         maxDelayBetweenPartialRepay: formatDecimal(p.maxDelayBetweenPartialRepay / SECONDS_IN_DAY, 1),
         minPartialRepayPercent: formatDecimal(p.minPartialRepayPercent * 100, 4),
-        hardCap: p.hardCap
+        hardCap: p.hardCap,
+        auctionHouse: p.auctionHouse
       });
     }
 
@@ -246,6 +237,20 @@ export default function Propose() {
                     <div className="px-1 py-0.5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                       <dt className="font-medium ">Hard Cap</dt>
                       <dd className="mt-1 leading-6  sm:col-span-2 sm:mt-0">{selectedTerm?.hardCap}</dd>
+                    </div>
+                    <div className="px-1 py-0.5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                      <dt className="font-medium ">Auction house</dt>
+                      <dd className="mt-1 leading-6  sm:col-span-2 sm:mt-0">
+                        <a
+                          className="flex items-center gap-1 transition-all duration-150 ease-in-out hover:text-brand-500"
+                          href={getExplorerBaseUrl(appChainId) + '/address/' + selectedTerm?.auctionHouse}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {selectedTerm?.auctionHouse.slice(0, 4) + '...' + selectedTerm?.auctionHouse.slice(-4)}{' '}
+                          <MdOpenInNew />
+                        </a>
+                      </dd>
                     </div>
                   </dl>
                 </div>

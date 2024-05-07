@@ -43,6 +43,9 @@ export default function Create() {
   const { contractsList, appMarketId, coinDetails, appChainId, fetchProposalsUntilBlock } = useAppStore();
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedPeriod, setSelectedPeriod] = useState<string>('None');
+  const [selectedAuctionHouse, setSelectedAuctionHouse] = useState<string>(
+    contractsList.auctionHouses[0].auctionHouseName
+  );
   const { register, handleSubmit, watch, reset, formState } = useForm({
     resolver: yupResolver(schema),
     mode: 'onChange'
@@ -142,7 +145,9 @@ export default function Create() {
       maxDelayBetweenPartialRepay: maxDelayBetweenPartialRepay,
       minPartialRepayPercent: minPartialRepayPercent,
       openingFee: parseEther((data.openingFee / 100).toString()),
-      hardCap: parseEther(data.hardCap.toString())
+      hardCap: parseEther(data.hardCap.toString()),
+      auctionHouseAddress: contractsList.auctionHouses.find((_) => _.auctionHouseName === selectedAuctionHouse)
+        ?.auctionHouseAddress
     };
 
     await createTerm(args);
@@ -151,6 +156,7 @@ export default function Create() {
   /* Smart contract Write & Read */
 
   const createTerm = async (args: any): Promise<void> => {
+    console.log('createTerm args', args);
     //Init Steps
     setSteps([{ name: 'Create New Term', status: 'Not Started' }]);
 
@@ -190,7 +196,7 @@ export default function Create() {
         args: [
           appMarketId, //gauge type
           contractsList.lendingTermV1ImplementationAddress, //implementation
-          contractsList.auctionHouseAddress, //auction house
+          args.auctionHouseAddress, //auction house
           encodedLendingTermParameters
         ]
       });
@@ -357,6 +363,29 @@ export default function Create() {
             </div>
           </div>
           <ErrorMessage title={formState.errors.borrowRatio?.message} variant="error" />
+
+          <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">
+            <TooltipHorizon
+              extra=""
+              trigger={
+                <label htmlFor="auctionHouse" className="text-md block font-medium leading-6 sm:pt-1.5">
+                  Auction house <BiInfoCircle className="ml-1 inline" />
+                </label>
+              }
+              content={<p>Defines the auction duration when a loan is called</p>}
+              placement="top"
+            />
+
+            <div className="mt-2 sm:col-span-2 sm:mt-0">
+              <DropdownSelect
+                options={contractsList.auctionHouses.map((_) => _.auctionHouseName)}
+                selectedOption={selectedAuctionHouse}
+                onChange={setSelectedAuctionHouse}
+                getLabel={(item) => item}
+                extra={'w-full'}
+              />
+            </div>
+          </div>
           <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">
             <TooltipHorizon
               extra=""

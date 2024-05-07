@@ -22,7 +22,7 @@ export type ContractsList = {
   marketContracts: { [marketId: number]: MarketContractList };
 
   // TODO, USE THEM
-  auctionHouseAddresses: Address[];
+  auctionHouses: {auctionHouseName: string, auctionHouseAddress: Address}[];
   lendingTermImplementationAddresses: Address[];
 };
 
@@ -78,9 +78,14 @@ export const createContractsListSlice: StateCreator<ContractsListSlice> = (set, 
         lendingTermFactoryAddress: contractJsonFile.find((contract) => contract.name === 'LENDING_TERM_FACTORY').addr,
         guildAddress: contractJsonFile.find((contract) => contract.name === 'ERC20_GUILD').addr,
         auctionHouseAddress: contractJsonFile.find((contract) => contract.name === 'AUCTION_HOUSE_12H').addr,
-        auctionHouseAddresses: contractJsonFile
+        auctionHouses: contractJsonFile
           .filter((contract) => contract.name.startsWith('AUCTION_HOUSE_'))
-          .map((_) => _.addr),
+          .map((_) => {
+            return {
+              auctionHouseName: _.name,
+              auctionHouseAddress: _.addr
+            };
+          }),
         lendingTermImplementationAddresses: contractJsonFile
           .filter((contract) => contract.name.startsWith('LENDING_TERM_'))
           .map((_) => _.addr),

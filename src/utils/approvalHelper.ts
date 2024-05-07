@@ -26,6 +26,8 @@ export async function approvalStepsFlow(
     args: [userAddress, spenderAddress]
   })) as bigint;
 
+  console.log('allowance', allowance);
+  console.log('amountToApprove', amountToApprove);
   updateStepStatus(checkApprovalStepName, 'Success');
 
   if (allowance < amountToApprove) {

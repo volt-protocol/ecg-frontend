@@ -71,6 +71,14 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
       logo: '/img/crypto-logos/weth.png'
     },
     {
+      key: 'arb-4',
+      pegToken: 'ARB',
+      name: 'ARB',
+      marketId: 4,
+      networkId: 42161,
+      logo: '/img/crypto-logos/arb.png'
+    },
+    {
       key: 'usdc-1',
       pegToken: 'USDC',
       name: 'USDC',

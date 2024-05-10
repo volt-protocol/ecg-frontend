@@ -143,6 +143,14 @@ if (process.env.NEXT_PUBLIC_APP_ENV.toLowerCase() == 'production') {
         marketId: 1,
         networkId: 42161,
         logo: '/img/crypto-logos/usdc.png'
+      },
+      {
+        key: 'arb-4',
+        pegToken: 'ARB',
+        name: 'ARB',
+        marketId: 4,
+        networkId: 42161,
+        logo: '/img/crypto-logos/arb.png'
       }
     ]
   };

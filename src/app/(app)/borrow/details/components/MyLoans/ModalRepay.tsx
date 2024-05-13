@@ -100,7 +100,7 @@ export default function ModalRepay({
   const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
 
-    // Vérifier si la valeur saisie ne contient que des numéros
+    // Verify input is a number
     if (/^[0-9]+\.?[0-9]*$/i.test(inputValue)) {
       currencyType == 'pegToken'
         ? (parseUnits(inputValue, pegToken.decimals) * normalizer) / BigInt('1' + '0'.repeat(18)) > rowData.loanDebt

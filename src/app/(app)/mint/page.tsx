@@ -643,7 +643,7 @@ function MintAndSaving() {
                 height={16}
                 alt={pegToken?.symbol}
               />{' '}
-              {pegToken?.symbol} lent since market launch.
+              {pegToken?.symbol} in the savings rate since market launch.
             </p>
             <div>
               {chartData.length === 0 ? (

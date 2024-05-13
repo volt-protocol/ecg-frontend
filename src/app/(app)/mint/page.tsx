@@ -607,6 +607,7 @@ function MintAndSaving() {
                   Unit Price : <span className="font-semibold">{pegToken.price}</span> ${' '}
                   <span className="text-gray-400">(DefiLlama)</span>
                 </p>
+                <p>This corresponds to the gray area on the chart.</p>
               </>
             }
             trigger={

@@ -4,8 +4,8 @@ import Disconnected from 'components/error/disconnected';
 import React, { useEffect, useState } from 'react';
 import Card from 'components/card';
 import { useAccount, useReadContracts } from 'wagmi';
-import { ProfitManagerABI, CreditABI } from 'lib/contracts';
-import { waitForTransactionReceipt, writeContract } from '@wagmi/core';
+import { ProfitManagerABI, CreditABI, WethABI } from 'lib/contracts';
+import { waitForTransactionReceipt, writeContract, getBalance } from '@wagmi/core';
 import { formatCurrencyValue, formatDecimal } from 'utils/numbers';
 import { toastError } from 'components/toast';
 import MintOrRedeem from './components/MintOrRedeem';
@@ -13,7 +13,7 @@ import { Step } from 'components/stepLoader/stepType';
 import StepModal from 'components/stepLoader';
 import clsx from 'clsx';
 import { Switch } from '@headlessui/react';
-import { formatUnits, Address, erc20Abi } from 'viem';
+import { formatUnits, Address, erc20Abi, parseUnits } from 'viem';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
 import Spinner from 'components/spinner';
@@ -23,6 +23,7 @@ import { TooltipHorizon, QuestionMarkIcon } from 'components/tooltip';
 import { BsBank2 } from 'react-icons/bs';
 import Widget from 'components/widget/Widget';
 import { ApexChartWrapper } from 'components/charts/ApexChartWrapper';
+import DefiInputBox from 'components/box/DefiInputBox';
 
 function MintAndSaving() {
   const { appMarketId, appChainId, contractsList, coinDetails, historicalData, airdropData } = useAppStore();
@@ -31,6 +32,9 @@ function MintAndSaving() {
   const [showModal, setShowModal] = useState(false);
   const [editingFdv, setEditingFdv] = useState(false);
   const [fdv, setFdv] = useState(0);
+  const [wrapValue, setWrapValue] = useState<string>('');
+  const [unwrapValue, setUnwrapValue] = useState<string>('');
+  const [userBalance, setUserBalance] = useState<bigint>(BigInt(0));
   const [chartData, setChartData] = useState<any>([]);
 
   const createSteps = (): Step[] => {
@@ -227,13 +231,114 @@ function MintAndSaving() {
   });
 
   useEffect(() => {
+    if (!isConnected) return;
+    getBalance(wagmiConfig, {
+      address,
+      chainId: appChainId as any
+    }).then(function (balance) {
+      setUserBalance(balance.value);
+    });
+  }, [reload]);
+
+  useEffect(() => {
     if (reload) {
       refetch();
       setReload(false);
     }
   }, [reload]);
 
+  const handleWrapInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+
+    // Vérifier si la valeur saisie ne contient que des numéros
+    if (/^[0-9]*\.?[0-9]*$/i.test(inputValue)) {
+      setWrapValue(inputValue as string);
+    }
+  };
+
+  const handleUnwrapInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+
+    // Vérifier si la valeur saisie ne contient que des numéros
+    if (/^[0-9]*\.?[0-9]*$/i.test(inputValue)) {
+      setUnwrapValue(inputValue as string);
+    }
+  };
+
+  async function wrap(): Promise<void> {
+    if (!isConnected) {
+      toastError('Please connect your wallet');
+      return;
+    }
+    setSteps([{ name: 'Wrap', status: 'Not Started' }]);
+    const updateStepStatus = (stepName: string, status: Step['status']) => {
+      setSteps((prevSteps) => prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step)));
+    };
+
+    try {
+      setShowModal(true);
+      updateStepStatus('Wrap', 'In Progress');
+
+      const hash = await writeContract(wagmiConfig, {
+        address: pegTokenAddress,
+        abi: WethABI,
+        functionName: 'deposit',
+        value: parseUnits(wrapValue, 18)
+      });
+
+      const check = await waitForTransactionReceipt(wagmiConfig, {
+        hash: hash
+      });
+      if (check.status != 'success') {
+        updateStepStatus('Wrap', 'Error');
+        return;
+      }
+      updateStepStatus('Wrap', 'Success');
+      setReload(true);
+    } catch (error) {
+      updateStepStatus('Wrap', 'Error');
+      console.log(error);
+    }
+  }
+
+  async function unwrap(): Promise<void> {
+    if (!isConnected) {
+      toastError('Please connect your wallet');
+      return;
+    }
+    setSteps([{ name: 'Unwrap', status: 'Not Started' }]);
+    const updateStepStatus = (stepName: string, status: Step['status']) => {
+      setSteps((prevSteps) => prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step)));
+    };
+
+    try {
+      setShowModal(true);
+      updateStepStatus('Unwrap', 'In Progress');
+
+      const hash = await writeContract(wagmiConfig, {
+        address: pegTokenAddress,
+        abi: WethABI,
+        functionName: 'withdraw',
+        args: [parseUnits(unwrapValue, 18)]
+      });
+
+      const check = await waitForTransactionReceipt(wagmiConfig, {
+        hash: hash
+      });
+      if (check.status != 'success') {
+        updateStepStatus('Unwrap', 'Error');
+        return;
+      }
+      updateStepStatus('Unwrap', 'Success');
+      setReload(true);
+    } catch (error) {
+      updateStepStatus('Unwrap', 'Error');
+      console.log(error);
+    }
+  }
+
   async function saving(rebaseMode: string): Promise<void> {
+    setSteps(createSteps());
     if (!isConnected) {
       toastError('Please connect your wallet');
       return;
@@ -491,6 +596,75 @@ function MintAndSaving() {
             </div>
           </Card>
         </div>
+
+        {pegTokenAddress == '0x82af49447d8a07e3bd95bd0d56f35241523fbab1' ? (
+          <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-2">
+            <Card title="" extra="order-1 w-full h-full sm:overflow-auto px-6 py-4">
+              <h3 className="mb-2 text-xl font-medium text-gray-800 dark:text-white">
+                Wrap ETH to WETH
+                <span className="ml-5 align-middle text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Available: {formatDecimal(Number(formatUnits(userBalance, 18)), pegTokenDecimalsToDisplay)}{' '}
+                  <button
+                    className="inline text-sm font-medium text-brand-500 hover:text-brand-400"
+                    onClick={(e) => setWrapValue(formatUnits(userBalance, 18))}
+                  >
+                    Set to max
+                  </button>
+                </span>
+                {wrapValue ? (
+                  <button
+                    className="float-right inline rounded-sm bg-brand-500 px-3 py-1 text-sm font-medium hover:bg-brand-400"
+                    onClick={(e) => wrap()}
+                  >
+                    Wrap
+                  </button>
+                ) : null}
+              </h3>
+              <DefiInputBox
+                topLabel=""
+                currencyLogo="/img/crypto-logos/eth.png"
+                currencySymbol="ETH"
+                placeholder="0"
+                pattern="^[0-9]*[.,]?[0-9]*$"
+                inputSize="text-xl sm:text-2xl"
+                value={wrapValue}
+                onChange={handleWrapInputChange}
+              />
+            </Card>
+            <Card title="" extra="order-1 w-full h-full sm:overflow-auto px-6 py-4">
+              <h3 className="mb-2 text-xl font-medium text-gray-800 dark:text-white">
+                Unwrap WETH to ETH
+                <span className="ml-5 align-middle text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Available: {formatDecimal(Number(formatUnits(data.pegTokenBalance, 18)), pegTokenDecimalsToDisplay)}{' '}
+                  <button
+                    className="inline text-sm font-medium text-brand-500 hover:text-brand-400"
+                    onClick={(e) => setUnwrapValue(formatUnits(data.pegTokenBalance, 18))}
+                  >
+                    Set to max
+                  </button>
+                </span>
+                {unwrapValue ? (
+                  <button
+                    className="float-right inline rounded-sm bg-brand-500 px-3 py-1 text-sm font-medium hover:bg-brand-400"
+                    onClick={(e) => unwrap()}
+                  >
+                    Unwrap
+                  </button>
+                ) : null}
+              </h3>
+              <DefiInputBox
+                topLabel=""
+                currencyLogo="/img/crypto-logos/weth.png"
+                currencySymbol="WETH"
+                placeholder="0"
+                pattern="^[0-9]*[.,]?[0-9]*$"
+                inputSize="text-xl sm:text-2xl"
+                value={unwrapValue}
+                onChange={handleUnwrapInputChange}
+              />
+            </Card>
+          </div>
+        ) : null}
 
         <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-2">
           <Card

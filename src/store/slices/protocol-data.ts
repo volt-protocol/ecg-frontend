@@ -30,6 +30,11 @@ export interface ProtocolDataSlice {
   fetchProtocolData: (marketId: number, chainId: number, contractsList: ContractsList) => Promise<void>;
 }
 
+export interface ApiMarketDataResponse {
+  creditMultiplier: string;
+  creditHolderCount: number;
+}
+
 export const createProtocolDataSlice: StateCreator<ProtocolDataSlice> = (set, get) => ({
   creditHolderCount: 0,
   creditMultiplier: BigInt(0),
@@ -104,7 +109,7 @@ export const createProtocolDataSlice: StateCreator<ProtocolDataSlice> = (set, ge
     });
 
     const apiUrl = getApiBaseUrl(chainId) + `/markets/${marketId}/marketdata`;
-    const res = await HttpGet<any>(apiUrl);
+    const res = await HttpGet<ApiMarketDataResponse>(apiUrl);
 
     set({
       creditHolderCount: res.creditHolderCount as number,

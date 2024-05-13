@@ -73,9 +73,10 @@ function MintOrRedeem({
     const baseSteps = [
       { name: `Check ${pegToken.symbol} allowance`, status: 'Not Started' },
       { name: `Approve ${pegToken.symbol}`, status: 'Not Started' },
-      { name: 'Mint', status: 'Not Started' }];
+      { name: 'Mint', status: 'Not Started' }
+    ];
 
-      return baseSteps;
+    return baseSteps;
   };
 
   const [steps, setSteps] = useState<Step[]>(createSteps());
@@ -138,7 +139,7 @@ function MintOrRedeem({
       console.log(e);
     }
   }
-  
+
   async function mintAndEnterRebase() {
     setShowModal(true);
     try {
@@ -245,8 +246,8 @@ function MintOrRedeem({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
 
-    // Vérifier si la valeur saisie ne contient que des numéros
-    if (/^[0-9]*\.?[0-9]*$/i.test(inputValue)) {
+    // Verify input is a number
+    if (/^[0-9]+\.?[0-9]*$/i.test(inputValue)) {
       setValue(inputValue as string);
     }
   };

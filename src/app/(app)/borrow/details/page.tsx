@@ -420,7 +420,7 @@ const LendingDetails = () => {
                     style={{ width: '100px' }}
                     value={fdv}
                     onChange={(e) => {
-                      if (/^[0-9]*\.?[0-9]*$/i.test(e.target.value)) {
+                      if (/^[0-9]+\.?[0-9]*$/i.test(e.target.value)) {
                         let num = Number(e.target.value);
                         if (!isNaN(num)) {
                           setFdv(Number(e.target.value));

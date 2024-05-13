@@ -250,8 +250,8 @@ function MintAndSaving() {
   const handleWrapInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
 
-    // Vérifier si la valeur saisie ne contient que des numéros
-    if (/^[0-9]*\.?[0-9]*$/i.test(inputValue)) {
+    // Verify input is a number
+    if (/^[0-9]+\.?[0-9]*$/i.test(inputValue)) {
       setWrapValue(inputValue as string);
     }
   };
@@ -259,8 +259,8 @@ function MintAndSaving() {
   const handleUnwrapInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
 
-    // Vérifier si la valeur saisie ne contient que des numéros
-    if (/^[0-9]*\.?[0-9]*$/i.test(inputValue)) {
+    // Verify input is a number
+    if (/^[0-9]+\.?[0-9]*$/i.test(inputValue)) {
       setUnwrapValue(inputValue as string);
     }
   };
@@ -500,7 +500,7 @@ function MintAndSaving() {
                     type="text"
                     value={fdv}
                     onChange={(e) => {
-                      if (/^[0-9]*\.?[0-9]*$/i.test(e.target.value)) {
+                      if (/^[0-9]+\.?[0-9]*$/i.test(e.target.value)) {
                         let num = Number(e.target.value);
                         if (!isNaN(num)) {
                           setFdv(Number(e.target.value));

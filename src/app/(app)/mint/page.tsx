@@ -26,12 +26,15 @@ import { ApexChartWrapper } from 'components/charts/ApexChartWrapper';
 import DefiInputBox from 'components/box/DefiInputBox';
 
 function MintAndSaving() {
-  const { appMarketId, appChainId, contractsList, coinDetails, historicalData, airdropData } = useAppStore();
+  const { appMarketId, appChainId, contractsList, coinDetails, historicalData, airdropData, creditHolderCount } =
+    useAppStore();
   const { address, isConnected } = useAccount();
   const [reload, setReload] = React.useState<boolean>(false);
   const [showModal, setShowModal] = useState(false);
   const [editingFdv, setEditingFdv] = useState(false);
   const [fdv, setFdv] = useState(0);
+  const [apr, setApr] = useState(0);
+  const [aprFuture, setAprFuture] = useState(0);
   const [wrapValue, setWrapValue] = useState<string>('');
   const [unwrapValue, setUnwrapValue] = useState<string>('');
   const [userBalance, setUserBalance] = useState<bigint>(BigInt(0));
@@ -70,7 +73,11 @@ function MintAndSaving() {
 
     const interpolatingRebaseRewards: number[] = [];
     const unpaidInterestPerUnit: number[] = [];
-    historicalData.aprData.timestamps.forEach((t, i) => {
+    let dxAPR: number = 0;
+    let dyAPR: number = 0;
+    let dxAPRFuture: number = 0;
+    let dyAPRFuture: number = 0;
+    historicalData.aprData.timestamps.forEach((t, i, arr) => {
       // compute unpaid interest per unit of credit token
       const unpaidInterest =
         historicalData.loanBorrow.values.totalUnpaidInterests[i] /
@@ -86,7 +93,31 @@ function MintAndSaving() {
       interpolatingRebaseRewards.push(
         Number(formatDecimal(interpolatingRewardsPerCredit, pegTokenDecimalsToDisplay * 2))
       );
+
+      // variables to compute apr
+      if (i != 0 && t > (Date.now() - 24 * 36e5) / 1000) {
+        const dx = t - arr[i - 1];
+        const dy = historicalData.aprData.values.sharePrice[i] - historicalData.aprData.values.sharePrice[i - 1];
+        if (dy > 0) {
+          dxAPR += dx;
+          dyAPR += dy;
+        }
+        const dyUnpaid = unpaidInterestPerUnit[i] - unpaidInterestPerUnit[i - 1];
+        const dyInterpolating = interpolatingRebaseRewards[i] - interpolatingRebaseRewards[i - 1];
+        const dyFuture = dy + dyUnpaid + dyInterpolating;
+        if (dyFuture > 0) {
+          dxAPRFuture += dx;
+          dyAPRFuture += dyFuture;
+        }
+      }
     });
+
+    let _apr = 100 * ((1 + (dyAPR * 31536000) / dxAPR) / 1 - 1);
+    if (isNaN(_apr)) _apr = 0;
+    setApr(_apr);
+    let _aprFuture = 100 * ((1 + (dyAPRFuture * 31536000) / dxAPRFuture) / 1 - 1);
+    if (isNaN(_aprFuture)) _aprFuture = 0;
+    setAprFuture(_aprFuture);
 
     const seriesData = [
       {
@@ -97,21 +128,21 @@ function MintAndSaving() {
         color: '#212121'
       },
       {
-        name: 'Pending Interest',
-        data: unpaidInterestPerUnit,
-        color: '#757575'
-      },
-      {
         name: 'Distributed through rebase',
         data: historicalData.aprData.values.sharePrice.map((e) =>
           Number(formatDecimal(e - 1, pegTokenDecimalsToDisplay * 2))
         ),
-        color: '#388E3C'
+        color: '#689F38'
       },
       {
         name: 'Interpolating rebase rewards',
         data: interpolatingRebaseRewards,
-        color: '#4CAF50'
+        color: '#FFC107'
+      },
+      {
+        name: 'Pending Interest',
+        data: unpaidInterestPerUnit,
+        color: '#757575'
       }
     ];
 
@@ -383,55 +414,219 @@ function MintAndSaving() {
       <div>
         {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
 
-        {true ? null : (
-          <div className="mt-3 grid grid-cols-1 gap-5 opacity-50 xs:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 3xl:grid-cols-6">
-            <TooltipHorizon
-              extra="dark:text-gray-200"
-              content={
-                <>
-                  <p>
-                    Lent : <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
-                    <span className="font-semibold">{formatDecimal(123.456789, pegTokenDecimalsToDisplay)}</span>{' '}
-                    {pegToken?.symbol}
-                  </p>
-                  <p>
-                    Unit Price : <span className="font-semibold">{pegToken.price}</span> ${' '}
-                    <span className="text-gray-400">(DefiLlama)</span>
-                  </p>
-                  <p>
-                    Total Lent : <span className="font-semibold">{formatDecimal(123.456789 * pegToken.price, 2)}</span>{' '}
-                    $ <span className="text-gray-400">(DefiLlama)</span>
-                  </p>
-                </>
-              }
-              trigger={
-                <div>
-                  <Widget
-                    icon={<BsBank2 className="h-7 w-7" />}
-                    title={'Total Lent'}
-                    subtitle={
-                      pegToken.price === 0
-                        ? '$ -.--'
-                        : '$ ' + formatCurrencyValue(parseFloat(formatDecimal(123.456789 * pegToken.price, 2)))
-                    }
-                    extra={<QuestionMarkIcon />}
-                  />
-                </div>
-              }
-              placement="bottom"
-            />
+        <div className="mt-3 grid grid-cols-1 gap-5 xs:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 3xl:grid-cols-6">
+          <TooltipHorizon
+            extra="dark:text-gray-200"
+            content={
+              <>
+                <p>
+                  Lent : <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                  <span className="font-semibold">
+                    {formatDecimal(Number(historicalData.creditSupply.values.slice(-1)[0]), pegTokenDecimalsToDisplay)}
+                  </span>{' '}
+                  {pegToken?.symbol}
+                </p>
+                <p>
+                  Unit Price : <span className="font-semibold">{pegToken.price}</span> ${' '}
+                  <span className="text-gray-400">(DefiLlama)</span>
+                </p>
+                <p>
+                  Total Lent :{' '}
+                  <span className="font-semibold">
+                    {formatDecimal(Number(historicalData.creditSupply.values.slice(-1)[0]) * pegToken.price, 2)}
+                  </span>{' '}
+                  $ <span className="text-gray-400">(DefiLlama)</span>
+                </p>
+                <p className="mt-2">
+                  Earning Savings Rate:{' '}
+                  <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                  <span className="font-semibold">
+                    {formatDecimal(
+                      Number(historicalData.aprData.values.rebasingSupply.slice(-1)[0]),
+                      pegTokenDecimalsToDisplay
+                    )}
+                  </span>
+                </p>
+              </>
+            }
+            trigger={
+              <div>
+                <Widget
+                  icon={<BsBank2 className="h-7 w-7" />}
+                  title={'Total Lent'}
+                  subtitle={
+                    pegToken.price === 0
+                      ? '$ -.--'
+                      : '$ ' +
+                        formatCurrencyValue(
+                          parseFloat(
+                            formatDecimal(Number(historicalData.creditSupply.values.slice(-1)[0]) * pegToken.price, 2)
+                          )
+                        )
+                  }
+                  extra={<QuestionMarkIcon />}
+                />
+              </div>
+            }
+            placement="bottom"
+          />
 
-            <Widget icon={<BsBank2 className="h-7 w-7" />} title={'Lenders'} subtitle={'Soon™️'} />
+          <TooltipHorizon
+            extra="dark:text-gray-200"
+            content={
+              <>
+                <p>
+                  Number of unique addresses holding{' '}
+                  <Image
+                    className="inline-block"
+                    src={pegTokenLogo}
+                    width={20}
+                    height={20}
+                    alt="logo"
+                    style={{ borderRadius: '50%', border: '2px solid #3e6b7d' }}
+                  />{' '}
+                  {creditTokenSymbol}.
+                </p>
+              </>
+            }
+            trigger={
+              <div>
+                <Widget
+                  icon={<BsBank2 className="h-7 w-7" />}
+                  title={'Lenders'}
+                  subtitle={creditHolderCount}
+                  extra={<QuestionMarkIcon />}
+                />
+              </div>
+            }
+            placement="bottom"
+          />
 
-            <Widget icon={<BsBank2 className="h-7 w-7" />} title={'Utilization'} subtitle={'Soon™️'} />
+          <TooltipHorizon
+            extra="dark:text-gray-200"
+            content={
+              <>
+                <p>
+                  Total Borrows :{' '}
+                  <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                  <span className="font-semibold">
+                    {formatDecimal(
+                      Number(historicalData.creditTotalIssuance.values.slice(-1)[0]),
+                      pegTokenDecimalsToDisplay
+                    )}
+                  </span>
+                </p>
+                <p>
+                  Total Lent : <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                  <span className="font-semibold">
+                    {formatDecimal(Number(historicalData.creditSupply.values.slice(-1)[0]), pegTokenDecimalsToDisplay)}
+                  </span>
+                </p>
+              </>
+            }
+            trigger={
+              <div>
+                <Widget
+                  icon={<BsBank2 className="h-7 w-7" />}
+                  title={'Utilization'}
+                  subtitle={
+                    formatDecimal(
+                      100 *
+                        (Number(historicalData.creditTotalIssuance.values.slice(-1)[0]) /
+                          Number(historicalData.creditSupply.values.slice(-1)[0])),
+                      1
+                    ) + '%'
+                  }
+                  extra={<QuestionMarkIcon />}
+                />
+              </div>
+            }
+            placement="bottom"
+          />
 
-            <Widget icon={<BsBank2 className="h-7 w-7" />} title={'Current APR'} subtitle={'Soon™️'} />
+          <TooltipHorizon
+            extra="dark:text-gray-200"
+            content={
+              <>
+                <p>APR currently being distributed through the rebasing mechanism (savings rate).</p>
+                <p>Average over the last 24 hours.</p>
+                <p>This corresponds to the green area on the chart.</p>
+              </>
+            }
+            trigger={
+              <div>
+                <Widget
+                  icon={<BsBank2 className="h-7 w-7" />}
+                  title={'Current APR'}
+                  subtitle={formatDecimal(apr, 2) + '%'}
+                  extra={<QuestionMarkIcon />}
+                />
+              </div>
+            }
+            placement="bottom"
+          />
 
-            <Widget icon={<BsBank2 className="h-7 w-7" />} title={'Future APR (est)'} subtitle={'Soon™️'} />
+          <TooltipHorizon
+            extra="dark:text-gray-200"
+            content={
+              <>
+                <p>Estimated future APR, based on current savings rate + interpolating rewards + pending interests.</p>
+                <p>Average over the last 24 hours.</p>
+                <p>This corresponds to the green + yellow + gray areas on the chart.</p>
+              </>
+            }
+            trigger={
+              <div>
+                <Widget
+                  icon={<BsBank2 className="h-7 w-7" />}
+                  title={'Future APR'}
+                  subtitle={formatDecimal(aprFuture, 2) + '%'}
+                  extra={<QuestionMarkIcon />}
+                />
+              </div>
+            }
+            placement="bottom"
+          />
 
-            <Widget icon={<BsBank2 className="h-7 w-7" />} title={'All-time P&L'} subtitle={'Soon™️'} />
-          </div>
-        )}
+          <TooltipHorizon
+            extra="dark:text-gray-200"
+            content={
+              <>
+                <p>
+                  Pending Interest :{' '}
+                  <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                  <span className="font-semibold">
+                    {formatDecimal(
+                      historicalData.loanBorrow.values.totalUnpaidInterests.slice(-1)[0],
+                      pegTokenDecimalsToDisplay
+                    )}
+                  </span>{' '}
+                  {pegToken?.symbol}
+                </p>
+                <p>
+                  Unit Price : <span className="font-semibold">{pegToken.price}</span> ${' '}
+                  <span className="text-gray-400">(DefiLlama)</span>
+                </p>
+              </>
+            }
+            trigger={
+              <div>
+                <Widget
+                  icon={<BsBank2 className="h-7 w-7" />}
+                  title={'Pending Interest'}
+                  subtitle={
+                    '$ ' +
+                    formatCurrencyValue(
+                      historicalData.loanBorrow.values.totalUnpaidInterests.slice(-1)[0] * pegToken?.price
+                    )
+                  }
+                  extra={<QuestionMarkIcon />}
+                />
+              </div>
+            }
+            placement="bottom"
+          />
+        </div>
 
         <div className="mt-3 grid grid-cols-1 gap-5 xs:grid-cols-1 lg:grid-cols-6 2xl:grid-cols-6 3xl:grid-cols-6">
           <Card

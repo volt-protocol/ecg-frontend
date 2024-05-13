@@ -13,8 +13,11 @@ import {
   SurplusGuildMinterABI
 } from 'lib/contracts';
 import { Abi } from 'viem';
+import { getApiBaseUrl } from 'config';
+import { HttpGet } from 'utils/HttpHelper';
 
 export interface ProtocolDataSlice {
+  creditHolderCount: number;
   creditMultiplier: bigint;
   creditSupply: bigint;
   totalWeight: bigint;
@@ -28,6 +31,7 @@ export interface ProtocolDataSlice {
 }
 
 export const createProtocolDataSlice: StateCreator<ProtocolDataSlice> = (set, get) => ({
+  creditHolderCount: 0,
   creditMultiplier: BigInt(0),
   creditSupply: BigInt(0),
   totalWeight: BigInt(0),
@@ -99,7 +103,11 @@ export const createProtocolDataSlice: StateCreator<ProtocolDataSlice> = (set, ge
       chainId: chainId as any
     });
 
+    const apiUrl = getApiBaseUrl(chainId) + `/markets/${marketId}/marketdata`;
+    const res = await HttpGet<any>(apiUrl);
+
     set({
+      creditHolderCount: res.creditHolderCount as number,
       creditMultiplier: protocolData[0].result as bigint,
       creditSupply: protocolData[1].result as bigint,
       totalWeight: protocolData[2].result as bigint,

@@ -42,7 +42,7 @@ const LendingDetails = () => {
   const [eventLoans, setEventLoans] = useState<loanObj[]>([]);
   const [currencyType, setCurrencyType] = useState<'creditToken' | 'pegToken'>('creditToken');
   const [editingFdv, setEditingFdv] = useState(false);
-  const [fdv, setFdv] = useState(0);
+  const [fdv, setFdv] = useState(20_000_000);
 
   useEffect(() => {
     if (lendingTerms && termAddress) {
@@ -380,7 +380,7 @@ const LendingDetails = () => {
             termTotalCollateral={termTotalCollateral}
           />
           <Card
-            title="Current GUILD rewards"
+            title="Current daily GUILD rewards"
             extra="order-2 w-full h-full sm:overflow-auto px-6 py-4 lg:col-span-2 2xl:col-span-2 3xl:col-span-2 xs:col-span-1"
           >
             <div className="text-center">
@@ -395,7 +395,7 @@ const LendingDetails = () => {
                   />
                   <span className="font-bold">{formatDecimal(borrowerApr * 100, 0)}%</span> *
                   <div className="mt-1 text-xs font-normal opacity-50">
-                    * APR assuming ${formatCurrencyValue(fdv)} FDV, GUILD is not transferable yet
+                    * Assuming ${formatCurrencyValue(fdv)} FDV, GUILD is not transferable yet
                   </div>
                 </div>
               ) : (
@@ -434,16 +434,7 @@ const LendingDetails = () => {
                       setEditingFdv(false);
                     }}
                   >
-                    Set Custom
-                  </span>
-                  <span
-                    className="mr-2 cursor-pointer rounded-sm bg-brand-500 px-1 py-1 text-xs font-semibold text-white no-underline hover:bg-brand-400 dark:bg-brand-800 dark:hover:bg-brand-700"
-                    onClick={async () => {
-                      setFdv(50e6);
-                      setEditingFdv(false);
-                    }}
-                  >
-                    Set to $50M
+                    Set
                   </span>
                   <span
                     className="mr-2 cursor-pointer rounded-sm bg-gray-500 px-1 py-1 text-xs font-semibold text-white no-underline hover:bg-gray-400 dark:bg-gray-800 dark:hover:bg-gray-700"
@@ -462,7 +453,7 @@ const LendingDetails = () => {
                     setEditingFdv(true);
                   }}
                 >
-                  Set FDV to {fdv ? 'update' : 'display'} APY
+                  Set {fdv ? 'another' : ''} FDV to {fdv ? 'update' : 'display'} APY
                 </div>
               )}
               <TooltipHorizon

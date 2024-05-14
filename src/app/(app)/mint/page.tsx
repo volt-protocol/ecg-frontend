@@ -20,7 +20,7 @@ import Spinner from 'components/spinner';
 import { getPegTokenLogo, marketsConfig } from 'config';
 import Image from 'next/image';
 import { TooltipHorizon, QuestionMarkIcon } from 'components/tooltip';
-import { BsBank2 } from 'react-icons/bs';
+import { BsClock, BsPerson, BsSafe2, BsPercent, BsFire } from 'react-icons/bs';
 import Widget from 'components/widget/Widget';
 import { ApexChartWrapper } from 'components/charts/ApexChartWrapper';
 import DefiInputBox from 'components/box/DefiInputBox';
@@ -32,7 +32,7 @@ function MintAndSaving() {
   const [reload, setReload] = React.useState<boolean>(false);
   const [showModal, setShowModal] = useState(false);
   const [editingFdv, setEditingFdv] = useState(false);
-  const [fdv, setFdv] = useState(0);
+  const [fdv, setFdv] = useState(20_000_000);
   const [apr, setApr] = useState(0);
   const [aprFuture, setAprFuture] = useState(0);
   const [wrapValue, setWrapValue] = useState<string>('');
@@ -414,387 +414,422 @@ function MintAndSaving() {
       <div>
         {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
 
-        <div className="mt-3 grid grid-cols-1 gap-5 xs:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 3xl:grid-cols-6">
-          <TooltipHorizon
-            extra="dark:text-gray-200"
-            content={
-              <>
-                <p>
-                  Lent : <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
-                  <span className="font-semibold">
-                    {formatDecimal(Number(historicalData.creditSupply.values.slice(-1)[0]), pegTokenDecimalsToDisplay)}
-                  </span>{' '}
-                  {pegToken?.symbol}
-                </p>
-                <p>
-                  Unit Price : <span className="font-semibold">{pegToken.price}</span> ${' '}
-                  <span className="text-gray-400">(DefiLlama)</span>
-                </p>
-                <p>
-                  Total Lent :{' '}
-                  <span className="font-semibold">
-                    {formatDecimal(Number(historicalData.creditSupply.values.slice(-1)[0]) * pegToken.price, 2)}
-                  </span>{' '}
-                  $ <span className="text-gray-400">(DefiLlama)</span>
-                </p>
-                <p className="mt-2">
-                  Earning Savings Rate:{' '}
-                  <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
-                  <span className="font-semibold">
-                    {formatDecimal(
-                      Number(historicalData.aprData.values.rebasingSupply.slice(-1)[0]),
-                      pegTokenDecimalsToDisplay
-                    )}
-                  </span>
-                </p>
-              </>
-            }
-            trigger={
-              <div>
-                <Widget
-                  icon={<BsBank2 className="h-7 w-7" />}
-                  title={'Total Lent'}
-                  subtitle={
-                    pegToken.price === 0
-                      ? '$ -.--'
-                      : '$ ' +
-                        formatCurrencyValue(
-                          parseFloat(
-                            formatDecimal(Number(historicalData.creditSupply.values.slice(-1)[0]) * pegToken.price, 2)
-                          )
-                        )
-                  }
-                  extra={<QuestionMarkIcon />}
-                />
-              </div>
-            }
-            placement="bottom"
-          />
-
-          <TooltipHorizon
-            extra="dark:text-gray-200"
-            content={
-              <>
-                <p>
-                  Number of unique addresses holding{' '}
-                  <Image
-                    className="inline-block"
-                    src={pegTokenLogo}
-                    width={20}
-                    height={20}
-                    alt="logo"
-                    style={{ borderRadius: '50%', border: '2px solid #3e6b7d' }}
-                  />{' '}
-                  {creditTokenSymbol}.
-                </p>
-              </>
-            }
-            trigger={
-              <div>
-                <Widget
-                  icon={<BsBank2 className="h-7 w-7" />}
-                  title={'Lenders'}
-                  subtitle={creditHolderCount}
-                  extra={<QuestionMarkIcon />}
-                />
-              </div>
-            }
-            placement="bottom"
-          />
-
-          <TooltipHorizon
-            extra="dark:text-gray-200"
-            content={
-              <>
-                <p>
-                  Total Borrows :{' '}
-                  <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
-                  <span className="font-semibold">
-                    {formatDecimal(
-                      Number(historicalData.creditTotalIssuance.values.slice(-1)[0]),
-                      pegTokenDecimalsToDisplay
-                    )}
-                  </span>
-                </p>
-                <p>
-                  Total Lent : <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
-                  <span className="font-semibold">
-                    {formatDecimal(Number(historicalData.creditSupply.values.slice(-1)[0]), pegTokenDecimalsToDisplay)}
-                  </span>
-                </p>
-              </>
-            }
-            trigger={
-              <div>
-                <Widget
-                  icon={<BsBank2 className="h-7 w-7" />}
-                  title={'Utilization'}
-                  subtitle={
-                    formatDecimal(
-                      100 *
-                        (Number(historicalData.creditTotalIssuance.values.slice(-1)[0]) /
-                          Number(historicalData.creditSupply.values.slice(-1)[0])),
-                      1
-                    ) + '%'
-                  }
-                  extra={<QuestionMarkIcon />}
-                />
-              </div>
-            }
-            placement="bottom"
-          />
-
-          <TooltipHorizon
-            extra="dark:text-gray-200"
-            content={
-              <>
-                <p>APR currently being distributed through the rebasing mechanism (savings rate).</p>
-                <p>Average over the last 24 hours.</p>
-                <p>This corresponds to the green area on the chart.</p>
-              </>
-            }
-            trigger={
-              <div>
-                <Widget
-                  icon={<BsBank2 className="h-7 w-7" />}
-                  title={'Current APR'}
-                  subtitle={formatDecimal(apr, 2) + '%'}
-                  extra={<QuestionMarkIcon />}
-                />
-              </div>
-            }
-            placement="bottom"
-          />
-
-          <TooltipHorizon
-            extra="dark:text-gray-200"
-            content={
-              <>
-                <p>Estimated future APR, based on current savings rate + interpolating rewards + pending interests.</p>
-                <p>Average over the last 24 hours.</p>
-                <p>This corresponds to the green + yellow + gray areas on the chart.</p>
-              </>
-            }
-            trigger={
-              <div>
-                <Widget
-                  icon={<BsBank2 className="h-7 w-7" />}
-                  title={'Future APR'}
-                  subtitle={formatDecimal(aprFuture, 2) + '%'}
-                  extra={<QuestionMarkIcon />}
-                />
-              </div>
-            }
-            placement="bottom"
-          />
-
-          <TooltipHorizon
-            extra="dark:text-gray-200"
-            content={
-              <>
-                <p>
-                  Pending Interest :{' '}
-                  <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
-                  <span className="font-semibold">
-                    {formatDecimal(
-                      historicalData.loanBorrow.values.totalUnpaidInterests.slice(-1)[0],
-                      pegTokenDecimalsToDisplay
-                    )}
-                  </span>{' '}
-                  {pegToken?.symbol}
-                </p>
-                <p>
-                  Unit Price : <span className="font-semibold">{pegToken.price}</span> ${' '}
-                  <span className="text-gray-400">(DefiLlama)</span>
-                </p>
-                <p>This corresponds to the gray area on the chart.</p>
-              </>
-            }
-            trigger={
-              <div>
-                <Widget
-                  icon={<BsBank2 className="h-7 w-7" />}
-                  title={'Pending Interest'}
-                  subtitle={
-                    '$ ' +
-                    formatCurrencyValue(
-                      historicalData.loanBorrow.values.totalUnpaidInterests.slice(-1)[0] * pegToken?.price
-                    )
-                  }
-                  extra={<QuestionMarkIcon />}
-                />
-              </div>
-            }
-            placement="bottom"
-          />
-        </div>
-
-        <div className="mt-3 grid grid-cols-1 gap-5 xs:grid-cols-1 lg:grid-cols-6 2xl:grid-cols-6 3xl:grid-cols-6">
+        <div className="mt-3 grid gap-5 xs:grid-cols-1 lg:grid-cols-6 2xl:grid-cols-6 3xl:grid-cols-6">
           <Card
-            title="Earnings over time"
-            extra="order-1 w-full h-full sm:overflow-auto px-6 py-4 lg:col-span-4 2xl:col-span-4 3xl:col-span-4 xs:col-span-1"
+            title=""
+            extra="order-1 w-full h-full sm:overflow-auto px-3 py-3 lg:col-span-2 2xl:col-span-2 3xl:col-span-2 xs:col-span-1 text-center"
           >
-            <p className="text-sm opacity-70">
-              Hypothetical earnings of 1{' '}
-              <Image
-                className="inline-block align-text-bottom"
-                src={pegTokenLogo}
-                width={16}
-                height={16}
-                alt={pegToken?.symbol}
-              />{' '}
-              {pegToken?.symbol} in the savings rate since market launch.
-            </p>
-            <div>
-              {chartData.length === 0 ? (
-                <div className="flex h-96 items-center justify-center">
-                  <Spinner />
+            <h3 className="text-left leading-5">
+              <span className="mr-2 inline-block rounded-full bg-lightPrimary p-3 align-middle text-brand-500 dark:bg-navy-700">
+                <BsFire className="h-5 w-5" />
+              </span>
+              <span className="text-md">Lending APR</span>
+            </h3>
+            <TooltipHorizon
+              extra="dark:text-gray-200"
+              content={
+                <>
+                  <p>APR currently being distributed through the rebasing mechanism (savings rate).</p>
+                  <p>Average over the last 24 hours.</p>
+                  <p>This corresponds to the green area on the chart.</p>
+                </>
+              }
+              trigger={
+                <div className={!fdv ? 'mt-2' : ''}>
+                  <span className="mr-1 font-bold">Current APR :</span>
+                  <span>
+                    <Image
+                      className="inline-block align-bottom"
+                      title={pegToken?.symbol}
+                      src={pegTokenLogo}
+                      width={24}
+                      height={24}
+                      alt="logo"
+                    />{' '}
+                    {formatDecimal(apr, 2) + '%'}
+                  </span>
+                  <span>
+                    {' '}
+                    +{' '}
+                    <Image
+                      className="inline-block align-bottom"
+                      src="/img/crypto-logos/guild.png"
+                      title="GUILD"
+                      width={24}
+                      height={24}
+                      alt="logo"
+                    />{' '}
+                    {fdv
+                      ? formatDecimal(lenderApr * 100, 2) + '% *'
+                      : formatDecimal(currentDailyGuildPerDollarLent * 1000, 0) + ' / 1k$ daily'}
+                  </span>
                 </div>
-              ) : (
+              }
+              placement="bottom"
+            />
+            <TooltipHorizon
+              extra="dark:text-gray-200"
+              content={
+                <>
+                  <p>
+                    Estimated future APR, based on current savings rate + interpolating rewards + pending interests.
+                  </p>
+                  <p>Average over the last 24 hours.</p>
+                  <p>This corresponds to the green + yellow + gray areas on the chart.</p>
+                </>
+              }
+              trigger={
                 <div>
-                  <ApexChartWrapper options={chartData.options} series={chartData.series} type="area" height={270} />
+                  <span className="mr-1 font-bold">Future APR :</span>
+                  <span>
+                    <Image
+                      className="inline-block align-bottom"
+                      title={pegToken?.symbol}
+                      src={pegTokenLogo}
+                      width={24}
+                      height={24}
+                      alt="logo"
+                    />{' '}
+                    {formatDecimal(aprFuture, 2) + '%'}
+                  </span>
+                  <span>
+                    {' '}
+                    +{' '}
+                    <Image
+                      className="inline-block align-bottom"
+                      src="/img/crypto-logos/guild.png"
+                      title="GUILD"
+                      width={24}
+                      height={24}
+                      alt="logo"
+                    />{' '}
+                    {fdv
+                      ? formatDecimal(lenderApr * 100, 2) + '% *'
+                      : formatDecimal(currentDailyGuildPerDollarLent * 1000, 0) + ' / 1k$ daily'}
+                  </span>
                 </div>
-              )}
-            </div>
-            <p className="text-xs italic opacity-70">
-              Unlike most lending protocols, profit in the Credit Guild is accounted only when borrowers pay their
-              interests, once we know the loans did not create bad debt. When borrowers pay interests, the profit is
-              distributed to lenders through a rebase interpolation over 30 days (your balance slowly goes up over
-              time).
-            </p>
-          </Card>
-          <Card
-            title="Current daily GUILD rewards"
-            extra="order-2 w-full h-full sm:overflow-auto px-6 py-4 lg:col-span-2 2xl:col-span-2 3xl:col-span-2 xs:col-span-1"
-          >
-            <div className="text-center">
-              <Image
-                className="mt-3 inline-block"
-                src="/img/crypto-logos/guild.png"
-                width={85}
-                height={85}
-                alt="logo"
-              />
-              {fdv ? (
-                <div className="mt-2 text-2xl">
-                  <span className="font-bold">{formatDecimal(lenderApr * 100, 0)}%</span>*
-                  <div className="text-xs font-normal">
-                    *APR assuming ${formatCurrencyValue(fdv)} FDV, GUILD is not transferable yet
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-2 text-2xl font-bold">
-                  {formatDecimal(currentDailyGuildPerDollarLent * 1000, 0)} GUILD / 1k$
-                </div>
-              )}
+              }
+              placement="bottom"
+            />
+            {fdv ? (
+              <div className="mt-1 text-2xl text-xs font-normal opacity-50">
+                * Assuming ${formatCurrencyValue(fdv)} FDV, GUILD is not transferable yet
+              </div>
+            ) : null}
 
-              {editingFdv ? (
-                <div className="mt-1 cursor-pointer text-xs">
-                  $
-                  <input
-                    className="border-gray-300 bg-brand-100/0 px-2 py-1 text-gray-800 focus:border-brand-400/80 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-50"
-                    type="text"
-                    value={fdv}
-                    onChange={(e) => {
-                      if (/^[0-9]+\.?[0-9]*$/i.test(e.target.value)) {
-                        let num = Number(e.target.value);
-                        if (!isNaN(num)) {
-                          setFdv(Number(e.target.value));
-                        }
+            {editingFdv ? (
+              <div className="cursor-pointer text-xs">
+                $
+                <input
+                  className="border-gray-300 bg-brand-100/0 px-2 py-1 text-gray-800 focus:border-brand-400/80 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-50"
+                  type="text"
+                  value={fdv}
+                  onChange={(e) => {
+                    if (/^[0-9]+\.?[0-9]*$/i.test(e.target.value)) {
+                      let num = Number(e.target.value);
+                      if (!isNaN(num)) {
+                        setFdv(Number(e.target.value));
                       }
-                    }}
-                  />
-                  <span
-                    className="mr-2 cursor-pointer rounded-sm bg-brand-500 px-1 py-1 text-xs font-semibold text-white no-underline hover:bg-brand-400 dark:bg-brand-800 dark:hover:bg-brand-700"
-                    onClick={async () => {
-                      setEditingFdv(false);
-                    }}
-                  >
-                    Set Custom
-                  </span>
-                  <span
-                    className="mr-2 cursor-pointer rounded-sm bg-brand-500 px-1 py-1 text-xs font-semibold text-white no-underline hover:bg-brand-400 dark:bg-brand-800 dark:hover:bg-brand-700"
-                    onClick={async () => {
-                      setFdv(50e6);
-                      setEditingFdv(false);
-                    }}
-                  >
-                    Set to $50M
-                  </span>
-                  <span
-                    className="mr-2 cursor-pointer rounded-sm bg-gray-500 px-1 py-1 text-xs font-semibold text-white no-underline hover:bg-gray-400 dark:bg-gray-800 dark:hover:bg-gray-700"
-                    onClick={async () => {
-                      setFdv(0);
-                      setEditingFdv(false);
-                    }}
-                  >
-                    Clear
-                  </span>
-                </div>
-              ) : (
-                <div
-                  className="text-bold mt-1 cursor-pointer text-xs underline"
-                  onClick={() => {
-                    setEditingFdv(true);
+                    }
+                  }}
+                />
+                <span
+                  className="mr-2 cursor-pointer rounded-sm bg-brand-500 px-1 py-1 text-xs font-semibold text-white no-underline hover:bg-brand-400 dark:bg-brand-800 dark:hover:bg-brand-700"
+                  onClick={async () => {
+                    setEditingFdv(false);
                   }}
                 >
-                  Set FDV to {fdv ? 'update' : 'display'} APY
+                  Set
+                </span>
+                <span
+                  className="mr-2 cursor-pointer rounded-sm bg-gray-500 px-1 py-1 text-xs font-semibold text-white no-underline hover:bg-gray-400 dark:bg-gray-800 dark:hover:bg-gray-700"
+                  onClick={async () => {
+                    setFdv(0);
+                    setEditingFdv(false);
+                  }}
+                >
+                  Clear
+                </span>
+              </div>
+            ) : (
+              <div
+                className={(fdv ? 'mt-1' : 'mt-2') + ' text-bold cursor-pointer text-xs underline'}
+                onClick={() => {
+                  setEditingFdv(true);
+                }}
+              >
+                Set {fdv ? 'another' : ''} FDV to {fdv ? 'update' : 'display'} GUILD APR
+              </div>
+            )}
+            <TooltipHorizon
+              extra="dark:text-gray-200"
+              content={
+                <>
+                  <p className="mb-3 text-xs opacity-50">
+                    In addition to {pegToken?.symbol} yield, you will be earning GUILD tokens as a reward for helping
+                    <br />
+                    to bootstrap the protocol. GUILD rewards are computed per epoch of ~1 month, and
+                    <br />
+                    airdropped directly in your wallet. Current epoch is running between 19th of april to
+                    <br />
+                    19th of may, and a total of 10M GUILD tokens will be distributed.
+                    <br />
+                    Distribution will go 60% to lenders, 20% to borrowers, 15% to first-loss capital
+                    <br />
+                    providers (GUILD and {creditTokenSymbol}), and 5% towards liquidators, proportional to the
+                    <br />
+                    value and time spent in the protocol. Rewards are shared between all markets.
+                  </p>
+                  <p>
+                    GUILD airdrop : <span className="font-semibold">10M</span>
+                  </p>
+                  <p>
+                    Period duration : <span className="font-semibold">30 days</span>
+                  </p>
+                  <p>
+                    GUILD to lenders : <span className="font-semibold">60%</span>
+                  </p>
+                  <p>
+                    Daily GUILD to lenders :{' '}
+                    <span className="font-semibold">{formatCurrencyValue(dailyGuildToLenders)}</span>
+                  </p>
+                  <p>
+                    Total lent (across all markets) :{' '}
+                    <span className="font-semibold">{formatCurrencyValue(airdropData.rebasingSupplyUsd)}</span> $
+                  </p>
+                  <p>
+                    Current daily GUILD per $ lent :{' '}
+                    <span className="font-semibold">{formatDecimal(currentDailyGuildPerDollarLent, 2)}</span>
+                  </p>
+                  <p className="mt-3 italic">
+                    All values are estimates and the final result depends on the behavior
+                    <br />
+                    of protocol users between now and the end of the period.
+                  </p>
+                </>
+              }
+              trigger={
+                <div className="mt-1 cursor-help text-center text-xs italic opacity-50">
+                  Hover to view airdrop details
                 </div>
-              )}
-
-              <p className="mt-3 text-xs opacity-50">
-                In addition to {pegToken?.symbol} yield, you will be earning GUILD tokens as a reward for helping to
-                bootstrap the protocol. GUILD rewards are computed per epoch of ~1 month, and airdropped directly in
-                your wallet. Current epoch is running between 19th of april to 19th of may, and a total of 10M GUILD
-                tokens will be distributed. Distribution will go 60% to lenders, 20% to borrowers, 15% to first-loss
-                capital providers (GUILD and {creditTokenSymbol}), and 5% towards liquidators, proportional to the value
-                and time spent in the protocol. Rewards are shared between all markets.
-              </p>
-              <TooltipHorizon
-                extra="dark:text-gray-200"
-                content={
-                  <>
-                    <p>
-                      GUILD airdrop : <span className="font-semibold">10M</span>
-                    </p>
-                    <p>
-                      Period duration : <span className="font-semibold">30 days</span>
-                    </p>
-                    <p>
-                      GUILD to lenders : <span className="font-semibold">60%</span>
-                    </p>
-                    <p>
-                      Daily GUILD to lenders :{' '}
-                      <span className="font-semibold">{formatCurrencyValue(dailyGuildToLenders)}</span>
-                    </p>
-                    <p>
-                      Total lent (across all markets) :{' '}
-                      <span className="font-semibold">{formatCurrencyValue(airdropData.rebasingSupplyUsd)}</span> $
-                    </p>
-                    <p>
-                      Current daily GUILD per $ lent :{' '}
-                      <span className="font-semibold">{formatDecimal(currentDailyGuildPerDollarLent, 2)}</span>
-                    </p>
-                    <p className="mt-3 italic">
-                      All values are estimates and the final result depends on the behavior
-                      <br />
-                      of protocol users between now and the end of the period.
-                    </p>
-                  </>
-                }
-                trigger={
-                  <div className="mt-3 cursor-help text-center text-xs italic opacity-50">
-                    Hover to view airdrop details
-                  </div>
-                }
-                placement="bottom"
-              />
-            </div>
+              }
+              placement="bottom"
+            />
           </Card>
+
+          <div className="order-2 grid h-full w-full grid-cols-1 gap-5 xs:col-span-1 xs:grid-cols-2 sm:overflow-auto lg:col-span-4 lg:grid-cols-2 2xl:col-span-4 2xl:grid-cols-2 3xl:col-span-4 3xl:grid-cols-2">
+            <TooltipHorizon
+              extra="dark:text-gray-200"
+              content={
+                <>
+                  <p>
+                    Lent : <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                    <span className="font-semibold">
+                      {formatDecimal(
+                        Number(historicalData.creditSupply.values.slice(-1)[0]),
+                        pegTokenDecimalsToDisplay
+                      )}
+                    </span>{' '}
+                    {pegToken?.symbol}
+                  </p>
+                  <p>
+                    Unit Price : <span className="font-semibold">{pegToken.price}</span> ${' '}
+                    <span className="text-gray-400">(DefiLlama)</span>
+                  </p>
+                  <p>
+                    Total Lent :{' '}
+                    <span className="font-semibold">
+                      {formatDecimal(Number(historicalData.creditSupply.values.slice(-1)[0]) * pegToken.price, 2)}
+                    </span>{' '}
+                    $ <span className="text-gray-400">(DefiLlama)</span>
+                  </p>
+                  <p className="mt-2">
+                    Earning Savings Rate:{' '}
+                    <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                    <span className="font-semibold">
+                      {formatDecimal(
+                        Number(historicalData.aprData.values.rebasingSupply.slice(-1)[0]),
+                        pegTokenDecimalsToDisplay
+                      )}
+                    </span>
+                  </p>
+                </>
+              }
+              trigger={
+                <div>
+                  <Widget
+                    icon={<BsSafe2 className="h-7 w-7" />}
+                    title={'Total Lent'}
+                    subtitle={
+                      pegToken.price === 0
+                        ? '$ -.--'
+                        : '$ ' +
+                          formatCurrencyValue(
+                            parseFloat(
+                              formatDecimal(Number(historicalData.creditSupply.values.slice(-1)[0]) * pegToken.price, 2)
+                            )
+                          )
+                    }
+                    extra={<QuestionMarkIcon />}
+                  />
+                </div>
+              }
+              placement="bottom"
+            />
+
+            <TooltipHorizon
+              extra="dark:text-gray-200"
+              content={
+                <>
+                  <p>
+                    Number of unique addresses holding{' '}
+                    <Image
+                      className="inline-block"
+                      src={pegTokenLogo}
+                      width={20}
+                      height={20}
+                      alt="logo"
+                      style={{ borderRadius: '50%', border: '2px solid #3e6b7d' }}
+                    />{' '}
+                    {creditTokenSymbol}.
+                  </p>
+                </>
+              }
+              trigger={
+                <div>
+                  <Widget
+                    icon={<BsPerson className="h-7 w-7" />}
+                    title={'Lenders'}
+                    subtitle={creditHolderCount}
+                    extra={<QuestionMarkIcon />}
+                  />
+                </div>
+              }
+              placement="bottom"
+            />
+
+            <TooltipHorizon
+              extra="dark:text-gray-200"
+              content={
+                <>
+                  <p>
+                    Total Borrowed :{' '}
+                    <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                    <span className="font-semibold">
+                      {formatDecimal(
+                        Number(historicalData.creditTotalIssuance.values.slice(-1)[0]),
+                        pegTokenDecimalsToDisplay
+                      )}
+                    </span>
+                  </p>
+                  <p>
+                    Total Lent : <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                    <span className="font-semibold">
+                      {formatDecimal(
+                        Number(historicalData.creditSupply.values.slice(-1)[0]),
+                        pegTokenDecimalsToDisplay
+                      )}
+                    </span>
+                  </p>
+                </>
+              }
+              trigger={
+                <div>
+                  <Widget
+                    icon={<BsPercent className="h-7 w-7" />}
+                    title={'Utilization'}
+                    subtitle={
+                      formatDecimal(
+                        100 *
+                          (Number(historicalData.creditTotalIssuance.values.slice(-1)[0]) /
+                            Number(historicalData.creditSupply.values.slice(-1)[0])),
+                        1
+                      ) + '%'
+                    }
+                    extra={<QuestionMarkIcon />}
+                  />
+                </div>
+              }
+              placement="bottom"
+            />
+
+            <TooltipHorizon
+              extra="dark:text-gray-200"
+              content={
+                <>
+                  <p>
+                    Pending Interest :{' '}
+                    <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                    <span className="font-semibold">
+                      {formatDecimal(
+                        historicalData.loanBorrow.values.totalUnpaidInterests.slice(-1)[0],
+                        pegTokenDecimalsToDisplay
+                      )}
+                    </span>{' '}
+                    {pegToken?.symbol}
+                  </p>
+                  <p>
+                    Unit Price : <span className="font-semibold">{pegToken.price}</span> ${' '}
+                    <span className="text-gray-400">(DefiLlama)</span>
+                  </p>
+                  <p>This corresponds to the gray area on the chart.</p>
+                </>
+              }
+              trigger={
+                <div>
+                  <Widget
+                    icon={<BsClock className="h-7 w-7" />}
+                    title={'Pending Interest'}
+                    subtitle={
+                      '$ ' +
+                      formatCurrencyValue(
+                        historicalData.loanBorrow.values.totalUnpaidInterests.slice(-1)[0] * pegToken?.price
+                      )
+                    }
+                    extra={<QuestionMarkIcon />}
+                  />
+                </div>
+              }
+              placement="bottom"
+            />
+          </div>
         </div>
 
+        <Card
+          title="Earnings over time"
+          extra="mt-5 w-full sm:overflow-auto px-6 py-4 lg:col-span-1 2xl:col-span-1 3xl:col-span-1 xs:col-span-1"
+        >
+          <p className="text-sm opacity-70">
+            Hypothetical earnings of 1{' '}
+            <Image
+              className="inline-block align-text-bottom"
+              src={pegTokenLogo}
+              width={16}
+              height={16}
+              alt={pegToken?.symbol}
+            />{' '}
+            {pegToken?.symbol} in the savings rate since market launch.
+          </p>
+          <div>
+            {chartData.length === 0 ? (
+              <div className="flex h-96 items-center justify-center">
+                <Spinner />
+              </div>
+            ) : (
+              <div>
+                <ApexChartWrapper options={chartData.options} series={chartData.series} type="area" height={270} />
+              </div>
+            )}
+          </div>
+          <p className="text-xs italic opacity-70">
+            Unlike most lending protocols, profit in the Credit Guild is accounted only when borrowers pay their
+            interests, once we know the loans did not create bad debt. When borrowers pay interests, the profit is
+            distributed to lenders through a rebase interpolation over 30 days (your balance slowly goes up over time).
+          </p>
+        </Card>
+
         {pegTokenAddress == '0x82af49447d8a07e3bd95bd0d56f35241523fbab1' ? (
-          <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
             <Card title="" extra="order-1 w-full h-full sm:overflow-auto px-6 py-4">
               <h3 className="mb-2 text-xl font-medium text-gray-800 dark:text-white">
                 Wrap ETH to WETH
@@ -862,7 +897,7 @@ function MintAndSaving() {
           </div>
         ) : null}
 
-        <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div className="mb-5 mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
           <Card
             title="Savings Rate"
             extra="w-full h-full sm:overflow-auto px-6 py-4"

@@ -162,11 +162,27 @@ function Airdrop() {
 
   return (
     <div>
+      <Card title="" extra="w-full mb-2 md:col-span-1 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
+        <h3 className="mb-2">
+          <span className="text-bold text-xl">Cycle 2 (2024-05-17 → 2024-06-17)</span>
+          <span className="ml-2 inline-block rounded-md bg-gray-100 px-1 py-0.5 align-middle align-text-bottom font-mono text-xs text-gray-700 ring-1 ring-inset ring-gray-200 transition-all duration-150 ease-in-out">
+            in progress
+          </span>
+        </h3>
+
+        <p className="italic opacity-50">
+          In this epoch, a constant amount of rewards is allocated to each day. Stakers do not earn lender or borrower
+          rewards on top of their staker rewards, and staker rewards are proportional to interest pending+realized in
+          the lending terms during the stake. Lender rewards are proportional to the utilization in a market relative to
+          other markets (e.g. on any given day, if a market represents 80% of TVL, 80% of rewards will go to lenders of
+          this market).
+        </p>
+      </Card>
       <Card title="" extra="w-full min-h-[300px] md:col-span-1 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
         <h3 className="mb-2">
           <span className="text-bold text-xl">Cycle 1 (2024-04-20 → 2024-05-17)</span>
-          <span className="ml-2 inline-block rounded-md bg-gray-100 px-1 py-0.5 align-middle align-text-bottom font-mono text-xs text-gray-700 ring-1 ring-inset ring-gray-200 transition-all duration-150 ease-in-out dark:bg-navy-600 dark:text-gray-200 dark:ring-navy-500">
-            in progress
+          <span className="ml-2 inline-block rounded-md bg-green-600 px-1 py-0.5 align-middle align-text-bottom font-mono text-xs text-white ring-1 ring-inset ring-green-700 transition-all duration-150 ease-in-out">
+            distributed
           </span>
         </h3>
 

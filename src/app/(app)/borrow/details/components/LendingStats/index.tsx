@@ -173,23 +173,11 @@ export default function LendingStats({
           <div>
             <p>
               This term allows to borrow{' '}
-              <Image
-                className="inline-block"
-                src={pegTokenLogo}
-                style={{ borderRadius: '50%', border: '3px solid #3e6b7d' }}
-                width={18}
-                height={18}
-                alt="logo"
-              />{' '}
-              <span className="font-semibold">
-                {formatDecimal(lendingTermData.borrowRatio / creditMultiplierNumber, creditTokenDecimalsToDisplay)}
-              </span>{' '}
-              {creditTokenSymbol} (redeemable for{' '}
               <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
               <span className="font-semibold">
                 {formatDecimal(lendingTermData.borrowRatio, creditTokenDecimalsToDisplay)}
               </span>{' '}
-              {pegToken.symbol}) per unit of{' '}
+              {pegToken.symbol} per unit of{' '}
               <ImageWithFallback
                 className="inline-block"
                 src={lendingTermData.collateral.logo}

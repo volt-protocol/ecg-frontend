@@ -9,14 +9,14 @@ import {
   getPaginationRowModel
 } from '@tanstack/react-table';
 import { readContract, waitForTransactionReceipt, writeContract } from '@wagmi/core';
-import { TermABI, ERC20PermitABI, GatewayABI, CreditABI } from 'lib/contracts';
+import { TermABI, ERC20PermitABI, GatewayABI, CreditABI, PsmABI } from 'lib/contracts';
 import { secondsToAppropriateUnit } from 'utils/date';
 import { LendingTerms, loanObj } from 'types/lending';
 import { useAccount, useReadContracts } from 'wagmi';
 import { Step } from 'components/stepLoader/stepType';
 import { MdOutlineError, MdOutlineHandshake } from 'react-icons/md';
 import { formatDecimal, gUsdcToUsdc, usdcToGUsdc, toLocaleString } from 'utils/numbers';
-import { Abi, Address, erc20Abi, formatUnits, parseUnits } from 'viem';
+import { Abi, Address, erc20Abi, formatUnits, parseUnits, encodeFunctionData } from 'viem';
 import clsx from 'clsx';
 import ModalRepay from './ModalRepay';
 import StepModal from 'components/stepLoader';
@@ -26,11 +26,8 @@ import { ItemIdBadge } from 'components/badge/ItemIdBadge';
 import { signPermit } from 'lib/transactions/signPermit';
 import moment from 'moment';
 import { simpleRepay } from './helper/simpleRepay';
-import { getMulticallsDecoded } from 'lib/transactions/getMulticallsDecoded';
 import { HOURS_IN_YEAR } from 'utils/constants';
 import { getPegTokenLogo, permitConfig } from 'config';
-import { getAllowCollateralTokenCall } from './helper/repayWithLeverage';
-import { CurrencyTypes } from 'components/switch/ToggleCredit';
 import CustomTable from 'components/table/CustomTable';
 import { useAppStore } from 'store';
 import { marketsConfig } from 'config';
@@ -46,8 +43,7 @@ function Myloans({
   pegTokenNonces,
   setReload,
   reload,
-  minBorrow,
-  currencyType
+  minBorrow
 }: {
   lendingTerm: LendingTerms;
   isLoadingEventLoans: boolean;
@@ -59,7 +55,6 @@ function Myloans({
   minBorrow: bigint;
   reload: boolean;
   setReload: React.Dispatch<React.SetStateAction<boolean>>;
-  currencyType: CurrencyTypes;
 }) {
   const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
   const { address } = useAccount();
@@ -111,12 +106,41 @@ function Myloans({
         functionName: 'nonces',
         args: [address],
         chainId: appChainId
+      },
+      {
+        address: pegToken.address as Address,
+        abi: ERC20PermitABI as Abi,
+        functionName: 'nonces',
+        args: [address],
+        chainId: appChainId
+      },
+      {
+        address: lendingTerm.collateral.address as Address,
+        abi: erc20Abi as Abi,
+        functionName: 'name',
+        chainId: appChainId
+      },
+      {
+        address: creditAddress as Address,
+        abi: erc20Abi as Abi,
+        functionName: 'name',
+        chainId: appChainId
+      },
+      {
+        address: pegToken.address as Address,
+        abi: erc20Abi as Abi,
+        functionName: 'name',
+        chainId: appChainId
       }
     ],
     query: {
       select: (data) => {
         return {
-          collateralNonces: data[0].result as bigint
+          collateralNonces: data[0].result as bigint,
+          pegTokenNonces: data[1].result as bigint,
+          collaternalTokenName: data[2].result as string,
+          creditTokenName: data[3].result as string,
+          pegTokenName: data[4].result as string
         };
       }
     }
@@ -271,14 +295,16 @@ function Myloans({
 
     try {
       const debtToRepay = tableDataWithDebts.find((item) => item.id == loanId).loanDebt;
-      const hourlyFees =
-        (parseUnits(lendingTerm.interestRate.toString(), 2) * debtToRepay) / BigInt(100) / BigInt(HOURS_IN_YEAR);
+      const quarterHourInterests =
+        (parseUnits(lendingTerm.interestRate.toString(), 2) * debtToRepay) /
+        BigInt(100) /
+        (BigInt(4) * BigInt(HOURS_IN_YEAR));
 
       const approvalSuccess = await approvalStepsFlow(
         address,
         lendingTerm.address,
         contractsList?.marketContracts[appMarketId].creditAddress,
-        debtToRepay + hourlyFees,
+        debtToRepay + quarterHourInterests,
         appChainId,
         updateStepStatus,
         checkStepName,
@@ -325,71 +351,192 @@ function Myloans({
   async function partialRepayGateway(loanId: string, value: string) {
     setOpen(false);
 
+    const checkStepName = `Check ${pegToken.symbol} allowance`;
+    const approveStepName = `Approve ${pegToken.symbol}`;
+
     const createSteps = (): Step[] => {
-      const baseSteps = [
-        { name: `Sign Permit for ${pegToken.symbol}`, status: 'Not Started' },
-        { name: 'Partial Repay', status: 'Not Started' }
-      ];
+      const baseSteps: Step[] = [];
+      if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+        baseSteps.push({
+          name: `Sign Permit for ${pegToken.symbol}`,
+          status: 'Not Started'
+        });
+      } else {
+        baseSteps.push({ name: checkStepName, status: 'Not Started' });
+        baseSteps.push({ name: approveStepName, status: 'Not Started' });
+      }
+
+      baseSteps.push({ name: 'Mint + Partial repay (Multicall)', status: 'Not Started' });
+
       return baseSteps;
     };
 
     setSteps(createSteps());
-    let signatureUSDC: any;
+    let signaturePegToken: any;
 
-    const usdcAmount = parseUnits(value, 6);
-    const debtToRepay = usdcToGUsdc(
-      usdcAmount,
-      tableDataWithDebts.find((item) => item.id == loanId).borrowCreditMultiplier as bigint
-    );
+    const debtToRepay = tableDataWithDebts.find((item) => item.id == loanId).loanDebt as bigint;
+    const decimalNormalizer = BigInt('1' + '0'.repeat(36 - pegToken.decimals));
+    const pegTokenToRepay = parseUnits(value.toString(), pegToken.decimals);
+    const creditToRepay = (pegTokenToRepay * decimalNormalizer) / creditMultiplier;
 
     setShowModal(true);
 
-    /* Sign permit on USDC for Gateway*/
-    try {
-      updateStepStatus(`Sign Permit for ${pegToken.symbol}`, 'In Progress');
+    /* Set allowance for pegToken */
+    if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+      try {
+        updateStepStatus(`Sign Permit for ${pegToken.symbol}`, 'In Progress');
 
-      signatureUSDC = await signPermit({
-        contractAddress: pegToken.address as Address,
-        erc20Name: pegToken.name,
-        ownerAddress: address,
-        spenderAddress: contractsList.gatewayAddress as Address,
-        value: usdcAmount,
-        deadline: BigInt(Number(moment().add(10, 'seconds'))),
-        nonce: pegTokenNonces,
-        chainId: wagmiConfig.chains[0].id,
-        permitVersion: '1'
-      });
+        signaturePegToken = await signPermit({
+          contractAddress: pegToken.address as Address,
+          erc20Name: contractData?.pegTokenName,
+          ownerAddress: address,
+          spenderAddress: contractsList.gatewayAddress as Address,
+          value: pegTokenToRepay,
+          deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
+          nonce: contractData?.pegTokenNonces,
+          chainId: appChainId,
+          permitVersion: '1'
+        });
 
-      if (!signatureUSDC) {
+        if (!signaturePegToken) {
+          updateStepStatus(`Sign Permit for ${pegToken.symbol}`, 'Error');
+          return;
+        }
+        updateStepStatus(`Sign Permit for ${pegToken.symbol}`, 'Success');
+      } catch (e) {
+        console.log(e);
         updateStepStatus(`Sign Permit for ${pegToken.symbol}`, 'Error');
         return;
       }
-      updateStepStatus(`Sign Permit for ${pegToken.symbol}`, 'Success');
-    } catch (e) {
-      console.log(e);
-      updateStepStatus(`Sign Permit for ${pegToken.symbol}`, 'Error');
-      return;
+    } else {
+      try {
+        const approvalSuccess = await approvalStepsFlow(
+          address,
+          contractsList.gatewayAddress,
+          pegToken.address,
+          pegTokenToRepay,
+          appChainId,
+          updateStepStatus,
+          checkStepName,
+          approveStepName,
+          wagmiConfig
+        );
+
+        if (!approvalSuccess) {
+          updateStepStatus(approveStepName, 'Error');
+          return;
+        }
+      } catch (e) {
+        console.log(e);
+        updateStepStatus(approveStepName, 'Error');
+        return;
+      }
     }
 
     /* Call gateway.multicall() */
     try {
       //build multicall
-      const calls = simpleRepay(
-        'partial',
-        lendingTerm,
-        loanId,
-        usdcAmount,
-        debtToRepay,
-        signatureUSDC,
-        contractsList,
-        pegToken.address,
-        creditAddress,
-        psmAddress
+      const calls = [];
+
+      // pull pegToken on gateway
+      if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+        calls.push(
+          encodeFunctionData({
+            abi: GatewayABI as Abi,
+            functionName: 'consumePermit',
+            args: [
+              pegToken.address,
+              pegTokenToRepay,
+              signaturePegToken.deadline,
+              signaturePegToken.v,
+              signaturePegToken.r,
+              signaturePegToken.s
+            ]
+          })
+        );
+      }
+
+      calls.push(
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'consumeAllowance',
+          args: [pegToken.address, pegTokenToRepay]
+        })
+      );
+
+      // do psm.mint
+      calls.push(
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'callExternal',
+          args: [
+            pegToken.address,
+            encodeFunctionData({
+              abi: ERC20PermitABI,
+              functionName: 'approve',
+              args: [psmAddress, pegTokenToRepay]
+            })
+          ]
+        })
+      );
+
+      calls.push(
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'callExternal',
+          args: [
+            psmAddress,
+            encodeFunctionData({
+              abi: PsmABI,
+              functionName: 'mint',
+              args: [contractsList.gatewayAddress, pegTokenToRepay]
+            })
+          ]
+        })
+      );
+
+      // partialRepay
+      calls.push(
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'callExternal',
+          args: [
+            creditAddress,
+            encodeFunctionData({
+              abi: CreditABI as Abi,
+              functionName: 'approve',
+              args: [lendingTerm.address, creditToRepay]
+            })
+          ]
+        })
+      );
+
+      calls.push(
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'callExternal',
+          args: [
+            lendingTerm.address,
+            encodeFunctionData({
+              abi: TermABI as Abi,
+              functionName: 'partialRepay',
+              args: [loanId, creditToRepay]
+            })
+          ]
+        })
+      );
+
+      // sweep leftovers
+      calls.push(
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'sweep',
+          args: [creditAddress]
+        })
       );
 
       //get description of calls in multicall
-      const callsDescription = getMulticallsDecoded(calls, lendingTerm, contractsList);
-      updateStepStatus(`Partial Repay`, 'In Progress', callsDescription);
+      updateStepStatus(`Mint + Partial repay (Multicall)`, 'In Progress');
 
       const hash = await writeContract(wagmiConfig, {
         address: contractsList.gatewayAddress,
@@ -398,228 +545,34 @@ function Myloans({
         args: [calls]
       });
 
-      const checkBorrow = await waitForTransactionReceipt(wagmiConfig, {
+      const checkTx = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash
       });
 
-      if (checkBorrow.status === 'success') {
+      if (checkTx.status === 'success') {
         setTimeout(function () {
           setReload(true);
         }, 5000);
-        updateStepStatus('Partial Repay', 'Success');
+        updateStepStatus('Mint + Partial repay (Multicall)', 'Success');
         return;
       } else {
-        updateStepStatus('Partial Repay', 'Error');
+        updateStepStatus('Mint + Partial repay (Multicall)', 'Error');
       }
 
-      updateStepStatus(`Partial Repay`, 'Success');
+      updateStepStatus(`Mint + Partial repay (Multicall)`, 'Success');
     } catch (e) {
       console.log(e);
-      updateStepStatus('Partial Repay', 'Error');
+      updateStepStatus('Mint + Partial repay (Multicall)', 'Error');
       return;
     }
   }
-
-  // async function partialRepayGatewayLeverage(
-  //   loanId: string,
-  //   value: string,
-  //   flashloanValue: string
-  // ) {
-  //   setOpen(false)
-  //   const createSteps = (): Step[] => {
-  //     const baseSteps = [
-  //       permitConfig.find(
-  //         (item) => item.collateralAddress === lendingTerm.collateral.address
-  //       )?.hasPermit
-  //         ? {
-  //             name: `Sign Permit for ${lendingTerm.collateral.symbol}`,
-  //             status: "Not Started",
-  //           }
-  //         : { name: `Approve ${lendingTerm.collateral.symbol}`, status: "Not Started" },
-  //       { name: "Sign Permit for USDC", status: "Not Started" },
-  //       { name: "Partial Repay with Leverage", status: "Not Started" },
-  //     ]
-  //     return baseSteps
-  //   }
-  //   setSteps(createSteps())
-
-  //   let signatureUSDC: any
-  //   let signatureCollateral: any
-
-  //   const usdcAmount = parseUnits(value, 6)
-  //   const usdcAmountFlashloan = parseUnits(flashloanValue, 6)
-  //   const debtToRepay = usdcToGUsdc(
-  //     usdcAmount + usdcAmountFlashloan,
-  //     tableDataWithDebts.find((item) => item.id == loanId)
-  //       .borrowCreditMultiplier as bigint
-  //   )
-  //   const flashloanCollateralAmount = calculateCollateralAmount(
-  //     usdcToGUsdc(
-  //       usdcAmountFlashloan,
-  //       tableDataWithDebts.find((item) => item.id == loanId)
-  //         .borrowCreditMultiplier as bigint
-  //     )
-  //   )
-  //   const collateralAmount = calculateCollateralAmount(debtToRepay)
-
-  //   setShowModal(true)
-
-  //   /* Set allowance for collateral token */
-  //   if (
-  //     permitConfig.find(
-  //       (item) => item.collateralAddress === lendingTerm.collateral.address
-  //     )?.hasPermit
-  //   ) {
-  //     try {
-  //       updateStepStatus(
-  //         `Sign Permit for ${lendingTerm.collateral.symbol}`,
-  //         "In Progress"
-  //       )
-
-  //       signatureCollateral = await signPermit({
-  //         contractAddress: lendingTerm.collateral.address,
-  //         erc20Name: lendingTerm.collateral.name,
-  //         ownerAddress: address,
-  //         spenderAddress: contractsList.gatewayAddress as Address,
-  //         value: collateralAmount,
-  //         deadline: BigInt(Number(moment().add(10, "seconds"))),
-  //         nonce: contractData?.collateralNonces,
-  //         chainId: wagmiConfig.chains[0].id,
-  //         permitVersion: "1",
-  //       })
-
-  //       if (!signatureCollateral) {
-  //         updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Error")
-  //         return
-  //       }
-  //       updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Success")
-  //     } catch (e) {
-  //       console.log(e)
-  //       updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, "Error")
-  //       return
-  //     }
-  //   } else {
-  //     try {
-  //       updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "In Progress")
-
-  //       const hash = await writeContract(wagmiConfig, {
-  //         address: lendingTerm.collateral.address,
-  //         abi: erc20Abi,
-  //         functionName: "approve",
-  //         args: [contractsList.gatewayAddress as Address, collateralAmount],
-  //       })
-  //       const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
-  //         hash: hash,
-  //       })
-
-  //       if (checkApprove.status != "success") {
-  //         updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Error")
-  //         return
-  //       }
-  //       updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Success")
-  //     } catch (e) {
-  //       console.log(e)
-  //       updateStepStatus(`Approve ${lendingTerm.collateral.symbol}`, "Error")
-  //       return
-  //     }
-  //   }
-
-  //   /* Sign permit on USDC for Gateway*/
-  //   try {
-  //     updateStepStatus(`Sign Permit for USDC`, "In Progress")
-
-  //     signatureUSDC = await signPermit({
-  //       contractAddress: pegToken.address,
-  //       erc20Name: pegToken.name,
-  //       ownerAddress: address,
-  //       spenderAddress: contractsList.gatewayAddress as Address,
-  //       value: usdcAmount,
-  //       deadline: BigInt(Number(moment().add(10, "seconds"))),
-  //       nonce: pegTokenNonces,
-  //       chainId: wagmiConfig.chains[0].id,
-  //       permitVersion: "1",
-  //     })
-
-  //     if (!signatureUSDC) {
-  //       updateStepStatus(`Sign Permit for USDC`, "Error")
-  //       return
-  //     }
-  //     updateStepStatus(`Sign Permit for USDC`, "Success")
-  //   } catch (e) {
-  //     console.log(e)
-  //     updateStepStatus(`Sign Permit for USDC`, "Error")
-  //     return
-  //   }
-
-  //   const deadlineSwap = BigInt(Number(moment().add(3600, "seconds")))
-  //   console.log(
-  //     "repayMode",
-  //     debtToRepay >= tableDataWithDebts.find((item) => item.id == loanId).loanDebt
-  //       ? "full"
-  //       : "partial"
-  //   )
-
-  //   /* Call gateway.multicall() */
-  //   try {
-  //     //build multicall
-  //     const calls = repayWithLeverage(
-  //       debtToRepay >= tableDataWithDebts.find((item) => item.id == loanId).loanDebt
-  //         ? "full"
-  //         : "partial",
-  //       lendingTerm,
-  //       loanId,
-  //       debtToRepay, //in gUSDC
-  //       usdcAmount, //in USDC
-  //       collateralAmount, // eg: sDAI
-  //       flashloanCollateralAmount, // eg: sDAI
-  //       usdcAmountFlashloan,
-  //       signatureCollateral,
-  //       signatureUSDC,
-  //       deadlineSwap,
-  //       contractsList,
-  //       pegToken.address,
-  //       creditAddress,
-  //       psmAddress
-  //     )
-
-  //     //get description of calls in multicall
-  //     const callsDescription = getMulticallsDecoded(calls, lendingTerm)
-  //     updateStepStatus(`Partial Repay with Leverage`, "In Progress", callsDescription)
-
-  //     const hash = await writeContract(wagmiConfig, {
-  //       ...gatewayContract,
-  //       functionName: "multicallWithBalancerFlashLoan",
-  //       args: [[lendingTerm.collateral.address], [flashloanCollateralAmount], calls],
-  //     })
-
-  //     const checkBorrow = await waitForTransactionReceipt(wagmiConfig, {
-  //       hash: hash,
-  //     })
-
-  //     if (checkBorrow.status === "success") {
-  //
-  //       setTimeout(function() {
-  //         setReload(true);
-  //       }, 5000);
-  //       updateStepStatus("Partial Repay with Leverage", "Success")
-  //       return
-  //     } else {
-  //       updateStepStatus("Partial Repay with Leverage", "Error")
-  //     }
-
-  //     updateStepStatus(`Partial Repay with Leverage`, "Success")
-  //   } catch (e) {
-  //     console.log(e)
-  //     updateStepStatus("Partial Repay with Leverage", "Error")
-  //     return
-  //   }
-  // }
 
   async function repayGatewayLeverage(loanId: string) {
     setOpen(false);
     const createSteps = (): Step[] => {
       const baseSteps = [
-        permitConfig.find((item) => item.collateralAddress === lendingTerm.collateral.address)?.hasPermit
+        permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
+          ?.hasPermit
           ? {
               name: `Sign Permit for ${lendingTerm.collateral.symbol}`,
               status: 'Not Started'
@@ -638,7 +591,10 @@ function Myloans({
     setShowModal(true);
 
     /* Set allowance for collateral token */
-    if (permitConfig.find((item) => item.collateralAddress === lendingTerm.collateral.address)?.hasPermit) {
+    if (
+      permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
+        ?.hasPermit
+    ) {
       try {
         updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, 'In Progress');
 
@@ -704,7 +660,18 @@ function Myloans({
           lendingTerm.collateral.address,
           pegToken.address,
           collateralAmount,
-          getAllowCollateralTokenCall(lendingTerm, collateralAmount, signatureCollateral)
+          encodeFunctionData({
+            abi: GatewayABI as Abi,
+            functionName: 'consumePermit',
+            args: [
+              lendingTerm.collateral.address,
+              collateralAmount,
+              signatureCollateral.deadline,
+              signatureCollateral.v,
+              signatureCollateral.r,
+              signatureCollateral.s
+            ]
+          })
         ]
       });
 
@@ -730,75 +697,200 @@ function Myloans({
     }
   }
 
-  async function repayGateway(loanId: string) {
+  async function repayGateway(loanId: string, value: string) {
     setOpen(false);
+
+    const checkStepName = `Check ${pegToken.symbol} allowance`;
+    const approveStepName = `Approve ${pegToken.symbol}`;
+
     const createSteps = (): Step[] => {
-      const baseSteps = [
-        { name: 'Sign Permit for USDC', status: 'Not Started' },
-        { name: 'Repay', status: 'Not Started' }
-      ];
+      const baseSteps: Step[] = [];
+      if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+        baseSteps.push({
+          name: `Sign Permit for ${pegToken.symbol}`,
+          status: 'Not Started'
+        });
+      } else {
+        baseSteps.push({ name: checkStepName, status: 'Not Started' });
+        baseSteps.push({ name: approveStepName, status: 'Not Started' });
+      }
+
+      baseSteps.push({ name: 'Mint + Repay (Multicall)', status: 'Not Started' });
+
       return baseSteps;
     };
+
     setSteps(createSteps());
+    let signaturePegToken: any;
 
-    let signatureUSDC: any;
-
-    const debtToRepay = tableDataWithDebts.find((item) => item.id == loanId).loanDebt;
-    const hourlyFees =
-      (parseUnits(lendingTerm.interestRate.toString(), 2) * debtToRepay) / BigInt(100) / BigInt(HOURS_IN_YEAR);
-    const usdcAmountToApprove = gUsdcToUsdc(
-      tableDataWithDebts.find((item) => item.id == loanId).loanDebt + hourlyFees,
-      creditMultiplier
-    );
+    const debtToRepay = tableDataWithDebts.find((item) => item.id == loanId).loanDebt as bigint;
+    const quarterHourInterests =
+      (parseUnits(lendingTerm.interestRate.toString(), 2) * debtToRepay) /
+      BigInt(100) /
+      (BigInt(4) * BigInt(HOURS_IN_YEAR));
+    const decimalNormalizer = BigInt('1' + '0'.repeat(36 - pegToken.decimals));
+    const pegTokenDebt = ((debtToRepay + quarterHourInterests) * creditMultiplier) / decimalNormalizer;
+    const pegTokenToRepay = pegTokenDebt;
+    const creditToRepay = (pegTokenToRepay * decimalNormalizer) / creditMultiplier;
 
     setShowModal(true);
 
-    /* Sign permit on USDC for Gateway*/
-    try {
-      updateStepStatus(`Sign Permit for USDC`, 'In Progress');
+    /* Set allowance for pegToken */
+    if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+      try {
+        updateStepStatus(`Sign Permit for ${pegToken.symbol}`, 'In Progress');
 
-      signatureUSDC = await signPermit({
-        contractAddress: pegToken.address as Address,
-        erc20Name: pegToken.name,
-        ownerAddress: address,
-        spenderAddress: contractsList.gatewayAddress as Address,
-        value: usdcAmountToApprove,
-        deadline: BigInt(Number(moment().add(10, 'seconds'))),
-        nonce: pegTokenNonces,
-        chainId: wagmiConfig.chains[0].id,
-        permitVersion: '1'
-      });
+        signaturePegToken = await signPermit({
+          contractAddress: pegToken.address as Address,
+          erc20Name: contractData?.pegTokenName,
+          ownerAddress: address,
+          spenderAddress: contractsList.gatewayAddress as Address,
+          value: pegTokenToRepay,
+          deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
+          nonce: contractData?.pegTokenNonces,
+          chainId: appChainId,
+          permitVersion: '1'
+        });
 
-      if (!signatureUSDC) {
-        updateStepStatus(`Sign Permit for USDC`, 'Error');
+        if (!signaturePegToken) {
+          updateStepStatus(`Sign Permit for ${pegToken.symbol}`, 'Error');
+          return;
+        }
+        updateStepStatus(`Sign Permit for ${pegToken.symbol}`, 'Success');
+      } catch (e) {
+        console.log(e);
+        updateStepStatus(`Sign Permit for ${pegToken.symbol}`, 'Error');
         return;
       }
-      updateStepStatus(`Sign Permit for USDC`, 'Success');
-    } catch (e) {
-      console.log(e);
-      updateStepStatus(`Sign Permit for USDC`, 'Error');
-      return;
+    } else {
+      try {
+        const approvalSuccess = await approvalStepsFlow(
+          address,
+          contractsList.gatewayAddress,
+          pegToken.address,
+          pegTokenToRepay,
+          appChainId,
+          updateStepStatus,
+          checkStepName,
+          approveStepName,
+          wagmiConfig
+        );
+
+        if (!approvalSuccess) {
+          updateStepStatus(approveStepName, 'Error');
+          return;
+        }
+      } catch (e) {
+        console.log(e);
+        updateStepStatus(approveStepName, 'Error');
+        return;
+      }
     }
 
     /* Call gateway.multicall() */
     try {
       //build multicall
-      const calls = simpleRepay(
-        'full',
-        lendingTerm,
-        loanId,
-        usdcAmountToApprove,
-        tableDataWithDebts.find((item) => item.id == loanId).loanDebt + hourlyFees,
-        signatureUSDC,
-        contractsList,
-        pegToken.address,
-        creditAddress,
-        psmAddress
+      const calls = [];
+
+      // pull pegToken on gateway
+      if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+        calls.push(
+          encodeFunctionData({
+            abi: GatewayABI as Abi,
+            functionName: 'consumePermit',
+            args: [
+              pegToken.address,
+              pegTokenToRepay,
+              signaturePegToken.deadline,
+              signaturePegToken.v,
+              signaturePegToken.r,
+              signaturePegToken.s
+            ]
+          })
+        );
+      }
+
+      calls.push(
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'consumeAllowance',
+          args: [pegToken.address, pegTokenToRepay]
+        })
+      );
+
+      // do psm.mint
+      calls.push(
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'callExternal',
+          args: [
+            pegToken.address,
+            encodeFunctionData({
+              abi: ERC20PermitABI,
+              functionName: 'approve',
+              args: [psmAddress, pegTokenToRepay]
+            })
+          ]
+        })
+      );
+
+      calls.push(
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'callExternal',
+          args: [
+            psmAddress,
+            encodeFunctionData({
+              abi: PsmABI,
+              functionName: 'mint',
+              args: [contractsList.gatewayAddress, pegTokenToRepay]
+            })
+          ]
+        })
+      );
+
+      // partialRepay
+      calls.push(
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'callExternal',
+          args: [
+            creditAddress,
+            encodeFunctionData({
+              abi: CreditABI as Abi,
+              functionName: 'approve',
+              args: [lendingTerm.address, creditToRepay]
+            })
+          ]
+        })
+      );
+
+      calls.push(
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'callExternal',
+          args: [
+            lendingTerm.address,
+            encodeFunctionData({
+              abi: TermABI as Abi,
+              functionName: 'repay',
+              args: [loanId]
+            })
+          ]
+        })
+      );
+
+      // sweep leftovers
+      calls.push(
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'sweep',
+          args: [creditAddress]
+        })
       );
 
       //get description of calls in multicall
-      const callsDescription = getMulticallsDecoded(calls, lendingTerm, contractsList);
-      updateStepStatus(`Repay`, 'In Progress', callsDescription);
+      updateStepStatus(`Mint + Repay (Multicall)`, 'In Progress');
 
       const hash = await writeContract(wagmiConfig, {
         address: contractsList.gatewayAddress,
@@ -807,24 +899,24 @@ function Myloans({
         args: [calls]
       });
 
-      const checkBorrow = await waitForTransactionReceipt(wagmiConfig, {
+      const checkTx = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash
       });
 
-      if (checkBorrow.status === 'success') {
+      if (checkTx.status === 'success') {
         setTimeout(function () {
           setReload(true);
         }, 5000);
-        updateStepStatus('Repay', 'Success');
+        updateStepStatus('Mint + Repay (Multicall)', 'Success');
         return;
       } else {
-        updateStepStatus('Repay', 'Error');
+        updateStepStatus('Mint + Repay (Multicall)', 'Error');
       }
 
-      updateStepStatus(`Repay`, 'Success');
+      updateStepStatus(`Mint + Repay (Multicall)`, 'Success');
     } catch (e) {
       console.log(e);
-      updateStepStatus('Repay', 'Error');
+      updateStepStatus('Mint + Repay (Multicall)', 'Error');
       return;
     }
   }
@@ -1084,7 +1176,6 @@ function Myloans({
         repayGatewayLeverage={repayGatewayLeverage}
         creditMultiplier={creditMultiplier}
         minBorrow={minBorrow}
-        currencyType={currencyType}
       />
 
       {isLoadingEventLoans ? (

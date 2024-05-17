@@ -1,33 +1,41 @@
-import { CurrencyTypes } from 'components/switch/ToggleCredit';
-import { formatDecimal } from 'utils/numbers';
+import { formatCurrencyValue } from 'utils/numbers';
 import { formatUnits } from 'viem';
 
 export const getTitleDisabled = (
+  pegTokenSymbol: string,
   collateralAmount: number,
   borrowAmount: number,
   collateralBalance: number,
   maxDebt: number,
   maxBorrow: number,
   minBorrow: number,
+  pegTokenBorrowAmount: number,
+  pegTokenBalance: number,
   withLeverage: boolean
 ): string => {
   if (!collateralAmount || collateralAmount <= 0) {
     return 'Enter collateral amount';
   }
 
-  if (collateralAmount > collateralBalance) {
-    return 'Not enough collateral';
-  }
-
   if (borrowAmount > maxDebt) {
     return 'Cannot exceed available debt';
   }
 
-  if (!withLeverage && borrowAmount > maxBorrow) {
-    return 'Cannot exceed available borrowing power';
+  if (borrowAmount < minBorrow) {
+    return `Minimum borrow is ${formatCurrencyValue(minBorrow)} ${pegTokenSymbol}`;
   }
 
-  if (borrowAmount < minBorrow) {
-    return 'Borrow minimum USDC amount';
+  if (pegTokenBorrowAmount > pegTokenBalance) {
+    return `Only ${formatCurrencyValue(pegTokenBalance)} ${pegTokenSymbol} liquidity available`;
   }
+
+  if (!withLeverage && borrowAmount > maxBorrow) {
+    return 'Not enough collateral';
+  }
+
+  if (collateralAmount > collateralBalance) {
+    return 'Not enough collateral';
+  }
+
+  return '';
 };

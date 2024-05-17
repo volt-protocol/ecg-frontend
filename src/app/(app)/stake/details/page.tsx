@@ -37,7 +37,6 @@ const LendingDetails = () => {
   const [reload, setReload] = useState<boolean>(true);
   const [utilization, setUtilization] = useState<string>('');
   const [eventLoans, setEventLoans] = useState<loanObj[]>([]);
-  const [currencyType, setCurrencyType] = useState<'creditToken' | 'pegToken'>('creditToken');
 
   useEffect(() => {
     if (lendingTerms && termAddress) {

@@ -162,18 +162,46 @@ function Airdrop() {
 
   return (
     <div>
-      <Card title="" extra="w-full min-h-[300px] md:col-span-1 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
+      <Card title="" extra="w-full mb-2 md:col-span-1 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
         <h3 className="mb-2">
-          <span className="text-bold text-xl">Cycle 1 (2024-04-20 → 2024-05-17)</span>
-          <span className="ml-2 inline-block rounded-md bg-gray-100 px-1 py-0.5 align-middle align-text-bottom font-mono text-xs text-gray-700 ring-1 ring-inset ring-gray-200 transition-all duration-150 ease-in-out dark:bg-navy-600 dark:text-gray-200 dark:ring-navy-500">
+          <span className="text-bold text-xl">Cycle 2 (2024-05-17 → 2024-06-17)</span>
+          <span className="ml-2 inline-block rounded-md bg-gray-100 px-1 py-0.5 align-middle align-text-bottom font-mono text-xs text-gray-700 ring-1 ring-inset ring-gray-200 transition-all duration-150 ease-in-out">
             in progress
           </span>
         </h3>
 
-        <p className="mb-2 italic opacity-50">
+        <p className="mb-1 italic opacity-50">
+          In this epoch, a constant amount of rewards is allocated to each day. Stakers do not earn lender or borrower
+          rewards on top of their staker rewards anymore, and staker rewards are proportional to interest
+          pending+realized in the lending terms during the stake. Lender rewards are proportional to the utilization in
+          a market relative to other markets.
+        </p>
+        <p className="mb-1 italic opacity-50">
+          As a lender, lend in the market with highest utilization percent to maximize your rewards.
+        </p>
+        <p className="mb-1 italic opacity-50">
+          As a staker, stake on terms with highest interest paid by borrowers (and the fewest other stakers) to maximize
+          your rewards.
+        </p>
+        <p className="italic opacity-50">
+          10M GUILD Airdrop. 70% to Lenders, 10% to Borrowers, 17% to Stakers, 3% to Liquidators.
+        </p>
+      </Card>
+      <Card title="" extra="w-full min-h-[300px] md:col-span-1 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
+        <h3 className="mb-2">
+          <span className="text-bold text-xl">Cycle 1 (2024-04-20 → 2024-05-17)</span>
+          <span className="ml-2 inline-block rounded-md bg-green-600 px-1 py-0.5 align-middle align-text-bottom font-mono text-xs text-white ring-1 ring-inset ring-green-700 transition-all duration-150 ease-in-out">
+            distributed
+          </span>
+        </h3>
+
+        <p className="mb-1 italic opacity-50">
           In this epoch, a constant amount of rewards is allocated to each day. Stakers who have more (lend + stake)
           than borrow on any given day are considered "lenders" for this day, and earn the lender rewards for this day,
           on top of the staker rewards.
+        </p>
+        <p className="mb-2 italic opacity-50">
+          10M GUILD Airdrop. 60% to Lenders, 20% to Borrowers, 15% to Stakers, 5% to Liquidators.
         </p>
 
         <table className="w-full">

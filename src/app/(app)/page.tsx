@@ -20,6 +20,7 @@ import { GlobalStatCarts } from './components/GlobalStatCarts';
 import { TVLChart } from './components/TVLChart';
 import { HttpGet } from 'utils/HttpHelper';
 import { LastActivityApiResponse } from 'types/activities';
+import { MdOutlineHandshake } from 'react-icons/md';
 
 const GlobalDashboard = () => {
   const {
@@ -37,6 +38,7 @@ const GlobalDashboard = () => {
     psmPegTokenBalance
   } = useAppStore();
   const [totalActiveLoans, setTotalActiveLoans] = useState<number>();
+  const [dataLoading, setDataLoading] = useState<boolean>(true);
   const [debtCeilingData, setDebtCeilingData] = useState([]);
   const [collateralData, setCollateralData] = useState([]);
   const [liquidityData, setLiquidityData] = useState(0);
@@ -57,6 +59,7 @@ const GlobalDashboard = () => {
   };
 
   useEffect(() => {
+    setDataLoading(true);
     const asyncFunc = async () => {
       const total = await getTotalActiveLoans();
       setTotalActiveLoans(total);
@@ -74,9 +77,14 @@ const GlobalDashboard = () => {
       // setLastActivites(lastActivities);
       const allTimePnl = await getAllTimePnl();
       setAllTimePnl(allTimePnl);
+      setDataLoading(false);
     };
 
-    lendingTerms.length && asyncFunc();
+    if (lendingTerms.length == 0) {
+      setDataLoading(false);
+    } else {
+      asyncFunc();
+    }
   }, [lendingTerms]);
 
   if (!contractsList?.marketContracts[appMarketId]) {
@@ -242,9 +250,16 @@ const GlobalDashboard = () => {
           title="Collateral Types"
           extra="w-full min-h-[300px] md:col-span-1 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
         >
-          {debtCeilingData.length == 0 ? (
+          {dataLoading ? (
             <div className="flex h-96 items-center justify-center">
               <Spinner />
+            </div>
+          ) : collateralData.length == 0 ? (
+            <div className="mt-20 flex-col items-center justify-center opacity-40">
+              <div className="flex justify-center">
+                <MdOutlineHandshake className="h-10 w-10" />
+              </div>
+              <div className="mt-4 flex justify-center">No data to display</div>
             </div>
           ) : (
             <CollateralTypes
@@ -283,9 +298,16 @@ const GlobalDashboard = () => {
           title="Debt Ceiling"
           extra="w-full min-h-[300px] md:col-span-1 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
         >
-          {debtCeilingData.length == 0 ? (
+          {dataLoading ? (
             <div className="flex h-96 items-center justify-center">
               <Spinner />
+            </div>
+          ) : debtCeilingData.length == 0 ? (
+            <div className="mt-20 flex-col items-center justify-center opacity-40">
+              <div className="flex justify-center">
+                <MdOutlineHandshake className="h-10 w-10" />
+              </div>
+              <div className="mt-4 flex justify-center">No data to display</div>
             </div>
           ) : (
             <DebtCeiling
@@ -337,9 +359,17 @@ const GlobalDashboard = () => {
               </dd>
             </div>
           </dl>
-          {firstLossData.length == 0 ? (
+
+          {dataLoading ? (
             <div className="flex h-96 items-center justify-center">
               <Spinner />
+            </div>
+          ) : firstLossData.length == 0 ? (
+            <div className="mt-20 flex-col items-center justify-center opacity-40">
+              <div className="flex justify-center">
+                <MdOutlineHandshake className="h-10 w-10" />
+              </div>
+              <div className="mt-4 flex justify-center">No data to display</div>
             </div>
           ) : (
             <FirstLossCapital

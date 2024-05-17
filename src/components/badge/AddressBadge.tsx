@@ -3,7 +3,15 @@ import { shortenAddress } from 'utils/strings';
 import { Address } from 'viem';
 import { getExplorerBaseUrl } from 'config';
 
-export const AddressBadge = ({ address, appChainId }: { address: Address; appChainId: number }) => {
+export const AddressBadge = ({
+  address,
+  appChainId,
+  noShortening
+}: {
+  address: Address;
+  appChainId: number;
+  noShortening?: boolean;
+}) => {
   return (
     <div className="w-fit rounded-md bg-gray-100 px-1 py-0.5 ring-1 ring-inset ring-gray-200 dark:bg-navy-600 dark:ring-navy-500 ">
       <a
@@ -13,7 +21,7 @@ export const AddressBadge = ({ address, appChainId }: { address: Address; appCha
         rel="noopener noreferrer"
       >
         <MdOutlineArticle />
-        {shortenAddress(address)}
+        {noShortening ? address : shortenAddress(address)}
         <MdOpenInNew />
       </a>
     </div>

@@ -576,8 +576,8 @@ function CreateLoan({
 
   const handleCollateralChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
-    // Vérifier si la valeur saisie ne contient que des numéros
-    if (/^[0-9]*\.?[0-9]*$/i.test(inputValue)) {
+    // Verify input is a number
+    if (/^[0-9]+\.?[0-9]*$/i.test(inputValue)) {
       setCollateralAmount(inputValue as string);
     }
   };

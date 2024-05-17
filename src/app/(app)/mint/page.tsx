@@ -4,8 +4,8 @@ import Disconnected from 'components/error/disconnected';
 import React, { useEffect, useState } from 'react';
 import Card from 'components/card';
 import { useAccount, useReadContracts } from 'wagmi';
-import { ProfitManagerABI, CreditABI } from 'lib/contracts';
-import { waitForTransactionReceipt, writeContract } from '@wagmi/core';
+import { ProfitManagerABI, CreditABI, WethABI } from 'lib/contracts';
+import { waitForTransactionReceipt, writeContract, getBalance } from '@wagmi/core';
 import { formatCurrencyValue, formatDecimal } from 'utils/numbers';
 import { toastError } from 'components/toast';
 import MintOrRedeem from './components/MintOrRedeem';
@@ -13,24 +13,31 @@ import { Step } from 'components/stepLoader/stepType';
 import StepModal from 'components/stepLoader';
 import clsx from 'clsx';
 import { Switch } from '@headlessui/react';
-import { formatUnits, Address, erc20Abi } from 'viem';
+import { formatUnits, Address, erc20Abi, parseUnits } from 'viem';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
 import Spinner from 'components/spinner';
 import { getPegTokenLogo, marketsConfig } from 'config';
 import Image from 'next/image';
 import { TooltipHorizon, QuestionMarkIcon } from 'components/tooltip';
-import { BsBank2 } from 'react-icons/bs';
+import { BsClock, BsPerson, BsSafe2, BsPercent, BsFire } from 'react-icons/bs';
 import Widget from 'components/widget/Widget';
 import { ApexChartWrapper } from 'components/charts/ApexChartWrapper';
+import DefiInputBox from 'components/box/DefiInputBox';
 
 function MintAndSaving() {
-  const { appMarketId, appChainId, contractsList, coinDetails, historicalData, airdropData } = useAppStore();
+  const { appMarketId, appChainId, contractsList, coinDetails, historicalData, airdropData, creditHolderCount } =
+    useAppStore();
   const { address, isConnected } = useAccount();
   const [reload, setReload] = React.useState<boolean>(false);
   const [showModal, setShowModal] = useState(false);
   const [editingFdv, setEditingFdv] = useState(false);
-  const [fdv, setFdv] = useState(0);
+  const [fdv, setFdv] = useState(20_000_000);
+  const [apr, setApr] = useState(0);
+  const [aprFuture, setAprFuture] = useState(0);
+  const [wrapValue, setWrapValue] = useState<string>('');
+  const [unwrapValue, setUnwrapValue] = useState<string>('');
+  const [userBalance, setUserBalance] = useState<bigint>(BigInt(0));
   const [chartData, setChartData] = useState<any>([]);
 
   const createSteps = (): Step[] => {
@@ -56,8 +63,8 @@ function MintAndSaving() {
   const fdvSupply = 1e9; // 1B GUILD max supply
   const airdropPercent = 0.01; // 1% supply
   const airdropSize = airdropPercent * fdvSupply;
-  const dailyGuild = airdropSize / 30; // monthly periods
-  const dailyGuildToLenders = dailyGuild * 0.6; // 60% to lenders
+  const dailyGuild = airdropSize / 30; // days in period
+  const dailyGuildToLenders = dailyGuild * 0.7; // 70% to lenders
   const currentDailyGuildPerDollarLent = dailyGuildToLenders / airdropData.rebasingSupplyUsd;
   const lenderApr = (365 * currentDailyGuildPerDollarLent * fdv) / 1e9;
 
@@ -66,7 +73,11 @@ function MintAndSaving() {
 
     const interpolatingRebaseRewards: number[] = [];
     const unpaidInterestPerUnit: number[] = [];
-    historicalData.aprData.timestamps.forEach((t, i) => {
+    let dxAPR: number = 0;
+    let dyAPR: number = 0;
+    let dxAPRFuture: number = 0;
+    let dyAPRFuture: number = 0;
+    historicalData.aprData.timestamps.forEach((t, i, arr) => {
       // compute unpaid interest per unit of credit token
       const unpaidInterest =
         historicalData.loanBorrow.values.totalUnpaidInterests[i] /
@@ -82,7 +93,31 @@ function MintAndSaving() {
       interpolatingRebaseRewards.push(
         Number(formatDecimal(interpolatingRewardsPerCredit, pegTokenDecimalsToDisplay * 2))
       );
+
+      // variables to compute apr
+      if (i != 0 && t > (Date.now() - 24 * 36e5) / 1000) {
+        const dx = t - arr[i - 1];
+        const dy = historicalData.aprData.values.sharePrice[i] - historicalData.aprData.values.sharePrice[i - 1];
+        if (dy > 0) {
+          dxAPR += dx;
+          dyAPR += dy;
+        }
+        const dyUnpaid = unpaidInterestPerUnit[i] - unpaidInterestPerUnit[i - 1];
+        const dyInterpolating = interpolatingRebaseRewards[i] - interpolatingRebaseRewards[i - 1];
+        const dyFuture = dy + dyUnpaid + dyInterpolating;
+        if (dyFuture > 0) {
+          dxAPRFuture += dx;
+          dyAPRFuture += dyFuture;
+        }
+      }
     });
+
+    let _apr = 100 * ((1 + (dyAPR * 31536000) / dxAPR) / 1 - 1);
+    if (isNaN(_apr)) _apr = 0;
+    setApr(_apr);
+    let _aprFuture = 100 * ((1 + (dyAPRFuture * 31536000) / dxAPRFuture) / 1 - 1);
+    if (isNaN(_aprFuture)) _aprFuture = 0;
+    setAprFuture(_aprFuture);
 
     const seriesData = [
       {
@@ -93,21 +128,21 @@ function MintAndSaving() {
         color: '#212121'
       },
       {
-        name: 'Pending Interest',
-        data: unpaidInterestPerUnit,
-        color: '#757575'
-      },
-      {
         name: 'Distributed through rebase',
         data: historicalData.aprData.values.sharePrice.map((e) =>
           Number(formatDecimal(e - 1, pegTokenDecimalsToDisplay * 2))
         ),
-        color: '#388E3C'
+        color: '#689F38'
       },
       {
         name: 'Interpolating rebase rewards',
         data: interpolatingRebaseRewards,
-        color: '#4CAF50'
+        color: '#FFC107'
+      },
+      {
+        name: 'Pending Interest',
+        data: unpaidInterestPerUnit,
+        color: '#757575'
       }
     ];
 
@@ -227,13 +262,114 @@ function MintAndSaving() {
   });
 
   useEffect(() => {
+    if (!isConnected) return;
+    getBalance(wagmiConfig, {
+      address,
+      chainId: appChainId as any
+    }).then(function (balance) {
+      setUserBalance(balance.value);
+    });
+  }, [reload]);
+
+  useEffect(() => {
     if (reload) {
       refetch();
       setReload(false);
     }
   }, [reload]);
 
+  const handleWrapInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+
+    // Verify input is a number
+    if (/^[0-9]+\.?[0-9]*$/i.test(inputValue)) {
+      setWrapValue(inputValue as string);
+    }
+  };
+
+  const handleUnwrapInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+
+    // Verify input is a number
+    if (/^[0-9]+\.?[0-9]*$/i.test(inputValue)) {
+      setUnwrapValue(inputValue as string);
+    }
+  };
+
+  async function wrap(): Promise<void> {
+    if (!isConnected) {
+      toastError('Please connect your wallet');
+      return;
+    }
+    setSteps([{ name: 'Wrap', status: 'Not Started' }]);
+    const updateStepStatus = (stepName: string, status: Step['status']) => {
+      setSteps((prevSteps) => prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step)));
+    };
+
+    try {
+      setShowModal(true);
+      updateStepStatus('Wrap', 'In Progress');
+
+      const hash = await writeContract(wagmiConfig, {
+        address: pegTokenAddress,
+        abi: WethABI,
+        functionName: 'deposit',
+        value: parseUnits(wrapValue, 18)
+      });
+
+      const check = await waitForTransactionReceipt(wagmiConfig, {
+        hash: hash
+      });
+      if (check.status != 'success') {
+        updateStepStatus('Wrap', 'Error');
+        return;
+      }
+      updateStepStatus('Wrap', 'Success');
+      setReload(true);
+    } catch (error) {
+      updateStepStatus('Wrap', 'Error');
+      console.log(error);
+    }
+  }
+
+  async function unwrap(): Promise<void> {
+    if (!isConnected) {
+      toastError('Please connect your wallet');
+      return;
+    }
+    setSteps([{ name: 'Unwrap', status: 'Not Started' }]);
+    const updateStepStatus = (stepName: string, status: Step['status']) => {
+      setSteps((prevSteps) => prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step)));
+    };
+
+    try {
+      setShowModal(true);
+      updateStepStatus('Unwrap', 'In Progress');
+
+      const hash = await writeContract(wagmiConfig, {
+        address: pegTokenAddress,
+        abi: WethABI,
+        functionName: 'withdraw',
+        args: [parseUnits(unwrapValue, 18)]
+      });
+
+      const check = await waitForTransactionReceipt(wagmiConfig, {
+        hash: hash
+      });
+      if (check.status != 'success') {
+        updateStepStatus('Unwrap', 'Error');
+        return;
+      }
+      updateStepStatus('Unwrap', 'Success');
+      setReload(true);
+    } catch (error) {
+      updateStepStatus('Unwrap', 'Error');
+      console.log(error);
+    }
+  }
+
   async function saving(rebaseMode: string): Promise<void> {
+    setSteps(createSteps());
     if (!isConnected) {
       toastError('Please connect your wallet');
       return;
@@ -278,15 +414,214 @@ function MintAndSaving() {
       <div>
         {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
 
-        {true ? null : (
-          <div className="mt-3 grid grid-cols-1 gap-5 opacity-50 xs:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 3xl:grid-cols-6">
+        <div className="mt-3 grid gap-5 xs:grid-cols-1 lg:grid-cols-6 2xl:grid-cols-6 3xl:grid-cols-6">
+          <Card
+            title=""
+            extra="order-1 w-full h-full sm:overflow-auto px-3 py-3 lg:col-span-2 2xl:col-span-2 3xl:col-span-2 xs:col-span-1 text-center"
+          >
+            <h3 className="text-left leading-5">
+              <span className="mr-2 inline-block rounded-full bg-lightPrimary p-3 align-middle text-brand-500 dark:bg-navy-700">
+                <BsFire className="h-5 w-5" />
+              </span>
+              <span className="text-md">Lending APR</span>
+            </h3>
+            <TooltipHorizon
+              extra="dark:text-gray-200"
+              content={
+                <>
+                  <p>APR currently being distributed through the rebasing mechanism (savings rate).</p>
+                  <p>Average over the last 24 hours.</p>
+                  <p>This corresponds to the green area on the chart.</p>
+                </>
+              }
+              trigger={
+                <div className={!fdv ? 'mt-2' : ''}>
+                  <span className="mr-1 font-bold">Current APR :</span>
+                  <span>
+                    <Image
+                      className="inline-block align-bottom"
+                      title={pegToken?.symbol}
+                      src={pegTokenLogo}
+                      width={24}
+                      height={24}
+                      alt="logo"
+                    />{' '}
+                    {formatDecimal(apr, 2) + '%'}
+                  </span>
+                  <span>
+                    {' '}
+                    +{' '}
+                    <Image
+                      className="inline-block align-bottom"
+                      src="/img/crypto-logos/guild.png"
+                      title="GUILD"
+                      width={24}
+                      height={24}
+                      alt="logo"
+                    />{' '}
+                    {fdv
+                      ? formatDecimal(lenderApr * 100, 2) + '% *'
+                      : formatDecimal(currentDailyGuildPerDollarLent * 1000, 0) + ' / 1k$ daily'}
+                  </span>
+                </div>
+              }
+              placement="bottom"
+            />
+            <TooltipHorizon
+              extra="dark:text-gray-200"
+              content={
+                <>
+                  <p>
+                    Estimated future APR, based on current savings rate + interpolating rewards + pending interests.
+                  </p>
+                  <p>Average over the last 24 hours.</p>
+                  <p>This corresponds to the green + yellow + gray areas on the chart.</p>
+                </>
+              }
+              trigger={
+                <div>
+                  <span className="mr-1 font-bold">Future APR :</span>
+                  <span>
+                    <Image
+                      className="inline-block align-bottom"
+                      title={pegToken?.symbol}
+                      src={pegTokenLogo}
+                      width={24}
+                      height={24}
+                      alt="logo"
+                    />{' '}
+                    {formatDecimal(aprFuture, 2) + '%'}
+                  </span>
+                  <span>
+                    {' '}
+                    +{' '}
+                    <Image
+                      className="inline-block align-bottom"
+                      src="/img/crypto-logos/guild.png"
+                      title="GUILD"
+                      width={24}
+                      height={24}
+                      alt="logo"
+                    />{' '}
+                    {fdv
+                      ? formatDecimal(lenderApr * 100, 2) + '% *'
+                      : formatDecimal(currentDailyGuildPerDollarLent * 1000, 0) + ' / 1k$ daily'}
+                  </span>
+                </div>
+              }
+              placement="bottom"
+            />
+            {fdv ? (
+              <div className="mt-1 text-2xl text-xs font-normal opacity-50">
+                * Assuming ${formatCurrencyValue(fdv)} FDV, GUILD is not transferable yet
+              </div>
+            ) : null}
+
+            {editingFdv ? (
+              <div className="cursor-pointer text-xs">
+                $
+                <input
+                  className="border-gray-300 bg-brand-100/0 px-2 py-1 text-gray-800 focus:border-brand-400/80 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-50"
+                  type="text"
+                  value={fdv}
+                  onChange={(e) => {
+                    if (/^[0-9]+\.?[0-9]*$/i.test(e.target.value)) {
+                      let num = Number(e.target.value);
+                      if (!isNaN(num)) {
+                        setFdv(Number(e.target.value));
+                      }
+                    }
+                  }}
+                />
+                <span
+                  className="mr-2 cursor-pointer rounded-sm bg-brand-500 px-1 py-1 text-xs font-semibold text-white no-underline hover:bg-brand-400 dark:bg-brand-800 dark:hover:bg-brand-700"
+                  onClick={async () => {
+                    setEditingFdv(false);
+                  }}
+                >
+                  Set
+                </span>
+                <span
+                  className="mr-2 cursor-pointer rounded-sm bg-gray-500 px-1 py-1 text-xs font-semibold text-white no-underline hover:bg-gray-400 dark:bg-gray-800 dark:hover:bg-gray-700"
+                  onClick={async () => {
+                    setFdv(0);
+                    setEditingFdv(false);
+                  }}
+                >
+                  Clear
+                </span>
+              </div>
+            ) : (
+              <div
+                className={(fdv ? 'mt-1' : 'mt-2') + ' text-bold cursor-pointer text-xs underline'}
+                onClick={() => {
+                  setEditingFdv(true);
+                }}
+              >
+                Set {fdv ? 'another' : ''} FDV to {fdv ? 'update' : 'display'} GUILD APR
+              </div>
+            )}
+            <TooltipHorizon
+              extra="dark:text-gray-200"
+              content={
+                <>
+                  <p className="mb-3 text-xs opacity-50">
+                    In addition to {pegToken?.symbol} yield, you will be earning GUILD tokens as a reward for
+                    <br />
+                    helping to bootstrap the protocol. GUILD rewards are computed per epoch,
+                    <br />
+                    visit the airdrop page for more information.
+                  </p>
+                  <p>
+                    GUILD airdrop : <span className="font-semibold">10M</span>
+                  </p>
+                  <p>
+                    Period duration : <span className="font-semibold">30 days</span>
+                  </p>
+                  <p>
+                    GUILD to lenders : <span className="font-semibold">70%</span>
+                  </p>
+                  <p>
+                    Daily GUILD to lenders :{' '}
+                    <span className="font-semibold">{formatCurrencyValue(dailyGuildToLenders)}</span>
+                  </p>
+                  <p>
+                    Total lent (across all markets) :{' '}
+                    <span className="font-semibold">{formatCurrencyValue(airdropData.rebasingSupplyUsd)}</span> $
+                  </p>
+                  <p>
+                    Current daily GUILD per $ lent :{' '}
+                    <span className="font-semibold">{formatDecimal(currentDailyGuildPerDollarLent, 2)}</span>
+                  </p>
+                  <p className="mt-3 italic">
+                    All values are estimates and the final result depends on the behavior
+                    <br />
+                    of other protocol users.
+                  </p>
+                </>
+              }
+              trigger={
+                <div className="mt-1 cursor-help text-center text-xs italic opacity-50">
+                  Hover to view airdrop details
+                </div>
+              }
+              placement="bottom"
+            />
+          </Card>
+
+          <div className="order-2 grid h-full w-full grid-cols-1 gap-5 xs:col-span-1 xs:grid-cols-2 sm:overflow-auto lg:col-span-4 lg:grid-cols-2 2xl:col-span-4 2xl:grid-cols-2 3xl:col-span-4 3xl:grid-cols-2">
             <TooltipHorizon
               extra="dark:text-gray-200"
               content={
                 <>
                   <p>
                     Lent : <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
-                    <span className="font-semibold">{formatDecimal(123.456789, pegTokenDecimalsToDisplay)}</span>{' '}
+                    <span className="font-semibold">
+                      {formatDecimal(
+                        Number(historicalData.creditSupply.values.slice(-1)[0]),
+                        pegTokenDecimalsToDisplay
+                      )}
+                    </span>{' '}
                     {pegToken?.symbol}
                   </p>
                   <p>
@@ -294,20 +629,38 @@ function MintAndSaving() {
                     <span className="text-gray-400">(DefiLlama)</span>
                   </p>
                   <p>
-                    Total Lent : <span className="font-semibold">{formatDecimal(123.456789 * pegToken.price, 2)}</span>{' '}
+                    Total Lent :{' '}
+                    <span className="font-semibold">
+                      {formatDecimal(Number(historicalData.creditSupply.values.slice(-1)[0]) * pegToken.price, 2)}
+                    </span>{' '}
                     $ <span className="text-gray-400">(DefiLlama)</span>
+                  </p>
+                  <p className="mt-2">
+                    Earning Savings Rate:{' '}
+                    <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                    <span className="font-semibold">
+                      {formatDecimal(
+                        Number(historicalData.aprData.values.rebasingSupply.slice(-1)[0]),
+                        pegTokenDecimalsToDisplay
+                      )}
+                    </span>
                   </p>
                 </>
               }
               trigger={
                 <div>
                   <Widget
-                    icon={<BsBank2 className="h-7 w-7" />}
+                    icon={<BsSafe2 className="h-7 w-7" />}
                     title={'Total Lent'}
                     subtitle={
                       pegToken.price === 0
                         ? '$ -.--'
-                        : '$ ' + formatCurrencyValue(parseFloat(formatDecimal(123.456789 * pegToken.price, 2)))
+                        : '$ ' +
+                          formatCurrencyValue(
+                            parseFloat(
+                              formatDecimal(Number(historicalData.creditSupply.values.slice(-1)[0]) * pegToken.price, 2)
+                            )
+                          )
                     }
                     extra={<QuestionMarkIcon />}
                   />
@@ -316,183 +669,227 @@ function MintAndSaving() {
               placement="bottom"
             />
 
-            <Widget icon={<BsBank2 className="h-7 w-7" />} title={'Lenders'} subtitle={'Soon™️'} />
-
-            <Widget icon={<BsBank2 className="h-7 w-7" />} title={'Utilization'} subtitle={'Soon™️'} />
-
-            <Widget icon={<BsBank2 className="h-7 w-7" />} title={'Current APR'} subtitle={'Soon™️'} />
-
-            <Widget icon={<BsBank2 className="h-7 w-7" />} title={'Future APR (est)'} subtitle={'Soon™️'} />
-
-            <Widget icon={<BsBank2 className="h-7 w-7" />} title={'All-time P&L'} subtitle={'Soon™️'} />
-          </div>
-        )}
-
-        <div className="mt-3 grid grid-cols-1 gap-5 xs:grid-cols-1 lg:grid-cols-6 2xl:grid-cols-6 3xl:grid-cols-6">
-          <Card
-            title="Earnings over time"
-            extra="order-1 w-full h-full sm:overflow-auto px-6 py-4 lg:col-span-4 2xl:col-span-4 3xl:col-span-4 xs:col-span-1"
-          >
-            <p className="text-sm opacity-70">
-              Hypothetical earnings of 1{' '}
-              <Image
-                className="inline-block align-text-bottom"
-                src={pegTokenLogo}
-                width={16}
-                height={16}
-                alt={pegToken?.symbol}
-              />{' '}
-              {pegToken?.symbol} lent since market launch.
-            </p>
-            <div>
-              {chartData.length === 0 ? (
-                <div className="flex h-96 items-center justify-center">
-                  <Spinner />
-                </div>
-              ) : (
+            <TooltipHorizon
+              extra="dark:text-gray-200"
+              content={
+                <>
+                  <p>
+                    Number of unique addresses holding{' '}
+                    <Image
+                      className="inline-block"
+                      src={pegTokenLogo}
+                      width={20}
+                      height={20}
+                      alt="logo"
+                      style={{ borderRadius: '50%', border: '2px solid #3e6b7d' }}
+                    />{' '}
+                    {creditTokenSymbol}.
+                  </p>
+                </>
+              }
+              trigger={
                 <div>
-                  <ApexChartWrapper options={chartData.options} series={chartData.series} type="area" height={270} />
-                </div>
-              )}
-            </div>
-            <p className="text-xs italic opacity-70">
-              Unlike most lending protocols, profit in the Credit Guild is accounted only when borrowers pay their
-              interests, once we know the loans did not create bad debt. When borrowers pay interests, the profit is
-              distributed to lenders through a rebase interpolation over 30 days (your balance slowly goes up over
-              time).
-            </p>
-          </Card>
-          <Card
-            title="Current daily GUILD rewards"
-            extra="order-2 w-full h-full sm:overflow-auto px-6 py-4 lg:col-span-2 2xl:col-span-2 3xl:col-span-2 xs:col-span-1"
-          >
-            <div className="text-center">
-              <Image
-                className="mt-3 inline-block"
-                src="/img/crypto-logos/guild.png"
-                width={85}
-                height={85}
-                alt="logo"
-              />
-              {fdv ? (
-                <div className="mt-2 text-2xl">
-                  <span className="font-bold">{formatDecimal(lenderApr * 100, 0)}%</span>*
-                  <div className="text-xs font-normal">
-                    *APR assuming ${formatCurrencyValue(fdv)} FDV, GUILD is not transferable yet
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-2 text-2xl font-bold">
-                  {formatDecimal(currentDailyGuildPerDollarLent * 1000, 0)} GUILD / 1k$
-                </div>
-              )}
-
-              {editingFdv ? (
-                <div className="mt-1 cursor-pointer text-xs">
-                  $
-                  <input
-                    className="border-gray-300 bg-brand-100/0 px-2 py-1 text-gray-800 focus:border-brand-400/80 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-50"
-                    type="text"
-                    value={fdv}
-                    onChange={(e) => {
-                      if (/^[0-9]*\.?[0-9]*$/i.test(e.target.value)) {
-                        let num = Number(e.target.value);
-                        if (!isNaN(num)) {
-                          setFdv(Number(e.target.value));
-                        }
-                      }
-                    }}
+                  <Widget
+                    icon={<BsPerson className="h-7 w-7" />}
+                    title={'Lenders'}
+                    subtitle={creditHolderCount}
+                    extra={<QuestionMarkIcon />}
                   />
-                  <span
-                    className="mr-2 cursor-pointer rounded-sm bg-brand-500 px-1 py-1 text-xs font-semibold text-white no-underline hover:bg-brand-400 dark:bg-brand-800 dark:hover:bg-brand-700"
-                    onClick={async () => {
-                      setEditingFdv(false);
-                    }}
-                  >
-                    Set Custom
-                  </span>
-                  <span
-                    className="mr-2 cursor-pointer rounded-sm bg-brand-500 px-1 py-1 text-xs font-semibold text-white no-underline hover:bg-brand-400 dark:bg-brand-800 dark:hover:bg-brand-700"
-                    onClick={async () => {
-                      setFdv(50e6);
-                      setEditingFdv(false);
-                    }}
-                  >
-                    Set to $50M
-                  </span>
-                  <span
-                    className="mr-2 cursor-pointer rounded-sm bg-gray-500 px-1 py-1 text-xs font-semibold text-white no-underline hover:bg-gray-400 dark:bg-gray-800 dark:hover:bg-gray-700"
-                    onClick={async () => {
-                      setFdv(0);
-                      setEditingFdv(false);
-                    }}
-                  >
-                    Clear
-                  </span>
                 </div>
-              ) : (
-                <div
-                  className="text-bold mt-1 cursor-pointer text-xs underline"
-                  onClick={() => {
-                    setEditingFdv(true);
-                  }}
-                >
-                  Set FDV to {fdv ? 'update' : 'display'} APY
-                </div>
-              )}
+              }
+              placement="bottom"
+            />
 
-              <p className="mt-3 text-xs opacity-50">
-                In addition to {pegToken?.symbol} yield, you will be earning GUILD tokens as a reward for helping to
-                bootstrap the protocol. GUILD rewards are computed per epoch of ~1 month, and airdropped directly in
-                your wallet. Current epoch is running between 19th of april to 19th of may, and a total of 10M GUILD
-                tokens will be distributed. Distribution will go 60% to lenders, 20% to borrowers, 15% to first-loss
-                capital providers (GUILD and {creditTokenSymbol}), and 5% towards liquidators, proportional to the value
-                and time spent in the protocol. Rewards are shared between all markets.
-              </p>
-              <TooltipHorizon
-                extra="dark:text-gray-200"
-                content={
-                  <>
-                    <p>
-                      GUILD airdrop : <span className="font-semibold">10M</span>
-                    </p>
-                    <p>
-                      Period duration : <span className="font-semibold">30 days</span>
-                    </p>
-                    <p>
-                      GUILD to lenders : <span className="font-semibold">60%</span>
-                    </p>
-                    <p>
-                      Daily GUILD to lenders :{' '}
-                      <span className="font-semibold">{formatCurrencyValue(dailyGuildToLenders)}</span>
-                    </p>
-                    <p>
-                      Total lent (across all markets) :{' '}
-                      <span className="font-semibold">{formatCurrencyValue(airdropData.rebasingSupplyUsd)}</span> $
-                    </p>
-                    <p>
-                      Current daily GUILD per $ lent :{' '}
-                      <span className="font-semibold">{formatDecimal(currentDailyGuildPerDollarLent, 2)}</span>
-                    </p>
-                    <p className="mt-3 italic">
-                      All values are estimates and the final result depends on the behavior
-                      <br />
-                      of protocol users between now and the end of the period.
-                    </p>
-                  </>
-                }
-                trigger={
-                  <div className="mt-3 cursor-help text-center text-xs italic opacity-50">
-                    Hover to view airdrop details
-                  </div>
-                }
-                placement="bottom"
-              />
-            </div>
-          </Card>
+            <TooltipHorizon
+              extra="dark:text-gray-200"
+              content={
+                <>
+                  <p>
+                    Total Borrowed :{' '}
+                    <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                    <span className="font-semibold">
+                      {formatDecimal(
+                        Number(historicalData.creditTotalIssuance.values.slice(-1)[0]),
+                        pegTokenDecimalsToDisplay
+                      )}
+                    </span>
+                  </p>
+                  <p>
+                    Total Lent : <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                    <span className="font-semibold">
+                      {formatDecimal(
+                        Number(historicalData.creditSupply.values.slice(-1)[0]),
+                        pegTokenDecimalsToDisplay
+                      )}
+                    </span>
+                  </p>
+                </>
+              }
+              trigger={
+                <div>
+                  <Widget
+                    icon={<BsPercent className="h-7 w-7" />}
+                    title={'Utilization'}
+                    subtitle={
+                      formatDecimal(
+                        100 *
+                          (Number(historicalData.creditTotalIssuance.values.slice(-1)[0]) /
+                            Number(historicalData.creditSupply.values.slice(-1)[0])),
+                        1
+                      ) + '%'
+                    }
+                    extra={<QuestionMarkIcon />}
+                  />
+                </div>
+              }
+              placement="bottom"
+            />
+
+            <TooltipHorizon
+              extra="dark:text-gray-200"
+              content={
+                <>
+                  <p>
+                    Pending Interest :{' '}
+                    <Image className="inline-block" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                    <span className="font-semibold">
+                      {formatDecimal(
+                        historicalData.loanBorrow.values.totalUnpaidInterests.slice(-1)[0],
+                        pegTokenDecimalsToDisplay
+                      )}
+                    </span>{' '}
+                    {pegToken?.symbol}
+                  </p>
+                  <p>
+                    Unit Price : <span className="font-semibold">{pegToken.price}</span> ${' '}
+                    <span className="text-gray-400">(DefiLlama)</span>
+                  </p>
+                  <p>This corresponds to the gray area on the chart.</p>
+                </>
+              }
+              trigger={
+                <div>
+                  <Widget
+                    icon={<BsClock className="h-7 w-7" />}
+                    title={'Pending Interest'}
+                    subtitle={
+                      '$ ' +
+                      formatCurrencyValue(
+                        historicalData.loanBorrow.values.totalUnpaidInterests.slice(-1)[0] * pegToken?.price
+                      )
+                    }
+                    extra={<QuestionMarkIcon />}
+                  />
+                </div>
+              }
+              placement="bottom"
+            />
+          </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-2">
+        <Card
+          title="Earnings over time"
+          extra="mt-5 w-full sm:overflow-auto px-6 py-4 lg:col-span-1 2xl:col-span-1 3xl:col-span-1 xs:col-span-1"
+        >
+          <p className="text-sm opacity-70">
+            Hypothetical earnings of 1{' '}
+            <Image
+              className="inline-block align-text-bottom"
+              src={pegTokenLogo}
+              width={16}
+              height={16}
+              alt={pegToken?.symbol}
+            />{' '}
+            {pegToken?.symbol} in the savings rate since market launch.
+          </p>
+          <div>
+            {chartData.length === 0 ? (
+              <div className="flex h-96 items-center justify-center">
+                <Spinner />
+              </div>
+            ) : (
+              <div>
+                <ApexChartWrapper options={chartData.options} series={chartData.series} type="area" height={270} />
+              </div>
+            )}
+          </div>
+          <p className="text-xs italic opacity-70">
+            Unlike most lending protocols, profit in the Credit Guild is accounted only when borrowers pay their
+            interests, once we know the loans did not create bad debt. When borrowers pay interests, the profit is
+            distributed to lenders through a rebase interpolation over 30 days (your balance slowly goes up over time).
+          </p>
+        </Card>
+
+        {pegTokenAddress == '0x82af49447d8a07e3bd95bd0d56f35241523fbab1' ? (
+          <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
+            <Card title="" extra="order-1 w-full h-full sm:overflow-auto px-6 py-4">
+              <h3 className="mb-2 text-xl font-medium text-gray-800 dark:text-white">
+                Wrap ETH to WETH
+                <span className="ml-5 align-middle text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Available: {formatDecimal(Number(formatUnits(userBalance, 18)), pegTokenDecimalsToDisplay)}{' '}
+                  <button
+                    className="inline text-sm font-medium text-brand-500 hover:text-brand-400"
+                    onClick={(e) => setWrapValue(formatUnits(userBalance, 18))}
+                  >
+                    Set to max
+                  </button>
+                </span>
+                {wrapValue ? (
+                  <button
+                    className="float-right inline rounded-sm bg-brand-500 px-3 py-1 text-sm font-medium hover:bg-brand-400"
+                    onClick={(e) => wrap()}
+                  >
+                    Wrap
+                  </button>
+                ) : null}
+              </h3>
+              <DefiInputBox
+                topLabel=""
+                currencyLogo="/img/crypto-logos/eth.png"
+                currencySymbol="ETH"
+                placeholder="0"
+                pattern="^[0-9]*[.,]?[0-9]*$"
+                inputSize="text-xl sm:text-2xl"
+                value={wrapValue}
+                onChange={handleWrapInputChange}
+              />
+            </Card>
+            <Card title="" extra="order-1 w-full h-full sm:overflow-auto px-6 py-4">
+              <h3 className="mb-2 text-xl font-medium text-gray-800 dark:text-white">
+                Unwrap WETH to ETH
+                <span className="ml-5 align-middle text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Available: {formatDecimal(Number(formatUnits(data.pegTokenBalance, 18)), pegTokenDecimalsToDisplay)}{' '}
+                  <button
+                    className="inline text-sm font-medium text-brand-500 hover:text-brand-400"
+                    onClick={(e) => setUnwrapValue(formatUnits(data.pegTokenBalance, 18))}
+                  >
+                    Set to max
+                  </button>
+                </span>
+                {unwrapValue ? (
+                  <button
+                    className="float-right inline rounded-sm bg-brand-500 px-3 py-1 text-sm font-medium hover:bg-brand-400"
+                    onClick={(e) => unwrap()}
+                  >
+                    Unwrap
+                  </button>
+                ) : null}
+              </h3>
+              <DefiInputBox
+                topLabel=""
+                currencyLogo="/img/crypto-logos/weth.png"
+                currencySymbol="WETH"
+                placeholder="0"
+                pattern="^[0-9]*[.,]?[0-9]*$"
+                inputSize="text-xl sm:text-2xl"
+                value={unwrapValue}
+                onChange={handleUnwrapInputChange}
+              />
+            </Card>
+          </div>
+        ) : null}
+
+        <div className="mb-5 mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
           <Card
             title="Savings Rate"
             extra="w-full h-full sm:overflow-auto px-6 py-4"

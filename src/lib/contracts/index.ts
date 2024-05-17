@@ -24,6 +24,7 @@ export { default as ERC20PermitABI } from './abi/ERC20PermitABI.json';
 export { default as GatewayABI } from './abi/GatewayABI.json';
 export { default as UniswapRouterABI } from './abi/UniswapRouterABI.json';
 export { default as LendingTermFactoryABI } from './abi/LendingTermFactoryABI.json';
+export { default as WethABI } from './abi/WethABI.json';
 
 export const termContract = (address: Address) => {
   return {

@@ -12,6 +12,7 @@ import {
   MdOutlineSavings,
   MdPersonOutline
 } from 'react-icons/md';
+import { PiParachute } from 'react-icons/pi';
 
 const routes = [
   {
@@ -79,6 +80,13 @@ const routes = [
     layout: '/',
     path: 'auctions',
     icon: <MdOutlineBalance className="h-6 w-6" />,
+    show: true
+  },
+  {
+    name: 'GUILD Airdrop',
+    layout: '/',
+    path: 'airdrop',
+    icon: <PiParachute className="h-6 w-6" />,
     show: true
   },
   {

@@ -65,8 +65,8 @@ const LendingDetails = () => {
   const fdvSupply = 1e9; // 1B GUILD max supply
   const airdropPercent = 0.01; // 1% supply
   const airdropSize = airdropPercent * fdvSupply;
-  const dailyGuild = airdropSize / 30; // monthly periods
-  const dailyGuildToBorrowers = dailyGuild * 0.2; // 20% to lenders
+  const dailyGuild = airdropSize / 30; // days per periods
+  const dailyGuildToBorrowers = dailyGuild * 0.1; // 10% to lenders
   const currentDailyGuildPerDollar = dailyGuildToBorrowers / airdropData.totalIssuanceUsd;
   const borrowerApr = (365 * currentDailyGuildPerDollar * fdv) / 1e9;
 
@@ -461,19 +461,11 @@ const LendingDetails = () => {
                 content={
                   <>
                     <p className="mb-3 text-xs opacity-70">
-                      When borrowing, you pay interest but will be earning GUILD tokens as a reward for helping to
+                      When borrowing, you pay interest but will be earning GUILD tokens as a reward for
                       <br />
-                      bootstrap the protocol. GUILD rewards are computed per epoch of ~1 month, and airdropped
+                      helping to bootstrap the protocol. GUILD rewards are computed per epoch, visit the
                       <br />
-                      directly in your wallet. Current epoch is running between 19th of april to 19th of may, and a
-                      total
-                      <br />
-                      of 10M GUILD tokens will be distributed. Distribution will go 60% to lenders, 20% to borrowers,
-                      <br />
-                      15% to first-loss capital providers (GUILD and {creditTokenSymbol}), and 5% towards liquidators,
-                      proportional
-                      <br />
-                      to the value and time spent in the protocol. Rewards are shared between all markets.
+                      airdrop page for more information.
                     </p>
                     <p>
                       GUILD airdrop : <span className="font-semibold">10M</span>
@@ -482,7 +474,7 @@ const LendingDetails = () => {
                       Period duration : <span className="font-semibold">30 days</span>
                     </p>
                     <p>
-                      GUILD to borrowers : <span className="font-semibold">20%</span>
+                      GUILD to borrowers : <span className="font-semibold">10%</span>
                     </p>
                     <p>
                       Daily GUILD to borrowers :{' '}
@@ -499,7 +491,7 @@ const LendingDetails = () => {
                     <p className="mt-3 italic">
                       All values are estimates and the final result depends on the behavior
                       <br />
-                      of protocol users between now and the end of the period.
+                      of other protocol users.
                     </p>
                   </>
                 }

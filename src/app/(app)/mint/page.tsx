@@ -63,8 +63,8 @@ function MintAndSaving() {
   const fdvSupply = 1e9; // 1B GUILD max supply
   const airdropPercent = 0.01; // 1% supply
   const airdropSize = airdropPercent * fdvSupply;
-  const dailyGuild = airdropSize / 30; // monthly periods
-  const dailyGuildToLenders = dailyGuild * 0.6; // 60% to lenders
+  const dailyGuild = airdropSize / 30; // days in period
+  const dailyGuildToLenders = dailyGuild * 0.7; // 70% to lenders
   const currentDailyGuildPerDollarLent = dailyGuildToLenders / airdropData.rebasingSupplyUsd;
   const lenderApr = (365 * currentDailyGuildPerDollarLent * fdv) / 1e9;
 
@@ -566,19 +566,11 @@ function MintAndSaving() {
               content={
                 <>
                   <p className="mb-3 text-xs opacity-50">
-                    In addition to {pegToken?.symbol} yield, you will be earning GUILD tokens as a reward for helping
+                    In addition to {pegToken?.symbol} yield, you will be earning GUILD tokens as a reward for
                     <br />
-                    to bootstrap the protocol. GUILD rewards are computed per epoch of ~1 month, and
+                    helping to bootstrap the protocol. GUILD rewards are computed per epoch,
                     <br />
-                    airdropped directly in your wallet. Current epoch is running between 19th of april to
-                    <br />
-                    19th of may, and a total of 10M GUILD tokens will be distributed.
-                    <br />
-                    Distribution will go 60% to lenders, 20% to borrowers, 15% to first-loss capital
-                    <br />
-                    providers (GUILD and {creditTokenSymbol}), and 5% towards liquidators, proportional to the
-                    <br />
-                    value and time spent in the protocol. Rewards are shared between all markets.
+                    visit the airdrop page for more information.
                   </p>
                   <p>
                     GUILD airdrop : <span className="font-semibold">10M</span>
@@ -587,7 +579,7 @@ function MintAndSaving() {
                     Period duration : <span className="font-semibold">30 days</span>
                   </p>
                   <p>
-                    GUILD to lenders : <span className="font-semibold">60%</span>
+                    GUILD to lenders : <span className="font-semibold">70%</span>
                   </p>
                   <p>
                     Daily GUILD to lenders :{' '}
@@ -604,7 +596,7 @@ function MintAndSaving() {
                   <p className="mt-3 italic">
                     All values are estimates and the final result depends on the behavior
                     <br />
-                    of protocol users between now and the end of the period.
+                    of other protocol users.
                   </p>
                 </>
               }

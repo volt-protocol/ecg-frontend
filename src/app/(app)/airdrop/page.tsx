@@ -170,12 +170,21 @@ function Airdrop() {
           </span>
         </h3>
 
-        <p className="italic opacity-50">
+        <p className="mb-1 italic opacity-50">
           In this epoch, a constant amount of rewards is allocated to each day. Stakers do not earn lender or borrower
-          rewards on top of their staker rewards, and staker rewards are proportional to interest pending+realized in
-          the lending terms during the stake. Lender rewards are proportional to the utilization in a market relative to
-          other markets (e.g. on any given day, if a market represents 80% of TVL, 80% of rewards will go to lenders of
-          this market).
+          rewards on top of their staker rewards anymore, and staker rewards are proportional to interest
+          pending+realized in the lending terms during the stake. Lender rewards are proportional to the utilization in
+          a market relative to other markets.
+        </p>
+        <p className="mb-1 italic opacity-50">
+          As a lender, lend in the market with highest utilization percent to maximize your rewards.
+        </p>
+        <p className="mb-1 italic opacity-50">
+          As a staker, stake on terms with highest interest paid by borrowers (and the fewest other stakers) to maximize
+          your rewards.
+        </p>
+        <p className="italic opacity-50">
+          10M GUILD Airdrop. 70% to Lenders, 10% to Borrowers, 17% to Stakers, 3% to Liquidators.
         </p>
       </Card>
       <Card title="" extra="w-full min-h-[300px] md:col-span-1 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
@@ -186,10 +195,13 @@ function Airdrop() {
           </span>
         </h3>
 
-        <p className="mb-2 italic opacity-50">
+        <p className="mb-1 italic opacity-50">
           In this epoch, a constant amount of rewards is allocated to each day. Stakers who have more (lend + stake)
           than borrow on any given day are considered "lenders" for this day, and earn the lender rewards for this day,
           on top of the staker rewards.
+        </p>
+        <p className="mb-2 italic opacity-50">
+          10M GUILD Airdrop. 60% to Lenders, 20% to Borrowers, 15% to Stakers, 5% to Liquidators.
         </p>
 
         <table className="w-full">

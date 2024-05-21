@@ -62,10 +62,10 @@ const routes = [
   //   show: true,
   // },
   {
-    name: 'Lend or Redeem',
+    name: 'Earn',
     layout: '/',
     icon: <MdOutlineSavings className="h-6 w-6" />,
-    path: 'mint',
+    path: 'earn',
     show: true
   },
   {

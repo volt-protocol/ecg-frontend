@@ -12,18 +12,26 @@ import { getCreditTokenSymbol } from 'utils/strings';
 
 export const CreditTotalSupply = ({
   creditSupply,
-  creditTotalIssuance
+  lastCreditTotalIssuance,
+  creditTotalIssuance,
+  lastCreditSupply
 }: {
   creditSupply: any;
+  lastCreditTotalIssuance: number;
   creditTotalIssuance: any;
+  lastCreditSupply: number;
 }) => {
   const [chartData, setChartData] = useState<any>([]);
   const [timeline, setTimeline] = useState<ChartTimeline>('all');
   const { appMarketId, coinDetails, contractsList } = useAppStore();
 
   useEffect(() => {
-    if (!creditSupply || !creditTotalIssuance) return;
+    if (!creditSupply || !creditTotalIssuance || !lastCreditSupply || !lastCreditTotalIssuance) return;
 
+    creditSupply.values.push(lastCreditSupply);
+    creditSupply.timestamps.push(Date.now());
+    creditTotalIssuance.values.push(lastCreditTotalIssuance);
+    creditTotalIssuance.timestamps.push(Date.now());
     const state = {
       series: [
         {
@@ -91,7 +99,7 @@ export const CreditTotalSupply = ({
     };
 
     setChartData(state);
-  }, [creditSupply, creditTotalIssuance]);
+  }, [creditSupply, creditTotalIssuance, lastCreditSupply, lastCreditTotalIssuance]);
 
   const updateData = (timeline: ChartTimeline) => {
     // reload the chart with the new timeline

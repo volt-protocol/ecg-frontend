@@ -290,6 +290,7 @@ const GlobalDashboard = () => {
           </div>
         ) : (
           <CreditTotalSupply
+            creditMultiplier={historicalData.creditMultiplier}
             creditTotalIssuance={historicalData.creditTotalIssuance}
             creditSupply={historicalData.creditSupply}
           />

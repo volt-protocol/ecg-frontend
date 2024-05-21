@@ -64,7 +64,7 @@ const LendingDetails = () => {
   const fdvSupply = 1e9; // 1B GUILD max supply
   const airdropPercent = 0.01; // 1% supply
   const airdropSize = airdropPercent * fdvSupply;
-  const dailyGuild = airdropSize / 30; // days per periods
+  const dailyGuild = airdropSize / 28; // days per periods
   const dailyGuildToBorrowers = dailyGuild * 0.1; // 10% to lenders
   const currentDailyGuildPerDollar = dailyGuildToBorrowers / airdropData.totalIssuanceUsd;
   const borrowerApr = (365 * currentDailyGuildPerDollar * fdv) / 1e9;

@@ -22,6 +22,11 @@ import { HttpGet } from 'utils/HttpHelper';
 import { LastActivityApiResponse } from 'types/activities';
 import { MdOutlineHandshake } from 'react-icons/md';
 
+interface CurrentChartData {
+  lastSupply: number;
+  lastIssuance: number;
+  lastTvl: number;
+}
 const GlobalDashboard = () => {
   const {
     appMarketId,
@@ -35,7 +40,9 @@ const GlobalDashboard = () => {
     totalWeight,
     auctions,
     loans,
-    psmPegTokenBalance
+    psmPegTokenBalance,
+    totalIssuance,
+    creditTargetSupply
   } = useAppStore();
   const [totalActiveLoans, setTotalActiveLoans] = useState<number>();
   const [dataLoading, setDataLoading] = useState<boolean>(true);
@@ -43,6 +50,7 @@ const GlobalDashboard = () => {
   const [collateralData, setCollateralData] = useState([]);
   const [liquidityData, setLiquidityData] = useState(0);
   const [firstLossData, setFirstLossData] = useState([]);
+  const [lastChartData, setLastChartData] = useState<CurrentChartData>({});
   // const [lastActivities, setLastActivites] = useState<LastActivity[]>([]);
   const [allTimePnl, setAllTimePnl] = useState<number>(0);
 
@@ -77,6 +85,16 @@ const GlobalDashboard = () => {
       // setLastActivites(lastActivities);
       const allTimePnl = await getAllTimePnl();
       setAllTimePnl(allTimePnl);
+
+      // load issuance, total target supply and tvl
+      const totalCollateral = collateralData.reduce((a, b) => a + b.collateralValueDollar, 0);
+
+      setLastChartData({
+        lastIssuance: Number(formatUnits(totalIssuance, 18)),
+        lastSupply: Number(formatUnits(creditTargetSupply, 18)),
+        lastTvl: totalCollateral + Number(formatUnits(liquidityData, pegToken.decimals)) * pegToken.price
+      });
+
       setDataLoading(false);
     };
 
@@ -273,7 +291,7 @@ const GlobalDashboard = () => {
             <Spinner />
           </div>
         ) : (
-          <TVLChart tvl={historicalData.tvl} />
+          <TVLChart tvl={historicalData.tvl} lastTVL={lastChartData.lastTvl} />
         )}
         {/* <Card
           title="Loan Success Rate"
@@ -291,7 +309,9 @@ const GlobalDashboard = () => {
         ) : (
           <CreditTotalSupply
             creditTotalIssuance={historicalData.creditTotalIssuance}
+            lastCreditTotalIssuance={lastChartData.lastIssuance}
             creditSupply={historicalData.creditSupply}
+            lastCreditSupply={lastChartData.lastSupply}
           />
         )}
         <Card

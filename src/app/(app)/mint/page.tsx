@@ -63,9 +63,19 @@ function MintAndSaving() {
   const fdvSupply = 1e9; // 1B GUILD max supply
   const airdropPercent = 0.01; // 1% supply
   const airdropSize = airdropPercent * fdvSupply;
-  const dailyGuild = airdropSize / 30; // days in period
+  const dailyGuild = airdropSize / 28; // days in period
+  const totalMarketWeights = Object.keys(airdropData.marketUtilization).reduce((acc, cur) => {
+    acc += airdropData.marketDebt[cur];
+    return acc;
+  }, 0);
+  const marketWeight = airdropData.marketDebt[appMarketId];
+  console.log('market earns', Math.round((10000 * marketWeight) / totalMarketWeights) / 100, '% of lender rewards');
   const dailyGuildToLenders = dailyGuild * 0.7; // 70% to lenders
-  const currentDailyGuildPerDollarLent = dailyGuildToLenders / airdropData.rebasingSupplyUsd;
+  const dailyGuildToMarketLenders = dailyGuildToLenders * (marketWeight / totalMarketWeights);
+  const marketCreditSupply = Number(historicalData.aprData.values.rebasingSupply.slice(-1)[0]);
+  const marketCreditSupplyValue =
+    marketCreditSupply * pegToken?.price * Number(historicalData.creditMultiplier.values.slice(-1)[0]);
+  const currentDailyGuildPerDollarLent = dailyGuildToMarketLenders / marketCreditSupplyValue;
   const lenderApr = (365 * currentDailyGuildPerDollarLent * fdv) / 1e9;
 
   useEffect(() => {
@@ -73,10 +83,6 @@ function MintAndSaving() {
 
     const interpolatingRebaseRewards: number[] = [];
     const unpaidInterestPerUnit: number[] = [];
-    let dxAPR: number = 0;
-    let dyAPR: number = 0;
-    let dxAPRFuture: number = 0;
-    let dyAPRFuture: number = 0;
     historicalData.aprData.timestamps.forEach((t, i, arr) => {
       // compute unpaid interest per unit of credit token
       const unpaidInterest =
@@ -93,29 +99,26 @@ function MintAndSaving() {
       interpolatingRebaseRewards.push(
         Number(formatDecimal(interpolatingRewardsPerCredit, pegTokenDecimalsToDisplay * 2))
       );
-
-      // variables to compute apr
-      if (i != 0 && t > (Date.now() - 24 * 36e5) / 1000) {
-        const dx = t - arr[i - 1];
-        const dy = historicalData.aprData.values.sharePrice[i] - historicalData.aprData.values.sharePrice[i - 1];
-        if (dy > 0) {
-          dxAPR += dx;
-          dyAPR += dy;
-        }
-        const dyUnpaid = unpaidInterestPerUnit[i] - unpaidInterestPerUnit[i - 1];
-        const dyInterpolating = interpolatingRebaseRewards[i] - interpolatingRebaseRewards[i - 1];
-        const dyFuture = dy + dyUnpaid + dyInterpolating;
-        if (dyFuture > 0) {
-          dxAPRFuture += dx;
-          dyAPRFuture += dyFuture;
-        }
-      }
     });
 
-    let _apr = 100 * ((1 + (dyAPR * 31536000) / dxAPR) / 1 - 1);
+    const sharePrice = historicalData.aprData.values.sharePrice.slice(-1)[0];
+    const deltaGreen =
+      historicalData.aprData.values.sharePrice.slice(-2)[1] - historicalData.aprData.values.sharePrice.slice(-2)[0];
+    const gray =
+      historicalData.loanBorrow.values.totalUnpaidInterests.slice(-1)[0] /
+      historicalData.aprData.values.rebasingSupply.slice(-1)[0];
+    const yellow =
+      (historicalData.aprData.values.targetTotalSupply.slice(-1)[0] -
+        historicalData.aprData.values.totalSupply.slice(-1)[0]) /
+      historicalData.aprData.values.rebasingSupply.slice(-1)[0];
+    const apr = (deltaGreen * 365 * 24) / sharePrice;
+    const pendingApr = ((gray + yellow) * 365) / 30 / sharePrice;
+    const futureApr = apr + pendingApr;
+
+    let _apr = 100 * apr;
     if (isNaN(_apr)) _apr = 0;
     setApr(_apr);
-    let _aprFuture = 100 * ((1 + (dyAPRFuture * 31536000) / dxAPRFuture) / 1 - 1);
+    let _aprFuture = 100 * futureApr;
     if (isNaN(_aprFuture)) _aprFuture = 0;
     setAprFuture(_aprFuture);
 
@@ -430,7 +433,6 @@ function MintAndSaving() {
               content={
                 <>
                   <p>APR currently being distributed through the rebasing mechanism (savings rate).</p>
-                  <p>Average over the last 24 hours.</p>
                   <p>This corresponds to the green area on the chart.</p>
                 </>
               }
@@ -474,7 +476,6 @@ function MintAndSaving() {
                   <p>
                     Estimated future APR, based on current savings rate + interpolating rewards + pending interests.
                   </p>
-                  <p>Average over the last 24 hours.</p>
                   <p>This corresponds to the green + yellow + gray areas on the chart.</p>
                 </>
               }

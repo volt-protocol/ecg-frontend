@@ -13,6 +13,8 @@ export interface AirdropDataSlice {
   rebasingSupplyUsd: number;
   termSurplusBufferUsd: number;
   totalIssuanceUsd: number;
+  marketUtilization: { [marketId: number]: number };
+  marketTVL: { [marketId: number]: number };
   fetchAirdropData: (chainId: number) => Promise<void>;
 }
 

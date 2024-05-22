@@ -13,19 +13,28 @@ import { getPegToken } from 'utils/strings';
 export const CreditTotalSupply = ({
   creditMultiplier,
   creditSupply,
-  creditTotalIssuance
+  lastCreditTotalIssuance,
+  creditTotalIssuance,
+  lastCreditSupply
 }: {
   creditMultiplier: any;
   creditSupply: any;
+  lastCreditTotalIssuance: number;
   creditTotalIssuance: any;
+  lastCreditSupply: number;
 }) => {
   const [chartData, setChartData] = useState<any>([]);
   const [timeline, setTimeline] = useState<ChartTimeline>('all');
   const { appMarketId, coinDetails, contractsList } = useAppStore();
 
   useEffect(() => {
-    if (!creditSupply || !creditTotalIssuance || !creditMultiplier) return;
+    if (!creditSupply || !creditTotalIssuance || !lastCreditSupply || !lastCreditTotalIssuance || !creditMultiplier)
+      return;
 
+    creditSupply.values.push(lastCreditSupply);
+    creditSupply.timestamps.push(Date.now());
+    creditTotalIssuance.values.push(lastCreditTotalIssuance);
+    creditTotalIssuance.timestamps.push(Date.now());
     const state = {
       series: [
         {
@@ -97,7 +106,7 @@ export const CreditTotalSupply = ({
     };
 
     setChartData(state);
-  }, [creditSupply, creditTotalIssuance]);
+  }, [creditSupply, creditTotalIssuance, lastCreditSupply, lastCreditTotalIssuance]);
 
   const updateData = (timeline: ChartTimeline) => {
     // reload the chart with the new timeline

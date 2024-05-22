@@ -9,8 +9,8 @@ import { walletConnect, injected, coinbaseWallet } from 'wagmi/connectors';
 const queryClient = new QueryClient();
 
 const metadata = {
-  name: 'ECG Guild',
-  description: 'ECG Guild',
+  name: 'Credit Guild',
+  description: 'Credit Guild',
   url: 'https://web3modal.com',
   icons: ['https://avatars.githubusercontent.com/u/37784886'],
   verifyUrl: 'https://web3modal.com/verify'

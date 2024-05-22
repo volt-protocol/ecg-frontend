@@ -7,10 +7,14 @@ export const generateTermName = (collateral: string, interestRate: number, borro
   return `${collateral}-${formatNumberDecimal(borrowRatio)}-${(interestRate * 100).toFixed(1)}%`;
 };
 
-export function getCreditTokenSymbol(coinDetails: CoinSettings[], appMarketId: number, contractsList: ContractsList) {
-  const pegToken = coinDetails.find(
+export function getPegToken(coinDetails: CoinSettings[], appMarketId: number, contractsList: ContractsList) {
+  return coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
+}
+
+export function getCreditTokenSymbol(coinDetails: CoinSettings[], appMarketId: number, contractsList: ContractsList) {
+  const pegToken = getPegToken(coinDetails, appMarketId, contractsList);
   const creditTokenSymbol = 'g' + pegToken?.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
   return creditTokenSymbol;
 }

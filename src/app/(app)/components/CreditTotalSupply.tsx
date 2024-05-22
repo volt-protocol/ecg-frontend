@@ -8,14 +8,16 @@ import { ChartTimeline } from 'types/charts';
 import { getDateFrom, getTimelineButton } from './helper';
 import moment from 'moment';
 import { useAppStore } from 'store';
-import { getCreditTokenSymbol } from 'utils/strings';
+import { getPegToken } from 'utils/strings';
 
 export const CreditTotalSupply = ({
+  creditMultiplier,
   creditSupply,
   lastCreditTotalIssuance,
   creditTotalIssuance,
   lastCreditSupply
 }: {
+  creditMultiplier: any;
   creditSupply: any;
   lastCreditTotalIssuance: number;
   creditTotalIssuance: any;
@@ -26,7 +28,8 @@ export const CreditTotalSupply = ({
   const { appMarketId, coinDetails, contractsList } = useAppStore();
 
   useEffect(() => {
-    if (!creditSupply || !creditTotalIssuance || !lastCreditSupply || !lastCreditTotalIssuance) return;
+    if (!creditSupply || !creditTotalIssuance || !lastCreditSupply || !lastCreditTotalIssuance || !creditMultiplier)
+      return;
 
     creditSupply.values.push(lastCreditSupply);
     creditSupply.timestamps.push(Date.now());
@@ -35,13 +38,17 @@ export const CreditTotalSupply = ({
     const state = {
       series: [
         {
-          name: 'Total Supply',
-          data: creditSupply.values,
+          name: 'Lent',
+          data: creditSupply.values.map((x, i) => {
+            return x * creditMultiplier.values[i];
+          }),
           color: '#50bdae'
         },
         {
-          name: 'Total Borrows',
-          data: creditTotalIssuance.values,
+          name: 'Borrowed',
+          data: creditTotalIssuance.values.map((x, i) => {
+            return x * creditMultiplier.values[i];
+          }),
           color: '#f7b924'
         }
       ],
@@ -110,7 +117,7 @@ export const CreditTotalSupply = ({
 
   return (
     <Card
-      title={`Total Supply (${getCreditTokenSymbol(coinDetails, appMarketId, contractsList)})`}
+      title={`Total Supply (${getPegToken(coinDetails, appMarketId, contractsList).symbol})`}
       extra="w-full min-h-[300px] md:col-span-2 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
       rightText={getTimelineButton({ timeline, updateData })}
     >

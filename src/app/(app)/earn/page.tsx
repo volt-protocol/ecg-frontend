@@ -4,7 +4,7 @@ import Disconnected from 'components/error/disconnected';
 import React, { useEffect, useState } from 'react';
 import Card from 'components/card';
 import { useAccount, useReadContracts } from 'wagmi';
-import { ProfitManagerABI, CreditABI, WethABI } from 'lib/contracts';
+import { ProfitManagerABI, CreditABI, WethABI, ERC20PermitABI } from 'lib/contracts';
 import { waitForTransactionReceipt, writeContract, getBalance } from '@wagmi/core';
 import { formatCurrencyValue, formatDecimal } from 'utils/numbers';
 import { toastError } from 'components/toast';
@@ -246,6 +246,32 @@ function MintAndSaving() {
         abi: ProfitManagerABI,
         functionName: 'getProfitSharingConfig',
         chainId: appChainId
+      },
+      {
+        address: creditAddress,
+        abi: ERC20PermitABI,
+        functionName: 'nonces',
+        args: [address],
+        chainId: appChainId
+      },
+      {
+        address: pegToken?.address,
+        abi: ERC20PermitABI,
+        functionName: 'nonces',
+        args: [address],
+        chainId: appChainId
+      },
+      {
+        address: creditAddress,
+        abi: ERC20PermitABI,
+        functionName: 'name',
+        chainId: appChainId
+      },
+      {
+        address: pegToken?.address,
+        abi: ERC20PermitABI,
+        functionName: 'name',
+        chainId: appChainId
       }
     ],
     query: {
@@ -258,7 +284,11 @@ function MintAndSaving() {
           isRebasing: data[4].result as boolean,
           creditSplit: formatDecimal(Number(formatUnits(data[5].result[1] as bigint, 18)) * 100, 2),
           guildSplit: formatDecimal(Number(formatUnits(data[5].result[2] as bigint, 18)) * 100, 2),
-          surplusBufferSplit: formatDecimal(Number(formatUnits(data[5].result[0] as bigint, 18)) * 100, 2)
+          surplusBufferSplit: formatDecimal(Number(formatUnits(data[5].result[0] as bigint, 18)) * 100, 2),
+          creditTokenNonces: data[6].result as bigint,
+          pegTokenNonces: data[7].result as bigint,
+          creditTokenName: data[8].result as string,
+          pegTokenName: data[9].result as string
         };
       }
     }
@@ -317,7 +347,8 @@ function MintAndSaving() {
         address: pegTokenAddress,
         abi: WethABI,
         functionName: 'deposit',
-        value: parseUnits(wrapValue, 18)
+        value: parseUnits(wrapValue, 18),
+        chainId: appChainId as any
       });
 
       const check = await waitForTransactionReceipt(wagmiConfig, {
@@ -353,7 +384,8 @@ function MintAndSaving() {
         address: pegTokenAddress,
         abi: WethABI,
         functionName: 'withdraw',
-        args: [parseUnits(unwrapValue, 18)]
+        args: [parseUnits(unwrapValue, 18)],
+        chainId: appChainId as any
       });
 
       const check = await waitForTransactionReceipt(wagmiConfig, {
@@ -388,7 +420,8 @@ function MintAndSaving() {
       const hash = await writeContract(wagmiConfig, {
         address: contractsList?.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
-        functionName: rebaseMode
+        functionName: rebaseMode,
+        chainId: appChainId as any
       });
 
       const checkStartSaving = await waitForTransactionReceipt(wagmiConfig, {
@@ -1015,6 +1048,10 @@ function MintAndSaving() {
               creditTokenBalance={data.creditTokenBalance}
               creditMultiplier={data.creditMultiplier}
               isRebasing={data.isRebasing}
+              creditTokenNonces={data.creditTokenNonces}
+              pegTokenNonces={data.pegTokenNonces}
+              creditTokenName={data.creditTokenName}
+              pegTokenName={data.pegTokenName}
             />
           </Card>
         </div>

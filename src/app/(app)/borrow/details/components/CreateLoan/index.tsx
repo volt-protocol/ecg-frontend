@@ -193,7 +193,7 @@ function CreateLoan({
           deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
           nonce: data?.collateralNonces,
           chainId: appChainId,
-          permitVersion: '1'
+          version: '1'
         });
 
         if (!signatureCollateral) {
@@ -244,7 +244,7 @@ function CreateLoan({
         deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
         nonce: creditTokenNonces,
         chainId: appChainId,
-        permitVersion: '1'
+        version: '1'
       });
 
       if (!permitSigCreditToken) {
@@ -354,7 +354,7 @@ function CreateLoan({
           deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
           nonce: data?.collateralNonces,
           chainId: appChainId,
-          permitVersion: '1'
+          version: '1'
         });
 
         if (!signatureCollateral) {
@@ -405,7 +405,7 @@ function CreateLoan({
         deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
         nonce: creditTokenNonces,
         chainId: appChainId,
-        permitVersion: '1'
+        version: '1'
       });
 
       if (!permitSigCreditToken) {

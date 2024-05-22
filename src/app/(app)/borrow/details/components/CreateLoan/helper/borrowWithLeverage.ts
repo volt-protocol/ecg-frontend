@@ -285,7 +285,7 @@ export const getAllowBorrowedCreditCall = (
 //         deadline: BigInt(Number(moment().add(10, "seconds"))),
 //         nonce: data?.collateralNonces,
 //         chainId: wagmiConfig.chains[0].id,
-//         permitVersion: "1",
+//         version: "1",
 //       })
 
 //       if (!signatureCollateral) {
@@ -340,7 +340,7 @@ export const getAllowBorrowedCreditCall = (
 //       deadline: BigInt(Number(moment().add(10, "seconds"))),
 //       nonce: gusdcNonces,
 //       chainId: wagmiConfig.chains[0].id,
-//       permitVersion: "1",
+//       version: "1",
 //     })
 
 //     if (!signatureGUSDC) {

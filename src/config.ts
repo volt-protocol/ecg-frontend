@@ -14,6 +14,7 @@ export interface LendingTermConfig {
 export interface PermitConfig {
   address: Address;
   hasPermit: boolean;
+  version?: string;
 }
 
 // set borrowing configurations for each term here
@@ -28,8 +29,14 @@ export const lendingTermConfig: LendingTermConfig[] = [
 //set permit configurations for each collateral token here
 export const permitConfig: PermitConfig[] = [
   {
+    // Arbitrum USDC
+    address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+    hasPermit: true,
+    version: '2'
+  },
+  {
     // Arbitrum WETH
-    address: '0x82af49447d8a07e3bd95bd0d56f35241523fbab1',
+    address: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
     hasPermit: true
   },
   {

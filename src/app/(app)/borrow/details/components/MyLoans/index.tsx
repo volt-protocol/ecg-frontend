@@ -395,7 +395,8 @@ function Myloans({
           deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
           nonce: contractData?.pegTokenNonces,
           chainId: appChainId,
-          permitVersion: '1'
+          version:
+            permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.version || '1'
         });
 
         if (!signaturePegToken) {
@@ -607,7 +608,9 @@ function Myloans({
           deadline: BigInt(Number(moment().add(10, 'seconds'))),
           nonce: contractData?.collateralNonces,
           chainId: wagmiConfig.chains[0].id,
-          permitVersion: '1'
+          version:
+            permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
+              ?.version || '1'
         });
 
         if (!signatureCollateral) {
@@ -749,7 +752,8 @@ function Myloans({
           deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
           nonce: contractData?.pegTokenNonces,
           chainId: appChainId,
-          permitVersion: '1'
+          version:
+            permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.version || '1'
         });
 
         if (!signaturePegToken) {

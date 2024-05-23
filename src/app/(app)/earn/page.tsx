@@ -78,132 +78,6 @@ function MintAndSaving() {
   const currentDailyGuildPerDollarLent = dailyGuildToMarketLenders / marketCreditSupplyValue;
   const lenderApr = (365 * currentDailyGuildPerDollarLent * fdv) / 1e9;
 
-  useEffect(() => {
-    if (!historicalData) return;
-
-    const interpolatingRebaseRewards: number[] = [];
-    const unpaidInterestPerUnit: number[] = [];
-    historicalData.aprData.timestamps.forEach((t, i, arr) => {
-      // compute unpaid interest per unit of credit token
-      const unpaidInterest =
-        historicalData.loanBorrow.values.totalUnpaidInterests[i] /
-        (historicalData.aprData.values.rebasingSupply[i] * historicalData.creditMultiplier.values[i]);
-      unpaidInterestPerUnit.push(
-        isNaN(unpaidInterest) ? 0 : Number(formatDecimal(unpaidInterest, pegTokenDecimalsToDisplay * 2))
-      );
-
-      // compute interpolating rebase rewards
-      const nInterpolatingRewards =
-        historicalData.aprData.values.targetTotalSupply[i] - historicalData.aprData.values.totalSupply[i];
-      const interpolatingRewardsPerCredit = nInterpolatingRewards / historicalData.aprData.values.rebasingSupply[i];
-      interpolatingRebaseRewards.push(
-        Number(formatDecimal(interpolatingRewardsPerCredit, pegTokenDecimalsToDisplay * 2))
-      );
-    });
-
-    const sharePrice = historicalData.aprData.values.sharePrice.slice(-1)[0];
-    const deltaGreen =
-      historicalData.aprData.values.sharePrice.slice(-2)[1] - historicalData.aprData.values.sharePrice.slice(-2)[0];
-    const gray =
-      historicalData.loanBorrow.values.totalUnpaidInterests.slice(-1)[0] /
-      historicalData.aprData.values.rebasingSupply.slice(-1)[0];
-    const yellow =
-      (historicalData.aprData.values.targetTotalSupply.slice(-1)[0] -
-        historicalData.aprData.values.totalSupply.slice(-1)[0]) /
-      historicalData.aprData.values.rebasingSupply.slice(-1)[0];
-    const apr = (deltaGreen * 365 * 24) / sharePrice;
-    const pendingApr = ((gray + yellow) * 365) / 30 / sharePrice;
-    const futureApr = apr + pendingApr;
-
-    let _apr = 100 * apr;
-    if (isNaN(_apr)) _apr = 0;
-    setApr(_apr);
-    let _aprFuture = 100 * futureApr;
-    if (isNaN(_aprFuture)) _aprFuture = 0;
-    setAprFuture(_aprFuture);
-
-    const seriesData = [
-      {
-        name: 'Principal losses',
-        data: historicalData.creditMultiplier.values.map((e, i) =>
-          Number(formatDecimal(e - 1, pegTokenDecimalsToDisplay * 2))
-        ),
-        color: '#212121'
-      },
-      {
-        name: 'Distributed through rebase',
-        data: historicalData.aprData.values.sharePrice.map((e) =>
-          Number(formatDecimal(e - 1, pegTokenDecimalsToDisplay * 2))
-        ),
-        color: '#689F38'
-      },
-      {
-        name: 'Interpolating rebase rewards',
-        data: interpolatingRebaseRewards,
-        color: '#FFC107'
-      },
-      {
-        name: 'Pending Interest',
-        data: unpaidInterestPerUnit,
-        color: '#757575'
-      }
-    ];
-
-    const state = {
-      series: seriesData,
-      options: {
-        chart: {
-          id: 'creditGrowthChart',
-          stacked: true,
-          toolbar: {
-            show: false
-          },
-          height: 350,
-          type: 'area',
-          zoom: {
-            autoScaleYaxis: true
-          }
-        },
-        legend: {
-          show: true,
-          floating: false,
-          fontSize: '14px',
-          fontFamily: 'Inter',
-          fontWeight: 400,
-          offsetY: 3
-        },
-        dataLabels: {
-          enabled: false
-        },
-        stroke: {
-          curve: 'straight',
-          width: 0
-        },
-        xaxis: {
-          type: 'datetime',
-          tickAmount: 6,
-          labels: {
-            datetimeFormatter: {
-              year: 'yyyy',
-              month: "MMM 'yy",
-              day: 'dd MMM',
-              hour: 'HH:mm'
-            }
-          },
-          min: new Date(historicalData.aprData.timestamps[0] * 1000).getTime(),
-          categories: historicalData.aprData.timestamps.map((e) => e * 1000)
-        },
-        fill: {
-          colors: seriesData.map((e) => e.color),
-          type: 'solid',
-          opacity: 1
-        }
-      }
-    };
-
-    setChartData(state);
-  }, [historicalData]);
-
   /* Smart contract reads */
   const { data, isError, isLoading, refetch } = useReadContracts({
     contracts: [
@@ -293,6 +167,136 @@ function MintAndSaving() {
       }
     }
   });
+
+  useEffect(() => {
+    if (!historicalData) return;
+
+    const interpolatingRebaseRewards: number[] = [];
+    const unpaidInterestPerUnit: number[] = [];
+    historicalData.aprData.timestamps.forEach((t, i, arr) => {
+      // compute unpaid interest per unit of credit token
+      const unpaidInterest =
+        historicalData.loanBorrow.values.totalUnpaidInterests[i] /
+        (historicalData.aprData.values.rebasingSupply[i] * historicalData.creditMultiplier.values[i]);
+      unpaidInterestPerUnit.push(
+        isNaN(unpaidInterest) ? 0 : Number(formatDecimal(unpaidInterest, pegTokenDecimalsToDisplay * 2))
+      );
+
+      // compute interpolating rebase rewards
+      const nInterpolatingRewards =
+        historicalData.aprData.values.targetTotalSupply[i] - historicalData.aprData.values.totalSupply[i];
+      const interpolatingRewardsPerCredit = nInterpolatingRewards / historicalData.aprData.values.rebasingSupply[i];
+      interpolatingRebaseRewards.push(
+        Number(formatDecimal(interpolatingRewardsPerCredit, pegTokenDecimalsToDisplay * 2))
+      );
+    });
+
+    const sharePrice = historicalData.aprData.values.sharePrice.slice(-1)[0];
+    const deltaGreen =
+      historicalData.aprData.values.sharePrice.slice(-2)[1] - historicalData.aprData.values.sharePrice.slice(-2)[0];
+    /*const gray =
+      historicalData.loanBorrow.values.totalUnpaidInterests.slice(-1)[0] /
+      historicalData.aprData.values.rebasingSupply.slice(-1)[0];
+    const yellow =
+      (historicalData.aprData.values.targetTotalSupply.slice(-1)[0] -
+        historicalData.aprData.values.totalSupply.slice(-1)[0]) /
+      historicalData.aprData.values.rebasingSupply.slice(-1)[0];*/
+    const apr = (deltaGreen * 365 * 24) / sharePrice;
+
+    const marketLent = Number(historicalData.creditSupply.values.slice(-1)[0]);
+    const marketSaving = Number(historicalData.aprData.values.rebasingSupply.slice(-1)[0]);
+    const multiplier = marketLent / marketSaving;
+    const averageInterestPaidByBorrowers = Number(historicalData.averageInterestRate.values.slice(-1)[0]) / 100;
+    const futureApr = averageInterestPaidByBorrowers * (data?.creditSplit / 100) * multiplier;
+
+    let _apr = 100 * apr;
+    if (isNaN(_apr)) _apr = 0;
+    setApr(_apr);
+    let _aprFuture = 100 * futureApr;
+    if (isNaN(_aprFuture)) _aprFuture = 0;
+    setAprFuture(_aprFuture);
+
+    const seriesData = [
+      {
+        name: 'Principal losses',
+        data: historicalData.creditMultiplier.values.map((e, i) =>
+          Number(formatDecimal(e - 1, pegTokenDecimalsToDisplay * 2))
+        ),
+        color: '#212121'
+      },
+      {
+        name: 'Distributed',
+        data: historicalData.aprData.values.sharePrice.map((e) =>
+          Number(formatDecimal(e - 1, pegTokenDecimalsToDisplay * 2))
+        ),
+        color: '#689F38'
+      },
+      {
+        name: 'Interest paid interpolating over 30d',
+        data: interpolatingRebaseRewards,
+        color: '#FFC107'
+      },
+      {
+        name: 'Pending Interest on open loans',
+        data: unpaidInterestPerUnit,
+        color: '#757575'
+      }
+    ];
+
+    const state = {
+      series: seriesData,
+      options: {
+        chart: {
+          id: 'creditGrowthChart',
+          stacked: true,
+          toolbar: {
+            show: false
+          },
+          height: 350,
+          type: 'area',
+          zoom: {
+            autoScaleYaxis: true
+          }
+        },
+        legend: {
+          show: true,
+          floating: false,
+          fontSize: '14px',
+          fontFamily: 'Inter',
+          fontWeight: 400,
+          offsetY: 3
+        },
+        dataLabels: {
+          enabled: false
+        },
+        stroke: {
+          curve: 'straight',
+          width: 0
+        },
+        xaxis: {
+          type: 'datetime',
+          tickAmount: 6,
+          labels: {
+            datetimeFormatter: {
+              year: 'yyyy',
+              month: "MMM 'yy",
+              day: 'dd MMM',
+              hour: 'HH:mm'
+            }
+          },
+          min: new Date(historicalData.aprData.timestamps[0] * 1000).getTime(),
+          categories: historicalData.aprData.timestamps.map((e) => e * 1000)
+        },
+        fill: {
+          colors: seriesData.map((e) => e.color),
+          type: 'solid',
+          opacity: 1
+        }
+      }
+    };
+
+    setChartData(state);
+  }, [historicalData]);
 
   useEffect(() => {
     if (!isConnected) return;
@@ -467,6 +471,7 @@ function MintAndSaving() {
                 <>
                   <p>APR currently being distributed through the rebasing mechanism (savings rate).</p>
                   <p>This corresponds to the green area on the chart.</p>
+                  <p>It is currently distributed in real-time, you will earn this rate if you lend.</p>
                 </>
               }
               trigger={
@@ -506,10 +511,42 @@ function MintAndSaving() {
               extra="dark:text-gray-200"
               content={
                 <>
-                  <p>
-                    Estimated future APR, based on current savings rate + interpolating rewards + pending interests.
+                  <p>Estimated future APR, based on current average interest paid by borrowers and current lenders.</p>
+                  <p className="mt-2">
+                    Average rate paid by borrowers :{' '}
+                    <strong>{formatDecimal(Number(historicalData.averageInterestRate.values.slice(-1)[0]), 2)}</strong>%
                   </p>
-                  <p>This corresponds to the green + yellow + gray areas on the chart.</p>
+                  <p>
+                    Percent of interest going to lenders :{' '}
+                    <strong>{formatDecimal(Number(data?.creditSplit), 2)}</strong>%
+                  </p>
+                  <p>
+                    Multiplier effect :{' '}
+                    <strong>
+                      {'x' +
+                        formatDecimal(
+                          Number(historicalData.creditSupply.values.slice(-1)[0]) /
+                            Number(historicalData.aprData.values.rebasingSupply.slice(-1)[0]),
+                          3
+                        )}
+                    </strong>{' '}
+                    (only{' '}
+                    <span className="font-semibold">
+                      {formatDecimal(
+                        Number(historicalData.aprData.values.rebasingSupply.slice(-1)[0]),
+                        pegTokenDecimalsToDisplay
+                      )}
+                    </span>{' '}
+                    of{' '}
+                    <span className="font-semibold">
+                      {formatDecimal(
+                        Number(historicalData.creditSupply.values.slice(-1)[0]),
+                        pegTokenDecimalsToDisplay
+                      )}
+                    </span>{' '}
+                    <Image className="inline-block align-top" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                    {pegToken?.symbol} lent is earning the savings rate)
+                  </p>
                 </>
               }
               trigger={

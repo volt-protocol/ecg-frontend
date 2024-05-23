@@ -15,7 +15,7 @@ export const TVLChart = ({ tvl, lastTVL }: { tvl: any; lastTVL: number }) => {
 
   useEffect(() => {
     if (!tvl) return;
-    if (!lastTVL) return;
+    if (lastTVL == -1) return;
     tvl.values.push(lastTVL);
     tvl.timestamps.push(Date.now());
 
@@ -49,6 +49,11 @@ export const TVLChart = ({ tvl, lastTVL }: { tvl: any; lastTVL: number }) => {
         },
         stroke: {
           curve: 'straight'
+        },
+        yaxis: {
+          labels: {
+            formatter: (val) => '$' + formatCurrencyValue(val)
+          }
         },
         xaxis: {
           type: 'datetime',

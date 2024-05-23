@@ -9,15 +9,16 @@ import { getDateFrom, getTimelineButton } from './helper';
 import moment from 'moment';
 import { useAppStore } from 'store';
 import { getPegToken } from 'utils/strings';
+import { formatUnits } from 'viem';
 
 export const CreditTotalSupply = ({
-  creditMultiplier,
+  creditMultiplierHistory,
   creditSupply,
   lastCreditTotalIssuance,
   creditTotalIssuance,
-  lastCreditSupply
+  lastCreditSupply,
 }: {
-  creditMultiplier: any;
+  creditMultiplierHistory: any;
   creditSupply: any;
   lastCreditTotalIssuance: number;
   creditTotalIssuance: any;
@@ -25,29 +26,32 @@ export const CreditTotalSupply = ({
 }) => {
   const [chartData, setChartData] = useState<any>([]);
   const [timeline, setTimeline] = useState<ChartTimeline>('all');
-  const { appMarketId, coinDetails, contractsList } = useAppStore();
+  const { appMarketId, coinDetails, contractsList, creditMultiplier } = useAppStore();
 
   useEffect(() => {
-    if (!creditSupply || !creditTotalIssuance || !lastCreditSupply || !lastCreditTotalIssuance || !creditMultiplier)
+    if (!creditSupply || !creditTotalIssuance || lastCreditSupply == -1 || lastCreditTotalIssuance == -1 || !creditMultiplierHistory)
       return;
 
     creditSupply.values.push(lastCreditSupply);
     creditSupply.timestamps.push(Date.now());
     creditTotalIssuance.values.push(lastCreditTotalIssuance);
     creditTotalIssuance.timestamps.push(Date.now());
+    creditMultiplierHistory.timestamps.push(Date.now());
+    creditMultiplierHistory.values.push(Number(formatUnits(creditMultiplier, 18)));
+
     const state = {
       series: [
         {
           name: 'Lent',
           data: creditSupply.values.map((x, i) => {
-            return x * creditMultiplier.values[i];
+            return x * creditMultiplierHistory.values[i];
           }),
           color: '#50bdae'
         },
         {
           name: 'Borrowed',
           data: creditTotalIssuance.values.map((x, i) => {
-            return x * creditMultiplier.values[i];
+            return x * creditMultiplierHistory.values[i];
           }),
           color: '#f7b924'
         }

@@ -50,7 +50,11 @@ const GlobalDashboard = () => {
   const [collateralData, setCollateralData] = useState([]);
   const [liquidityData, setLiquidityData] = useState(0);
   const [firstLossData, setFirstLossData] = useState([]);
-  const [lastChartData, setLastChartData] = useState<CurrentChartData>({});
+  const [lastChartData, setLastChartData] = useState<CurrentChartData>({
+    lastIssuance: -1,
+    lastSupply: -1,
+    lastTvl: -1
+  });
   // const [lastActivities, setLastActivites] = useState<LastActivity[]>([]);
   const [allTimePnl, setAllTimePnl] = useState<number>(0);
 
@@ -308,7 +312,7 @@ const GlobalDashboard = () => {
           </div>
         ) : (
           <CreditTotalSupply
-            creditMultiplier={historicalData.creditMultiplier}
+            creditMultiplierHistory={historicalData.creditMultiplier}
             creditTotalIssuance={historicalData.creditTotalIssuance}
             lastCreditTotalIssuance={lastChartData.lastIssuance}
             creditSupply={historicalData.creditSupply}

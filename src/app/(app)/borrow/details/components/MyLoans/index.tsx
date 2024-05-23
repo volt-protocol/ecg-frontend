@@ -543,7 +543,8 @@ function Myloans({
         address: contractsList.gatewayAddress,
         abi: GatewayABI,
         functionName: 'multicall',
-        args: [calls]
+        args: [calls],
+        gas: 600_000
       });
 
       const checkTx = await waitForTransactionReceipt(wagmiConfig, {
@@ -732,7 +733,7 @@ function Myloans({
       BigInt(100) /
       (BigInt(4) * BigInt(HOURS_IN_YEAR));
     const decimalNormalizer = BigInt('1' + '0'.repeat(36 - pegToken.decimals));
-    const pegTokenDebt = ((debtToRepay + quarterHourInterests) * creditMultiplier) / decimalNormalizer;
+    const pegTokenDebt = ((debtToRepay + quarterHourInterests) * creditMultiplier) / decimalNormalizer + BigInt(1); // add 1 wei for rounding
     const pegTokenToRepay = pegTokenDebt;
     const creditToRepay = (pegTokenToRepay * decimalNormalizer) / creditMultiplier;
 
@@ -853,7 +854,7 @@ function Myloans({
         })
       );
 
-      // partialRepay
+      // repay
       calls.push(
         encodeFunctionData({
           abi: GatewayABI as Abi,
@@ -900,7 +901,8 @@ function Myloans({
         address: contractsList.gatewayAddress,
         abi: GatewayABI,
         functionName: 'multicall',
-        args: [calls]
+        args: [calls],
+        gas: 750_000
       });
 
       const checkTx = await waitForTransactionReceipt(wagmiConfig, {

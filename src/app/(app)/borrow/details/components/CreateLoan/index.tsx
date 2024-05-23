@@ -277,7 +277,8 @@ function CreateLoan({
         address: contractsList.gatewayAddress,
         abi: GatewayABI,
         functionName: 'multicall',
-        args: [calls]
+        args: [calls],
+        gas: 750_000
       });
 
       const checkBorrow = await waitForTransactionReceipt(wagmiConfig, {

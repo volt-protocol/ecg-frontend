@@ -268,7 +268,8 @@ function MintOrRedeem({
         address: contractsList.gatewayAddress,
         abi: GatewayABI,
         functionName: 'multicall',
-        args: [calls]
+        args: [calls],
+        gas: 500_000
       });
 
       const checkTx = await waitForTransactionReceipt(wagmiConfig, {
@@ -436,7 +437,8 @@ function MintOrRedeem({
         address: contractsList.gatewayAddress,
         abi: GatewayABI,
         functionName: 'multicall',
-        args: [calls]
+        args: [calls],
+        gas: 500_000
       });
 
       const checkTx = await waitForTransactionReceipt(wagmiConfig, {

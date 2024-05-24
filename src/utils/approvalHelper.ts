@@ -26,8 +26,6 @@ export async function approvalStepsFlow(
     args: [userAddress, spenderAddress]
   })) as bigint;
 
-  console.log('allowance', allowance);
-  console.log('amountToApprove', amountToApprove);
   updateStepStatus(checkApprovalStepName, 'Success');
 
   if (allowance < amountToApprove) {
@@ -41,13 +39,12 @@ export async function approvalStepsFlow(
     const checkApprove = await waitForTransactionReceipt(wagmiConfig, {
       hash: hash
     });
+    await sleep(5000);
 
     if (checkApprove.status != 'success') {
       return false;
     }
   }
-
-  await sleep(5000);
 
   updateStepStatus(approvalStepName, 'Success');
   return true;

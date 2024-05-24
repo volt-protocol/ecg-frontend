@@ -1,9 +1,9 @@
-import { waitForTransactionReceipt, writeContract } from '@wagmi/core';
+import { waitForTransactionReceipt, writeContract, readContract } from '@wagmi/core';
 import StepModal from 'components/stepLoader';
 import { Step } from 'components/stepLoader/stepType';
-import { PsmUsdcABI, CreditABI } from 'lib/contracts';
+import { CreditABI, GatewayABI, ERC20PermitABI, PsmABI } from 'lib/contracts';
 import React, { useEffect, useState } from 'react';
-import { Address, erc20Abi, parseUnits, formatUnits } from 'viem';
+import { Address, parseUnits, formatUnits, encodeFunctionData, Abi } from 'viem';
 import { useAccount } from 'wagmi';
 import { Switch, Tab } from '@headlessui/react';
 import clsx from 'clsx';
@@ -13,10 +13,10 @@ import ButtonPrimary from 'components/button/ButtonPrimary';
 import { AlertMessage } from 'components/message/AlertMessage';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore } from 'store';
-import { getPegTokenLogo, marketsConfig, getExplorerBaseUrl } from 'config';
+import { getPegTokenLogo, getExplorerBaseUrl, permitConfig } from 'config';
 import Image from 'next/image';
 import { MdOpenInNew } from 'react-icons/md';
-import { approvalStepsFlow } from 'utils/approvalHelper';
+import { signPermit } from 'lib/transactions/signPermit';
 
 function MintOrRedeem({
   reloadMintRedeem,
@@ -24,7 +24,11 @@ function MintOrRedeem({
   creditTokenBalance,
   creditMultiplier,
   pegTokenPSMBalance,
-  isRebasing
+  isRebasing,
+  creditTokenNonces,
+  pegTokenNonces,
+  creditTokenName,
+  pegTokenName
 }: {
   reloadMintRedeem: React.Dispatch<React.SetStateAction<boolean>>;
   pegTokenBalance: bigint;
@@ -32,6 +36,10 @@ function MintOrRedeem({
   creditMultiplier: bigint;
   pegTokenPSMBalance: bigint;
   isRebasing: boolean;
+  creditTokenNonces: bigint;
+  pegTokenNonces: bigint;
+  creditTokenName: string;
+  pegTokenName: string;
 }) {
   const { contractsList, appChainId, coinDetails, appMarketId } = useAppStore();
   const { address } = useAccount();
@@ -70,175 +78,387 @@ function MintOrRedeem({
   }, [isRebasing]);
 
   const createSteps = (): Step[] => {
-    const baseSteps = [
-      { name: `Check ${pegToken.symbol} allowance`, status: 'Not Started' },
-      { name: `Approve ${pegToken.symbol}`, status: 'Not Started' },
-      { name: 'Mint', status: 'Not Started' }
-    ];
-
-    return baseSteps;
+    return [];
   };
-
   const [steps, setSteps] = useState<Step[]>(createSteps());
 
-  const getStep = (stepName: string) => {
-    return steps.findLast((x) => x.name == stepName);
-  };
   const updateStepStatus = (stepName: string, status: Step['status']) => {
     setSteps((prevSteps) => prevSteps.map((step) => (step.name === stepName ? { ...step, status } : step)));
   };
-  function updateStepName(oldName: string, newName: string) {
-    setSteps((prevSteps) => prevSteps.map((step) => (step.name === oldName ? { ...step, name: newName } : step)));
-  }
 
   /* Smart contract writes */
-  async function mint() {
+  async function doMint() {
+    const doEnterRebase: boolean = show;
+    let usePermit: boolean = false;
+    if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+      usePermit = true;
+    }
+    const amount = parseUnits(value.toString(), pegToken.decimals);
+
+    const steps = [];
+    if (doEnterRebase) {
+      steps.push({ name: 'Enter Savings Rate', status: 'Not Started' });
+    }
+    if (usePermit) {
+      steps.push({ name: `Check ${pegToken.symbol} allowance`, status: 'Not Started' });
+      steps.push({ name: `Permit ${pegToken.symbol}`, status: 'Not Started' });
+    } else {
+      steps.push({ name: `Check ${pegToken.symbol} allowance`, status: 'Not Started' });
+      steps.push({ name: `Approve ${pegToken.symbol}`, status: 'Not Started' });
+    }
+    steps.push({ name: 'Mint', status: 'Not Started' });
+    setSteps(steps);
     setShowModal(true);
+
+    /* Enter savings rate, if needed */
+    if (doEnterRebase) {
+      try {
+        setShowModal(true);
+        updateStepStatus('Enter Savings Rate', 'In Progress');
+
+        const hash = await writeContract(wagmiConfig, {
+          address: contractsList?.marketContracts[appMarketId].creditAddress,
+          abi: CreditABI,
+          functionName: 'enterRebase',
+          chainId: appChainId as any
+        });
+
+        const checkTx = await waitForTransactionReceipt(wagmiConfig, {
+          hash: hash,
+          chainId: appChainId as any
+        });
+        if (checkTx.status != 'success') {
+          updateStepStatus('Enter Savings Rate', 'Error');
+          return false;
+        }
+        updateStepStatus('Enter Savings Rate', 'Success');
+      } catch (error) {
+        updateStepStatus('Enter Savings Rate', 'Error');
+        console.log(error);
+        return false;
+      }
+    }
+
+    /* Check allowance */
+    updateStepStatus(`Check ${pegToken.symbol} allowance`, 'In Progress');
+    const allowance = (await readContract(wagmiConfig, {
+      chainId: appChainId as any,
+      address: pegTokenAddress as Address,
+      abi: ERC20PermitABI,
+      functionName: 'allowance',
+      args: [address, contractsList.gatewayAddress]
+    })) as bigint;
+    updateStepStatus(`Check ${pegToken.symbol} allowance`, 'Success');
+
+    /* Set allowance */
+    let permitSig: any;
+    if (allowance < amount) {
+      // set allowance with permit
+      if (usePermit) {
+        updateStepStatus(`Permit ${pegToken.symbol}`, 'In Progress');
+        try {
+          permitSig = await signPermit({
+            contractAddress: pegToken.address as Address,
+            erc20Name: pegTokenName,
+            ownerAddress: address,
+            spenderAddress: contractsList.gatewayAddress as Address,
+            value: amount,
+            deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
+            nonce: pegTokenNonces,
+            chainId: appChainId,
+            version:
+              permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.version || '1'
+          });
+
+          if (!permitSig) {
+            updateStepStatus(`Permit ${pegToken.symbol}`, 'Error');
+            return false;
+          }
+          updateStepStatus(`Permit ${pegToken.symbol}`, 'Success');
+        } catch (e) {
+          console.log(e);
+          updateStepStatus(`Permit ${pegToken.symbol}`, 'Error');
+          return false;
+        }
+      }
+      // set allowance with approve
+      else {
+        updateStepStatus(`Approve ${pegToken.symbol}`, 'In Progress');
+        const hash = await writeContract(wagmiConfig, {
+          address: pegTokenAddress as Address,
+          abi: ERC20PermitABI,
+          functionName: 'approve',
+          args: [contractsList.gatewayAddress, amount],
+          chainId: appChainId as any
+        });
+        const checkTx = await waitForTransactionReceipt(wagmiConfig, {
+          hash: hash,
+          chainId: appChainId as any
+        });
+
+        if (checkTx.status != 'success') {
+          updateStepStatus(`Approve ${pegToken.symbol}`, 'Error');
+          return false;
+        }
+        updateStepStatus(`Approve ${pegToken.symbol}`, 'Success');
+      }
+    } else {
+      if (usePermit) {
+        updateStepStatus(`Permit ${pegToken.symbol}`, 'Success');
+      } else {
+        updateStepStatus(`Approve ${pegToken.symbol}`, 'Success');
+      }
+    }
+
+    /* Gateway call */
+    updateStepStatus('Mint', 'In Progress');
     try {
-      const approvalSuccess = await approvalStepsFlow(
-        address,
-        psmAddress,
-        pegTokenAddress,
-        parseUnits(value.toString(), pegToken.decimals),
-        appChainId,
-        updateStepStatus,
-        `Check ${pegToken.symbol} allowance`,
-        `Approve ${pegToken.symbol}`,
-        wagmiConfig
+      //build multicall
+      const calls = [];
+
+      // pull pegToken on gateway
+      if (usePermit && permitSig) {
+        calls.push(
+          encodeFunctionData({
+            abi: GatewayABI as Abi,
+            functionName: 'consumePermit',
+            args: [pegToken.address, amount, permitSig.deadline, permitSig.v, permitSig.r, permitSig.s]
+          })
+        );
+      }
+      calls.push(
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'consumeAllowance',
+          args: [pegToken.address, amount]
+        })
       );
 
-      if (!approvalSuccess) {
-        updateStepStatus(`Approve ${pegToken.symbol}`, 'Error');
-        return;
-      }
-    } catch (e) {
-      console.log(e);
-      updateStepStatus(`Approve ${pegToken.symbol}`, 'Error');
-      return;
-    }
-    try {
-      updateStepStatus('Mint', 'In Progress');
+      // do psm.mint
+      calls.push(
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'callExternal',
+          args: [
+            pegToken.address,
+            encodeFunctionData({
+              abi: ERC20PermitABI,
+              functionName: 'approve',
+              args: [psmAddress, amount]
+            })
+          ]
+        })
+      );
+      calls.push(
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'callExternal',
+          args: [
+            psmAddress,
+            encodeFunctionData({
+              abi: PsmABI,
+              functionName: 'mint',
+              args: [address, amount]
+            })
+          ]
+        })
+      );
+
       const hash = await writeContract(wagmiConfig, {
-        address: psmAddress,
-        abi: PsmUsdcABI,
-        functionName: 'mint',
-        args: [address, parseUnits(value.toString(), pegToken.decimals)]
-      });
-      const checkmint = await waitForTransactionReceipt(wagmiConfig, {
-        hash: hash
+        address: contractsList.gatewayAddress,
+        abi: GatewayABI,
+        functionName: 'multicall',
+        args: [calls],
+        gas: 500_000
       });
 
-      if (checkmint.status === 'success') {
+      const checkTx = await waitForTransactionReceipt(wagmiConfig, {
+        hash: hash,
+        chainId: appChainId as any
+      });
+
+      if (checkTx.status === 'success') {
         updateStepStatus('Mint', 'Success');
         reloadMintRedeem(true);
         setValue('');
-        return;
-      } else updateStepStatus('Mint', 'Error');
+        return true;
+      } else {
+        updateStepStatus('Mint', 'Error');
+        return false;
+      }
     } catch (e) {
+      console.log(e);
       updateStepStatus('Mint', 'Error');
-      console.log(e);
+      return false;
     }
   }
 
-  async function mintAndEnterRebase() {
+  async function doRedeem() {
+    let usePermit: boolean = true;
+    const amount = parseUnits(value.toString(), 18);
+
+    const steps = [];
+    if (usePermit) {
+      steps.push({ name: `Check ${creditTokenSymbol} allowance`, status: 'Not Started' });
+      steps.push({ name: `Permit ${creditTokenSymbol}`, status: 'Not Started' });
+    } else {
+      steps.push({ name: `Check ${creditTokenSymbol} allowance`, status: 'Not Started' });
+      steps.push({ name: `Approve ${creditTokenSymbol}`, status: 'Not Started' });
+    }
+    steps.push({ name: 'Redeem', status: 'Not Started' });
+    setSteps(steps);
     setShowModal(true);
-    try {
-      updateStepName('Mint', 'Mint and Enter Rebase');
 
-      const approvalSuccess = await approvalStepsFlow(
-        address,
-        psmAddress,
-        pegTokenAddress,
-        parseUnits(value.toString(), pegToken.decimals),
-        appChainId,
-        updateStepStatus,
-        `Check ${pegToken.symbol} allowance`,
-        `Approve ${pegToken.symbol}`,
-        wagmiConfig
+    /* Check allowance */
+    updateStepStatus(`Check ${creditTokenSymbol} allowance`, 'In Progress');
+    const allowance = (await readContract(wagmiConfig, {
+      chainId: appChainId as any,
+      address: creditAddress as Address,
+      abi: ERC20PermitABI,
+      functionName: 'allowance',
+      args: [address, contractsList.gatewayAddress]
+    })) as bigint;
+    updateStepStatus(`Check ${creditTokenSymbol} allowance`, 'Success');
+
+    /* Set allowance */
+    let permitSig: any;
+    if (allowance < amount) {
+      // set allowance with permit
+      if (usePermit) {
+        updateStepStatus(`Permit ${creditTokenSymbol}`, 'In Progress');
+        try {
+          permitSig = await signPermit({
+            contractAddress: creditAddress as Address,
+            erc20Name: creditTokenName,
+            ownerAddress: address,
+            spenderAddress: contractsList.gatewayAddress as Address,
+            value: amount,
+            deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
+            nonce: creditTokenNonces,
+            chainId: appChainId,
+            version: '1'
+          });
+
+          if (!permitSig) {
+            updateStepStatus(`Permit ${creditTokenSymbol}`, 'Error');
+            return false;
+          }
+          updateStepStatus(`Permit ${creditTokenSymbol}`, 'Success');
+        } catch (e) {
+          console.log(e);
+          updateStepStatus(`Permit ${creditTokenSymbol}`, 'Error');
+          return false;
+        }
+      }
+      // set allowance with approve
+      else {
+        updateStepStatus(`Approve ${creditTokenSymbol}`, 'In Progress');
+        const hash = await writeContract(wagmiConfig, {
+          address: creditAddress as Address,
+          abi: ERC20PermitABI,
+          functionName: 'approve',
+          args: [contractsList.gatewayAddress, amount],
+          chainId: appChainId as any
+        });
+        const checkTx = await waitForTransactionReceipt(wagmiConfig, {
+          hash: hash,
+          chainId: appChainId as any
+        });
+
+        if (checkTx.status != 'success') {
+          updateStepStatus(`Approve ${creditTokenSymbol}`, 'Error');
+          return false;
+        }
+        updateStepStatus(`Approve ${creditTokenSymbol}`, 'Success');
+      }
+    } else {
+      if (usePermit) {
+        updateStepStatus(`Permit ${creditTokenSymbol}`, 'Success');
+      } else {
+        updateStepStatus(`Approve ${creditTokenSymbol}`, 'Success');
+      }
+    }
+
+    /* Gateway call */
+    updateStepStatus('Redeem', 'In Progress');
+    try {
+      //build multicall
+      const calls = [];
+
+      // pull pegToken on gateway
+      if (usePermit && permitSig) {
+        calls.push(
+          encodeFunctionData({
+            abi: GatewayABI as Abi,
+            functionName: 'consumePermit',
+            args: [creditAddress, amount, permitSig.deadline, permitSig.v, permitSig.r, permitSig.s]
+          })
+        );
+      }
+      calls.push(
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'consumeAllowance',
+          args: [creditAddress, amount]
+        })
       );
 
-      if (!approvalSuccess) {
-        updateStepStatus(`Approve ${pegToken.symbol}`, 'Error');
-        return;
-      }
-    } catch (e) {
-      console.log(e);
-      updateStepStatus(`Approve ${pegToken.symbol}`, 'Error');
-      return;
-    }
-    try {
-      updateStepStatus('Mint and Enter Rebase', 'In Progress');
-      const hash = await writeContract(wagmiConfig, {
-        address: psmAddress,
-        abi: PsmUsdcABI,
-        functionName: 'mintAndEnterRebase',
-        args: [parseUnits(value.toString(), pegToken.decimals)]
-      });
-      const checkmint = await waitForTransactionReceipt(wagmiConfig, {
-        hash: hash
-      });
-
-      if (checkmint.status === 'success') {
-        updateStepStatus('Mint and Enter Rebase', 'Success');
-        reloadMintRedeem(true);
-        setValue('');
-        return;
-      } else updateStepStatus('Mint and Enter Rebase', 'Error');
-    } catch (e) {
-      updateStepStatus('Mint and Enter Rebase', 'Error');
-      console.log(e);
-    }
-  }
-
-  async function redeem() {
-    try {
-      setShowModal(true);
-      updateStepName(`Check ${pegToken.symbol} allowance`, `Check ${creditTokenSymbol} allowance`);
-      updateStepName(`Approve ${pegToken.symbol}`, `Approve ${creditTokenSymbol}`);
-      updateStepName('Mint', 'Redeem');
-
-      const approvalSuccess = await approvalStepsFlow(
-        address,
-        psmAddress,
-        creditAddress,
-        parseUnits(value.toString(), 18),
-        appChainId,
-        updateStepStatus,
-        `Check ${creditTokenSymbol} allowance`,
-        `Approve ${creditTokenSymbol}`,
-        wagmiConfig
+      // do psm.mint
+      calls.push(
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'callExternal',
+          args: [
+            creditAddress,
+            encodeFunctionData({
+              abi: ERC20PermitABI,
+              functionName: 'approve',
+              args: [psmAddress, amount]
+            })
+          ]
+        })
+      );
+      calls.push(
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'callExternal',
+          args: [
+            psmAddress,
+            encodeFunctionData({
+              abi: PsmABI,
+              functionName: 'redeem',
+              args: [address, amount]
+            })
+          ]
+        })
       );
 
-      if (!approvalSuccess) {
-        updateStepStatus(`Approve ${creditTokenSymbol}`, 'Error');
-        return;
-      }
-    } catch (e) {
-      console.log(e);
-      updateStepStatus(`Approve ${creditTokenSymbol}`, 'Error');
-      return;
-    }
-    try {
-      updateStepStatus('Redeem', 'In Progress');
       const hash = await writeContract(wagmiConfig, {
-        address: psmAddress,
-        abi: PsmUsdcABI,
-        functionName: 'redeem',
-        args: [address, parseUnits(value.toString(), 18)]
-      });
-      const checkredeem = await waitForTransactionReceipt(wagmiConfig, {
-        hash: hash
+        address: contractsList.gatewayAddress,
+        abi: GatewayABI,
+        functionName: 'multicall',
+        args: [calls],
+        gas: 500_000
       });
 
-      if (checkredeem.status === 'success') {
-        reloadMintRedeem(true);
-        setValue('');
+      const checkTx = await waitForTransactionReceipt(wagmiConfig, {
+        hash: hash,
+        chainId: appChainId as any
+      });
+
+      if (checkTx.status === 'success') {
         updateStepStatus('Redeem', 'Success');
-        return;
-      } else updateStepStatus('Redeem', 'Error');
+        reloadMintRedeem(true);
+        setValue('');
+        return true;
+      } else {
+        updateStepStatus('Redeem', 'Error');
+        return false;
+      }
     } catch (e) {
-      updateStepStatus('Redeem', 'Error');
       console.log(e);
+      updateStepStatus('Redeem', 'Error');
+      return false;
     }
   }
   /* End Smart contract writes */
@@ -384,10 +604,10 @@ function MintOrRedeem({
                 </div>
                 <ButtonPrimary
                   variant="lg"
-                  title={show ? 'Mint and Enter Rebase' : 'Mint'}
+                  title={show ? 'Mint and start saving' : 'Mint'}
                   titleDisabled={getTitleDisabled('Mint', Number(value), pegTokenBalanceNumber)}
                   extra="w-full !rounded-xl"
-                  onClick={show ? mintAndEnterRebase : mint}
+                  onClick={doMint}
                   disabled={Number(value) > pegTokenBalanceNumber || Number(value) <= 0 || !value}
                 />
                 <AlertMessage
@@ -470,7 +690,7 @@ function MintOrRedeem({
                   title={'Redeem'}
                   titleDisabled={getTitleDisabled('Redeem', Number(value), pegTokenPSMBalanceNumber)}
                   extra="w-full !rounded-xl"
-                  onClick={redeem}
+                  onClick={doRedeem}
                   disabled={Number(value) > pegTokenPSMBalanceNumber || !value ? true : false}
                 />
                 <AlertMessage

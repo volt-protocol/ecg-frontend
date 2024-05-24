@@ -9,12 +9,15 @@ import Spinner from 'components/spinner';
 import Card from 'components/card';
 import { formatCurrencyValue } from 'utils/numbers';
 
-export const TVLChart = ({ tvl }: { tvl: any }) => {
+export const TVLChart = ({ tvl, lastTVL }: { tvl: any; lastTVL: number }) => {
   const [chartData, setChartData] = useState<any>([]);
   const [timeline, setTimeline] = useState<ChartTimeline>('all');
 
   useEffect(() => {
     if (!tvl) return;
+    if (lastTVL == -1) return;
+    tvl.values.push(lastTVL);
+    tvl.timestamps.push(Date.now());
 
     const state = {
       series: [
@@ -47,6 +50,11 @@ export const TVLChart = ({ tvl }: { tvl: any }) => {
         stroke: {
           curve: 'straight'
         },
+        yaxis: {
+          labels: {
+            formatter: (val) => '$' + formatCurrencyValue(val)
+          }
+        },
         xaxis: {
           type: 'datetime',
           tickAmount: 6,
@@ -75,7 +83,7 @@ export const TVLChart = ({ tvl }: { tvl: any }) => {
     };
 
     setChartData(state);
-  }, [tvl]);
+  }, [tvl, lastTVL]);
 
   const updateData = (timeline: ChartTimeline) => {
     // reload the chart with the new timeline

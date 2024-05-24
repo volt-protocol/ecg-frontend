@@ -40,7 +40,6 @@ const LendingDetails = () => {
   const [reload, setReload] = useState<boolean>(true);
   const [utilization, setUtilization] = useState<string>('');
   const [eventLoans, setEventLoans] = useState<loanObj[]>([]);
-  const [currencyType, setCurrencyType] = useState<'creditToken' | 'pegToken'>('creditToken');
   const [editingFdv, setEditingFdv] = useState(false);
   const [fdv, setFdv] = useState(20_000_000);
 
@@ -65,7 +64,7 @@ const LendingDetails = () => {
   const fdvSupply = 1e9; // 1B GUILD max supply
   const airdropPercent = 0.01; // 1% supply
   const airdropSize = airdropPercent * fdvSupply;
-  const dailyGuild = airdropSize / 30; // days per periods
+  const dailyGuild = airdropSize / 28; // days per periods
   const dailyGuildToBorrowers = dailyGuild * 0.1; // 10% to lenders
   const currentDailyGuildPerDollar = dailyGuildToBorrowers / airdropData.totalIssuanceUsd;
   const borrowerApr = (365 * currentDailyGuildPerDollar * fdv) / 1e9;
@@ -333,42 +332,6 @@ const LendingDetails = () => {
               <MdOutlineOpenInNew />
             </a>
           </div>
-          {lendingTermConfig.find((item) => item.termAddress == termAddress)?.useGateway ? (
-            <div className="flex items-center gap-1">
-              <TooltipHorizon
-                extra="dark:text-gray-200 w-[240px]"
-                content={
-                  <p>
-                    Use a Gateway contract instead of interacting with the core protocol directly.
-                    <br />
-                    This enables batch actions such as "borrow g{pegToken?.symbol} + redeem g{pegToken?.symbol} for{' '}
-                    {pegToken?.symbol}",
-                    <br />
-                    or "mint g{pegToken?.symbol} from {pegToken?.symbol} + repay debt", or access flashloan/leverage
-                    features.
-                    <br />
-                    This feature is tied to the front-end and not to the core protocol, and is only enabled
-                    <br />
-                    for some terms by the provider of this web interface.
-                  </p>
-                }
-                trigger={
-                  <div>
-                    <QuestionMarkIcon />
-                  </div>
-                }
-                placement="left"
-              />
-
-              <ToggleCredit
-                selectType={setCurrencyType}
-                pegToken={pegToken}
-                marketId={appMarketId}
-                type={currencyType}
-                disabled={!lendingTermConfig.find((item) => item.termAddress == termAddress)?.useGateway}
-              />
-            </div>
-          ) : null}
         </div>
         <div className="mt-3 grid gap-5 xs:grid-cols-1 lg:grid-cols-6 2xl:grid-cols-6 3xl:grid-cols-6">
           <LendingStats
@@ -518,7 +481,6 @@ const LendingDetails = () => {
               minBorrow={Number(formatUnits(data?.minBorrow, 18))}
               setReload={setReload}
               reload={reload}
-              currencyType={currencyType}
             />
           </Card>
           <Card
@@ -536,7 +498,6 @@ const LendingDetails = () => {
               creditBalance={data?.creditBalance}
               pegTokenNonces={data?.pegTokenNonces}
               minBorrow={data?.minBorrow}
-              currencyType={currencyType}
             />
           </Card>
         </div>

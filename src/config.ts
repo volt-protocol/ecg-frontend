@@ -8,43 +8,50 @@ import { wagmiConfig } from 'contexts/Web3Provider';
 
 export interface LendingTermConfig {
   termAddress: Address;
-  hasLeverage: boolean;
   maxLeverage: number;
-  useGateway: boolean;
 }
 
 export interface PermitConfig {
-  collateralAddress: Address;
-  collateralName: string;
+  address: Address;
   hasPermit: boolean;
+  version?: string;
 }
 
 // set borrowing configurations for each term here
 export const lendingTermConfig: LendingTermConfig[] = [
-  {
-    termAddress: '0x938998fca53D8BFD91BC1726D26238e9Eada596C',
-    hasLeverage: true,
-    maxLeverage: 10,
-    useGateway: true
-  },
-  {
-    termAddress: '0x820E8F9399514264Fd8CB21cEE5F282c723131f6',
-    hasLeverage: false,
-    maxLeverage: 0,
-    useGateway: false
-  }
+  /*{
+    // Sepolia sDAI-8%
+    termAddress: '0xA6751F2CB086CCF9bB4cc4424a9dE9Ae97496eDe',
+    maxLeverage: 5
+  }*/
 ];
 
 //set permit configurations for each collateral token here
 export const permitConfig: PermitConfig[] = [
   {
-    collateralAddress: '0x9F07498d9f4903B10dB57a3Bd1D91b6B64AEd61e',
-    collateralName: 'sDAI',
+    // Arbitrum USDC
+    address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+    hasPermit: true,
+    version: '2'
+  },
+  {
+    // Arbitrum WETH
+    address: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
     hasPermit: true
   },
   {
-    collateralAddress: '0x1cED1eB530b5E71E6dB9221A22C725e862fC0e60',
-    collateralName: 'WBTC',
+    // Sepolia USDC
+    address: '0x7b8b4418990e4Daf35F5c7f0165DC487b1963641',
+    hasPermit: true
+  },
+  {
+    // Sepolia sDAI
+    address: '0x9F07498d9f4903B10dB57a3Bd1D91b6B64AEd61e',
+    hasPermit: true
+  },
+  {
+    // Sepolia WBTC
+    address: '0x1cED1eB530b5E71E6dB9221A22C725e862fC0e60',
     hasPermit: false
   }
 ];

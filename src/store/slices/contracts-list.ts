@@ -22,7 +22,7 @@ export type ContractsList = {
   marketContracts: { [marketId: number]: MarketContractList };
 
   // TODO, USE THEM
-  auctionHouses: {auctionHouseName: string, auctionHouseAddress: Address}[];
+  auctionHouses: { auctionHouseName: string; auctionHouseAddress: Address }[];
   lendingTermImplementationAddresses: Address[];
 };
 

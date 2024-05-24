@@ -1,7 +1,7 @@
 import { readContract, waitForTransactionReceipt, writeContract } from '@wagmi/core';
 import StepModal from 'components/stepLoader';
 import { Step } from 'components/stepLoader/stepType';
-import { ERC20PermitABI, TermABI, UsdcABI, GatewayABI, UniswapRouterABI, erc20ABI } from 'lib/contracts';
+import { ERC20PermitABI, TermABI, GatewayABI, UniswapRouterABI } from 'lib/contracts';
 import React, { useEffect, useState } from 'react';
 import { erc20Abi, Abi, Address, formatUnits, parseUnits } from 'viem';
 import moment from 'moment';
@@ -17,9 +17,7 @@ import { RangeSlider } from 'components/rangeSlider/RangeSlider';
 import { useAccount, useReadContracts } from 'wagmi';
 import { lendingTermConfig, permitConfig } from 'config';
 import { signPermit } from 'lib/transactions/signPermit';
-import { getMulticallsDecoded } from 'lib/transactions/getMulticallsDecoded';
 import { getAllowBorrowedCreditCall, getPullCollateralCalls } from './helper/borrowWithLeverage';
-import { CurrencyTypes } from 'components/switch/ToggleCredit';
 import { toastError } from 'components/toast';
 import { useAppStore } from 'store';
 import { marketsConfig } from 'config';
@@ -37,8 +35,7 @@ function CreateLoan({
   creditTokenNonces,
   minBorrow,
   setReload,
-  reload,
-  currencyType
+  reload
 }: {
   lendingTerm: LendingTerms;
   availableDebt: number;
@@ -49,7 +46,6 @@ function CreateLoan({
   minBorrow: number;
   reload: boolean;
   setReload: React.Dispatch<React.SetStateAction<boolean>>;
-  currencyType: CurrencyTypes;
 }) {
   const { contractsList, coinDetails, appMarketId, appChainId, psmPegTokenBalance } = useAppStore();
   const { address } = useAccount();
@@ -57,11 +53,12 @@ function CreateLoan({
   const [collateralAmount, setCollateralAmount] = useState<string>('');
   const [showModal, setShowModal] = useState(false);
   const [minToRepay, setMinToRepay] = useState<string>('');
-  const [msgAboveLiquidity, setMsgAboveLiquidity] = useState<string>('');
   const [withLeverage, setWithLeverage] = useState<boolean>(false);
   const [leverageValue, setLeverageValue] = useState<number>(1);
   const [withOverCollateralization, setWithOverCollateralization] = useState<boolean>(true);
-  const [overCollateralizationValue, setOverCollateralizationValue] = useState<number>(105);
+  const [overCollateralizationValue, setOverCollateralizationValue] = useState<number>(
+    Math.round(105 + lendingTerm.openingFee * 100)
+  );
   const [flashLoanBorrowAmount, setFlashLoanBorrowAmount] = useState<bigint>(BigInt(0));
   const [flashLoanCollateralAmount, setFlashLoanCollateralAmount] = useState<bigint>(BigInt(0));
   const updateStepStatus = (stepName: string, status: Step['status'], description?: any[]) => {
@@ -90,13 +87,27 @@ function CreateLoan({
         functionName: 'nonces',
         args: [address],
         chainId: appChainId
+      },
+      {
+        address: lendingTerm.collateral.address as Address,
+        abi: erc20Abi as Abi,
+        functionName: 'name',
+        chainId: appChainId
+      },
+      {
+        address: creditAddress as Address,
+        abi: erc20Abi as Abi,
+        functionName: 'name',
+        chainId: appChainId
       }
     ],
     query: {
       select: (data) => {
         return {
           collateralBalance: formatUnits(data[0].result as bigint, lendingTerm.collateral.decimals),
-          collateralNonces: data[1].result as bigint
+          collateralNonces: data[1].result as bigint,
+          collaternalTokenName: data[2].result as string,
+          creditTokenName: data[3].result as string
         };
       }
     }
@@ -118,7 +129,6 @@ function CreateLoan({
 
   /* Calculate borrow amount */
   useEffect(() => {
-    setMsgAboveLiquidity('');
     const borrowAmount: bigint = calculateBorrowAmount(collateralAmount);
     const flashLoanBorrowAmount: bigint = calculateBorrowAmount(
       (Number(collateralAmount) * (leverageValue - 1)).toString()
@@ -131,84 +141,9 @@ function CreateLoan({
     setBorrowAmount(borrowAmount);
     setFlashLoanBorrowAmount(flashLoanBorrowAmount);
     setFlashLoanCollateralAmount(flashLoanCollateralAmount);
-
-    const borrowAmountNorm = Number(formatUnits(borrowAmount, 18)) * Number(formatUnits(creditMultiplier, 18));
-    const pegTokenBalanceNorm = Number(formatUnits(psmPegTokenBalance, pegToken.decimals));
-    if (borrowAmountNorm > pegTokenBalanceNorm) {
-      setMsgAboveLiquidity(
-        `Only ${formatCurrencyValue(pegTokenBalanceNorm)} ${
-          pegToken.symbol
-        } of liquidity available to redeem, consider borrowing a smaller amount`
-      );
-    }
   }, [collateralAmount, overCollateralizationValue, leverageValue]);
 
   /****** Smart contract writes *******/
-
-  async function borrow() {
-    setShowModal(true);
-    const checkStepName = `Check ${lendingTerm.collateral.name} allowance`;
-    const approvalStepName = `Approve ${lendingTerm.collateral.name}`;
-    const createSteps = (): Step[] => {
-      const baseSteps = [
-        { name: checkStepName, status: 'Not Started' },
-        { name: approvalStepName, status: 'Not Started' },
-        { name: 'Borrow', status: 'Not Started' }
-      ];
-      return baseSteps;
-    };
-    setSteps(createSteps());
-
-    try {
-      const approvalSuccess = await approvalStepsFlow(
-        address,
-        lendingTerm.address,
-        lendingTerm.collateral.address,
-        parseUnits(collateralAmount, lendingTerm.collateral.decimals),
-        appChainId,
-        updateStepStatus,
-        checkStepName,
-        approvalStepName,
-        wagmiConfig
-      );
-
-      if (!approvalSuccess) {
-        updateStepStatus(approvalStepName, 'Error');
-        return;
-      }
-    } catch (e) {
-      console.log(e);
-      updateStepStatus(approvalStepName, 'Error');
-      return;
-    }
-
-    try {
-      updateStepStatus('Borrow', 'In Progress');
-      const hash = await writeContract(wagmiConfig, {
-        address: lendingTerm.address,
-        abi: TermABI,
-        functionName: 'borrow',
-        args: [borrowAmount, parseUnits(collateralAmount, lendingTerm.collateral.decimals)]
-      });
-      const checkBorrow = await waitForTransactionReceipt(wagmiConfig, {
-        hash: hash
-      });
-
-      if (checkBorrow.status === 'success') {
-        setTimeout(function () {
-          setReload(true);
-        }, 5000);
-        setBorrowAmount(BigInt(0));
-        setCollateralAmount('');
-        updateStepStatus('Borrow', 'Success');
-        return;
-      } else updateStepStatus('Borrow', 'Error');
-    } catch (e) {
-      console.log(e);
-      updateStepStatus('Borrow', 'Error');
-      return;
-    }
-  }
 
   async function borrowGateway() {
     setShowModal(true);
@@ -218,7 +153,10 @@ function CreateLoan({
 
     const createSteps = (): Step[] => {
       const baseSteps: Step[] = [];
-      if (permitConfig.find((item) => item.collateralAddress === lendingTerm.collateral.address)?.hasPermit) {
+      if (
+        permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
+          ?.hasPermit
+      ) {
         baseSteps.push({
           name: `Sign Permit for ${lendingTerm.collateral.symbol}`,
           status: 'Not Started'
@@ -229,30 +167,33 @@ function CreateLoan({
       }
 
       baseSteps.push({ name: `Sign Permit for ${creditTokenSymbol}`, status: 'Not Started' });
-      baseSteps.push({ name: 'Borrow (Multicall)', status: 'Not Started' });
+      baseSteps.push({ name: 'Borrow + Redeem (Multicall)', status: 'Not Started' });
 
       return baseSteps;
     };
     setSteps(createSteps());
 
     let signatureCollateral: any;
-    let signatureGUSDC: any;
+    let permitSigCreditToken: any;
 
     /* Set allowance for collateral token */
-    if (permitConfig.find((item) => item.collateralAddress === lendingTerm.collateral.address)?.hasPermit) {
+    if (
+      permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
+        ?.hasPermit
+    ) {
       try {
         updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, 'In Progress');
 
         signatureCollateral = await signPermit({
           contractAddress: lendingTerm.collateral.address,
-          erc20Name: lendingTerm.collateral.name,
+          erc20Name: data?.collaternalTokenName,
           ownerAddress: address,
           spenderAddress: contractsList.gatewayAddress as Address,
           value: parseUnits(collateralAmount, lendingTerm.collateral.decimals),
-          deadline: BigInt(Number(moment().add(10, 'seconds'))),
+          deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
           nonce: data?.collateralNonces,
-          chainId: wagmiConfig.chains[0].id,
-          permitVersion: '1'
+          chainId: appChainId,
+          version: '1'
         });
 
         if (!signatureCollateral) {
@@ -290,23 +231,23 @@ function CreateLoan({
       }
     }
 
-    /* Set allowance for gUSDC token */
+    /* Set allowance for credit token */
     try {
       updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'In Progress');
 
-      signatureGUSDC = await signPermit({
+      permitSigCreditToken = await signPermit({
         contractAddress: creditAddress as Address,
-        erc20Name: 'Ethereum Credit Guild - gUSDC',
+        erc20Name: data?.creditTokenName,
         ownerAddress: address,
         spenderAddress: contractsList.gatewayAddress as Address,
         value: borrowAmount,
-        deadline: BigInt(Number(moment().add(10, 'seconds'))),
+        deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
         nonce: creditTokenNonces,
-        chainId: wagmiConfig.chains[0].id,
-        permitVersion: '1'
+        chainId: appChainId,
+        version: '1'
       });
 
-      if (!signatureGUSDC) {
+      if (!permitSigCreditToken) {
         updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Error');
         return;
       }
@@ -325,19 +266,19 @@ function CreateLoan({
         borrowAmount,
         parseUnits(collateralAmount, lendingTerm.collateral.decimals),
         signatureCollateral,
-        signatureGUSDC,
+        permitSigCreditToken,
         creditAddress,
         psmAddress
       );
 
-      const callsDescription = getMulticallsDecoded(calls, lendingTerm, contractsList);
-      updateStepStatus(`Borrow (Multicall)`, 'In Progress', callsDescription);
+      updateStepStatus(`Borrow + Redeem (Multicall)`, 'In Progress');
 
       const hash = await writeContract(wagmiConfig, {
         address: contractsList.gatewayAddress,
         abi: GatewayABI,
         functionName: 'multicall',
-        args: [calls]
+        args: [calls],
+        gas: 750_000
       });
 
       const checkBorrow = await waitForTransactionReceipt(wagmiConfig, {
@@ -350,16 +291,16 @@ function CreateLoan({
         }, 5000);
         setBorrowAmount(BigInt(0));
         setCollateralAmount('');
-        updateStepStatus('Borrow (Multicall)', 'Success');
+        updateStepStatus('Borrow + Redeem (Multicall)', 'Success');
         return;
       } else {
-        updateStepStatus('Borrow (Multicall)', 'Error');
+        updateStepStatus('Borrow + Redeem (Multicall)', 'Error');
       }
 
-      updateStepStatus(`Borrow (Multicall)`, 'Success');
+      updateStepStatus(`Borrow + Redeem (Multicall)`, 'Success');
     } catch (e) {
       console.log(e);
-      updateStepStatus('Borrow (Multicall)', 'Error');
+      updateStepStatus('Borrow + Redeem (Multicall)', 'Error');
       return;
     }
   }
@@ -372,7 +313,10 @@ function CreateLoan({
 
     const createSteps = (): Step[] => {
       const baseSteps: Step[] = [];
-      if (permitConfig.find((item) => item.collateralAddress === lendingTerm.collateral.address)?.hasPermit) {
+      if (
+        permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
+          ?.hasPermit
+      ) {
         baseSteps.push({
           name: `Sign Permit for ${lendingTerm.collateral.symbol}`,
           status: 'Not Started'
@@ -383,7 +327,7 @@ function CreateLoan({
       }
 
       baseSteps.push({ name: `Sign Permit for ${creditTokenSymbol}`, status: 'Not Started' });
-      baseSteps.push({ name: 'Borrow with Leverage (Multicall)', status: 'Not Started' });
+      baseSteps.push({ name: 'Flashloan + Borrow + Redeem (Multicall)', status: 'Not Started' });
 
       return baseSteps;
     };
@@ -391,11 +335,14 @@ function CreateLoan({
     setSteps(createSteps());
 
     let signatureCollateral: any;
-    let signatureGUSDC: any;
+    let permitSigCreditToken: any;
     const debtAmount = borrowAmount + flashLoanBorrowAmount;
 
     /* Set allowance for collateral token */
-    if (permitConfig.find((item) => item.collateralAddress === lendingTerm.collateral.address)?.hasPermit) {
+    if (
+      permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
+        ?.hasPermit
+    ) {
       try {
         updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, 'In Progress');
 
@@ -405,10 +352,10 @@ function CreateLoan({
           ownerAddress: address,
           spenderAddress: contractsList.gatewayAddress as Address,
           value: parseUnits(collateralAmount, lendingTerm.collateral.decimals),
-          deadline: BigInt(Number(moment().add(10, 'seconds'))),
+          deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
           nonce: data?.collateralNonces,
-          chainId: wagmiConfig.chains[0].id,
-          permitVersion: '1'
+          chainId: appChainId,
+          version: '1'
         });
 
         if (!signatureCollateral) {
@@ -450,19 +397,19 @@ function CreateLoan({
     try {
       updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'In Progress');
 
-      signatureGUSDC = await signPermit({
+      permitSigCreditToken = await signPermit({
         contractAddress: creditAddress as Address,
-        erc20Name: 'Ethereum Credit Guild - gUSDC',
+        erc20Name: data?.creditTokenName,
         ownerAddress: address,
         spenderAddress: contractsList.gatewayAddress as Address,
         value: debtAmount,
-        deadline: BigInt(Number(moment().add(10, 'seconds'))),
+        deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
         nonce: creditTokenNonces,
-        chainId: wagmiConfig.chains[0].id,
-        permitVersion: '1'
+        chainId: appChainId,
+        version: '1'
       });
 
-      if (!signatureGUSDC) {
+      if (!permitSigCreditToken) {
         updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Error');
         return;
       }
@@ -483,23 +430,17 @@ function CreateLoan({
 
       const allowBorrowedCreditCall = getAllowBorrowedCreditCall(
         debtAmount,
-        signatureGUSDC,
+        permitSigCreditToken,
         contractsList,
         appMarketId
       );
 
-      const callsDescription = getMulticallsDecoded(
-        pullCollateralCalls.concat(allowBorrowedCreditCall),
-        lendingTerm,
-        contractsList
-      );
-
-      updateStepStatus(`Borrow with Leverage (Multicall)`, 'In Progress', callsDescription);
+      updateStepStatus(`Flashloan + Borrow + Redeem (Multicall)`, 'In Progress');
 
       /*** Calculate maxLoanDebt with 1% slippage ***/
       const path = [pegToken.address, lendingTerm.collateral.address];
 
-      //get min amount of usdc to swap with collateral from uniswap
+      //get min amount of pegToken to swap with collateral from uniswap
       const result = await readContract(wagmiConfig, {
         address: contractsList.uniswapRouterAddress,
         abi: UniswapRouterABI,
@@ -540,17 +481,17 @@ function CreateLoan({
         }, 5000);
         setBorrowAmount(BigInt(0));
         setCollateralAmount('');
-        updateStepStatus('Borrow with Leverage (Multicall)', 'Success');
+        updateStepStatus('Flashloan + Borrow + Redeem (Multicall)', 'Success');
         return;
       } else {
-        updateStepStatus('Borrow with Leverage (Multicall)', 'Error');
+        updateStepStatus('Flashloan + Borrow + Redeem (Multicall)', 'Error');
       }
 
-      updateStepStatus(`Borrow with Leverage (Multicall)`, 'Success');
+      updateStepStatus(`Flashloan + Borrow + Redeem (Multicall)`, 'Success');
     } catch (e) {
       console.log(e);
       toastError(e.shortMessage);
-      updateStepStatus('Borrow with Leverage (Multicall)', 'Error');
+      updateStepStatus('Flashloan + Borrow + Redeem (Multicall)', 'Error');
       return;
     }
   }
@@ -583,7 +524,7 @@ function CreateLoan({
   };
 
   const setMax = () => {
-    //max borrow of gUSDC given the collateral amount in wallet
+    //max borrow of credit given the collateral amount in wallet
     /*const maxBorrow =
       (Number(data?.collateralBalance) * lendingTerm.borrowRatio) /
       Number(formatUnits(creditMultiplier, 18))*/
@@ -605,11 +546,7 @@ function CreateLoan({
   }
 
   const getBorrowFunction = () => {
-    currencyType == 'pegToken'
-      ? withLeverage && leverageValue > 0
-        ? borrowGatewayLeverage()
-        : borrowGateway()
-      : borrow();
+    withLeverage && leverageValue > 0 ? borrowGatewayLeverage() : borrowGateway();
   };
   /* End Handlers and getters */
 
@@ -658,54 +595,32 @@ function CreateLoan({
 
           <DefiInputBox
             disabled={true}
-            topLabel={`Amount of ${currencyType == 'pegToken' ? pegToken.symbol : creditTokenSymbol} to borrow`}
+            topLabel={`Amount of ${pegToken.symbol} to borrow`}
             currencyLogo={pegTokenLogo}
-            currencyLogoStyle={currencyType == 'pegToken' ? {} : { borderRadius: '50%', border: '3px solid #3e6b7d' }}
-            currencySymbol={currencyType == 'pegToken' ? pegToken.symbol : creditTokenSymbol}
+            currencySymbol={pegToken.symbol}
             placeholder="0"
             pattern="[0-9]*\.[0-9]"
             inputSize="text-2xl xl:text-3xl"
-            // value={formatUnits(borrowAmount * creditMultiplier, 18)} //display amount borrowed in USDC
-            value={
-              currencyType == 'pegToken'
-                ? formatDecimal(
-                    Number(formatUnits(borrowAmount + flashLoanBorrowAmount, 18)) *
-                      Number(formatUnits(creditMultiplier, 18)),
-                    creditTokenDecimalsToDisplay
-                  )
-                : formatDecimal(Number(formatUnits(borrowAmount, 18)), creditTokenDecimalsToDisplay)
-            }
+            value={formatDecimal(
+              Number(formatUnits(borrowAmount + flashLoanBorrowAmount, 18)) * Number(formatUnits(creditMultiplier, 18)),
+              creditTokenDecimalsToDisplay
+            )}
             leftLabel={
-              currencyType == 'pegToken' ? (
-                <span className="text-sm font-medium text-gray-400 dark:text-gray-700">
-                  ≈ $
-                  {formatDecimal(
-                    pegToken.price *
-                      Number(formatUnits(borrowAmount + flashLoanBorrowAmount, 18)) *
-                      Number(formatUnits(creditMultiplier, 18)),
-                    2
-                  )}
-                </span>
-              ) : (
-                <span className="text-sm font-medium text-gray-400 dark:text-gray-700">
-                  ≈ $
-                  {formatDecimal(
-                    pegToken.price * Number(formatUnits(borrowAmount, 18)) * Number(formatUnits(creditMultiplier, 18)),
-                    2
-                  )}
-                </span>
-              )
+              <span className="text-sm font-medium text-gray-400 dark:text-gray-700">
+                ≈ $
+                {formatDecimal(
+                  pegToken.price *
+                    Number(formatUnits(borrowAmount + flashLoanBorrowAmount, 18)) *
+                    Number(formatUnits(creditMultiplier, 18)),
+                  2
+                )}
+              </span>
             }
             rightLabel={
               <>
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Balance:{' '}
-                  {currencyType == 'pegToken'
-                    ? formatDecimal(
-                        Number(formatUnits(pegTokenBalance, pegToken.decimals)),
-                        creditTokenDecimalsToDisplay
-                      )
-                    : formatDecimal(Number(formatUnits(creditBalance, 18)), creditTokenDecimalsToDisplay)}
+                  {formatDecimal(Number(formatUnits(pegTokenBalance, pegToken.decimals)), creditTokenDecimalsToDisplay)}
                 </p>
               </>
             }
@@ -718,12 +633,14 @@ function CreateLoan({
                 title={`Over-collateralization: ${overCollateralizationValue}%`}
                 value={overCollateralizationValue}
                 onChange={(value) => setOverCollateralizationValue(value)}
-                min={105}
+                min={Math.round(105 + lendingTerm.openingFee * 100)}
                 max={300}
                 step={1}
                 show={withOverCollateralization}
                 setShow={() => {
-                  setOverCollateralizationValue(withOverCollateralization ? 0 : 105);
+                  setOverCollateralizationValue(
+                    withOverCollateralization ? 0 : Math.round(105 + lendingTerm.openingFee * 100)
+                  );
                   setWithOverCollateralization(!withOverCollateralization);
                   setWithLeverage(false);
                   setLeverageValue(1);
@@ -739,7 +656,7 @@ function CreateLoan({
                       <TooltipHorizon
                         extra=""
                         content={
-                          <div className="w-[20rem] p-2">
+                          <div className="w-[20rem] p-2 dark:text-white">
                             <p>
                               With interests accruing at {formatDecimal(100 * lendingTerm.interestRate, 2)} % APR, and
                               an overcollateralization of {overCollateralizationValue}%, the interests will make your
@@ -785,69 +702,59 @@ function CreateLoan({
               )}
             </div>
 
-            {lendingTermConfig.find((item) => item.termAddress === lendingTerm.address)?.hasLeverage &&
-              currencyType == 'pegToken' && (
-                <div className="mt w-full px-5">
-                  <RangeSlider
-                    withSwitch={true}
-                    title={`Leverage: ${leverageValue}x`}
-                    value={leverageValue}
-                    onChange={(value) => setLeverageValue(value)}
-                    min={1}
-                    max={lendingTermConfig.find((item) => item.termAddress === lendingTerm.address)?.maxLeverage}
-                    step={0.1}
-                    show={withLeverage}
-                    setShow={() => {
-                      setLeverageValue(1);
-                      setWithLeverage(!withLeverage);
-                      setWithOverCollateralization(false);
-                      setOverCollateralizationValue(0);
-                    }}
-                  />
-                </div>
-              )}
+            {lendingTermConfig.find((item) => item.termAddress === lendingTerm.address)?.maxLeverage && (
+              <div className="mt w-full px-5">
+                <RangeSlider
+                  withSwitch={true}
+                  title={`Leverage: ${leverageValue}x`}
+                  value={leverageValue}
+                  onChange={(value) => setLeverageValue(value)}
+                  min={1}
+                  max={lendingTermConfig.find((item) => item.termAddress === lendingTerm.address)?.maxLeverage}
+                  step={0.1}
+                  show={withLeverage}
+                  setShow={() => {
+                    setLeverageValue(1);
+                    setWithLeverage(!withLeverage);
+                    setWithOverCollateralization(false);
+                    setOverCollateralizationValue(0);
+                  }}
+                />
+              </div>
+            )}
           </div>
           <ButtonPrimary
             variant="lg"
             title="Borrow"
             titleDisabled={getTitleDisabled(
+              pegToken?.symbol,
               Number(collateralAmount),
               Number(formatUnits(borrowAmount, 18)),
               Number(data?.collateralBalance),
               availableDebt,
               (Number(data?.collateralBalance) * lendingTerm.borrowRatio) / Number(formatUnits(creditMultiplier, 18)),
               minBorrow,
+              Number(formatUnits(borrowAmount, 18)) * Number(formatUnits(creditMultiplier, 18)),
+              Number(formatUnits(psmPegTokenBalance, pegToken.decimals)),
               withLeverage
             )}
             extra="w-full !rounded-xl"
             onClick={getBorrowFunction}
             disabled={
-              Number(collateralAmount) > Number(data?.collateralBalance) ||
-              Number(formatUnits(borrowAmount, 18)) < minBorrow ||
-              Number(formatUnits(borrowAmount, 18)) > availableDebt ||
-              (!withLeverage &&
-                Number(formatUnits(borrowAmount, 18)) >
-                  (Number(data?.collateralBalance) * lendingTerm.borrowRatio) /
-                    Number(formatUnits(creditMultiplier, 18)))
+              getTitleDisabled(
+                pegToken?.symbol,
+                Number(collateralAmount),
+                Number(formatUnits(borrowAmount, 18)),
+                Number(data?.collateralBalance),
+                availableDebt,
+                (Number(data?.collateralBalance) * lendingTerm.borrowRatio) / Number(formatUnits(creditMultiplier, 18)),
+                minBorrow,
+                Number(formatUnits(borrowAmount, 18)) * Number(formatUnits(creditMultiplier, 18)),
+                Number(formatUnits(psmPegTokenBalance, pegToken.decimals)),
+                withLeverage
+              ).length != 0
             }
           />
-
-          {Number(formatUnits(borrowAmount, 18)) < minBorrow && (
-            <AlertMessage
-              type="danger"
-              message={
-                <p className="">
-                  Minimum borrow is{' '}
-                  <strong>
-                    {currencyType == 'pegToken'
-                      ? formatDecimal(minBorrow * Number(formatUnits(creditMultiplier, 18)), pegTokenDecimalsToDisplay)
-                      : formatDecimal(minBorrow, pegTokenDecimalsToDisplay)}
-                  </strong>{' '}
-                  {currencyType == 'pegToken' ? pegToken.symbol : creditTokenSymbol}
-                </p>
-              }
-            />
-          )}
 
           {lendingTerm.openingFee > 0 && Number(formatUnits(borrowAmount, 18)) >= minBorrow && (
             <AlertMessage
@@ -857,9 +764,14 @@ function CreateLoan({
                   <span className="font-bold">
                     {' '}
                     {toLocaleString(
-                      formatDecimal(Number(formatUnits(borrowAmount, 18)) * lendingTerm.openingFee, 2)
+                      formatDecimal(
+                        Number(formatUnits(borrowAmount, 18)) *
+                          lendingTerm.openingFee *
+                          Number(formatUnits(creditMultiplier, 18)),
+                        2
+                      )
                     )}{' '}
-                    {creditTokenSymbol}{' '}
+                    {pegToken?.symbol}{' '}
                   </span>{' '}
                   of interest will accrue instantly after opening the loan.
                 </p>
@@ -871,7 +783,9 @@ function CreateLoan({
               type="warning"
               message={
                 <p className="">
-                  You will have to repay <strong>{formatDecimal(Number(minToRepay), 2)}</strong> {creditTokenSymbol} by{' '}
+                  You will have to repay{' '}
+                  <strong>{formatDecimal(Number(minToRepay), 2) * Number(formatUnits(creditMultiplier, 18))}</strong>{' '}
+                  {pegToken?.symbol} by{' '}
                   <strong>
                     {moment().add(lendingTerm.maxDelayBetweenPartialRepay, 'seconds').format('DD/MM/YYYY HH:mm:ss')}
                   </strong>{' '}
@@ -880,8 +794,6 @@ function CreateLoan({
               }
             />
           )}
-
-          {msgAboveLiquidity && <AlertMessage type="warning" message={<p className="">{msgAboveLiquidity}</p>} />}
         </div>
       </div>
     </>

@@ -4,7 +4,7 @@ import Disconnected from 'components/error/disconnected';
 import React, { useEffect, useState } from 'react';
 import Card from 'components/card';
 import { useAccount, useReadContracts } from 'wagmi';
-import { ProfitManagerABI, CreditABI, WethABI } from 'lib/contracts';
+import { ProfitManagerABI, CreditABI, WethABI, ERC20PermitABI } from 'lib/contracts';
 import { waitForTransactionReceipt, writeContract, getBalance } from '@wagmi/core';
 import { formatCurrencyValue, formatDecimal } from 'utils/numbers';
 import { toastError } from 'components/toast';
@@ -26,8 +26,16 @@ import { ApexChartWrapper } from 'components/charts/ApexChartWrapper';
 import DefiInputBox from 'components/box/DefiInputBox';
 
 function MintAndSaving() {
-  const { appMarketId, appChainId, contractsList, coinDetails, historicalData, airdropData, creditHolderCount } =
-    useAppStore();
+  const {
+    appMarketId,
+    appChainId,
+    contractsList,
+    coinDetails,
+    historicalData,
+    airdropData,
+    creditHolderCount,
+    profitSharingConfig
+  } = useAppStore();
   const { address, isConnected } = useAccount();
   const [reload, setReload] = React.useState<boolean>(false);
   const [showModal, setShowModal] = useState(false);
@@ -63,20 +71,107 @@ function MintAndSaving() {
   const fdvSupply = 1e9; // 1B GUILD max supply
   const airdropPercent = 0.01; // 1% supply
   const airdropSize = airdropPercent * fdvSupply;
-  const dailyGuild = airdropSize / 30; // days in period
+  const dailyGuild = airdropSize / 28; // days in period
+  const totalMarketWeights = Object.keys(airdropData.marketUtilization).reduce((acc, cur) => {
+    acc += airdropData.marketDebt[cur];
+    return acc;
+  }, 0);
+  const marketWeight = airdropData.marketDebt[appMarketId];
+  console.log('market earns', Math.round((10000 * marketWeight) / totalMarketWeights) / 100, '% of lender rewards');
   const dailyGuildToLenders = dailyGuild * 0.7; // 70% to lenders
-  const currentDailyGuildPerDollarLent = dailyGuildToLenders / airdropData.rebasingSupplyUsd;
+  const dailyGuildToMarketLenders = dailyGuildToLenders * (marketWeight / totalMarketWeights);
+  const marketCreditSupply = Number(historicalData.aprData.values.rebasingSupply.slice(-1)[0]);
+  const marketCreditSupplyValue =
+    marketCreditSupply * pegToken?.price * Number(historicalData.creditMultiplier.values.slice(-1)[0]);
+  const currentDailyGuildPerDollarLent = dailyGuildToMarketLenders / marketCreditSupplyValue;
   const lenderApr = (365 * currentDailyGuildPerDollarLent * fdv) / 1e9;
+
+  /* Smart contract reads */
+  const { data, isError, isLoading, refetch } = useReadContracts({
+    contracts: [
+      {
+        address: pegTokenAddress,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [address],
+        chainId: appChainId
+      },
+      {
+        address: creditAddress,
+        abi: CreditABI,
+        functionName: 'balanceOf',
+        args: [address],
+        chainId: appChainId
+      },
+      {
+        address: profitManagerAddress,
+        abi: ProfitManagerABI,
+        functionName: 'creditMultiplier',
+        chainId: appChainId
+      },
+      {
+        address: pegTokenAddress,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [psmAddress],
+        chainId: appChainId
+      },
+      {
+        address: creditAddress,
+        abi: CreditABI,
+        functionName: 'isRebasing',
+        args: [address as Address],
+        chainId: appChainId
+      },
+      {
+        address: creditAddress,
+        abi: ERC20PermitABI,
+        functionName: 'nonces',
+        args: [address],
+        chainId: appChainId
+      },
+      {
+        address: pegToken?.address,
+        abi: ERC20PermitABI,
+        functionName: 'nonces',
+        args: [address],
+        chainId: appChainId
+      },
+      {
+        address: creditAddress,
+        abi: ERC20PermitABI,
+        functionName: 'name',
+        chainId: appChainId
+      },
+      {
+        address: pegToken?.address,
+        abi: ERC20PermitABI,
+        functionName: 'name',
+        chainId: appChainId
+      }
+    ],
+    query: {
+      select: (data) => {
+        return {
+          pegTokenBalance: data[0].result as bigint,
+          creditTokenBalance: data[1].result as bigint,
+          creditMultiplier: data[2].result as bigint,
+          pegTokenPSMBalance: data[3].result as bigint,
+          isRebasing: data[4].result as boolean,
+          creditTokenNonces: data[5].result as bigint,
+          pegTokenNonces: data[6].result as bigint,
+          creditTokenName: data[7].result as string,
+          pegTokenName: data[8].result as string
+        };
+      }
+    }
+  });
 
   useEffect(() => {
     if (!historicalData) return;
 
     const interpolatingRebaseRewards: number[] = [];
     const unpaidInterestPerUnit: number[] = [];
-    let dxAPR: number = 0;
-    let dyAPR: number = 0;
-    let dxAPRFuture: number = 0;
-    let dyAPRFuture: number = 0;
     historicalData.aprData.timestamps.forEach((t, i, arr) => {
       // compute unpaid interest per unit of credit token
       const unpaidInterest =
@@ -93,29 +188,30 @@ function MintAndSaving() {
       interpolatingRebaseRewards.push(
         Number(formatDecimal(interpolatingRewardsPerCredit, pegTokenDecimalsToDisplay * 2))
       );
-
-      // variables to compute apr
-      if (i != 0 && t > (Date.now() - 24 * 36e5) / 1000) {
-        const dx = t - arr[i - 1];
-        const dy = historicalData.aprData.values.sharePrice[i] - historicalData.aprData.values.sharePrice[i - 1];
-        if (dy > 0) {
-          dxAPR += dx;
-          dyAPR += dy;
-        }
-        const dyUnpaid = unpaidInterestPerUnit[i] - unpaidInterestPerUnit[i - 1];
-        const dyInterpolating = interpolatingRebaseRewards[i] - interpolatingRebaseRewards[i - 1];
-        const dyFuture = dy + dyUnpaid + dyInterpolating;
-        if (dyFuture > 0) {
-          dxAPRFuture += dx;
-          dyAPRFuture += dyFuture;
-        }
-      }
     });
 
-    let _apr = 100 * ((1 + (dyAPR * 31536000) / dxAPR) / 1 - 1);
+    const sharePrice = historicalData.aprData.values.sharePrice.slice(-1)[0];
+    const deltaGreen =
+      historicalData.aprData.values.sharePrice.slice(-2)[1] - historicalData.aprData.values.sharePrice.slice(-2)[0];
+    /*const gray =
+      historicalData.loanBorrow.values.totalUnpaidInterests.slice(-1)[0] /
+      historicalData.aprData.values.rebasingSupply.slice(-1)[0];
+    const yellow =
+      (historicalData.aprData.values.targetTotalSupply.slice(-1)[0] -
+        historicalData.aprData.values.totalSupply.slice(-1)[0]) /
+      historicalData.aprData.values.rebasingSupply.slice(-1)[0];*/
+    const apr = (deltaGreen * 365 * 24) / sharePrice;
+
+    const marketLent = Number(historicalData.creditSupply.values.slice(-1)[0]);
+    const marketSaving = Number(historicalData.aprData.values.rebasingSupply.slice(-1)[0]);
+    const multiplier = marketLent / marketSaving;
+    const averageInterestPaidByBorrowers = Number(historicalData.averageInterestRate.values.slice(-1)[0]) / 100;
+    const futureApr = ((averageInterestPaidByBorrowers * Number(profitSharingConfig[1])) / 1e18) * multiplier;
+
+    let _apr = 100 * apr;
     if (isNaN(_apr)) _apr = 0;
     setApr(_apr);
-    let _aprFuture = 100 * ((1 + (dyAPRFuture * 31536000) / dxAPRFuture) / 1 - 1);
+    let _aprFuture = 100 * futureApr;
     if (isNaN(_aprFuture)) _aprFuture = 0;
     setAprFuture(_aprFuture);
 
@@ -128,19 +224,19 @@ function MintAndSaving() {
         color: '#212121'
       },
       {
-        name: 'Distributed through rebase',
+        name: 'Distributed',
         data: historicalData.aprData.values.sharePrice.map((e) =>
           Number(formatDecimal(e - 1, pegTokenDecimalsToDisplay * 2))
         ),
         color: '#689F38'
       },
       {
-        name: 'Interpolating rebase rewards',
+        name: 'Interest paid interpolating over 30d',
         data: interpolatingRebaseRewards,
         color: '#FFC107'
       },
       {
-        name: 'Pending Interest',
+        name: 'Pending Interest on open loans',
         data: unpaidInterestPerUnit,
         color: '#757575'
       }
@@ -201,66 +297,6 @@ function MintAndSaving() {
     setChartData(state);
   }, [historicalData]);
 
-  /* Smart contract reads */
-  const { data, isError, isLoading, refetch } = useReadContracts({
-    contracts: [
-      {
-        address: pegTokenAddress,
-        abi: erc20Abi,
-        functionName: 'balanceOf',
-        args: [address],
-        chainId: appChainId
-      },
-      {
-        address: creditAddress,
-        abi: CreditABI,
-        functionName: 'balanceOf',
-        args: [address],
-        chainId: appChainId
-      },
-      {
-        address: profitManagerAddress,
-        abi: ProfitManagerABI,
-        functionName: 'creditMultiplier',
-        chainId: appChainId
-      },
-      {
-        address: pegTokenAddress,
-        abi: erc20Abi,
-        functionName: 'balanceOf',
-        args: [psmAddress],
-        chainId: appChainId
-      },
-      {
-        address: creditAddress,
-        abi: CreditABI,
-        functionName: 'isRebasing',
-        args: [address as Address],
-        chainId: appChainId
-      },
-      {
-        address: profitManagerAddress,
-        abi: ProfitManagerABI,
-        functionName: 'getProfitSharingConfig',
-        chainId: appChainId
-      }
-    ],
-    query: {
-      select: (data) => {
-        return {
-          pegTokenBalance: data[0].result as bigint,
-          creditTokenBalance: data[1].result as bigint,
-          creditMultiplier: data[2].result as bigint,
-          pegTokenPSMBalance: data[3].result as bigint,
-          isRebasing: data[4].result as boolean,
-          creditSplit: formatDecimal(Number(formatUnits(data[5].result[1] as bigint, 18)) * 100, 2),
-          guildSplit: formatDecimal(Number(formatUnits(data[5].result[2] as bigint, 18)) * 100, 2),
-          surplusBufferSplit: formatDecimal(Number(formatUnits(data[5].result[0] as bigint, 18)) * 100, 2)
-        };
-      }
-    }
-  });
-
   useEffect(() => {
     if (!isConnected) return;
     getBalance(wagmiConfig, {
@@ -314,7 +350,8 @@ function MintAndSaving() {
         address: pegTokenAddress,
         abi: WethABI,
         functionName: 'deposit',
-        value: parseUnits(wrapValue, 18)
+        value: parseUnits(wrapValue, 18),
+        chainId: appChainId as any
       });
 
       const check = await waitForTransactionReceipt(wagmiConfig, {
@@ -350,7 +387,8 @@ function MintAndSaving() {
         address: pegTokenAddress,
         abi: WethABI,
         functionName: 'withdraw',
-        args: [parseUnits(unwrapValue, 18)]
+        args: [parseUnits(unwrapValue, 18)],
+        chainId: appChainId as any
       });
 
       const check = await waitForTransactionReceipt(wagmiConfig, {
@@ -385,7 +423,8 @@ function MintAndSaving() {
       const hash = await writeContract(wagmiConfig, {
         address: contractsList?.marketContracts[appMarketId].creditAddress,
         abi: CreditABI,
-        functionName: rebaseMode
+        functionName: rebaseMode,
+        chainId: appChainId as any
       });
 
       const checkStartSaving = await waitForTransactionReceipt(wagmiConfig, {
@@ -430,8 +469,8 @@ function MintAndSaving() {
               content={
                 <>
                   <p>APR currently being distributed through the rebasing mechanism (savings rate).</p>
-                  <p>Average over the last 24 hours.</p>
                   <p>This corresponds to the green area on the chart.</p>
+                  <p>It is currently distributed in real-time, you will earn this rate if you lend.</p>
                 </>
               }
               trigger={
@@ -471,11 +510,42 @@ function MintAndSaving() {
               extra="dark:text-gray-200"
               content={
                 <>
-                  <p>
-                    Estimated future APR, based on current savings rate + interpolating rewards + pending interests.
+                  <p>Estimated future APR, based on current average interest paid by borrowers and current lenders.</p>
+                  <p className="mt-2">
+                    Average rate paid by borrowers :{' '}
+                    <strong>{formatDecimal(Number(historicalData.averageInterestRate.values.slice(-1)[0]), 2)}</strong>%
                   </p>
-                  <p>Average over the last 24 hours.</p>
-                  <p>This corresponds to the green + yellow + gray areas on the chart.</p>
+                  <p>
+                    Percent of interest going to lenders :{' '}
+                    <strong>{formatDecimal((100 * Number(profitSharingConfig[1])) / 1e18, 2)}</strong>%
+                  </p>
+                  <p>
+                    Multiplier effect :{' '}
+                    <strong>
+                      {'x' +
+                        formatDecimal(
+                          Number(historicalData.creditSupply.values.slice(-1)[0]) /
+                            Number(historicalData.aprData.values.rebasingSupply.slice(-1)[0]),
+                          3
+                        )}
+                    </strong>{' '}
+                    (only{' '}
+                    <span className="font-semibold">
+                      {formatDecimal(
+                        Number(historicalData.aprData.values.rebasingSupply.slice(-1)[0]),
+                        pegTokenDecimalsToDisplay
+                      )}
+                    </span>{' '}
+                    of{' '}
+                    <span className="font-semibold">
+                      {formatDecimal(
+                        Number(historicalData.creditSupply.values.slice(-1)[0]),
+                        pegTokenDecimalsToDisplay
+                      )}
+                    </span>{' '}
+                    <Image className="inline-block align-top" src={pegTokenLogo} width={18} height={18} alt="logo" />{' '}
+                    {pegToken?.symbol} lent is earning the savings rate)
+                  </p>
                 </>
               }
               trigger={
@@ -934,7 +1004,7 @@ function MintAndSaving() {
                 </p>
                 <ul className="list-inside list-disc">
                   <li className="list-item">
-                    <span className="font-semibold ">{data.creditSplit}</span>% to{' '}
+                    <span className="font-semibold ">{(100 * Number(profitSharingConfig[1])) / 1e18}</span>% to{' '}
                     <Image
                       className="inline-block"
                       src={pegTokenLogo}
@@ -946,7 +1016,7 @@ function MintAndSaving() {
                     <strong>{creditTokenSymbol}</strong> savers,
                   </li>
                   <li className="list-item">
-                    <span className="font-semibold">{data.guildSplit}</span>% to{' '}
+                    <span className="font-semibold">{(100 * Number(profitSharingConfig[2])) / 1e18}</span>% to{' '}
                     <Image
                       className="inline-block"
                       src="/img/crypto-logos/guild.png"
@@ -957,7 +1027,8 @@ function MintAndSaving() {
                     <strong>GUILD</strong> stakers,
                   </li>
                   <li className="list-item">
-                    <span className="font-semibold">{data.surplusBufferSplit}</span>% to the Surplus Buffer.
+                    <span className="font-semibold">{(100 * Number(profitSharingConfig[0])) / 1e18}</span>% to the
+                    Surplus Buffer.
                   </li>
                 </ul>
                 <p>The Surplus Buffer is a first-loss capital reserve shared among all terms of a market.</p>
@@ -1014,6 +1085,10 @@ function MintAndSaving() {
               creditTokenBalance={data.creditTokenBalance}
               creditMultiplier={data.creditMultiplier}
               isRebasing={data.isRebasing}
+              creditTokenNonces={data.creditTokenNonces}
+              pegTokenNonces={data.pegTokenNonces}
+              creditTokenName={data.creditTokenName}
+              pegTokenName={data.pegTokenName}
             />
           </Card>
         </div>

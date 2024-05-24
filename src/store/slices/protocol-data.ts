@@ -20,6 +20,8 @@ export interface ProtocolDataSlice {
   creditHolderCount: number;
   creditMultiplier: bigint;
   creditSupply: bigint;
+  creditTargetSupply: bigint;
+  totalIssuance: bigint;
   totalWeight: bigint;
   offboardQuorum: bigint;
   offboardDurationBlock: bigint;
@@ -27,6 +29,7 @@ export interface ProtocolDataSlice {
   delegateLockupPeriod: bigint;
   psmPegTokenBalance: bigint;
   minimumCreditStake: bigint;
+  profitSharingConfig: any;
   fetchProtocolData: (marketId: number, chainId: number, contractsList: ContractsList) => Promise<void>;
 }
 
@@ -39,6 +42,8 @@ export const createProtocolDataSlice: StateCreator<ProtocolDataSlice> = (set, ge
   creditHolderCount: 0,
   creditMultiplier: BigInt(0),
   creditSupply: BigInt(0),
+  creditTargetSupply: BigInt(0),
+  totalIssuance: BigInt(0),
   totalWeight: BigInt(0),
   offboardQuorum: BigInt(0),
   offboardDurationBlock: BigInt(0),
@@ -63,6 +68,16 @@ export const createProtocolDataSlice: StateCreator<ProtocolDataSlice> = (set, ge
         address: creditAddress,
         abi: CreditABI as Abi,
         functionName: 'totalSupply'
+      },
+      {
+        address: creditAddress,
+        abi: CreditABI as Abi,
+        functionName: 'targetTotalSupply'
+      },
+      {
+        address: contractsList.marketContracts[marketId].profitManagerAddress,
+        abi: ProfitManagerABI as Abi,
+        functionName: 'totalIssuance'
       },
       {
         address: guildAddress,
@@ -99,6 +114,11 @@ export const createProtocolDataSlice: StateCreator<ProtocolDataSlice> = (set, ge
         address: surplusGuildMinterAddress,
         abi: SurplusGuildMinterABI as Abi,
         functionName: 'MIN_STAKE'
+      },
+      {
+        address: contractsList.marketContracts[marketId].profitManagerAddress,
+        abi: ProfitManagerABI as Abi,
+        functionName: 'getProfitSharingConfig'
       }
     ];
 
@@ -111,17 +131,21 @@ export const createProtocolDataSlice: StateCreator<ProtocolDataSlice> = (set, ge
     const apiUrl = getApiBaseUrl(chainId) + `/markets/${marketId}/marketdata`;
     const res = await HttpGet<ApiMarketDataResponse>(apiUrl);
 
+    let i = 0;
     set({
       creditHolderCount: res.creditHolderCount as number,
-      creditMultiplier: protocolData[0].result as bigint,
-      creditSupply: protocolData[1].result as bigint,
-      totalWeight: protocolData[2].result as bigint,
-      offboardQuorum: protocolData[3].result as bigint,
-      offboardDurationBlock: protocolData[4].result as bigint,
-      deprecatedGauges: protocolData[5].result as string[],
-      delegateLockupPeriod: protocolData[6].result as bigint,
-      psmPegTokenBalance: protocolData[7].result as bigint,
-      minimumCreditStake: protocolData[8].result as bigint
+      creditMultiplier: protocolData[i++].result as bigint,
+      creditSupply: protocolData[i++].result as bigint,
+      creditTargetSupply: protocolData[i++].result as bigint,
+      totalIssuance: protocolData[i++].result as bigint,
+      totalWeight: protocolData[i++].result as bigint,
+      offboardQuorum: protocolData[i++].result as bigint,
+      offboardDurationBlock: protocolData[i++].result as bigint,
+      deprecatedGauges: protocolData[i++].result as string[],
+      delegateLockupPeriod: protocolData[i++].result as bigint,
+      psmPegTokenBalance: protocolData[i++].result as bigint,
+      minimumCreditStake: protocolData[i++].result as bigint,
+      profitSharingConfig: protocolData[i++].result as any
     });
   }
 });

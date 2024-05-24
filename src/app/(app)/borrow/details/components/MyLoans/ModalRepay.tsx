@@ -10,12 +10,8 @@ import { formatUnits, parseUnits } from 'viem';
 import { getTitleDisabled } from './helper';
 import Link from 'next/link';
 import { getPegTokenLogo, lendingTermConfig } from 'config';
-import { RangeSlider } from 'components/rangeSlider/RangeSlider';
-import { CurrencyTypes } from 'components/switch/ToggleCredit';
-import { parse } from 'path';
 import clsx from 'clsx';
 import { useAppStore } from 'store';
-import { marketsConfig } from 'config';
 
 export default function ModalRepay({
   isOpen,
@@ -29,8 +25,7 @@ export default function ModalRepay({
   repayGateway,
   partialRepayGateway,
   repayGatewayLeverage,
-  minBorrow,
-  currencyType
+  minBorrow
 }: {
   isOpen: boolean;
   setOpen: (arg: boolean) => void;
@@ -44,7 +39,6 @@ export default function ModalRepay({
   partialRepayGateway: (id: string, amount: string) => void;
   repayGatewayLeverage: (id: string) => void;
   minBorrow: bigint;
-  currencyType: CurrencyTypes;
 }) {
   const [value, setValue] = useState<string>('');
   const [match, setMatch] = useState<boolean>(false);
@@ -74,27 +68,19 @@ export default function ModalRepay({
 
   useEffect(() => {
     if (rowData) {
-      currencyType == 'pegToken'
-        ? setMatch(parseUnits(value, pegToken.decimals) >= pegTokenDebt)
-        : setMatch(parseUnits(value, 18) >= rowData.loanDebt);
+      setMatch(parseUnits(value, pegToken.decimals) >= pegTokenDebt);
     }
   }, [value, rowData]);
 
   /* Handlers */
   const setAvailable = (): string => {
-    return currencyType == 'pegToken'
-      ? formatDecimal(Number(formatUnits(pegTokenBalance, pegToken.decimals)), creditTokenDecimalsToDisplay)
-      : formatDecimal(Number(formatUnits(creditBalance, 18)), creditTokenDecimalsToDisplay);
+    return formatDecimal(Number(formatUnits(pegTokenBalance, pegToken.decimals)), creditTokenDecimalsToDisplay);
   };
 
   const setMax = () => {
-    currencyType == 'pegToken'
-      ? pegTokenBalance > pegTokenDebt
-        ? setValue(formatUnits(pegTokenDebt, pegToken.decimals))
-        : setValue(formatUnits(pegTokenBalance, pegToken.decimals))
-      : creditBalance > rowData.loanDebt
-      ? setValue(formatUnits(rowData.loanDebt, 18))
-      : setValue(formatUnits(creditBalance, 18));
+    pegTokenBalance > pegTokenDebt
+      ? setValue(formatUnits(pegTokenDebt, pegToken.decimals))
+      : setValue(formatUnits(pegTokenBalance, pegToken.decimals));
   };
 
   const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,26 +88,18 @@ export default function ModalRepay({
 
     // Verify input is a number
     if (/^[0-9]+\.?[0-9]*$/i.test(inputValue)) {
-      currencyType == 'pegToken'
-        ? (parseUnits(inputValue, pegToken.decimals) * normalizer) / BigInt('1' + '0'.repeat(18)) > rowData.loanDebt
-          ? setValue(formatUnits(pegTokenDebt, pegToken.decimals))
-          : setValue(inputValue as string)
-        : parseUnits(inputValue, 18) > rowData.loanDebt
-        ? setValue(formatUnits(rowData.loanDebt, 18))
+      (parseUnits(inputValue, pegToken.decimals) * normalizer) / BigInt('1' + '0'.repeat(18)) > rowData.loanDebt
+        ? setValue(formatUnits(pegTokenDebt, pegToken.decimals))
         : setValue(inputValue as string);
     }
   };
 
-  const getBorrowFunction = () => {
-    currencyType == 'pegToken'
-      ? match
-        ? withLeverage
-          ? repayGatewayLeverage(rowData.id)
-          : repayGateway(rowData.id)
-        : partialRepayGateway(rowData.id, value)
-      : match
-      ? repay(rowData.id)
-      : partialRepay(rowData.id, value);
+  const doRepay = () => {
+    match
+      ? withLeverage
+        ? repayGatewayLeverage(rowData.id)
+        : repayGateway(rowData.id)
+      : partialRepayGateway(rowData.id, value);
   };
 
   /* End Handlers */
@@ -159,14 +137,9 @@ export default function ModalRepay({
 
                     <div className="mt-2 flex w-full flex-col gap-2">
                       <DefiInputBox
-                        topLabel={`Amount of ${
-                          currencyType == 'pegToken' ? pegToken.symbol : creditTokenSymbol
-                        } to repay`}
+                        topLabel={`Amount of ${pegToken.symbol} to repay`}
                         currencyLogo={pegTokenLogo}
-                        currencyLogoStyle={
-                          currencyType == 'pegToken' ? {} : { borderRadius: '50%', border: '3px solid #3e6b7d' }
-                        }
-                        currencySymbol={currencyType}
+                        currencySymbol={pegToken.symbol}
                         placeholder="0"
                         pattern="^[0-9]*[.,]?[0-9]*$"
                         inputSize="text-2xl sm:text-3xl"
@@ -179,15 +152,10 @@ export default function ModalRepay({
                             </p>
                             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                               Debt:{' '}
-                              {currencyType == 'pegToken'
-                                ? formatDecimal(
-                                    Number(formatUnits(pegTokenDebt, pegToken.decimals)),
-                                    creditTokenDecimalsToDisplay * 2
-                                  )
-                                : formatDecimal(
-                                    Number(formatUnits(rowData?.loanDebt, 18)),
-                                    creditTokenDecimalsToDisplay * 2
-                                  )}
+                              {formatDecimal(
+                                Number(formatUnits(pegTokenDebt, pegToken.decimals)),
+                                creditTokenDecimalsToDisplay * 2
+                              )}
                             </p>
                             <button
                               className="text-sm font-medium text-brand-500 hover:text-brand-400"
@@ -199,34 +167,33 @@ export default function ModalRepay({
                         }
                       />
 
-                      {lendingTermConfig.find((item) => item.termAddress === rowData.termAddress)?.hasLeverage &&
-                        currencyType == 'pegToken' && (
-                          <div className="flex flex-col gap-4 rounded-xl bg-gray-100 py-4 dark:bg-navy-900">
-                            <div className="mt w-full px-5">
-                              <div className="flex items-center justify-between">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                  Full Repay with Leverage
-                                </label>
-                                <Switch
-                                  checked={withLeverage}
-                                  onChange={setWithLeverage}
+                      {lendingTermConfig.find((item) => item.termAddress === rowData.termAddress)?.maxLeverage && (
+                        <div className="flex flex-col gap-4 rounded-xl bg-gray-100 py-4 dark:bg-navy-900">
+                          <div className="mt w-full px-5">
+                            <div className="flex items-center justify-between">
+                              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Full Repay with Flashloan
+                              </label>
+                              <Switch
+                                checked={withLeverage}
+                                onChange={setWithLeverage}
+                                className={clsx(
+                                  withLeverage ? 'bg-brand-500' : 'bg-gray-200',
+                                  'border-transparent relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out'
+                                )}
+                              >
+                                <span
+                                  aria-hidden="true"
                                   className={clsx(
-                                    withLeverage ? 'bg-brand-500' : 'bg-gray-200',
-                                    'border-transparent relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out'
+                                    withLeverage ? 'translate-x-5' : 'translate-x-0',
+                                    'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out'
                                   )}
-                                >
-                                  <span
-                                    aria-hidden="true"
-                                    className={clsx(
-                                      withLeverage ? 'translate-x-5' : 'translate-x-0',
-                                      'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out'
-                                    )}
-                                  />
-                                </Switch>
-                              </div>
+                                />
+                              </Switch>
                             </div>
                           </div>
-                        )}
+                        </div>
+                      )}
 
                       <ButtonPrimary
                         variant="lg"
@@ -236,39 +203,30 @@ export default function ModalRepay({
                             : 'Partial Repay'
                         }
                         titleDisabled={getTitleDisabled(
+                          pegToken?.symbol,
+                          pegToken?.decimals,
                           value,
                           rowData.loanDebt,
-                          currencyType == 'pegToken' ? pegTokenBalance : creditBalance,
+                          pegTokenBalance,
                           creditMultiplier,
                           minBorrow,
                           match
                         )}
                         extra="w-full !rounded-xl"
                         disabled={
-                          !value ||
-                          (currencyType == 'pegToken'
-                            ? parseUnits(value, pegToken.decimals) > pegTokenBalance
-                            : parseUnits(value, 18) > creditBalance) ||
-                          (!match &&
-                            rowData.loanDebt - (parseUnits(value, pegToken.decimals) * normalizer) / creditMultiplier <
-                              minBorrow)
+                          getTitleDisabled(
+                            pegToken?.symbol,
+                            pegToken?.decimals,
+                            value,
+                            rowData.loanDebt,
+                            pegTokenBalance,
+                            creditMultiplier,
+                            minBorrow,
+                            match
+                          ).length != 0
                         }
-                        onClick={getBorrowFunction}
+                        onClick={doRepay}
                       />
-
-                      {/* TODO */}
-                      {parseUnits(value, pegToken.decimals) > (creditBalance * creditMultiplier) / normalizer && (
-                        <div className="my-1 flex items-center justify-center gap-x-3 rounded-md bg-amber-100 px-2.5 py-1.5 text-sm text-amber-500/90 dark:bg-amber-100/0 dark:text-amber-500">
-                          <MdWarning className="h-5 w-5" />
-                          <p>
-                            You do not have enough {creditTokenSymbol}. Go to{' '}
-                            <Link href="/mint" className="font-bold">
-                              Lend or Redeem
-                            </Link>{' '}
-                            to mint more with {pegToken.symbol}.
-                          </p>
-                        </div>
-                      )}
                       {/* END TODO */}
                     </div>
                   </Dialog.Panel>

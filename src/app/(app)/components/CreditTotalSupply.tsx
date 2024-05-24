@@ -8,32 +8,51 @@ import { ChartTimeline } from 'types/charts';
 import { getDateFrom, getTimelineButton } from './helper';
 import moment from 'moment';
 import { useAppStore } from 'store';
-import { getCreditTokenSymbol } from 'utils/strings';
+import { getPegToken } from 'utils/strings';
+import { formatUnits } from 'viem';
 
 export const CreditTotalSupply = ({
+  creditMultiplierHistory,
   creditSupply,
-  creditTotalIssuance
+  lastCreditTotalIssuance,
+  creditTotalIssuance,
+  lastCreditSupply,
 }: {
+  creditMultiplierHistory: any;
   creditSupply: any;
+  lastCreditTotalIssuance: number;
   creditTotalIssuance: any;
+  lastCreditSupply: number;
 }) => {
   const [chartData, setChartData] = useState<any>([]);
   const [timeline, setTimeline] = useState<ChartTimeline>('all');
-  const { appMarketId, coinDetails, contractsList } = useAppStore();
+  const { appMarketId, coinDetails, contractsList, creditMultiplier } = useAppStore();
 
   useEffect(() => {
-    if (!creditSupply || !creditTotalIssuance) return;
+    if (!creditSupply || !creditTotalIssuance || lastCreditSupply == -1 || lastCreditTotalIssuance == -1 || !creditMultiplierHistory)
+      return;
+
+    creditSupply.values.push(lastCreditSupply);
+    creditSupply.timestamps.push(Date.now());
+    creditTotalIssuance.values.push(lastCreditTotalIssuance);
+    creditTotalIssuance.timestamps.push(Date.now());
+    creditMultiplierHistory.timestamps.push(Date.now());
+    creditMultiplierHistory.values.push(Number(formatUnits(creditMultiplier, 18)));
 
     const state = {
       series: [
         {
-          name: 'Total Supply',
-          data: creditSupply.values,
+          name: 'Lent',
+          data: creditSupply.values.map((x, i) => {
+            return x * creditMultiplierHistory.values[i];
+          }),
           color: '#50bdae'
         },
         {
-          name: 'Total Borrows',
-          data: creditTotalIssuance.values,
+          name: 'Borrowed',
+          data: creditTotalIssuance.values.map((x, i) => {
+            return x * creditMultiplierHistory.values[i];
+          }),
           color: '#f7b924'
         }
       ],
@@ -91,7 +110,7 @@ export const CreditTotalSupply = ({
     };
 
     setChartData(state);
-  }, [creditSupply, creditTotalIssuance]);
+  }, [creditSupply, creditTotalIssuance, lastCreditSupply, lastCreditTotalIssuance]);
 
   const updateData = (timeline: ChartTimeline) => {
     // reload the chart with the new timeline
@@ -102,7 +121,7 @@ export const CreditTotalSupply = ({
 
   return (
     <Card
-      title={`Total Supply (${getCreditTokenSymbol(coinDetails, appMarketId, contractsList)})`}
+      title={`Total Supply (${getPegToken(coinDetails, appMarketId, contractsList).symbol})`}
       extra="w-full min-h-[300px] md:col-span-2 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
       rightText={getTimelineButton({ timeline, updateData })}
     >

@@ -17,7 +17,7 @@ export type SignPermitProps = {
   spenderAddress: Address;
   deadline: bigint;
   chainId: number;
-  permitVersion?: string;
+  version?: string;
   nonce: bigint;
 };
 
@@ -39,7 +39,7 @@ export type Eip2612Props = SignPermitProps & {
  * @param {number} props.deadline - The permit expiration timestamp in seconds.
  * @param {number} props.nonce - The nonce of the address on the specified ERC20.
  * @param {number} props.chainId - The chain ID for which the permit will be valid.
- * @param {number} props.permitVersion - The version of the permit (optional, defaults to "1").
+ * @param {number} props.version - The version of the contract (optional, defaults to "1").
  */
 export const signPermit = async ({
   contractAddress,
@@ -50,7 +50,7 @@ export const signPermit = async ({
   deadline,
   nonce,
   chainId,
-  permitVersion
+  version
 }: Eip2612Props): Promise<PermitSignature> => {
   const walletClient = await getWalletClient(wagmiConfig);
 
@@ -66,7 +66,7 @@ export const signPermit = async ({
 
   const domainData = {
     name: erc20Name,
-    version: permitVersion ?? '1',
+    version: version ?? '1',
     chainId: chainId,
     verifyingContract: contractAddress
   };

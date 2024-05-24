@@ -33,7 +33,16 @@ import { wagmiConfig } from 'contexts/Web3Provider';
 import { getExplorerBaseUrl, getL1BlockNumber } from 'config';
 
 function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
-  const { appChainId, lendingTerms, contractsList, fetchLendingTermsUntilBlock, appMarketId, offboardQuorum, offboardDurationBlock, deprecatedGauges } = useAppStore();
+  const {
+    appChainId,
+    lendingTerms,
+    contractsList,
+    fetchLendingTermsUntilBlock,
+    appMarketId,
+    offboardQuorum,
+    offboardDurationBlock,
+    deprecatedGauges
+  } = useAppStore();
   const [selectedTerm, setSelectedTerm] = useState<LendingTerms>(undefined);
   const [showModal, setShowModal] = useState(false);
   const [activeOffboardingPolls, setActiveOffboardingPolls] = useState<ActiveOffboardingPolls[]>([]);
@@ -43,7 +52,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
     quorum: Number(formatUnits(offboardQuorum, 18)),
     pollDurationBlock: Number(offboardDurationBlock),
     deprecatedTerms: deprecatedGauges
-  }
+  };
 
   useEffect(() => {
     fetchActiveOffboardingPolls();
@@ -106,13 +115,13 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
             contracts: [
               {
                 ...termContract(item.term as Address),
-                functionName: 'issuance',
+                functionName: 'issuance'
               },
               {
                 address: contractsList.lendingTermOffboardingAddress,
                 abi: OffboardGovernorGuildABI,
                 functionName: 'canOffboard',
-                args: [item.term as Address],
+                args: [item.term as Address]
               }
             ]
           });
@@ -464,7 +473,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         <div className="mt-4 flex w-full flex-col items-center gap-2 xl:flex-row">
           <DropdownSelect
             onChange={setSelectedTerm}
-            options={lendingTerms.filter((item) => !activeOffboardingPolls.find((poll) => item.address == poll.term))}
+            options={lendingTerms}
             selectedOption={selectedTerm}
             getLabel={(item) => {
               return generateTermName(item.collateral.symbol, item.interestRate, item.borrowRatio);

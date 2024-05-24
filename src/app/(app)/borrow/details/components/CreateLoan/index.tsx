@@ -278,7 +278,7 @@ function CreateLoan({
         abi: GatewayABI,
         functionName: 'multicall',
         args: [calls],
-        gas: 750_000
+        gas: 1_250_000
       });
 
       const checkBorrow = await waitForTransactionReceipt(wagmiConfig, {

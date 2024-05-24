@@ -269,7 +269,7 @@ function MintOrRedeem({
         abi: GatewayABI,
         functionName: 'multicall',
         args: [calls],
-        gas: 500_000
+        gas: 750_000
       });
 
       const checkTx = await waitForTransactionReceipt(wagmiConfig, {
@@ -438,7 +438,7 @@ function MintOrRedeem({
         abi: GatewayABI,
         functionName: 'multicall',
         args: [calls],
-        gas: 500_000
+        gas: 750_000
       });
 
       const checkTx = await waitForTransactionReceipt(wagmiConfig, {

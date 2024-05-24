@@ -544,7 +544,7 @@ function Myloans({
         abi: GatewayABI,
         functionName: 'multicall',
         args: [calls],
-        gas: 600_000
+        gas: 1_000_000
       });
 
       const checkTx = await waitForTransactionReceipt(wagmiConfig, {
@@ -902,7 +902,7 @@ function Myloans({
         abi: GatewayABI,
         functionName: 'multicall',
         args: [calls],
-        gas: 750_000
+        gas: 1_250_000
       });
 
       const checkTx = await waitForTransactionReceipt(wagmiConfig, {

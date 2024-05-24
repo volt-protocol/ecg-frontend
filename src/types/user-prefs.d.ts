@@ -1,3 +1,5 @@
 export interface UserPreferences {
-    darkMode?: boolean;
+  darkMode?: boolean;
+  chainId?: number;
+  marketId?: number;
 }

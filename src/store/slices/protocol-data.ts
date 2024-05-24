@@ -29,6 +29,7 @@ export interface ProtocolDataSlice {
   delegateLockupPeriod: bigint;
   psmPegTokenBalance: bigint;
   minimumCreditStake: bigint;
+  profitSharingConfig: any;
   fetchProtocolData: (marketId: number, chainId: number, contractsList: ContractsList) => Promise<void>;
 }
 
@@ -113,6 +114,11 @@ export const createProtocolDataSlice: StateCreator<ProtocolDataSlice> = (set, ge
         address: surplusGuildMinterAddress,
         abi: SurplusGuildMinterABI as Abi,
         functionName: 'MIN_STAKE'
+      },
+      {
+        address: contractsList.marketContracts[marketId].profitManagerAddress,
+        abi: ProfitManagerABI as Abi,
+        functionName: 'getProfitSharingConfig'
       }
     ];
 
@@ -138,7 +144,8 @@ export const createProtocolDataSlice: StateCreator<ProtocolDataSlice> = (set, ge
       deprecatedGauges: protocolData[i++].result as string[],
       delegateLockupPeriod: protocolData[i++].result as bigint,
       psmPegTokenBalance: protocolData[i++].result as bigint,
-      minimumCreditStake: protocolData[i++].result as bigint
+      minimumCreditStake: protocolData[i++].result as bigint,
+      profitSharingConfig: protocolData[i++].result as any
     });
   }
 });

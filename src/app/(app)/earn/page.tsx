@@ -26,8 +26,16 @@ import { ApexChartWrapper } from 'components/charts/ApexChartWrapper';
 import DefiInputBox from 'components/box/DefiInputBox';
 
 function MintAndSaving() {
-  const { appMarketId, appChainId, contractsList, coinDetails, historicalData, airdropData, creditHolderCount } =
-    useAppStore();
+  const {
+    appMarketId,
+    appChainId,
+    contractsList,
+    coinDetails,
+    historicalData,
+    airdropData,
+    creditHolderCount,
+    profitSharingConfig
+  } = useAppStore();
   const { address, isConnected } = useAccount();
   const [reload, setReload] = React.useState<boolean>(false);
   const [showModal, setShowModal] = useState(false);
@@ -116,12 +124,6 @@ function MintAndSaving() {
         chainId: appChainId
       },
       {
-        address: profitManagerAddress,
-        abi: ProfitManagerABI,
-        functionName: 'getProfitSharingConfig',
-        chainId: appChainId
-      },
-      {
         address: creditAddress,
         abi: ERC20PermitABI,
         functionName: 'nonces',
@@ -156,13 +158,10 @@ function MintAndSaving() {
           creditMultiplier: data[2].result as bigint,
           pegTokenPSMBalance: data[3].result as bigint,
           isRebasing: data[4].result as boolean,
-          creditSplit: formatDecimal(Number(formatUnits(data[5].result[1] as bigint, 18)) * 100, 2),
-          guildSplit: formatDecimal(Number(formatUnits(data[5].result[2] as bigint, 18)) * 100, 2),
-          surplusBufferSplit: formatDecimal(Number(formatUnits(data[5].result[0] as bigint, 18)) * 100, 2),
-          creditTokenNonces: data[6].result as bigint,
-          pegTokenNonces: data[7].result as bigint,
-          creditTokenName: data[8].result as string,
-          pegTokenName: data[9].result as string
+          creditTokenNonces: data[5].result as bigint,
+          pegTokenNonces: data[6].result as bigint,
+          creditTokenName: data[7].result as string,
+          pegTokenName: data[8].result as string
         };
       }
     }
@@ -207,7 +206,7 @@ function MintAndSaving() {
     const marketSaving = Number(historicalData.aprData.values.rebasingSupply.slice(-1)[0]);
     const multiplier = marketLent / marketSaving;
     const averageInterestPaidByBorrowers = Number(historicalData.averageInterestRate.values.slice(-1)[0]) / 100;
-    const futureApr = averageInterestPaidByBorrowers * (data?.creditSplit / 100) * multiplier;
+    const futureApr = ((averageInterestPaidByBorrowers * Number(profitSharingConfig[1])) / 1e18) * multiplier;
 
     let _apr = 100 * apr;
     if (isNaN(_apr)) _apr = 0;
@@ -518,7 +517,7 @@ function MintAndSaving() {
                   </p>
                   <p>
                     Percent of interest going to lenders :{' '}
-                    <strong>{formatDecimal(Number(data?.creditSplit), 2)}</strong>%
+                    <strong>{formatDecimal((100 * Number(profitSharingConfig[1])) / 1e18, 2)}</strong>%
                   </p>
                   <p>
                     Multiplier effect :{' '}
@@ -1005,7 +1004,7 @@ function MintAndSaving() {
                 </p>
                 <ul className="list-inside list-disc">
                   <li className="list-item">
-                    <span className="font-semibold ">{data.creditSplit}</span>% to{' '}
+                    <span className="font-semibold ">{(100 * Number(profitSharingConfig[1])) / 1e18}</span>% to{' '}
                     <Image
                       className="inline-block"
                       src={pegTokenLogo}
@@ -1017,7 +1016,7 @@ function MintAndSaving() {
                     <strong>{creditTokenSymbol}</strong> savers,
                   </li>
                   <li className="list-item">
-                    <span className="font-semibold">{data.guildSplit}</span>% to{' '}
+                    <span className="font-semibold">{(100 * Number(profitSharingConfig[2])) / 1e18}</span>% to{' '}
                     <Image
                       className="inline-block"
                       src="/img/crypto-logos/guild.png"
@@ -1028,7 +1027,8 @@ function MintAndSaving() {
                     <strong>GUILD</strong> stakers,
                   </li>
                   <li className="list-item">
-                    <span className="font-semibold">{data.surplusBufferSplit}</span>% to the Surplus Buffer.
+                    <span className="font-semibold">{(100 * Number(profitSharingConfig[0])) / 1e18}</span>% to the
+                    Surplus Buffer.
                   </li>
                 </ul>
                 <p>The Surplus Buffer is a first-loss capital reserve shared among all terms of a market.</p>

@@ -38,7 +38,6 @@ const LendingDetails = () => {
   const [termTotalCollateral, setTermTotalCollateral] = useState(0);
   const [isLoadingEventLoans, setIsLoadingEventLoans] = useState<boolean>(true);
   const [reload, setReload] = useState<boolean>(true);
-  const [utilization, setUtilization] = useState<string>('');
   const [eventLoans, setEventLoans] = useState<loanObj[]>([]);
   const [editingFdv, setEditingFdv] = useState(false);
   const [fdv, setFdv] = useState(20_000_000);
@@ -197,6 +196,12 @@ const LendingDetails = () => {
         functionName: 'termSurplusBuffer',
         args: [termAddress],
         chainId: appChainId
+      },
+      {
+        address: termAddress as Address,
+        abi: TermABI,
+        functionName: 'getParameters',
+        chainId: appChainId
       }
     ],
     query: {
@@ -224,7 +229,8 @@ const LendingDetails = () => {
             guildSplit: formatDecimal(Number(formatUnits(data[17].result[2] as bigint, 18)) * 100, 2),
             surplusBufferSplit: formatDecimal(Number(formatUnits(data[17].result[0] as bigint, 18)) * 100, 2)
           },
-          termSurplusBuffer: Number(formatUnits(data[18].result as bigint, 18))
+          termSurplusBuffer: Number(formatUnits(data[18].result as bigint, 18)),
+          hardCap: Number(formatUnits(data[19].result?.hardCap as bigint, 18))
         };
       }
     }
@@ -246,7 +252,6 @@ const LendingDetails = () => {
 
     if (lendingTermData) {
       getTermsTotalCollateral();
-      setUtilization(formatDecimal(Math.min((data?.currentDebt / data?.debtCeiling) * 100, 100), 2));
     }
   }, [lendingTermData, data?.creditTotalSupply, data?.gaugeWeight, data?.totalWeight]);
 
@@ -338,8 +343,7 @@ const LendingDetails = () => {
             creditMultiplier={data?.creditMultiplier}
             lendingTermData={lendingTermData}
             currentDebt={data?.currentDebt}
-            debtCeiling={data?.debtCeiling}
-            utilization={utilization}
+            debtCeiling={Math.min(data?.debtCeiling, data?.hardCap)}
             termTotalCollateral={termTotalCollateral}
           />
           <Card
@@ -473,7 +477,11 @@ const LendingDetails = () => {
           <Card extra="order-1 w-full h-full sm:overflow-auto px-6 py-4" title="New Loan">
             <CreateLoan
               lendingTerm={lendingTermData}
-              availableDebt={data?.debtCeiling - data?.currentDebt > 0 ? data?.debtCeiling - data?.currentDebt : 0}
+              availableDebt={
+                Math.min(data?.debtCeiling, data?.hardCap) - data?.currentDebt > 0
+                  ? Math.min(data?.debtCeiling, data?.hardCap) - data?.currentDebt
+                  : 0
+              }
               creditMultiplier={data?.creditMultiplier}
               creditBalance={data?.creditBalance}
               pegTokenBalance={data?.pegTokenBalance}

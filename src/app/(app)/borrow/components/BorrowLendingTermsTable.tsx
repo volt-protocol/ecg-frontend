@@ -178,7 +178,10 @@ export default function BorrowLendingTermsTable(props: { tableData: LendingTerms
       id: 'usage',
       header: () => <p className="text-center text-sm font-medium text-gray-500 dark:text-white">Utilization</p>,
       cell: (info: any) => {
-        const debtCeilling = info.row.original.debtCeiling;
+        const debtCeilling = Math.min(
+          info.row.original.debtCeiling,
+          info.row.original.availableDebt + info.row.original.currentDebt
+        );
 
         return (
           <div>

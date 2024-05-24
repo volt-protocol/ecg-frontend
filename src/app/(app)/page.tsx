@@ -194,7 +194,7 @@ const GlobalDashboard = () => {
           term.borrowRatio / data?.creditMultiplier
         ),
         currentDebt: term.currentDebt * data?.creditMultiplier,
-        debtCeiling: term.debtCeiling * data?.creditMultiplier
+        debtCeiling: Math.min(term.debtCeiling, term.currentDebt + term.availableDebt) * data?.creditMultiplier
       });
     }
 

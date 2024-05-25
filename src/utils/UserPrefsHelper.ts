@@ -23,15 +23,3 @@ export function UpdateUserPrefsDarkMode(darkMode: boolean) {
   userPrefs.darkMode = darkMode;
   SaveUserPrefs(userPrefs);
 }
-
-export function UpdateUserPrefsChainId(chainId: number) {
-  const userPrefs = GetUserPrefs();
-  userPrefs.chainId = chainId;
-  SaveUserPrefs(userPrefs);
-}
-
-export function UpdateUserPrefsMarketId(marketId: number) {
-  const userPrefs = GetUserPrefs();
-  userPrefs.marketId = marketId;
-  SaveUserPrefs(userPrefs);
-}

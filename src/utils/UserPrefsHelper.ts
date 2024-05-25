@@ -2,7 +2,7 @@ import { UserPreferences } from '../types/user-prefs';
 
 const USER_PREFS_KEY = 'user-prefs';
 export function GetUserPrefs() {
-  const userPrefStorage = localStorage.getItem(USER_PREFS_KEY);
+  const userPrefStorage = window.localStorage.getItem(USER_PREFS_KEY);
   if (!userPrefStorage) {
     SaveUserPrefs({
       darkMode: undefined
@@ -15,7 +15,7 @@ export function GetUserPrefs() {
 }
 
 export function SaveUserPrefs(userPrefs: UserPreferences) {
-  localStorage.setItem(USER_PREFS_KEY, JSON.stringify(userPrefs));
+  window.localStorage.setItem(USER_PREFS_KEY, JSON.stringify(userPrefs));
 }
 
 export function UpdateUserPrefsDarkMode(darkMode: boolean) {

@@ -7,24 +7,28 @@ export interface AirdropData {
   rebasingSupplyUsd: number;
   termSurplusBufferUsd: number;
   totalIssuanceUsd: number;
+  marketUtilization: { [marketId: number]: number };
+  marketTVL: { [marketId: number]: number };
+  marketDebt: { [marketId: number]: number };
 }
 
 export interface AirdropDataSlice {
-  rebasingSupplyUsd: number;
-  termSurplusBufferUsd: number;
-  totalIssuanceUsd: number;
-  marketUtilization: { [marketId: number]: number };
-  marketTVL: { [marketId: number]: number };
+  airdropData: AirdropData
   fetchAirdropData: (chainId: number) => Promise<void>;
 }
 
 export const createAirdropDataSlice: StateCreator<AirdropDataSlice> = (set, get) => ({
-  rebasingSupplyUsd: 0,
-  termSurplusBufferUsd: 0,
-  totalIssuanceUsd: 0,
+  airdropData: {
+    rebasingSupplyUsd: 0,
+    termSurplusBufferUsd: 0,
+    totalIssuanceUsd: 0,
+    marketUtilization: {},
+    marketTVL: {},
+    marketDebt: {}
+  },
   fetchAirdropData: async (chainId: number) => {
     const apiUrl = getApiBaseUrl(chainId) + `/protocol/airdropdata`;
-    const res = await HttpGet<any>(apiUrl);
+    const res = await HttpGet<AirdropData>(apiUrl);
     set({
       airdropData: res
     });

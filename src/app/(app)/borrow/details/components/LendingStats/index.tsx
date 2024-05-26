@@ -18,14 +18,12 @@ export default function LendingStats({
   lendingTermData,
   currentDebt,
   debtCeiling,
-  utilization,
   termTotalCollateral,
   creditMultiplier
 }: {
   lendingTermData: LendingTerms;
   currentDebt: number;
   debtCeiling: number;
-  utilization: string;
   termTotalCollateral: number;
   creditMultiplier: bigint;
 }) {
@@ -122,7 +120,11 @@ export default function LendingStats({
             <Widget
               icon={<GiProgression className="h-6 w-6" />}
               title={'Utilization'}
-              subtitle={utilization === 'NaN' ? '-.--%' : formatDecimal((currentDebt / debtCeiling) * 100, 2) + '%'}
+              subtitle={
+                isNaN(currentDebt) || isNaN(debtCeiling)
+                  ? '-.--%'
+                  : formatDecimal((currentDebt / debtCeiling) * 100, 2) + '%'
+              }
               extra={<QuestionMarkIcon />}
             />
           </div>

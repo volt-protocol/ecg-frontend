@@ -18,7 +18,7 @@ export const getTitleDisabled = (
   }
 
   if (borrowAmount > maxDebt) {
-    return 'Cannot exceed available debt';
+    return `Only ${formatCurrencyValue(maxDebt)} ${pegTokenSymbol} available debt`;
   }
 
   if (borrowAmount < minBorrow) {

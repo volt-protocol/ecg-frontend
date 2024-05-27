@@ -19,7 +19,7 @@ import { lendingTermConfig, permitConfig } from 'config';
 import { signPermit } from 'lib/transactions/signPermit';
 import { getAllowBorrowedCreditCall, getPullCollateralCalls } from './helper/borrowWithLeverage';
 import { toastError } from 'components/toast';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { secondsToAppropriateUnit } from 'utils/date';
 import { TooltipHorizon } from 'components/tooltip';
 import { getPegTokenLogo } from 'config';
@@ -51,7 +51,8 @@ function CreateLoan({
   reload: boolean;
   setReload: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const { contractsList, coinDetails, appMarketId, appChainId, psmPegTokenBalance } = useAppStore();
+  const { contractsList, coinDetails, psmPegTokenBalance } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const { address } = useAccount();
   const [borrowAmount, setBorrowAmount] = useState<bigint>(BigInt(0));
   const [collateralAmount, setCollateralAmount] = useState<string>('');

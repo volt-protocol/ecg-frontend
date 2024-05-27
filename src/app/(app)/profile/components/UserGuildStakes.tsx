@@ -10,7 +10,7 @@ import {
 import { formatDecimal } from 'utils/numbers';
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import ImageWithFallback from 'components/image/ImageWithFallback';
 import { getPegTokenLogo } from 'config';
 import { LendingTerms } from 'types/lending';
@@ -39,7 +39,8 @@ interface UserStake {
 }
 
 export default function UserGuildStakes({ userAddress }: { userAddress: Address }) {
-  const { appMarketId, coinDetails, contractsList, lendingTerms, appChainId, creditMultiplier } = useAppStore();
+  const { coinDetails, contractsList, lendingTerms, creditMultiplier } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const columnHelper = createColumnHelper<UserStake>();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [userStakes, setUserStakes] = useState<UserStake[]>([]);

@@ -10,13 +10,13 @@ import Sidebar from 'components/sidebar';
 import { useAccount, useSwitchChain } from 'wagmi';
 import { ToastContainer } from 'react-toastify';
 import TermsConditionsModal from 'components/modals/TermsConditionsModal';
-import { useAppStore, useTosStore } from 'store';
+import { useTosStore, useUserPrefsStore } from 'store';
 import { MdError } from 'react-icons/md';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isConnected, chainId } = useAccount();
   const { chains, switchChain } = useSwitchChain();
-  const { appChainId } = useAppStore();
+  const { appChainId } = useUserPrefsStore();
   const { termsAccepted } = useTosStore();
   const [open, setOpen] = useState(false);
   const pathname = usePathname();

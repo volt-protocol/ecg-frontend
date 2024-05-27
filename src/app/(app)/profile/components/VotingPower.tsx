@@ -9,13 +9,14 @@ import { Delegatee } from 'app/(app)/governance/page';
 import { ApexChartWrapper } from 'components/charts/ApexChartWrapper';
 import Spinner from 'components/spinner';
 import { wagmiConfig } from 'contexts/Web3Provider';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { getCreditTokenSymbol } from 'utils/strings';
 import { getPegTokenLogo, marketsConfig } from 'config';
 import Image from 'next/image';
 
 export default function VotingPower({ userAddress }: { userAddress: Address }) {
-  const { contractsList, appMarketId, coinDetails, appChainId } = useAppStore();
+  const { contractsList, coinDetails } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const [guildDelegatees, setGuildDelegatees] = useState<Delegatee[]>([]);
   const [creditDelegatees, setCreditDelegatees] = useState<Delegatee[]>([]);
   const [loadingGuildDelegation, setLoadingGuildDelegation] = useState<boolean>(true);

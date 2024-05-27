@@ -11,7 +11,7 @@ import { getTitleDisabled } from './helper';
 import Link from 'next/link';
 import { getPegTokenLogo, lendingTermConfig } from 'config';
 import clsx from 'clsx';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 
 export default function ModalRepay({
   isOpen,
@@ -43,7 +43,8 @@ export default function ModalRepay({
   const [value, setValue] = useState<string>('');
   const [match, setMatch] = useState<boolean>(false);
   const [withLeverage, setWithLeverage] = useState<boolean>(false);
-  const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
+  const { coinDetails, contractsList } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
 
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()

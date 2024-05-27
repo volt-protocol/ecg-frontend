@@ -23,7 +23,7 @@ import { formatUnits, isAddress, parseEther } from 'viem';
 import ButtonPrimary from 'components/button/ButtonPrimary';
 import DefiInputBox from 'components/box/DefiInputBox';
 import { wagmiConfig } from 'contexts/Web3Provider';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { getExplorerBaseUrl } from 'config';
 
 interface Delegatee {
@@ -46,7 +46,8 @@ function DelegateGuild({
   userAddress: string;
   isConnected: boolean;
 }) {
-  const { appChainId, contractsList } = useAppStore();
+  const { contractsList } = useAppStore();
+  const { appChainId } = useUserPrefsStore();
   const { address } = useAccount();
   const [value, setValue] = useState<string>('');
   const [showModal, setShowModal] = useState(false);

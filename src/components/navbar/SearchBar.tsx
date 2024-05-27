@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Transition } from '@headlessui/react';
-import { useAppStore } from 'store';
+import { useUserPrefsStore } from 'store';
 import Link from 'next/link';
 import { isAddress } from 'viem';
 import { shortenAddress } from 'utils/strings';
@@ -10,7 +10,7 @@ import { MdDelete } from 'react-icons/md';
 
 export default function SearchBar() {
   const router = useRouter();
-  const { searchFocused, setSearchFocused, addSearchHistory, searchHistory, cleanSearchHistory } = useAppStore();
+  const { searchFocused, setSearchFocused, addSearchHistory, searchHistory, cleanSearchHistory } = useUserPrefsStore();
 
   const handleSubmit = (e) => {
     e.preventDefault();

@@ -10,7 +10,7 @@ import { formatDecimal, formatNumberDecimal, formatCurrencyValue } from 'utils/n
 import { formatUnits } from 'viem';
 import { secondsToAppropriateUnit } from 'utils/date';
 import { getPegTokenLogo, marketsConfig } from 'config';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import Image from 'next/image';
 import ImageWithFallback from 'components/image/ImageWithFallback';
 
@@ -27,7 +27,8 @@ export default function LendingStats({
   termTotalCollateral: number;
   creditMultiplier: bigint;
 }) {
-  const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
+  const { coinDetails, contractsList } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const collateralToken = coinDetails.find(
     (item) => item.address.toLowerCase() === lendingTermData.collateral.address.toLowerCase()
   );

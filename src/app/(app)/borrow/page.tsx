@@ -7,11 +7,11 @@ import BorrowLendingTermsTable from './components/BorrowLendingTermsTable';
 import { fromNow } from 'utils/date';
 import { MdCached } from 'react-icons/md';
 import clsx from 'clsx';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 
 const Lending = () => {
-  const { appMarketId, appChainId, contractsList } = useAppStore();
-  const { lendingTerms, lastUpdatedTerms, fetchLendingTerms } = useAppStore();
+  const { contractsList, lendingTerms, lastUpdatedTerms, fetchLendingTerms } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
 
   if (!lendingTerms) return <LendingSkeleton />;
 

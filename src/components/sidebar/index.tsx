@@ -8,13 +8,48 @@ import DropdownSelect from 'components/select/DropdownSelect';
 import NavLink from 'components/link/NavLink';
 import { MdOpenInNew, MdOutlineWarningAmber } from 'react-icons/md';
 import { useSwitchChain } from 'wagmi';
-import { useAppStore } from 'store';
-import { SelectableChainId, marketsConfig } from 'config';
+import { useUserPrefsStore } from 'store';
+import { SelectableChainId, marketsConfig, SupportedMarket } from 'config';
 
 function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
   const { chains } = useSwitchChain();
-  const { appChainId, setAppMarket, appMarket, setAppChainId } = useAppStore();
+  const { appChainId, setAppMarket, appMarket, setAppChainId } = useUserPrefsStore();
   const { routes, open, setOpen } = props;
+
+  if (marketsConfig[appChainId] == undefined) {
+    console.log(`using default chaindId ${Number(Object.keys(marketsConfig)[0])}`);
+    setAppChainId(Number(Object.keys(marketsConfig)[0]));
+  }
+
+  if (!marketsConfig[appChainId].some((_) => _.marketId == appMarket.marketId)) {
+    console.log(`using default market: ${marketsConfig[appChainId][0].name}`);
+    setAppMarket(marketsConfig[appChainId][0]);
+  }
+
+  function handleChangeChain(chainId: number) {
+    console.log('handleChangeChain', { chainId });
+    // if selected chain is not in the config list
+    // use the first one
+    // this can happen when loading chainId from store
+    if (marketsConfig[chainId] == undefined) {
+      chainId = Number(Object.keys(marketsConfig)[0]);
+    }
+
+    setAppChainId(chainId);
+  }
+
+  function handleChangeMarket(market: SupportedMarket) {
+    console.log('handleChangeMarket', { market });
+
+    // search if market exists in network
+    // if not, use first one
+    // this can happen when loading marketId from chain
+    if (!marketsConfig[appChainId].some((_) => _.marketId == market.marketId)) {
+      market = marketsConfig[appChainId][0];
+    }
+
+    setAppMarket(market);
+  }
 
   return (
     <div
@@ -35,9 +70,9 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
         </div>
         <div className="mt-2 px-1">
           <DropdownSelect
-            options={chains.filter(_ => SelectableChainId.includes(_.id)).map((chain) => chain.id)}
+            options={chains.filter((_) => SelectableChainId.includes(_.id)).map((chain) => chain.id)}
             selectedOption={appChainId}
-            onChange={(option) => setAppChainId(option)}
+            onChange={(option) => handleChangeChain(Number(option))}
             getLabel={(option) => {
               const chainFound = chains.find((chain) => chain.id == option);
               if (chainFound) {
@@ -57,7 +92,7 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
           <DropdownSelect
             options={marketsConfig[appChainId]}
             selectedOption={marketsConfig[appChainId].find((market) => market.key === appMarket.key)}
-            onChange={(option) => setAppMarket(option)}
+            onChange={(option) => handleChangeMarket(option as SupportedMarket)}
             getLabel={(option) => (
               <div className="flex items-center gap-1 text-sm">
                 <Image src={option.logo} width={25} height={25} alt={option.name} />

@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { ChartTimeline } from 'types/charts';
 import { getDateFrom, getTimelineButton } from './helper';
 import moment from 'moment';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { getPegToken } from 'utils/strings';
 import { formatUnits } from 'viem';
 
@@ -16,7 +16,7 @@ export const CreditTotalSupply = ({
   creditSupply,
   lastCreditTotalIssuance,
   creditTotalIssuance,
-  lastCreditSupply,
+  lastCreditSupply
 }: {
   creditMultiplierHistory: any;
   creditSupply: any;
@@ -26,10 +26,17 @@ export const CreditTotalSupply = ({
 }) => {
   const [chartData, setChartData] = useState<any>([]);
   const [timeline, setTimeline] = useState<ChartTimeline>('all');
-  const { appMarketId, coinDetails, contractsList, creditMultiplier } = useAppStore();
+  const { contractsList, creditMultiplier, coinDetails } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
 
   useEffect(() => {
-    if (!creditSupply || !creditTotalIssuance || lastCreditSupply == -1 || lastCreditTotalIssuance == -1 || !creditMultiplierHistory)
+    if (
+      !creditSupply ||
+      !creditTotalIssuance ||
+      lastCreditSupply == -1 ||
+      lastCreditTotalIssuance == -1 ||
+      !creditMultiplierHistory
+    )
       return;
 
     creditSupply.values.push(lastCreditSupply);

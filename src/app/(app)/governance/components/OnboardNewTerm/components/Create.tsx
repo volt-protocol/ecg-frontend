@@ -16,7 +16,7 @@ import { MdCheckCircle, MdClose } from 'react-icons/md';
 import { formatNumberDecimal } from 'utils/numbers';
 import getToken from 'lib/getToken';
 import { wagmiConfig } from 'contexts/Web3Provider';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { BiInfoCircle } from 'react-icons/bi';
 import { TooltipHorizon } from 'components/tooltip';
 
@@ -40,7 +40,8 @@ export interface CreateTermForm {
 }
 
 export default function Create() {
-  const { contractsList, appMarketId, coinDetails, appChainId, fetchProposalsUntilBlock } = useAppStore();
+  const { contractsList, coinDetails, fetchProposalsUntilBlock } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedPeriod, setSelectedPeriod] = useState<string>('None');
   const [selectedAuctionHouse, setSelectedAuctionHouse] = useState<string>(

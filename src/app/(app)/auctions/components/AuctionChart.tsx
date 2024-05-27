@@ -2,7 +2,7 @@
 
 import { ApexChartWrapper } from 'components/charts/ApexChartWrapper';
 import { Auction, AuctionHouse } from '../../../../store/slices/auctions';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { formatDecimal } from 'utils/numbers';
 import moment from 'moment';
 
@@ -13,7 +13,8 @@ export function AuctionChart({
   auctionHouse: AuctionHouse | null;
   auction: Auction | null;
 }) {
-  const { appMarketId, coinDetails, contractsList } = useAppStore();
+  const { coinDetails, contractsList } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   if (!auction || !auctionHouse) return null;
   const collateralToken = coinDetails.find(
     (item) => item.address.toLowerCase() === auction.collateralTokenAddress.toLowerCase()

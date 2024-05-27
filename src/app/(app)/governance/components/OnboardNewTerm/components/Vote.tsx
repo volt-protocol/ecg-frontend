@@ -17,7 +17,7 @@ import {
 import { MdChevronLeft, MdChevronRight, MdOpenInNew } from 'react-icons/md';
 import Spinner from 'components/spinner';
 import DropdownSelect from 'components/select/DropdownSelect';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import ButtonPrimary from 'components/button/ButtonPrimary';
 import { useAccount } from 'wagmi';
 import { formatCurrencyValue, formatDecimal, toLocaleString } from 'utils/numbers';
@@ -26,7 +26,6 @@ import { fromNow } from 'utils/date';
 import moment from 'moment';
 import { formatUnits, keccak256, stringToBytes, Address } from 'viem';
 import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
-import { getVotableTerms } from './helper';
 import VoteStatusBar from 'components/bar/VoteStatusBar';
 import { extractTermAddress } from 'utils/strings';
 import { wagmiConfig } from 'contexts/Web3Provider';
@@ -34,9 +33,9 @@ import { getExplorerBaseUrl, getL1BlockNumber } from 'config';
 import { BiInfoCircle } from 'react-icons/bi';
 
 function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
-  const { appChainId, appMarketId, contractsList, proposals, fetchProposalsUntilBlock } = useAppStore();
+  const { contractsList, proposals, fetchProposalsUntilBlock, fetchLendingTerms } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const { address } = useAccount();
-  const { fetchLendingTerms } = useAppStore();
   const [showModal, setShowModal] = useState(false);
   const [activeOnboardingVotes, setActiveOnboardingVotes] = useState<ActiveOnboardingVotes[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -69,25 +68,25 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
                 address: contractsList.onboardGovernorGuildAddress,
                 abi: OnboardGovernorGuildABI,
                 functionName: 'proposalVotes',
-                args: [proposal.proposalId],
+                args: [proposal.proposalId]
               },
               {
                 address: contractsList.onboardGovernorGuildAddress,
                 abi: OnboardGovernorGuildABI,
                 functionName: 'hasVoted',
-                args: [proposal.proposalId, address],
+                args: [proposal.proposalId, address]
               },
               {
                 address: contractsList.onboardGovernorGuildAddress,
                 abi: OnboardGovernorGuildABI,
                 functionName: 'state',
-                args: [proposal.proposalId],
+                args: [proposal.proposalId]
               },
               {
                 address: contractsList.onboardGovernorGuildAddress,
                 abi: OnboardGovernorGuildABI,
                 functionName: 'proposalEta',
-                args: [proposal.proposalId],
+                args: [proposal.proposalId]
               }
             ]
           });

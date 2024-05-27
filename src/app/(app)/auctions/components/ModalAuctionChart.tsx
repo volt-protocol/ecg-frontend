@@ -5,7 +5,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { AuctionChart } from './AuctionChart';
 import { Auction, AuctionHouse } from '../../../../store/slices/auctions';
 import { secondsToAppropriateUnit } from 'utils/date';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { formatDecimal } from 'utils/numbers';
 import moment from 'moment';
 import { MdOpenInNew } from 'react-icons/md';
@@ -20,7 +20,8 @@ export default function ModalAuctionChart({
   openAuction: Auction | null;
   auctionHouses: AuctionHouse[];
 }) {
-  const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
+  const { coinDetails, contractsList } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const auctionHouse = auctionHouses.find(
     (item) => item.address.toLowerCase() == openAuction?.auctionHouseAddress.toLowerCase()
   );

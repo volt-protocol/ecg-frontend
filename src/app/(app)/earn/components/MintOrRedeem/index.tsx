@@ -12,7 +12,7 @@ import { formatDecimal } from 'utils/numbers';
 import ButtonPrimary from 'components/button/ButtonPrimary';
 import { AlertMessage } from 'components/message/AlertMessage';
 import { wagmiConfig } from 'contexts/Web3Provider';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { getPegTokenLogo, getExplorerBaseUrl, permitConfig } from 'config';
 import Image from 'next/image';
 import { MdOpenInNew } from 'react-icons/md';
@@ -41,7 +41,8 @@ function MintOrRedeem({
   creditTokenName: string;
   pegTokenName: string;
 }) {
-  const { contractsList, appChainId, coinDetails, appMarketId } = useAppStore();
+  const { contractsList, coinDetails } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const { address } = useAccount();
   const [showModal, setShowModal] = useState(false);
   const [value, setValue] = useState<string>('');

@@ -29,7 +29,7 @@ import { wagmiConfig } from 'contexts/Web3Provider';
 import { ConnectWeb3Button } from 'components/button/ConnectWeb3Button';
 import { TransactionBadge } from 'components/badge/TransactionBadge';
 import { ItemIdBadge } from 'components/badge/ItemIdBadge';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { shortenUint } from 'utils/strings';
 import { Auction, AuctionHouse } from '../../../../store/slices/auctions';
 import { getExplorerBaseUrl } from 'config';
@@ -46,7 +46,8 @@ export default function AuctionsTable({
   setOpenAuction: (arg: Auction) => void;
   setReload: (arg: boolean) => void;
 }) {
-  const { appMarketId, appChainId, coinDetails, contractsList, lendingTerms } = useAppStore();
+  const { coinDetails, contractsList, lendingTerms } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const { address, isConnected } = useAccount();
   const columnHelper = createColumnHelper<Auction>();
   const [showModal, setShowModal] = useState(false);

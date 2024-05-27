@@ -14,7 +14,7 @@ import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
 import { Step } from 'components/stepLoader/stepType';
 import StepModal from 'components/stepLoader';
 import Spinner from 'components/spinner';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { ItemIdBadge } from 'components/badge/ItemIdBadge';
 import { AddressBadge } from 'components/badge/AddressBadge';
@@ -42,7 +42,8 @@ function ActiveLoans({
   creditMultiplier: bigint;
   reload: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
+  const { coinDetails, contractsList } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const [collateralPrice, setCollateralPrice] = useState(0);
   const [pegPrice, setPegPrice] = useState(0);
   const [repays, setRepays] = useState<Record<string, number>>({});

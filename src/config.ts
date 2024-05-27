@@ -219,7 +219,11 @@ export function getBlockLengthMs(chainId: number) {
 }
 
 export function getPegTokenLogo(chainId: number, marketId: number) {
-  return marketsConfig[chainId].find((item) => item.marketId == marketId).logo;
+  if (marketsConfig[chainId].some((item) => item.marketId == marketId)) {
+    return marketsConfig[chainId].find((item) => item.marketId == marketId).logo;
+  } else {
+    return '/img/crypto-logos/unk.png';
+  }
 }
 
 export async function getL1BlockNumber(chainId: number) {

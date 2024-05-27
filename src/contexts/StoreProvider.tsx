@@ -2,12 +2,12 @@
 
 import Spinner from 'components/spinner';
 import { useEffect, useState } from 'react';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 
 const StoreProvider = ({ children }: { children: React.ReactNode }) => {
-  // remove old app-storage if any
-  window.localStorage.removeItem('app-storage');
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  const { appMarketId, appChainId } = useUserPrefsStore();
 
   const {
     fetchAuctions,
@@ -18,9 +18,7 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
     fetchContractsList,
     fetchProtocolData,
     fetchAirdropData,
-    fetchProposals,
-    appMarketId,
-    appChainId
+    fetchProposals
   } = useAppStore();
 
   //Note: when several chains will be supported, reload the data when the appChainId changes

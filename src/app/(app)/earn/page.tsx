@@ -15,7 +15,7 @@ import clsx from 'clsx';
 import { Switch } from '@headlessui/react';
 import { formatUnits, Address, erc20Abi, parseUnits } from 'viem';
 import { wagmiConfig } from 'contexts/Web3Provider';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import Spinner from 'components/spinner';
 import { getPegTokenLogo, marketsConfig } from 'config';
 import Image from 'next/image';
@@ -26,16 +26,9 @@ import { ApexChartWrapper } from 'components/charts/ApexChartWrapper';
 import DefiInputBox from 'components/box/DefiInputBox';
 
 function MintAndSaving() {
-  const {
-    appMarketId,
-    appChainId,
-    contractsList,
-    coinDetails,
-    historicalData,
-    airdropData,
-    creditHolderCount,
-    profitSharingConfig
-  } = useAppStore();
+  const { contractsList, coinDetails, historicalData, airdropData, creditHolderCount, profitSharingConfig } =
+    useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const { address, isConnected } = useAccount();
   const [reload, setReload] = React.useState<boolean>(false);
   const [showModal, setShowModal] = useState(false);

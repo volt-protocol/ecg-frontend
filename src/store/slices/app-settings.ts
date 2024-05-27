@@ -4,6 +4,7 @@ import { Address } from 'viem';
 import { StateCreator } from 'zustand';
 
 export interface AppSettingsSlice {
+  useDarkMode: boolean | undefined;
   appMarketId: number;
   appMarket: SupportedMarket;
   appChainId: number;
@@ -14,9 +15,11 @@ export interface AppSettingsSlice {
   cleanSearchHistory: () => void;
   setAppMarket: (market: SupportedMarket) => void;
   setAppChainId: (chainId: number) => void;
+  setDarkMode: (darkMode: boolean) => void;
 }
 
 export const createAppSettingsSlice: StateCreator<AppSettingsSlice> = (set, get) => ({
+  useDarkMode: undefined,
   appChainId: wagmiConfig.chains[0].id,
   appMarketId: marketsConfig[wagmiConfig.chains[0].id][0].marketId,
   appMarket: marketsConfig[wagmiConfig.chains[0].id][0],
@@ -42,5 +45,8 @@ export const createAppSettingsSlice: StateCreator<AppSettingsSlice> = (set, get)
   },
   setSearchFocused: (value: boolean) => {
     set({ searchFocused: value });
+  },
+  setDarkMode: (value: boolean) => {
+    set({ useDarkMode: value });
   }
 });

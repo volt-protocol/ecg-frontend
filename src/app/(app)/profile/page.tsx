@@ -1,7 +1,7 @@
 'use client';
 
 import { useAccount } from 'wagmi';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { useEffect, useState } from 'react';
 import Card from 'components/card';
 import { getUserLevel, getUserLoans } from './helper';
@@ -30,18 +30,9 @@ import UserCreditStakes from './components/UserCreditStakes';
 const UserDashboard = () => {
   const searchParams = useSearchParams();
   const { address, isConnected } = useAccount();
-  const {
-    appChainId,
-    appMarketId,
-    coinDetails,
-    lendingTerms,
-    addUserLoans,
-    userData,
-    addLastVotes,
-    addLastMints,
-    contractsList,
-    loans
-  } = useAppStore();
+  const { coinDetails, lendingTerms, addUserLoans, userData, addLastVotes, addLastMints, contractsList, loans } =
+    useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const [userLoansData, setUserLoansData] = useState<LoansObj[]>([]);
   const [lastUpdated, setLastUpdated] = useState<number>();
   const [loadingLoans, setLoadingLoans] = useState<boolean>(true);

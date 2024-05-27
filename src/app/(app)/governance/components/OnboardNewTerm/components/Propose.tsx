@@ -14,7 +14,7 @@ import { MdOpenInNew } from 'react-icons/md';
 import { useAccount, useReadContracts } from 'wagmi';
 import { AlertMessage } from 'components/message/AlertMessage';
 import { wagmiConfig } from 'contexts/Web3Provider';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { getExplorerBaseUrl } from 'config';
 import { SECONDS_IN_DAY } from 'utils/constants';
 
@@ -33,7 +33,8 @@ export type ProposedTerm = {
 };
 
 export default function Propose() {
-  const { appChainId, appMarketId, contractsList, lendingTerms, proposals, fetchProposalsUntilBlock } = useAppStore();
+  const { contractsList, lendingTerms, proposals, fetchProposalsUntilBlock } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const { address } = useAccount();
   const [showModal, setShowModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);

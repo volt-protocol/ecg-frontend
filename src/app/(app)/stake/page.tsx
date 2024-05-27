@@ -1,16 +1,15 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useAccount } from 'wagmi';
 import Card from 'components/card';
 import StakeLendingTermsTable from './components/StakeLendingTermsTable';
 import { fromNow } from 'utils/date';
 import { MdCached } from 'react-icons/md';
 import clsx from 'clsx';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 
 const Lending = () => {
-  const { appMarketId, appChainId, contractsList } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const { lendingTerms, lastUpdatedTerms, fetchLendingTerms } = useAppStore();
 
   if (!lendingTerms) return <LendingSkeleton />;

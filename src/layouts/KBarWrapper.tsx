@@ -1,10 +1,10 @@
 'use client';
 
 import { useCallback, useEffect } from 'react';
-import { useAppStore } from 'store';
+import { useUserPrefsStore } from 'store';
 
 export default function KBarWrapper({ children }: { children: React.ReactNode }) {
-  const { setSearchFocused } = useAppStore();
+  const { setSearchFocused } = useUserPrefsStore();
 
   const handleKeyPress = useCallback((event) => {
     if (event.key === 'k' && (event.metaKey || event.ctrlKey)) {

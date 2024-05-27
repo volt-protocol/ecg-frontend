@@ -9,7 +9,7 @@ import { useAccount, useConnect } from 'wagmi';
 import SearchBar from './SearchBar';
 import { useRouter } from 'next/navigation';
 import { ConnectWeb3Button } from 'components/button/ConnectWeb3Button';
-import { GetUserPrefs, UpdateUserPrefsDarkMode } from 'utils/UserPrefsHelper';
+import { useUserPrefsStore } from 'store';
 
 const Navbar = (props: {
   onOpenSidenav: () => void;
@@ -19,16 +19,19 @@ const Navbar = (props: {
   [x: string]: any;
 }) => {
   const { connector: activeConnector, isConnected } = useAccount();
+  const { useDarkMode, setDarkMode } = useUserPrefsStore();
   const router = useRouter();
   const { onOpenSidenav, brandText, pathname } = props;
-  const userPrefs = GetUserPrefs();
 
-  if (userPrefs.darkMode == undefined) {
-    userPrefs.darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (useDarkMode == undefined) {
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setDarkMode(true);
+    } else {
+      setDarkMode(false);
+    }
   }
-  const [darkmode, setDarkmode] = React.useState(userPrefs.darkMode);
 
-  if (darkmode) {
+  if (useDarkMode) {
     document.body.classList.add('dark');
   } else {
     document.body.classList.remove('dark');
@@ -94,18 +97,16 @@ const Navbar = (props: {
           <div
             className="hidden cursor-pointer text-stone-600 md:block"
             onClick={() => {
-              if (darkmode) {
+              if (useDarkMode) {
                 document.body.classList.remove('dark');
-                setDarkmode(false);
-                UpdateUserPrefsDarkMode(false);
+                setDarkMode(false);
               } else {
                 document.body.classList.add('dark');
-                setDarkmode(true);
-                UpdateUserPrefsDarkMode(true);
+                setDarkMode(true);
               }
             }}
           >
-            {darkmode ? (
+            {useDarkMode ? (
               <RiSunFill className="h-4 w-4 text-stone-600 dark:text-white" />
             ) : (
               <RiMoonFill className="h-4 w-4 text-stone-600 dark:text-white" />

@@ -19,14 +19,15 @@ import { getLastVoteEventDescription } from '../profile/helper';
 import { AddressBadge } from 'components/badge/AddressBadge';
 import { Address } from 'viem';
 import { TransactionBadge } from 'components/badge/TransactionBadge';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { LastActivity } from 'types/activities';
 import { getBlockLengthMs } from 'config';
 
 export type Category = 'mintRedeem' | 'vote';
 
 export const LastProtocolActivity = ({ data, currentBlock }: { data: LastActivity[]; currentBlock: bigint }) => {
-  const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
+  const { coinDetails, contractsList } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
 
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList.marketContracts[appMarketId].pegTokenAddress.toLowerCase()

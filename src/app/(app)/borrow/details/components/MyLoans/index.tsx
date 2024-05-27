@@ -602,7 +602,7 @@ function Myloans({
 
         signatureCollateral = await signPermit({
           contractAddress: lendingTerm.collateral.address,
-          erc20Name: lendingTerm.collateral.name,
+          erc20Name: contractData?.collaternalTokenName,
           ownerAddress: address,
           spenderAddress: contractsList.gatewayAddress as Address,
           value: collateralAmount,

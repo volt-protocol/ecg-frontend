@@ -9,22 +9,36 @@ import { wagmiConfig } from 'contexts/Web3Provider';
 export interface LendingTermConfig {
   termAddress: Address;
   maxLeverage: number;
+  leverageDex: string;
 }
+
+// set borrowing configurations for each term here
+export const lendingTermConfig: LendingTermConfig[] = [
+  {
+    // Arbitrum gWETH -> wstETH-0.95-4.0%
+    termAddress: '0x0b3C054FB1d20C9d3E3B16E2FCe672Ddcf44B40e',
+    maxLeverage: 5,
+    leverageDex: 'kyber'
+  },
+  {
+    // Arbitrum gWETH-test -> USDC-0.000200-3.0%
+    termAddress: '0x47c213B223f0Bf45576560E7dC6e9B609d95DB09',
+    maxLeverage: 5,
+    leverageDex: 'kyber'
+  },
+  {
+    // Arbitrum gUSDC-test -> WETH-100.00-12.0%
+    termAddress: '0xBa7Eb8a1ed4d24E56bC41Dd248a465025ce6B096',
+    maxLeverage: 1.02,
+    leverageDex: 'kyber'
+  }
+];
 
 export interface PermitConfig {
   address: Address;
   hasPermit: boolean;
   version?: string;
 }
-
-// set borrowing configurations for each term here
-export const lendingTermConfig: LendingTermConfig[] = [
-  /*{
-    // Sepolia sDAI-8%
-    termAddress: '0xA6751F2CB086CCF9bB4cc4424a9dE9Ae97496eDe',
-    maxLeverage: 5
-  }*/
-];
 
 //set permit configurations for each collateral token here
 export const permitConfig: PermitConfig[] = [

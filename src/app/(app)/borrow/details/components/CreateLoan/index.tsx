@@ -1,11 +1,11 @@
-import { readContract, waitForTransactionReceipt, writeContract } from '@wagmi/core';
+import { waitForTransactionReceipt, writeContract } from '@wagmi/core';
 import StepModal from 'components/stepLoader';
 import { Step } from 'components/stepLoader/stepType';
-import { ERC20PermitABI, TermABI, GatewayABI, UniswapRouterABI } from 'lib/contracts';
+import { ERC20PermitABI, GatewayABI } from 'lib/contracts';
 import React, { useEffect, useState } from 'react';
 import { erc20Abi, Abi, Address, formatUnits, parseUnits } from 'viem';
 import moment from 'moment';
-import { formatCurrencyValue, formatDecimal, usdcToGUsdc, toLocaleString } from 'utils/numbers';
+import { formatDecimal, toLocaleString } from 'utils/numbers';
 import { AlertMessage } from 'components/message/AlertMessage';
 import ButtonPrimary from 'components/button/ButtonPrimary';
 import { LendingTerms } from 'types/lending';
@@ -20,11 +20,15 @@ import { signPermit } from 'lib/transactions/signPermit';
 import { getAllowBorrowedCreditCall, getPullCollateralCalls } from './helper/borrowWithLeverage';
 import { toastError } from 'components/toast';
 import { useAppStore } from 'store';
-import { marketsConfig } from 'config';
 import { secondsToAppropriateUnit } from 'utils/date';
-import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
+import { TooltipHorizon } from 'components/tooltip';
 import { getPegTokenLogo } from 'config';
 import { approvalStepsFlow } from 'utils/approvalHelper';
+import { HttpGet, HttpPost } from 'utils/HttpHelper';
+import { AiOutlineLoading3Quarters } from 'react-icons/ai';
+import Image from 'next/image';
+
+let doRequestTimeout;
 
 function CreateLoan({
   lendingTerm,
@@ -54,7 +58,36 @@ function CreateLoan({
   const [showModal, setShowModal] = useState(false);
   const [minToRepay, setMinToRepay] = useState<string>('');
   const [withLeverage, setWithLeverage] = useState<boolean>(false);
+  const [stallRequestLeverageDex, setStallRequestLeverageDex] = useState<boolean>(false);
+  const [loadingRequestLeverageDex, setLoadingRequestLeverageDex] = useState<boolean>(false);
   const [leverageValue, setLeverageValue] = useState<number>(1);
+  const [leverageData, setLeverageData] = useState<{
+    collateralAmount: bigint;
+    borrowAmount: bigint;
+    borrowAmountPegToken: bigint;
+    collateralAmountSwapped: bigint;
+    amountInUsd: number;
+    amountOutUsd: number;
+    routerAddress: string;
+    routerData: string;
+    routerGas: number;
+    effectiveLeverage: number;
+    callThreshold: number;
+    ltv: number;
+  }>({
+    collateralAmount: BigInt(0),
+    borrowAmount: BigInt(0),
+    borrowAmountPegToken: BigInt(0),
+    collateralAmountSwapped: BigInt(0),
+    amountInUsd: 0,
+    amountOutUsd: 0,
+    routerAddress: '',
+    routerData: '',
+    routerGas: 0,
+    effectiveLeverage: 0,
+    callThreshold: 0,
+    ltv: 0
+  } as any);
   const [withOverCollateralization, setWithOverCollateralization] = useState<boolean>(true);
   const [overCollateralizationValue, setOverCollateralizationValue] = useState<number>(
     Math.round(105 + lendingTerm.openingFee * 100)
@@ -193,7 +226,9 @@ function CreateLoan({
           deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
           nonce: data?.collateralNonces,
           chainId: appChainId,
-          version: '1'
+          version:
+            permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
+              ?.version || '1'
         });
 
         if (!signatureCollateral) {
@@ -327,7 +362,7 @@ function CreateLoan({
       }
 
       baseSteps.push({ name: `Sign Permit for ${creditTokenSymbol}`, status: 'Not Started' });
-      baseSteps.push({ name: 'Flashloan + Borrow + Redeem (Multicall)', status: 'Not Started' });
+      baseSteps.push({ name: 'Flashloan + Swap + Borrow (Multicall)', status: 'Not Started' });
 
       return baseSteps;
     };
@@ -336,7 +371,6 @@ function CreateLoan({
 
     let signatureCollateral: any;
     let permitSigCreditToken: any;
-    const debtAmount = borrowAmount + flashLoanBorrowAmount;
 
     /* Set allowance for collateral token */
     if (
@@ -345,17 +379,18 @@ function CreateLoan({
     ) {
       try {
         updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, 'In Progress');
-
         signatureCollateral = await signPermit({
           contractAddress: lendingTerm.collateral.address,
-          erc20Name: lendingTerm.collateral.name,
+          erc20Name: data?.collaternalTokenName,
           ownerAddress: address,
           spenderAddress: contractsList.gatewayAddress as Address,
-          value: parseUnits(collateralAmount, lendingTerm.collateral.decimals),
-          deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
+          value: leverageData.collateralAmount,
+          deadline: BigInt(Math.floor((Date.now() + 20 * 60 * 1000) / 1000)),
           nonce: data?.collateralNonces,
           chainId: appChainId,
-          version: '1'
+          version:
+            permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
+              ?.version || '1'
         });
 
         if (!signatureCollateral) {
@@ -374,7 +409,7 @@ function CreateLoan({
           address,
           contractsList.gatewayAddress,
           lendingTerm.collateral.address,
-          parseUnits(collateralAmount, lendingTerm.collateral.decimals),
+          leverageData.collateralAmount,
           appChainId,
           updateStepStatus,
           checkStepName,
@@ -402,8 +437,8 @@ function CreateLoan({
         erc20Name: data?.creditTokenName,
         ownerAddress: address,
         spenderAddress: contractsList.gatewayAddress as Address,
-        value: debtAmount,
-        deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
+        value: leverageData.borrowAmount,
+        deadline: BigInt(Math.floor((Date.now() + 20 * 60 * 1000) / 1000)),
         nonce: creditTokenNonces,
         chainId: appChainId,
         version: '1'
@@ -420,78 +455,67 @@ function CreateLoan({
       return;
     }
 
-    /* Call gateway.multicall() */
+    /* Call gateway.borrowWithBalancerFlashLoan() */
     try {
       const pullCollateralCalls = getPullCollateralCalls(
         lendingTerm,
-        parseUnits(collateralAmount, lendingTerm.collateral.decimals),
+        leverageData.collateralAmount,
         signatureCollateral
       );
 
-      const allowBorrowedCreditCall = getAllowBorrowedCreditCall(
-        debtAmount,
+      const consumePermitBorrowedCreditCall = getAllowBorrowedCreditCall(
+        leverageData.borrowAmount,
         permitSigCreditToken,
         contractsList,
         appMarketId
       );
 
-      updateStepStatus(`Flashloan + Borrow + Redeem (Multicall)`, 'In Progress');
-
-      /*** Calculate maxLoanDebt with 1% slippage ***/
-      const path = [pegToken.address, lendingTerm.collateral.address];
-
-      //get min amount of pegToken to swap with collateral from uniswap
-      const result = await readContract(wagmiConfig, {
-        address: contractsList.uniswapRouterAddress,
-        abi: UniswapRouterABI,
-        functionName: 'getAmountsIn',
-        args: [flashLoanCollateralAmount, path],
-        chainId: appChainId as any
-      });
-      const minUsdcAmount = usdcToGUsdc(result[0], creditMultiplier);
-      const maxLoanDebt = minUsdcAmount + minUsdcAmount / BigInt(100);
-
-      /*** End Calculate maxLoanDebt ***/
+      updateStepStatus(`Flashloan + Swap + Borrow (Multicall)`, 'In Progress');
 
       const hash = await writeContract(wagmiConfig, {
         address: contractsList.gatewayAddress,
         abi: GatewayABI,
         functionName: 'borrowWithBalancerFlashLoan',
         args: [
-          lendingTerm.address,
-          psmAddress,
-          contractsList.uniswapRouterAddress,
-          lendingTerm.collateral.address,
-          pegToken.address,
-          parseUnits(collateralAmount, lendingTerm.collateral.decimals),
-          flashLoanCollateralAmount,
-          maxLoanDebt,
-          pullCollateralCalls,
-          ...allowBorrowedCreditCall
-        ]
+          {
+            term: lendingTerm.address,
+            psm: psmAddress,
+            collateralToken: collateralToken.address,
+            pegToken: pegToken.address,
+            flashloanPegTokenAmount: leverageData.borrowAmountPegToken,
+            minCollateralToReceive: (leverageData.collateralAmountSwapped * BigInt(995)) / BigInt(1000), // minCollateralToReceive
+            borrowAmount: leverageData.borrowAmount,
+            pullCollateralCalls: pullCollateralCalls,
+            consumePermitBorrowedCreditCall: consumePermitBorrowedCreditCall,
+            routerAddress: leverageData.routerAddress,
+            routerCallData: leverageData.routerData
+          }
+        ],
+        gas: leverageData.routerGas + 5_000_000
       });
 
-      const checkBorrow = await waitForTransactionReceipt(wagmiConfig, {
+      const checkTx = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash
       });
 
-      if (checkBorrow.status === 'success') {
+      if (checkTx.status === 'success') {
         setTimeout(function () {
           setReload(true);
         }, 5000);
         setBorrowAmount(BigInt(0));
         setCollateralAmount('');
-        updateStepStatus('Flashloan + Borrow + Redeem (Multicall)', 'Success');
+        updateStepStatus('Flashloan + Swap + Borrow (Multicall)', 'Success');
         return;
       } else {
-        updateStepStatus('Flashloan + Borrow + Redeem (Multicall)', 'Error');
+        updateStepStatus('Flashloan + Swap + Borrow (Multicall)', 'Error');
       }
 
-      updateStepStatus(`Flashloan + Borrow + Redeem (Multicall)`, 'Success');
-    } catch (e) {
+      updateStepStatus(`Flashloan + Swap + Borrow (Multicall)`, 'Success');
+    } catch (e: any) {
       console.log(e);
+      console.log(e?.shortMessage);
       toastError(e.shortMessage);
-      updateStepStatus('Flashloan + Borrow + Redeem (Multicall)', 'Error');
+      updateStepStatus('Flashloan + Swap + Borrow (Multicall)', 'Error');
       return;
     }
   }
@@ -520,6 +544,9 @@ function CreateLoan({
     // Verify input is a number
     if (/^[0-9]+\.?[0-9]*$/i.test(inputValue)) {
       setCollateralAmount(inputValue as string);
+      if (withLeverage) {
+        requestLeverageDex(inputValue as string, leverageValue);
+      }
     }
   };
 
@@ -530,6 +557,9 @@ function CreateLoan({
       Number(formatUnits(creditMultiplier, 18))*/
 
     setCollateralAmount(data?.collateralBalance.toString());
+    if (withLeverage) {
+      requestLeverageDex(data?.collateralBalance.toString(), leverageValue);
+    }
 
     /*setCollateralAmount(
       maxBorrow < availableDebt
@@ -548,17 +578,107 @@ function CreateLoan({
   const getBorrowFunction = () => {
     withLeverage && leverageValue > 0 ? borrowGatewayLeverage() : borrowGateway();
   };
+
+  const requestLeverageDex = (collateralAmount: string, leverage: number) => {
+    if (doRequestTimeout) {
+      clearTimeout(doRequestTimeout);
+    }
+    if (Number(collateralAmount) == 0) return;
+    if (!stallRequestLeverageDex) {
+      setStallRequestLeverageDex(true);
+    }
+
+    doRequestTimeout = setTimeout(function () {
+      setStallRequestLeverageDex(false);
+      doRequestLeverageDex(collateralAmount, leverage);
+    }, 1000);
+  };
+
+  const doRequestLeverageDex = async (collateralAmount: string, leverage: number) => {
+    if (!loadingRequestLeverageDex) {
+      setLoadingRequestLeverageDex(true);
+    }
+    try {
+      let collateralAmountBigint: bigint = parseUnits(collateralAmount, lendingTerm.collateral.decimals);
+      let borrowAmount: bigint =
+        (collateralAmountBigint *
+          BigInt(Math.floor(10 ** (18 - lendingTerm.collateral.decimals))) *
+          parseUnits(lendingTerm.borrowRatio.toString(), 18)) /
+        creditMultiplier;
+      let borrowAmountCreditToken: bigint = (borrowAmount * BigInt(Math.floor(leverage * 10000))) / BigInt(10000);
+      let borrowAmountPegToken = borrowAmountCreditToken / BigInt(Math.floor(10 ** (18 - pegToken.decimals)));
+
+      const urlGet = `https://aggregator-api.kyberswap.com/arbitrum/api/v1/routes?tokenIn=${
+        pegToken?.address
+      }&tokenOut=${
+        lendingTerm.collateral.address
+      }&amountIn=${borrowAmountPegToken.toString()}&excludedSources=balancer-v1,balancer-v2-composable-stable,balancer-v2-stable,balancer-v2-weighted`;
+      const dataGet = await HttpGet<any>(urlGet, {
+        headers: {
+          'x-client-id': 'EthereumCreditGuild'
+        }
+      });
+      const urlPost = `https://aggregator-api.kyberswap.com/arbitrum/api/v1/route/build`;
+      const dataPost = await HttpPost<any>(
+        urlPost,
+        {
+          routeSummary: dataGet.data.routeSummary,
+          slippageTolerance: 50, // 0.5%
+          sender: contractsList.gatewayAddress,
+          recipient: contractsList.gatewayAddress
+        },
+        {
+          headers: {
+            'x-client-id': 'EthereumCreditGuild'
+          }
+        }
+      );
+      const collateralAmountNumber = Number(
+        formatUnits(
+          collateralAmountBigint + BigInt(Math.floor(dataPost.data.amountOut)),
+          lendingTerm.collateral.decimals
+        )
+      );
+      const maxBorrowNumber = collateralAmountNumber * lendingTerm.borrowRatio;
+      const borrowAmountNumber = Number(formatUnits(borrowAmountPegToken, pegToken?.decimals));
+      setLeverageData({
+        collateralAmount: collateralAmountBigint,
+        borrowAmount: borrowAmountCreditToken,
+        borrowAmountPegToken: borrowAmountPegToken,
+        collateralAmountSwapped: BigInt(Math.floor(dataPost.data.amountOut)),
+        amountInUsd: Number(dataPost.data.amountInUsd),
+        amountOutUsd: Number(dataPost.data.amountOutUsd),
+        routerAddress: dataPost.data.routerAddress,
+        routerData: dataPost.data.data,
+        routerGas: Number(dataPost.data.gas),
+        effectiveLeverage: collateralAmountNumber / Number(collateralAmount),
+        callThreshold: Number(borrowAmountCreditToken) / 1e18 / maxBorrowNumber,
+        ltv: (borrowAmountNumber * pegToken?.price) / (collateralAmountNumber * collateralToken?.price)
+      });
+      setLoadingRequestLeverageDex(false);
+    } catch (err: any) {
+      console.log('err', err);
+      console.log('err.response', err?.response);
+      console.log('err.response.data', err?.response?.data);
+      setLoadingRequestLeverageDex(false);
+    }
+  };
+  async function wait(ms) {
+    return new Promise(function (resolve, reject) {
+      setTimeout(resolve, ms);
+    });
+  }
   /* End Handlers and getters */
 
   const collateralToken = coinDetails.find(
     (item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase()
   );
+  const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken.price * 100)), 0);
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
   );
   const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
   const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
-  const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
 
   return (
@@ -593,133 +713,306 @@ function CreateLoan({
             }
           />
 
-          <DefiInputBox
-            disabled={true}
-            topLabel={`Amount of ${pegToken.symbol} to borrow`}
-            currencyLogo={pegTokenLogo}
-            currencySymbol={pegToken.symbol}
-            placeholder="0"
-            pattern="[0-9]*\.[0-9]"
-            inputSize="text-2xl xl:text-3xl"
-            value={formatDecimal(
-              Number(formatUnits(borrowAmount + flashLoanBorrowAmount, 18)) * Number(formatUnits(creditMultiplier, 18)),
-              creditTokenDecimalsToDisplay
-            )}
-            leftLabel={
-              <span className="text-sm font-medium text-gray-400 dark:text-gray-700">
-                ≈ $
-                {formatDecimal(
-                  pegToken.price *
-                    Number(formatUnits(borrowAmount + flashLoanBorrowAmount, 18)) *
-                    Number(formatUnits(creditMultiplier, 18)),
-                  2
-                )}
-              </span>
-            }
-            rightLabel={
-              <>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Balance:{' '}
-                  {formatDecimal(Number(formatUnits(pegTokenBalance, pegToken.decimals)), creditTokenDecimalsToDisplay)}
-                </p>
-              </>
-            }
-          />
+          {!withLeverage && (
+            <DefiInputBox
+              disabled={true}
+              topLabel={`Amount of ${pegToken.symbol} to borrow`}
+              currencyLogo={pegTokenLogo}
+              currencySymbol={pegToken.symbol}
+              placeholder="0"
+              pattern="[0-9]*\.[0-9]"
+              inputSize="text-2xl xl:text-3xl"
+              value={formatDecimal(
+                Number(formatUnits(borrowAmount + flashLoanBorrowAmount, 18)) *
+                  Number(formatUnits(creditMultiplier, 18)),
+                pegTokenDecimalsToDisplay
+              )}
+              leftLabel={
+                <span className="text-sm font-medium text-gray-400 dark:text-gray-700">
+                  ≈ $
+                  {formatDecimal(
+                    pegToken.price *
+                      Number(formatUnits(borrowAmount + flashLoanBorrowAmount, 18)) *
+                      Number(formatUnits(creditMultiplier, 18)),
+                    2
+                  )}
+                </span>
+              }
+              rightLabel={
+                <>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Balance:{' '}
+                    {formatDecimal(Number(formatUnits(pegTokenBalance, pegToken.decimals)), pegTokenDecimalsToDisplay)}
+                  </p>
+                </>
+              }
+            />
+          )}
 
           <div className="flex flex-col gap-4 rounded-xl bg-gray-100 py-4 dark:bg-navy-900">
-            <div className="w-full px-5">
-              <RangeSlider
-                withSwitch={true}
-                title={`Over-collateralization: ${overCollateralizationValue}%`}
-                value={overCollateralizationValue}
-                onChange={(value) => setOverCollateralizationValue(value)}
-                min={Math.round(105 + lendingTerm.openingFee * 100)}
-                max={300}
-                step={1}
-                show={withOverCollateralization}
-                setShow={() => {
-                  setOverCollateralizationValue(
-                    withOverCollateralization ? 0 : Math.round(105 + lendingTerm.openingFee * 100)
-                  );
-                  setWithOverCollateralization(!withOverCollateralization);
-                  setWithLeverage(false);
-                  setLeverageValue(1);
-                }}
-              />
-              {overCollateralizationValue == 0 ? (
-                <AlertMessage type="warning" message={<span>Your loan might be called instantly</span>} />
-              ) : (
-                <div className="mt-4">
-                  <AlertMessage
-                    type="info"
-                    message={
-                      <TooltipHorizon
-                        extra=""
-                        content={
-                          <div className="w-[20rem] p-2 dark:text-white">
-                            <p>
-                              With interests accruing at {formatDecimal(100 * lendingTerm.interestRate, 2)} % APR, and
-                              an overcollateralization of {overCollateralizationValue}%, the interests will make your
-                              position go above the max borrow ratio after{' '}
-                              {secondsToAppropriateUnit(
-                                Math.floor(
-                                  ((overCollateralizationValue / 100 - 1) / lendingTerm.interestRate) *
-                                    365.25 *
-                                    3600 *
-                                    24
-                                )
-                              )}
-                              .
-                            </p>
-                            <p className="mt-3">
-                              When your loan is above the max borrow ratio, it might be called at any time.
-                            </p>
-                            <p className="mt-3">
-                              You can add collateral or do a partial repay at any time to improve your borrow ratio.
-                            </p>
-                          </div>
-                        }
-                        trigger={
-                          <span>
-                            Runway before call :{' '}
-                            <strong>
-                              {secondsToAppropriateUnit(
-                                Math.floor(
-                                  ((overCollateralizationValue / 100 - 1) / lendingTerm.interestRate) *
-                                    365.25 *
-                                    3600 *
-                                    24
-                                )
-                              )}
-                            </strong>
-                          </span>
-                        }
-                        placement="top"
-                      />
-                    }
-                  />
-                </div>
-              )}
-            </div>
+            {!withLeverage && (
+              <div className="w-full px-5">
+                <RangeSlider
+                  withSwitch={true}
+                  title={`Over-collateralization: ${overCollateralizationValue}%`}
+                  value={overCollateralizationValue}
+                  onChange={(value) => setOverCollateralizationValue(value)}
+                  min={Math.round(105 + lendingTerm.openingFee * 100)}
+                  max={300}
+                  step={1}
+                  show={withOverCollateralization}
+                  setShow={() => {
+                    setOverCollateralizationValue(
+                      withOverCollateralization ? 0 : Math.round(105 + lendingTerm.openingFee * 100)
+                    );
+                    setWithOverCollateralization(!withOverCollateralization);
+                    setWithLeverage(false);
+                    setLeverageValue(1);
+                  }}
+                />
+                {overCollateralizationValue == 0 ? (
+                  <AlertMessage type="warning" message={<span>Your loan might be called instantly</span>} />
+                ) : (
+                  <div className="mt-4">
+                    <AlertMessage
+                      type="info"
+                      message={
+                        <TooltipHorizon
+                          extra=""
+                          content={
+                            <div className="w-[20rem] p-2 dark:text-white">
+                              <p>
+                                With interests accruing at {formatDecimal(100 * lendingTerm.interestRate, 2)} % APR, and
+                                an overcollateralization of {overCollateralizationValue}%, the interests will make your
+                                position go above the max borrow ratio after{' '}
+                                {secondsToAppropriateUnit(
+                                  Math.floor(
+                                    ((overCollateralizationValue / 100 - 1) / lendingTerm.interestRate) *
+                                      365.25 *
+                                      3600 *
+                                      24
+                                  )
+                                )}
+                                .
+                              </p>
+                              <p className="mt-3">
+                                When your loan is above the max borrow ratio, it might be called at any time.
+                              </p>
+                              <p className="mt-3">
+                                You can add collateral or do a partial repay at any time to improve your borrow ratio.
+                              </p>
+                            </div>
+                          }
+                          trigger={
+                            <span>
+                              Runway before call :{' '}
+                              <strong>
+                                {secondsToAppropriateUnit(
+                                  Math.floor(
+                                    ((overCollateralizationValue / 100 - 1) / lendingTerm.interestRate) *
+                                      365.25 *
+                                      3600 *
+                                      24
+                                  )
+                                )}
+                              </strong>
+                            </span>
+                          }
+                          placement="top"
+                        />
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             {lendingTermConfig.find((item) => item.termAddress === lendingTerm.address)?.maxLeverage && (
               <div className="mt w-full px-5">
                 <RangeSlider
                   withSwitch={true}
-                  title={`Leverage: ${leverageValue}x`}
+                  title={`Loop: ${leverageValue}x`}
                   value={leverageValue}
-                  onChange={(value) => setLeverageValue(value)}
+                  onChange={(value) => {
+                    setLeverageValue(value);
+                    requestLeverageDex(collateralAmount, value);
+                  }}
                   min={1}
                   max={lendingTermConfig.find((item) => item.termAddress === lendingTerm.address)?.maxLeverage}
-                  step={0.1}
+                  step={0.01}
                   show={withLeverage}
                   setShow={() => {
                     setLeverageValue(1);
                     setWithLeverage(!withLeverage);
-                    setWithOverCollateralization(false);
-                    setOverCollateralizationValue(0);
+                    if (!withLeverage) {
+                      setWithOverCollateralization(false);
+                      setOverCollateralizationValue(0);
+                      requestLeverageDex(collateralAmount, 1);
+                    } else {
+                      setWithOverCollateralization(true);
+                      setOverCollateralizationValue(Math.round(105 + lendingTerm.openingFee * 100));
+                    }
                   }}
                 />
+              </div>
+            )}
+
+            {withLeverage && Number(collateralAmount) != 0 && (
+              <div className="mt-2">
+                {stallRequestLeverageDex || loadingRequestLeverageDex ? (
+                  <div className="text-center text-xl">
+                    <span
+                      className="inline-block animate-spin"
+                      style={{ animationDirection: stallRequestLeverageDex ? 'reverse' : 'normal' }}
+                    >
+                      <AiOutlineLoading3Quarters />
+                    </span>
+                  </div>
+                ) : (
+                  <div className="px-5">
+                    <div className="text-xs">
+                      <span className="font-mono">1.</span>{' '}
+                      <Image
+                        src="/img/balancer.png"
+                        width={24}
+                        height={24}
+                        alt={''}
+                        className="mr-1 inline-block rounded-full align-middle"
+                      />
+                      Flashloan{' '}
+                      <Image
+                        src={pegTokenLogo}
+                        width={18}
+                        height={18}
+                        alt={''}
+                        className="mr-1 inline-block rounded-full align-middle"
+                      />
+                      {formatDecimal(
+                        Number(formatUnits(leverageData.borrowAmountPegToken, pegToken?.decimals)),
+                        pegTokenDecimalsToDisplay
+                      )}{' '}
+                      {pegToken?.symbol}
+                    </div>
+                    <div className="mt-1 text-xs">
+                      <span className="font-mono">2.</span>{' '}
+                      <Image
+                        src="/img/kyberswap.png"
+                        width={24}
+                        height={24}
+                        alt={''}
+                        className="mr-1 inline-block rounded-full align-middle"
+                      />
+                      Swap to{' '}
+                      <Image
+                        src={lendingTerm.collateral.logo}
+                        width={18}
+                        height={18}
+                        alt={''}
+                        className="mr-1 inline-block rounded-full align-middle"
+                      />
+                      {formatDecimal(
+                        Math.round(
+                          1e6 * Number(formatUnits(leverageData.collateralAmountSwapped, collateralToken?.decimals))
+                        ) / 1e6,
+                        collateralTokenDecimalsToDisplay
+                      )}{' '}
+                      {collateralToken?.symbol} (
+                      <TooltipHorizon
+                        extra=""
+                        content={
+                          <div className="p-2 dark:text-white">
+                            Amount in: ${formatDecimal(leverageData.amountInUsd, 2)}
+                            <br />
+                            Amount out: ${formatDecimal(leverageData.amountOutUsd, 2)}
+                          </div>
+                        }
+                        trigger={
+                          <span>
+                            {leverageData.amountOutUsd >= leverageData.amountInUsd ? '+' : '-'}
+                            {Math.round(10000 * Math.abs(1 - leverageData.amountOutUsd / leverageData.amountInUsd)) /
+                              100}
+                            %
+                          </span>
+                        }
+                        placement="top"
+                      />
+                      )
+                    </div>
+                    <div className="mt-1 text-xs">
+                      <span className="font-mono">3.</span>{' '}
+                      <Image
+                        src="/img/crypto-logos/guild.png"
+                        width={24}
+                        height={24}
+                        alt={''}
+                        className="mr-1 inline-block rounded-full align-middle"
+                      />
+                      Supply{' '}
+                      <Image
+                        src={lendingTerm.collateral.logo}
+                        width={18}
+                        height={18}
+                        alt={''}
+                        className="mr-1 inline-block rounded-full align-middle"
+                      />
+                      {formatDecimal(
+                        Math.round(
+                          1e6 *
+                            Number(
+                              formatUnits(
+                                leverageData.collateralAmountSwapped + leverageData.collateralAmount,
+                                collateralToken?.decimals
+                              )
+                            )
+                        ) / 1e6,
+                        collateralTokenDecimalsToDisplay
+                      )}{' '}
+                      {collateralToken?.symbol} collateral
+                    </div>
+                    <div className="mt-1 text-xs">
+                      <span className="font-mono">4.</span>{' '}
+                      <Image
+                        src="/img/crypto-logos/guild.png"
+                        width={24}
+                        height={24}
+                        alt={''}
+                        className="mr-1 inline-block rounded-full align-middle"
+                      />
+                      Borrow{' '}
+                      <Image
+                        src={pegTokenLogo}
+                        width={18}
+                        height={18}
+                        alt={''}
+                        className="mr-1 inline-block rounded-full align-middle"
+                      />
+                      {formatDecimal(
+                        Number(formatUnits(leverageData.borrowAmountPegToken, pegToken?.decimals)),
+                        pegTokenDecimalsToDisplay
+                      )}{' '}
+                      {pegToken?.symbol}
+                    </div>
+                    <div className="mt-1 text-xs">
+                      <span className="font-mono">5.</span>{' '}
+                      <Image
+                        src="/img/balancer.png"
+                        width={24}
+                        height={24}
+                        alt={''}
+                        className="mr-1 inline-block rounded-full align-middle"
+                      />
+                      Repay Flashloan
+                    </div>
+
+                    <div className="mt-2 rounded-md bg-white px-3 py-2 text-sm dark:bg-navy-700">
+                      Effective leverage: <strong>{Math.round(100 * leverageData.effectiveLeverage) / 100}x</strong>
+                      <br />
+                      Call Threshold: <strong>{Math.round(10000 * leverageData.callThreshold) / 100}%</strong>
+                      <br />
+                      LTV: <strong>{Math.round(10000 * leverageData.ltv) / 100}%</strong>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -736,7 +1029,10 @@ function CreateLoan({
               minBorrow,
               Number(formatUnits(borrowAmount, 18)) * Number(formatUnits(creditMultiplier, 18)),
               Number(formatUnits(psmPegTokenBalance, pegToken.decimals)),
-              withLeverage
+              withLeverage,
+              leverageData?.callThreshold,
+              Number(formatUnits(leverageData?.borrowAmount, 18)),
+              Number(formatUnits(leverageData?.borrowAmountPegToken, pegToken?.decimals))
             )}
             extra="w-full !rounded-xl"
             onClick={getBorrowFunction}
@@ -751,7 +1047,10 @@ function CreateLoan({
                 minBorrow,
                 Number(formatUnits(borrowAmount, 18)) * Number(formatUnits(creditMultiplier, 18)),
                 Number(formatUnits(psmPegTokenBalance, pegToken.decimals)),
-                withLeverage
+                withLeverage,
+                leverageData?.callThreshold,
+                Number(formatUnits(leverageData?.borrowAmount, 18)),
+                Number(formatUnits(leverageData?.borrowAmountPegToken, pegToken?.decimals))
               ).length != 0
             }
           />

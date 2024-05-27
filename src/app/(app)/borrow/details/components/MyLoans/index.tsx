@@ -29,7 +29,7 @@ import { simpleRepay } from './helper/simpleRepay';
 import { HOURS_IN_YEAR } from 'utils/constants';
 import { getPegTokenLogo, permitConfig } from 'config';
 import CustomTable from 'components/table/CustomTable';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { marketsConfig } from 'config';
 import { approvalStepsFlow } from 'utils/approvalHelper';
 
@@ -56,7 +56,8 @@ function Myloans({
   reload: boolean;
   setReload: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
+  const { coinDetails, contractsList } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const { address } = useAccount();
   const [showModal, setShowModal] = useState(false);
   const [tableDataWithDebts, setTableDataWithDebts] = useState<loanObj[]>([]);

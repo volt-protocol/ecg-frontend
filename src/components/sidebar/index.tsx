@@ -8,12 +8,12 @@ import DropdownSelect from 'components/select/DropdownSelect';
 import NavLink from 'components/link/NavLink';
 import { MdOpenInNew, MdOutlineWarningAmber } from 'react-icons/md';
 import { useSwitchChain } from 'wagmi';
-import { useAppStore } from 'store';
-import { SelectableChainId, marketsConfig } from 'config';
+import { useUserPrefsStore } from 'store';
+import { SelectableChainId, marketsConfig, SupportedMarket } from 'config';
 
 function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
   const { chains } = useSwitchChain();
-  const { appChainId, setAppMarket, appMarket, setAppChainId } = useAppStore();
+  const { appChainId, setAppMarket, appMarket, setAppChainId } = useUserPrefsStore();
   const { routes, open, setOpen } = props;
 
   return (
@@ -35,9 +35,9 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
         </div>
         <div className="mt-2 px-1">
           <DropdownSelect
-            options={chains.filter(_ => SelectableChainId.includes(_.id)).map((chain) => chain.id)}
+            options={chains.filter((_) => SelectableChainId.includes(_.id)).map((chain) => chain.id)}
             selectedOption={appChainId}
-            onChange={(option) => setAppChainId(option)}
+            onChange={(option) => setAppChainId(Number(option))}
             getLabel={(option) => {
               const chainFound = chains.find((chain) => chain.id == option);
               if (chainFound) {
@@ -57,7 +57,7 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
           <DropdownSelect
             options={marketsConfig[appChainId]}
             selectedOption={marketsConfig[appChainId].find((market) => market.key === appMarket.key)}
-            onChange={(option) => setAppMarket(option)}
+            onChange={(option) => setAppMarket(option as SupportedMarket)}
             getLabel={(option) => (
               <div className="flex items-center gap-1 text-sm">
                 <Image src={option.logo} width={25} height={25} alt={option.name} />

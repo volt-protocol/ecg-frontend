@@ -7,6 +7,7 @@ import am5themes_Animated from '@amcharts/amcharts5/themes/Animated';
 import am5themes_Responsive from '@amcharts/amcharts5/themes/Responsive';
 import { useLayoutEffect, useMemo } from 'react';
 import { GetUserPrefs } from '../../../utils/UserPrefsHelper';
+import { useUserPrefsStore } from 'store';
 
 export const DebtCeiling = ({
   data,
@@ -17,7 +18,7 @@ export const DebtCeiling = ({
   labels: string[];
   pegTokenSymbol: string;
 }) => {
-  const userPrefs = GetUserPrefs();
+  const { useDarkMode } = useUserPrefsStore();
 
   const dataProcessed = useMemo(() => {
     return data
@@ -49,11 +50,11 @@ export const DebtCeiling = ({
 
     const myTheme = am5.Theme.new(root);
     myTheme.rule('Grid').setAll({
-      stroke: am5.color(userPrefs.darkMode ? 0xffffff : 0x000000),
+      stroke: am5.color(useDarkMode ? 0xffffff : 0x000000),
       strokeWidth: 2
     });
     myTheme.rule('Label').setAll({
-      fill: am5.color(userPrefs.darkMode ? 0xffffff : 0x000000),
+      fill: am5.color(useDarkMode ? 0xffffff : 0x000000),
       opacity: 0.7
     });
 

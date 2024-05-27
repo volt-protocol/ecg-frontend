@@ -13,14 +13,15 @@ import clsx from 'clsx';
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
 import { Address } from 'viem';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import Image from 'next/image';
 import ImageWithFallback from 'components/image/ImageWithFallback';
 import { getPegTokenLogo, marketsConfig, getExplorerBaseUrl } from 'config';
 
 export default function UserLoan({ userAddress, data }: { userAddress: Address; data: any }) {
   const { address } = useAccount();
-  const { appMarketId, coinDetails, contractsList, lendingTerms, appChainId } = useAppStore();
+  const { coinDetails, contractsList, lendingTerms } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
 
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()

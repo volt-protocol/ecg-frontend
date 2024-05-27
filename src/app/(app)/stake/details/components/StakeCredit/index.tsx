@@ -16,7 +16,7 @@ import DefiInputBox from 'components/box/DefiInputBox';
 import { getTitleDisabledStake, getTitleDisabledUnstake } from './helper';
 import { LendingTerms } from 'types/lending';
 import { wagmiConfig } from 'contexts/Web3Provider';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { getPegTokenLogo, marketsConfig } from 'config';
 import Image from 'next/image';
 import { approvalStepsFlow } from 'utils/approvalHelper';
@@ -44,15 +44,10 @@ function StakeCredit({
   creditMultiplier: bigint;
   reload: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const {
-    appMarketId,
-    appChainId,
-    coinDetails,
-    lendingTerms,
-    contractsList,
-    fetchLendingTermsUntilBlock,
-    minimumCreditStake
-  } = useAppStore();
+  const { coinDetails, lendingTerms, contractsList, fetchLendingTermsUntilBlock, minimumCreditStake } = useAppStore();
+
+  const { appMarketId, appChainId } = useUserPrefsStore();
+
   const [value, setValue] = useState<string>('');
   const { address, isConnected } = useAccount();
   const [showModal, setShowModal] = useState<boolean>(false);

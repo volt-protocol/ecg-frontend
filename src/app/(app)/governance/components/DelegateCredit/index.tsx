@@ -24,7 +24,7 @@ import ButtonPrimary from 'components/button/ButtonPrimary';
 import DefiInputBox from 'components/box/DefiInputBox';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { AlertMessage } from 'components/message/AlertMessage';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { getPegTokenLogo, marketsConfig, getExplorerBaseUrl } from 'config';
 
 interface Delegatee {
@@ -51,7 +51,8 @@ function DelegateCredit({
   delegateLockupPeriod: bigint;
   creditTokenSymbol: string;
 }) {
-  const { contractsList, appMarketId, appChainId } = useAppStore();
+  const { contractsList } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const { address } = useAccount();
   const [value, setValue] = useState<string>('');
   const [showModal, setShowModal] = useState(false);

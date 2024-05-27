@@ -17,7 +17,7 @@ import { BLOCK_LENGTH_MILLISECONDS } from 'utils/constants';
 import { MintRedeemLogs } from 'lib/logs/mint-redeem';
 import { Address } from 'viem';
 import { TransactionBadge } from 'components/badge/TransactionBadge';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { getCreditTokenSymbol } from 'utils/strings';
 import { getPegTokenLogo, marketsConfig } from 'config';
 import Image from 'next/image';
@@ -32,7 +32,8 @@ export default function LastMintEvents({
   currentBlock: BigInt;
 }) {
   const { address } = useAccount();
-  const { contractsList, appMarketId, coinDetails, appChainId } = useAppStore();
+  const { contractsList, coinDetails } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
 
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()

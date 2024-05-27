@@ -16,7 +16,6 @@ type StoreState = LendingTermsSlice &
   LoansSlice &
   AuctionsSlice &
   CoinDetailsSlice &
-  AppSettingsSlice &
   DashboardSlice &
   ContractsListSlice &
   ProtocolDataSlice &
@@ -25,12 +24,13 @@ type StoreState = LendingTermsSlice &
 
 type TosState = TosSlice;
 
+type UserPrefsState = AppSettingsSlice;
+
 export const useAppStore = create<StoreState, any>((...a) => ({
   ...createLendingTermsSlice(...a),
   ...createLoansSlice(...a),
   ...createAuctionsSlice(...a),
   ...createCoinDetailsSlice(...a),
-  ...createAppSettingsSlice(...a),
   ...createDashboardSlice(...a),
   ...createContractsListSlice(...a),
   ...createProtocolDataSlice(...a),
@@ -45,6 +45,17 @@ export const useTosStore = create<TosState, any>(
     }),
     {
       name: 'tos-storage' // name of the item in the storage (must be unique)
+    }
+  )
+);
+
+export const useUserPrefsStore = create<UserPrefsState, any>(
+  persist(
+    (...a) => ({
+      ...createAppSettingsSlice(...a)
+    }),
+    {
+      name: 'user-prefs-storage' // name of the item in the storage (must be unique)
     }
   )
 );

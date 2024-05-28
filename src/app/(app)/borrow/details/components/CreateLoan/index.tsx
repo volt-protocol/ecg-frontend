@@ -24,9 +24,9 @@ import { secondsToAppropriateUnit } from 'utils/date';
 import { TooltipHorizon } from 'components/tooltip';
 import { getPegTokenLogo } from 'config';
 import { approvalStepsFlow } from 'utils/approvalHelper';
-import { HttpGet, HttpPost } from 'utils/HttpHelper';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import Image from 'next/image';
+import { getDexRouterData } from 'utils/dexApi';
 
 let doRequestTimeout;
 
@@ -609,36 +609,17 @@ function CreateLoan({
       let borrowAmountCreditToken: bigint = (borrowAmount * BigInt(Math.floor(leverage * 10000))) / BigInt(10000);
       let borrowAmountPegToken = borrowAmountCreditToken / BigInt(Math.floor(10 ** (18 - pegToken.decimals)));
 
-      const urlGet = `https://aggregator-api.kyberswap.com/arbitrum/api/v1/routes?tokenIn=${
-        pegToken?.address
-      }&tokenOut=${
-        lendingTerm.collateral.address
-      }&amountIn=${borrowAmountPegToken.toString()}&excludedSources=balancer-v1,balancer-v2-composable-stable,balancer-v2-stable,balancer-v2-weighted`;
-      const dataGet = await HttpGet<any>(urlGet, {
-        headers: {
-          'x-client-id': 'EthereumCreditGuild'
-        }
-      });
-      const urlPost = `https://aggregator-api.kyberswap.com/arbitrum/api/v1/route/build`;
-      const dataPost = await HttpPost<any>(
-        urlPost,
-        {
-          routeSummary: dataGet.data.routeSummary,
-          slippageTolerance: 50, // 0.5%
-          sender: contractsList.gatewayAddress,
-          recipient: contractsList.gatewayAddress
-        },
-        {
-          headers: {
-            'x-client-id': 'EthereumCreditGuild'
-          }
-        }
+      const dexData = await getDexRouterData(
+        lendingTermConfig.find((item) => item.termAddress === lendingTerm.address)?.leverageDex,
+        pegToken?.address,
+        lendingTerm.collateral.address,
+        borrowAmountPegToken,
+        0.005, // 0.5% max slippage
+        contractsList.gatewayAddress,
+        contractsList.gatewayAddress
       );
       const collateralAmountNumber = Number(
-        formatUnits(
-          collateralAmountBigint + BigInt(Math.floor(dataPost.data.amountOut)),
-          lendingTerm.collateral.decimals
-        )
+        formatUnits(collateralAmountBigint + dexData.amountOut, lendingTerm.collateral.decimals)
       );
       const maxBorrowNumber = collateralAmountNumber * lendingTerm.borrowRatio;
       const borrowAmountNumber = Number(formatUnits(borrowAmountPegToken, pegToken?.decimals));
@@ -646,12 +627,12 @@ function CreateLoan({
         collateralAmount: collateralAmountBigint,
         borrowAmount: borrowAmountCreditToken,
         borrowAmountPegToken: borrowAmountPegToken,
-        collateralAmountSwapped: BigInt(Math.floor(dataPost.data.amountOut)),
-        amountInUsd: Number(dataPost.data.amountInUsd),
-        amountOutUsd: Number(dataPost.data.amountOutUsd),
-        routerAddress: dataPost.data.routerAddress,
-        routerData: dataPost.data.data,
-        routerGas: Number(dataPost.data.gas),
+        collateralAmountSwapped: dexData.amountOut,
+        amountInUsd: dexData.amountInUsd,
+        amountOutUsd: dexData.amountOutUsd,
+        routerAddress: dexData.routerAddress,
+        routerData: dexData.routerData,
+        routerGas: dexData.routerGas,
         effectiveLeverage: collateralAmountNumber / Number(collateralAmount),
         callThreshold: Number(borrowAmountCreditToken) / 1e18 / maxBorrowNumber,
         ltv: (borrowAmountNumber * pegToken?.price) / (collateralAmountNumber * collateralToken?.price)

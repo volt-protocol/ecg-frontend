@@ -35,7 +35,7 @@ export default function ModalRepay({
   rowData: any;
   repay: (id: string) => void;
   partialRepay: (id: string, amount: string) => void;
-  repayGateway: (id: string) => void;
+  repayGateway: (id: string, amount: string) => void;
   partialRepayGateway: (id: string, amount: string) => void;
   repayGatewayLeverage: (id: string) => void;
   minBorrow: bigint;
@@ -60,12 +60,6 @@ export default function ModalRepay({
     setValue('');
     setWithLeverage(false);
   }, [isOpen]);
-
-  useEffect(() => {
-    if (withLeverage) {
-      setValue(pegTokenDebt.toString());
-    }
-  }, [withLeverage]);
 
   useEffect(() => {
     if (rowData) {
@@ -96,10 +90,10 @@ export default function ModalRepay({
   };
 
   const doRepay = () => {
-    match
-      ? withLeverage
-        ? repayGatewayLeverage(rowData.id)
-        : repayGateway(rowData.id)
+    withLeverage
+      ? repayGatewayLeverage(rowData.id)
+      : match
+      ? repayGateway(rowData.id, value)
       : partialRepayGateway(rowData.id, value);
   };
 
@@ -137,36 +131,38 @@ export default function ModalRepay({
                     <h3 className="text-xl font-medium text-gray-800 dark:text-white">Repay Loan</h3>
 
                     <div className="mt-2 flex w-full flex-col gap-2">
-                      <DefiInputBox
-                        topLabel={`Amount of ${pegToken.symbol} to repay`}
-                        currencyLogo={pegTokenLogo}
-                        currencySymbol={pegToken.symbol}
-                        placeholder="0"
-                        pattern="^[0-9]*[.,]?[0-9]*$"
-                        inputSize="text-2xl sm:text-3xl"
-                        value={value}
-                        onChange={handleValueChange}
-                        rightLabel={
-                          <>
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Available: {setAvailable()}
-                            </p>
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Debt:{' '}
-                              {formatDecimal(
-                                Number(formatUnits(pegTokenDebt, pegToken.decimals)),
-                                creditTokenDecimalsToDisplay * 2
-                              )}
-                            </p>
-                            <button
-                              className="text-sm font-medium text-brand-500 hover:text-brand-400"
-                              onClick={(e) => setMax()}
-                            >
-                              {rowData && pegTokenBalance > pegTokenDebt ? 'Full Repay' : 'Max'}
-                            </button>
-                          </>
-                        }
-                      />
+                      {!withLeverage && (
+                        <DefiInputBox
+                          topLabel={`Amount of ${pegToken.symbol} to repay`}
+                          currencyLogo={pegTokenLogo}
+                          currencySymbol={pegToken.symbol}
+                          placeholder="0"
+                          pattern="^[0-9]*[.,]?[0-9]*$"
+                          inputSize="text-2xl sm:text-3xl"
+                          value={value}
+                          onChange={handleValueChange}
+                          rightLabel={
+                            <>
+                              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Available: {setAvailable()}
+                              </p>
+                              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Debt:{' '}
+                                {formatDecimal(
+                                  Number(formatUnits(pegTokenDebt, pegToken.decimals)),
+                                  creditTokenDecimalsToDisplay * 2
+                                )}
+                              </p>
+                              <button
+                                className="text-sm font-medium text-brand-500 hover:text-brand-400"
+                                onClick={(e) => setMax()}
+                              >
+                                {rowData && pegTokenBalance > pegTokenDebt ? 'Full Repay' : 'Max'}
+                              </button>
+                            </>
+                          }
+                        />
+                      )}
 
                       {lendingTermConfig.find((item) => item.termAddress === rowData.termAddress)?.maxLeverage && (
                         <div className="flex flex-col gap-4 rounded-xl bg-gray-100 py-4 dark:bg-navy-900">
@@ -192,6 +188,14 @@ export default function ModalRepay({
                                 />
                               </Switch>
                             </div>
+                            {withLeverage && (
+                              <div className="mt-1 text-sm opacity-50 dark:text-white">
+                                This will not use any tokens in your wallet. Instead, you will take a flashloan of the
+                                amount of your debt, repay your debt, and swap as much collateral as needed to repay the
+                                flashloan. This option will only work if your loan is overcollateralized. The remaining
+                                collateral and debt tokens will be sent to your wallet if any.
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
@@ -199,7 +203,9 @@ export default function ModalRepay({
                       <ButtonPrimary
                         variant="lg"
                         title={
-                          rowData && parseUnits(value, pegToken.decimals) >= pegTokenDebt
+                          withLeverage
+                            ? 'Full Repay with Flashloan'
+                            : rowData && parseUnits(value, pegToken.decimals) >= pegTokenDebt
                             ? 'Full Repay'
                             : 'Partial Repay'
                         }
@@ -211,7 +217,8 @@ export default function ModalRepay({
                           pegTokenBalance,
                           creditMultiplier,
                           minBorrow,
-                          match
+                          match,
+                          withLeverage
                         )}
                         extra="w-full !rounded-xl"
                         disabled={
@@ -223,7 +230,8 @@ export default function ModalRepay({
                             pegTokenBalance,
                             creditMultiplier,
                             minBorrow,
-                            match
+                            match,
+                            withLeverage
                           ).length != 0
                         }
                         onClick={doRepay}

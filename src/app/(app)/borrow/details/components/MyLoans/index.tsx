@@ -27,11 +27,12 @@ import { signPermit } from 'lib/transactions/signPermit';
 import moment from 'moment';
 import { simpleRepay } from './helper/simpleRepay';
 import { HOURS_IN_YEAR } from 'utils/constants';
-import { getPegTokenLogo, permitConfig } from 'config';
+import { getPegTokenLogo, lendingTermConfig, permitConfig } from 'config';
 import CustomTable from 'components/table/CustomTable';
 import { useAppStore, useUserPrefsStore } from 'store';
 import { marketsConfig } from 'config';
 import { approvalStepsFlow } from 'utils/approvalHelper';
+import { getDexRouterData } from 'utils/dexApi';
 
 function Myloans({
   lendingTerm,
@@ -571,9 +572,11 @@ function Myloans({
   }
 
   async function repayGatewayLeverage(loanId: string) {
+    console.log('repayGatewayLeverage', repayGatewayLeverage);
     setOpen(false);
     const createSteps = (): Step[] => {
       const baseSteps = [
+        { name: `Check ${lendingTerm.collateral.name} allowance`, status: 'Not Started' },
         permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
           ?.hasPermit
           ? {
@@ -581,7 +584,7 @@ function Myloans({
               status: 'Not Started'
             }
           : { name: `Approve ${lendingTerm.collateral.symbol}`, status: 'Not Started' },
-        { name: 'Repay with Leverage', status: 'Not Started' }
+        { name: 'Repay with Flashloan', status: 'Not Started' }
       ];
       return baseSteps;
     };
@@ -589,7 +592,8 @@ function Myloans({
 
     let signatureCollateral: any;
 
-    const collateralAmount = tableDataWithDebts.find((item) => item.id == loanId).collateralAmount as bigint;
+    const loan = tableDataWithDebts.find((item) => item.id == loanId);
+    const collateralAmount = loan.collateralAmount as bigint;
 
     setShowModal(true);
 
@@ -599,6 +603,7 @@ function Myloans({
         ?.hasPermit
     ) {
       try {
+        updateStepStatus(`Check ${lendingTerm.collateral.name} allowance`, 'Success');
         updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, 'In Progress');
 
         signatureCollateral = await signPermit({
@@ -607,9 +612,9 @@ function Myloans({
           ownerAddress: address,
           spenderAddress: contractsList.gatewayAddress as Address,
           value: collateralAmount,
-          deadline: BigInt(Number(moment().add(10, 'seconds'))),
+          deadline: BigInt(Math.floor((Date.now() + 20 * 60 * 1000) / 1000)),
           nonce: contractData?.collateralNonces,
-          chainId: wagmiConfig.chains[0].id,
+          chainId: appChainId,
           version:
             permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
               ?.version || '1'
@@ -652,52 +657,85 @@ function Myloans({
 
     /* Call gateway.multicall() */
     try {
-      updateStepStatus('Repay with Leverage', 'In Progress');
+      updateStepStatus('Repay with Flashloan', 'In Progress');
+      const collateralValue = formatUnits(collateralAmount, collateralToken.decimals) * collateralToken.price;
+      const quarterHourInterests =
+        (parseUnits(lendingTerm.interestRate.toString(), 2) * loan.loanDebt) /
+        BigInt(100) /
+        (BigInt(4) * BigInt(HOURS_IN_YEAR));
+      const decimalNormalizer = BigInt('1' + '0'.repeat(36 - pegToken.decimals));
+      const pegTokenDebt = ((loan.loanDebt + quarterHourInterests) * creditMultiplier) / decimalNormalizer + BigInt(1); // add 1 wei for rounding
+      const debtValue = Number(formatUnits(pegTokenDebt, pegToken.decimals)) * pegToken.price;
+      const ltv = (100 * debtValue) / collateralValue;
+      const dexData = await getDexRouterData(
+        lendingTermConfig.find((item) => item.termAddress === lendingTerm.address)?.leverageDex,
+        lendingTerm.collateral.address,
+        pegToken?.address,
+        (collateralAmount * BigInt(Math.ceil(ltv + 0.5))) / BigInt(100),
+        0.005, // 0.5% max slippage
+        contractsList.gatewayAddress,
+        contractsList.gatewayAddress
+      );
+      let pullCollateralCalls = [
+        // todo: could be with approval flow
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'consumePermit',
+          args: [
+            lendingTerm.collateral.address,
+            collateralAmount,
+            signatureCollateral.deadline,
+            signatureCollateral.v,
+            signatureCollateral.r,
+            signatureCollateral.s
+          ]
+        }),
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'consumeAllowance',
+          args: [lendingTerm.collateral.address, collateralAmount]
+        })
+      ];
+      let minCollateralRemaining = BigInt(0); // TODO
+
       const hash = await writeContract(wagmiConfig, {
         address: contractsList.gatewayAddress,
         abi: GatewayABI,
         functionName: 'repayWithBalancerFlashLoan',
         args: [
-          loanId,
-          lendingTerm.address,
-          psmAddress,
-          contractsList.uniswapRouterAddress,
-          lendingTerm.collateral.address,
-          pegToken.address,
-          collateralAmount,
-          encodeFunctionData({
-            abi: GatewayABI as Abi,
-            functionName: 'consumePermit',
-            args: [
-              lendingTerm.collateral.address,
-              collateralAmount,
-              signatureCollateral.deadline,
-              signatureCollateral.v,
-              signatureCollateral.r,
-              signatureCollateral.s
-            ]
-          })
-        ]
+          {
+            loanId: loanId,
+            term: lendingTerm.address,
+            psm: psmAddress,
+            collateralToken: lendingTerm.collateral.address,
+            pegToken: pegToken.address,
+            minCollateralRemaining: minCollateralRemaining,
+            pullCollateralCalls: pullCollateralCalls,
+            routerAddress: dexData.routerAddress,
+            routerCallData: dexData.routerData
+          }
+        ],
+        gas: dexData.routerGas + 5_000_000
       });
 
-      const checkBorrow = await waitForTransactionReceipt(wagmiConfig, {
+      const txReceipt = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash
       });
 
-      if (checkBorrow.status === 'success') {
+      if (txReceipt.status === 'success') {
         setTimeout(function () {
           setReload(true);
         }, 5000);
-        updateStepStatus('Repay with Leverage', 'Success');
+        updateStepStatus('Repay with Flashloan', 'Success');
         return;
       } else {
-        updateStepStatus('Repay with Leverage', 'Error');
+        updateStepStatus('Repay with Flashloan', 'Error');
       }
 
-      updateStepStatus(`Repay with Leverage`, 'Success');
+      updateStepStatus(`Repay with Flashloan`, 'Success');
     } catch (e) {
       console.log(e);
-      updateStepStatus('Repay with Leverage', 'Error');
+      updateStepStatus('Repay with Flashloan', 'Error');
       return;
     }
   }

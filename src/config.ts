@@ -20,6 +20,12 @@ export const pendleConfig: PendleConfig = {
     chainId: 42161,
     market: '0x952083cde7aaa11AB8449057F7de23A970AA8472', // market
     syTokenOut: '0x35751007a407ca6FEFfE80b3cB397736D2cf4dbe' // weETH
+  },
+  // ERC20_PT_RSETH_27JUN2024
+  '0xafd22f824d51fb7eed4778d303d4388ac644b026': {
+    chainId: 42161,
+    market: '0x6Ae79089b2CF4be441480801bb741A531d94312b', // market
+    syTokenOut: '0x4186BFC76E2E237523CBC30FD220FE055156b41F' // rsETH
   }
 };
 
@@ -98,6 +104,12 @@ export const permitConfig: PermitConfig[] = [
   {
     // Arbitrum PT_WEETH_27JUN2024
     address: '0x1c27Ad8a19Ba026ADaBD615F6Bc77158130cfBE4',
+    hasPermit: true,
+    version: '1'
+  },
+  {
+    // Arbitrum ERC20_PT_RSETH_27JUN2024
+    address: '0xafd22f824d51fb7eed4778d303d4388ac644b026',
     hasPermit: true,
     version: '1'
   },

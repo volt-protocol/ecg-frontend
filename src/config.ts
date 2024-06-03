@@ -44,6 +44,30 @@ export const lendingTermConfig: LendingTermConfig[] = [
     leverageDex: 'pendle'
   },
   {
+    // Arbitrum gWETH -> ARB-0.000150-4.0%
+    termAddress: '0x7049e9D5E491CAe4d5215c9cc8E2Da3f3e172e1c',
+    maxLeverage: 2,
+    leverageDex: 'kyber'
+  },
+  {
+    // Arbitrum gWETH -> PT-weETH-27JUN2024-0.70-10.0%
+    termAddress: '0x92A661aD3A8D68b4aa3174F71ed5e2FeFa74E224',
+    maxLeverage: 3,
+    leverageDex: 'pendle'
+  },
+  {
+    // Arbitrum gWETH -> PT-weETH-27JUN2024-0.70-12.0%
+    termAddress: '0x66b7297C3ADB28B3A7Fd562604089aD659b8c09b',
+    maxLeverage: 3,
+    leverageDex: 'pendle'
+  },
+  {
+    // Arbitrum gWETH -> PT-rsETH-27JUN2024-0.70-8.0%
+    termAddress: '0xb9e256a5A311f454b646F24AE1Ba084c4A6De788',
+    maxLeverage: 3,
+    leverageDex: 'pendle'
+  },
+  {
     // Arbitrum gWETH -> wstETH-0.95-4.0%
     termAddress: '0x0b3C054FB1d20C9d3E3B16E2FCe672Ddcf44B40e',
     maxLeverage: 5,

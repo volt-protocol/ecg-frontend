@@ -58,7 +58,7 @@ function Myloans({
   setReload: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const { coinDetails, contractsList } = useAppStore();
-  const { appMarketId, appChainId } = useUserPrefsStore();
+  const { appMarketId, appChainId, usePermit } = useUserPrefsStore();
   const { address } = useAccount();
   const [showModal, setShowModal] = useState(false);
   const [tableDataWithDebts, setTableDataWithDebts] = useState<loanObj[]>([]);
@@ -358,7 +358,10 @@ function Myloans({
 
     const createSteps = (): Step[] => {
       const baseSteps: Step[] = [];
-      if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+      if (
+        usePermit &&
+        permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit
+      ) {
         baseSteps.push({
           name: `Sign Permit for ${pegToken.symbol}`,
           status: 'Not Started'
@@ -384,7 +387,10 @@ function Myloans({
     setShowModal(true);
 
     /* Set allowance for pegToken */
-    if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+    if (
+      usePermit &&
+      permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit
+    ) {
       try {
         updateStepStatus(`Sign Permit for ${pegToken.symbol}`, 'In Progress');
 
@@ -442,7 +448,10 @@ function Myloans({
       const calls = [];
 
       // pull pegToken on gateway
-      if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+      if (
+        usePermit &&
+        permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit
+      ) {
         calls.push(
           encodeFunctionData({
             abi: GatewayABI as Abi,
@@ -564,7 +573,8 @@ function Myloans({
       }
 
       updateStepStatus(`Mint + Partial repay (Multicall)`, 'Success');
-    } catch (e) {
+    } catch (e: any) {
+      console.log(e?.shortMessage);
       console.log(e);
       updateStepStatus('Mint + Partial repay (Multicall)', 'Error');
       return;
@@ -572,11 +582,11 @@ function Myloans({
   }
 
   async function repayGatewayLeverage(loanId: string) {
-    console.log('repayGatewayLeverage', repayGatewayLeverage);
     setOpen(false);
     const createSteps = (): Step[] => {
       const baseSteps = [
         { name: `Check ${lendingTerm.collateral.name} allowance`, status: 'Not Started' },
+        usePermit &&
         permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
           ?.hasPermit
           ? {
@@ -599,6 +609,7 @@ function Myloans({
 
     /* Set allowance for collateral token */
     if (
+      usePermit &&
       permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
         ?.hasPermit
     ) {
@@ -667,36 +678,39 @@ function Myloans({
       const pegTokenDebt = ((loan.loanDebt + quarterHourInterests) * creditMultiplier) / decimalNormalizer + BigInt(1); // add 1 wei for rounding
       const debtValue = Number(formatUnits(pegTokenDebt, pegToken.decimals)) * pegToken.price;
       const ltv = (100 * debtValue) / collateralValue;
+      const minCollateralRemaining = (collateralAmount * BigInt(Math.max(0, Math.ceil(100 - ltv - 1)))) / BigInt(100);
       const dexData = await getDexRouterData(
         lendingTermConfig.find((item) => item.termAddress === lendingTerm.address)?.leverageDex,
         lendingTerm.collateral.address,
         pegToken?.address,
-        (collateralAmount * BigInt(Math.ceil(ltv + 0.5))) / BigInt(100),
+        collateralAmount - minCollateralRemaining,
         0.005, // 0.5% max slippage
         contractsList.gatewayAddress,
         contractsList.gatewayAddress
       );
       let pullCollateralCalls = [
-        // todo: could be with approval flow
-        encodeFunctionData({
-          abi: GatewayABI as Abi,
-          functionName: 'consumePermit',
-          args: [
-            lendingTerm.collateral.address,
-            collateralAmount,
-            signatureCollateral.deadline,
-            signatureCollateral.v,
-            signatureCollateral.r,
-            signatureCollateral.s
-          ]
-        }),
         encodeFunctionData({
           abi: GatewayABI as Abi,
           functionName: 'consumeAllowance',
           args: [lendingTerm.collateral.address, collateralAmount]
         })
       ];
-      let minCollateralRemaining = BigInt(0); // TODO
+      if (signatureCollateral) {
+        pullCollateralCalls.unshift(
+          encodeFunctionData({
+            abi: GatewayABI as Abi,
+            functionName: 'consumePermit',
+            args: [
+              lendingTerm.collateral.address,
+              collateralAmount,
+              signatureCollateral.deadline,
+              signatureCollateral.v,
+              signatureCollateral.r,
+              signatureCollateral.s
+            ]
+          })
+        );
+      }
 
       const hash = await writeContract(wagmiConfig, {
         address: contractsList.gatewayAddress,
@@ -734,6 +748,7 @@ function Myloans({
 
       updateStepStatus(`Repay with Flashloan`, 'Success');
     } catch (e) {
+      console.log(e?.shortMessage);
       console.log(e);
       updateStepStatus('Repay with Flashloan', 'Error');
       return;
@@ -748,7 +763,10 @@ function Myloans({
 
     const createSteps = (): Step[] => {
       const baseSteps: Step[] = [];
-      if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+      if (
+        usePermit &&
+        permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit
+      ) {
         baseSteps.push({
           name: `Sign Permit for ${pegToken.symbol}`,
           status: 'Not Started'
@@ -779,7 +797,10 @@ function Myloans({
     setShowModal(true);
 
     /* Set allowance for pegToken */
-    if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+    if (
+      usePermit &&
+      permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit
+    ) {
       try {
         updateStepStatus(`Sign Permit for ${pegToken.symbol}`, 'In Progress');
 
@@ -837,7 +858,10 @@ function Myloans({
       const calls = [];
 
       // pull pegToken on gateway
-      if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+      if (
+        usePermit &&
+        permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit
+      ) {
         calls.push(
           encodeFunctionData({
             abi: GatewayABI as Abi,

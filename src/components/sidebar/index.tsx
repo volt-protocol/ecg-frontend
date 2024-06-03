@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { HiX } from 'react-icons/hi';
 import Links from './components/Links';
 import clsx from 'clsx';
+import React, { useState } from 'react';
 import { IRoute } from 'types/navigation';
 import DropdownSelect from 'components/select/DropdownSelect';
 import NavLink from 'components/link/NavLink';
@@ -10,11 +11,13 @@ import { MdOpenInNew, MdOutlineWarningAmber } from 'react-icons/md';
 import { useSwitchChain } from 'wagmi';
 import { useUserPrefsStore } from 'store';
 import { SelectableChainId, marketsConfig, SupportedMarket } from 'config';
+import { Switch } from '@headlessui/react';
 
 function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
   const { chains } = useSwitchChain();
-  const { appChainId, setAppMarket, appMarket, setAppChainId } = useUserPrefsStore();
+  const { appChainId, setAppMarket, appMarket, setAppChainId, usePermit, setUsePermit } = useUserPrefsStore();
   const { routes, open, setOpen } = props;
+  const [localUsePermit, setLocalUsePermit] = useState(usePermit);
 
   if (marketsConfig[appChainId] == undefined) {
     console.log(`using default chaindId ${Number(Object.keys(marketsConfig)[0])}`);
@@ -49,6 +52,11 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
     }
 
     setAppMarket(market);
+  }
+
+  function handleUsePermitChange(val) {
+    setLocalUsePermit(val);
+    setUsePermit(val);
   }
 
   return (
@@ -132,6 +140,27 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
 
       {/* Nav item end */}
       <div className="flex flex-col justify-end">
+        <div className="mb-2 text-center text-sm">
+          <Switch
+            checked={localUsePermit}
+            onChange={handleUsePermitChange}
+            className={clsx(
+              localUsePermit ? 'bg-brand-500' : 'bg-gray-200',
+              'border-transparent relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out'
+            )}
+          >
+            <span
+              aria-hidden="true"
+              className={clsx(
+                localUsePermit ? 'translate-x-5' : 'translate-x-0',
+                'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out'
+              )}
+            />
+          </Switch>
+          <span className="ml-2" style={{ display: 'inline-block', height: '24px', verticalAlign: 'bottom' }}>
+            Use Permit if available
+          </span>
+        </div>
         <a href={process.env.NEXT_PUBLIC_DOCS_URL} target="_blank">
           <div
             className={clsx(

@@ -1,5 +1,6 @@
 import { SupportedMarket, marketsConfig } from 'config';
 import { wagmiConfig } from 'contexts/Web3Provider';
+import { GiValley } from 'react-icons/gi';
 import { Address } from 'viem';
 import { StateCreator } from 'zustand';
 
@@ -8,6 +9,7 @@ export interface AppSettingsSlice {
   appMarketId: number;
   appMarket: SupportedMarket;
   appChainId: number;
+  usePermit: boolean;
   searchFocused: boolean;
   searchHistory: Address[];
   setSearchFocused: (value: boolean) => void;
@@ -16,6 +18,7 @@ export interface AppSettingsSlice {
   setAppMarket: (market: SupportedMarket) => void;
   setAppChainId: (chainId: number) => void;
   setDarkMode: (darkMode: boolean) => void;
+  setUsePermit: (val: boolean) => void;
 }
 
 export const createAppSettingsSlice: StateCreator<AppSettingsSlice> = (set, get) => ({
@@ -23,6 +26,7 @@ export const createAppSettingsSlice: StateCreator<AppSettingsSlice> = (set, get)
   appChainId: wagmiConfig.chains[0].id,
   appMarketId: marketsConfig[wagmiConfig.chains[0].id][0].marketId,
   appMarket: marketsConfig[wagmiConfig.chains[0].id][0],
+  usePermit: true,
   searchFocused: false,
   searchHistory: [],
   setAppMarket: (market: SupportedMarket) => {
@@ -32,6 +36,9 @@ export const createAppSettingsSlice: StateCreator<AppSettingsSlice> = (set, get)
   setAppChainId: (chainId: number) => {
     const defaultMarket = marketsConfig[chainId][0];
     set({ appChainId: chainId, appMarket: defaultMarket, appMarketId: defaultMarket.marketId });
+  },
+  setUsePermit: (val: boolean) => {
+    set({ usePermit: val });
   },
   addSearchHistory: (value: Address) => {
     const history = get().searchHistory;

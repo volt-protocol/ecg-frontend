@@ -3,7 +3,7 @@ import StepModal from 'components/stepLoader';
 import { Step } from 'components/stepLoader/stepType';
 import { ERC20PermitABI, GatewayABI } from 'lib/contracts';
 import React, { useEffect, useState } from 'react';
-import { erc20Abi, Abi, Address, formatUnits, parseUnits } from 'viem';
+import { erc20Abi, Abi, Address, formatUnits, parseUnits, encodeFunctionData } from 'viem';
 import moment from 'moment';
 import { formatDecimal, toLocaleString } from 'utils/numbers';
 import { AlertMessage } from 'components/message/AlertMessage';
@@ -52,7 +52,7 @@ function CreateLoan({
   setReload: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const { contractsList, coinDetails, psmPegTokenBalance } = useAppStore();
-  const { appMarketId, appChainId } = useUserPrefsStore();
+  const { appMarketId, appChainId, usePermit } = useUserPrefsStore();
   const { address } = useAccount();
   const [borrowAmount, setBorrowAmount] = useState<bigint>(BigInt(0));
   const [collateralAmount, setCollateralAmount] = useState<string>('');
@@ -188,6 +188,7 @@ function CreateLoan({
     const createSteps = (): Step[] => {
       const baseSteps: Step[] = [];
       if (
+        usePermit &&
         permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
           ?.hasPermit
       ) {
@@ -199,8 +200,13 @@ function CreateLoan({
         baseSteps.push({ name: checkStepName, status: 'Not Started' });
         baseSteps.push({ name: approveStepName, status: 'Not Started' });
       }
+      if (usePermit) {
+        baseSteps.push({ name: `Sign Permit for ${creditTokenSymbol}`, status: 'Not Started' });
+      } else {
+        baseSteps.push({ name: `Check ${creditTokenSymbol} allowance`, status: 'Not Started' });
+        baseSteps.push({ name: `Approve ${creditTokenSymbol}`, status: 'Not Started' });
+      }
 
-      baseSteps.push({ name: `Sign Permit for ${creditTokenSymbol}`, status: 'Not Started' });
       baseSteps.push({ name: 'Borrow + Redeem (Multicall)', status: 'Not Started' });
 
       return baseSteps;
@@ -212,6 +218,7 @@ function CreateLoan({
 
     /* Set allowance for collateral token */
     if (
+      usePermit &&
       permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
         ?.hasPermit
     ) {
@@ -268,30 +275,55 @@ function CreateLoan({
     }
 
     /* Set allowance for credit token */
-    try {
-      updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'In Progress');
+    if (usePermit) {
+      try {
+        updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'In Progress');
 
-      permitSigCreditToken = await signPermit({
-        contractAddress: creditAddress as Address,
-        erc20Name: data?.creditTokenName,
-        ownerAddress: address,
-        spenderAddress: contractsList.gatewayAddress as Address,
-        value: borrowAmount,
-        deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
-        nonce: creditTokenNonces,
-        chainId: appChainId,
-        version: '1'
-      });
+        permitSigCreditToken = await signPermit({
+          contractAddress: creditAddress as Address,
+          erc20Name: data?.creditTokenName,
+          ownerAddress: address,
+          spenderAddress: contractsList.gatewayAddress as Address,
+          value: borrowAmount,
+          deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
+          nonce: creditTokenNonces,
+          chainId: appChainId,
+          version: '1'
+        });
 
-      if (!permitSigCreditToken) {
+        if (!permitSigCreditToken) {
+          updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Error');
+          return;
+        }
+        updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Success');
+      } catch (e) {
+        console.log(e);
         updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Error');
         return;
       }
-      updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Success');
-    } catch (e) {
-      console.log(e);
-      updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Error');
-      return;
+    } else {
+      try {
+        const approvalSuccess = await approvalStepsFlow(
+          address,
+          contractsList.gatewayAddress,
+          creditAddress,
+          borrowAmount,
+          appChainId,
+          updateStepStatus,
+          `Check ${creditTokenSymbol} allowance`,
+          `Approve ${creditTokenSymbol}`,
+          wagmiConfig
+        );
+
+        if (!approvalSuccess) {
+          updateStepStatus(`Approve ${creditTokenSymbol}`, 'Error');
+          return;
+        }
+      } catch (e) {
+        console.log(e);
+        updateStepStatus(`Approve ${creditTokenSymbol}`, 'Error');
+        return;
+      }
     }
 
     /* Call gateway.multicall() */
@@ -350,6 +382,7 @@ function CreateLoan({
     const createSteps = (): Step[] => {
       const baseSteps: Step[] = [];
       if (
+        usePermit &&
         permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
           ?.hasPermit
       ) {
@@ -362,7 +395,13 @@ function CreateLoan({
         baseSteps.push({ name: approveStepName, status: 'Not Started' });
       }
 
-      baseSteps.push({ name: `Sign Permit for ${creditTokenSymbol}`, status: 'Not Started' });
+      if (usePermit) {
+        baseSteps.push({ name: `Sign Permit for ${creditTokenSymbol}`, status: 'Not Started' });
+      } else {
+        baseSteps.push({ name: `Check ${creditTokenSymbol} allowance`, status: 'Not Started' });
+        baseSteps.push({ name: `Approve ${creditTokenSymbol}`, status: 'Not Started' });
+      }
+
       baseSteps.push({ name: 'Flashloan + Swap + Borrow (Multicall)', status: 'Not Started' });
 
       return baseSteps;
@@ -375,6 +414,7 @@ function CreateLoan({
 
     /* Set allowance for collateral token */
     if (
+      usePermit &&
       permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
         ?.hasPermit
     ) {
@@ -430,30 +470,55 @@ function CreateLoan({
     }
 
     /* Set allowance for CREDIT token */
-    try {
-      updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'In Progress');
+    if (usePermit) {
+      try {
+        updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'In Progress');
 
-      permitSigCreditToken = await signPermit({
-        contractAddress: creditAddress as Address,
-        erc20Name: data?.creditTokenName,
-        ownerAddress: address,
-        spenderAddress: contractsList.gatewayAddress as Address,
-        value: leverageData.borrowAmount,
-        deadline: BigInt(Math.floor((Date.now() + 20 * 60 * 1000) / 1000)),
-        nonce: creditTokenNonces,
-        chainId: appChainId,
-        version: '1'
-      });
+        permitSigCreditToken = await signPermit({
+          contractAddress: creditAddress as Address,
+          erc20Name: data?.creditTokenName,
+          ownerAddress: address,
+          spenderAddress: contractsList.gatewayAddress as Address,
+          value: leverageData.borrowAmount,
+          deadline: BigInt(Math.floor((Date.now() + 20 * 60 * 1000) / 1000)),
+          nonce: creditTokenNonces,
+          chainId: appChainId,
+          version: '1'
+        });
 
-      if (!permitSigCreditToken) {
+        if (!permitSigCreditToken) {
+          updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Error');
+          return;
+        }
+        updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Success');
+      } catch (e) {
+        console.log(e);
         updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Error');
         return;
       }
-      updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Success');
-    } catch (e) {
-      console.log(e);
-      updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Error');
-      return;
+    } else {
+      try {
+        const approvalSuccess = await approvalStepsFlow(
+          address,
+          contractsList.gatewayAddress,
+          creditAddress,
+          leverageData.borrowAmount,
+          appChainId,
+          updateStepStatus,
+          `Check ${creditTokenSymbol} allowance`,
+          `Approve ${creditTokenSymbol}`,
+          wagmiConfig
+        );
+
+        if (!approvalSuccess) {
+          updateStepStatus(`Approve ${creditTokenSymbol}`, 'Error');
+          return;
+        }
+      } catch (e) {
+        console.log(e);
+        updateStepStatus(`Approve ${creditTokenSymbol}`, 'Error');
+        return;
+      }
     }
 
     /* Call gateway.borrowWithBalancerFlashLoan() */
@@ -464,12 +529,13 @@ function CreateLoan({
         signatureCollateral
       );
 
-      const consumePermitBorrowedCreditCall = getAllowBorrowedCreditCall(
-        leverageData.borrowAmount,
-        permitSigCreditToken,
-        contractsList,
-        appMarketId
-      );
+      const consumePermitBorrowedCreditCall = usePermit
+        ? getAllowBorrowedCreditCall(leverageData.borrowAmount, permitSigCreditToken, contractsList, appMarketId)
+        : encodeFunctionData({
+            abi: GatewayABI as Abi,
+            functionName: 'consumeAllowance',
+            args: [creditAddress, '0']
+          });
 
       updateStepStatus(`Flashloan + Swap + Borrow (Multicall)`, 'In Progress');
 
@@ -877,13 +943,24 @@ function CreateLoan({
                     </div>
                     <div className="mt-1 text-xs">
                       <span className="font-mono">2.</span>{' '}
-                      <Image
-                        src="/img/kyberswap.png"
-                        width={24}
-                        height={24}
-                        alt={''}
-                        className="mr-1 inline-block rounded-full align-middle"
-                      />
+                      {lendingTermConfig.find((item) => item.termAddress === lendingTerm.address)?.leverageDex ===
+                      'pendle' ? (
+                        <Image
+                          src="/img/crypto-logos/pendle.png"
+                          width={24}
+                          height={24}
+                          alt={''}
+                          className="mr-1 inline-block rounded-full align-middle"
+                        />
+                      ) : (
+                        <Image
+                          src="/img/kyberswap.png"
+                          width={24}
+                          height={24}
+                          alt={''}
+                          className="mr-1 inline-block rounded-full align-middle"
+                        />
+                      )}
                       Swap to{' '}
                       <Image
                         src={lendingTerm.collateral.logo}

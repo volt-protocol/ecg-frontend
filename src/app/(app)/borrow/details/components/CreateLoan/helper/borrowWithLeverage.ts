@@ -41,21 +41,23 @@ export const getPullCollateralCalls = (
 };
 
 export const getAllowBorrowedCreditCall = (
-  debtAmount: bigint, //  borrowAmount + flashloanAmount in gUSDC
-  permitDatagUSDC: any,
+  debtAmount: bigint,
+  permitCreditToken: any,
   contractsList: ContractsList,
   appMarketId: number
 ) => {
+  if (!permitCreditToken) {
+  }
   return encodeFunctionData({
     abi: GatewayABI as Abi,
     functionName: 'consumePermit',
     args: [
       contractsList.marketContracts[appMarketId].creditAddress,
       debtAmount,
-      permitDatagUSDC.deadline,
-      permitDatagUSDC.v,
-      permitDatagUSDC.r,
-      permitDatagUSDC.s
+      permitCreditToken.deadline,
+      permitCreditToken.v,
+      permitCreditToken.r,
+      permitCreditToken.s
     ]
   });
 };

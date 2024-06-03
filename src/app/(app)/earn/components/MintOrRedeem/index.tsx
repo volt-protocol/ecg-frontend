@@ -42,7 +42,7 @@ function MintOrRedeem({
   pegTokenName: string;
 }) {
   const { contractsList, coinDetails } = useAppStore();
-  const { appMarketId, appChainId } = useUserPrefsStore();
+  const { appMarketId, appChainId, usePermit } = useUserPrefsStore();
   const { address } = useAccount();
   const [showModal, setShowModal] = useState(false);
   const [value, setValue] = useState<string>('');
@@ -90,9 +90,12 @@ function MintOrRedeem({
   /* Smart contract writes */
   async function doMint() {
     const doEnterRebase: boolean = show;
-    let usePermit: boolean = false;
-    if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
-      usePermit = true;
+    let withPermit: boolean = false;
+    if (
+      usePermit &&
+      permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit
+    ) {
+      withPermit = true;
     }
     const amount = parseUnits(value.toString(), pegToken.decimals);
 
@@ -100,7 +103,7 @@ function MintOrRedeem({
     if (doEnterRebase) {
       steps.push({ name: 'Enter Savings Rate', status: 'Not Started' });
     }
-    if (usePermit) {
+    if (withPermit) {
       steps.push({ name: `Check ${pegToken.symbol} allowance`, status: 'Not Started' });
       steps.push({ name: `Permit ${pegToken.symbol}`, status: 'Not Started' });
     } else {
@@ -155,7 +158,7 @@ function MintOrRedeem({
     let permitSig: any;
     if (allowance < amount) {
       // set allowance with permit
-      if (usePermit) {
+      if (withPermit) {
         updateStepStatus(`Permit ${pegToken.symbol}`, 'In Progress');
         try {
           permitSig = await signPermit({
@@ -204,7 +207,7 @@ function MintOrRedeem({
         updateStepStatus(`Approve ${pegToken.symbol}`, 'Success');
       }
     } else {
-      if (usePermit) {
+      if (withPermit) {
         updateStepStatus(`Permit ${pegToken.symbol}`, 'Success');
       } else {
         updateStepStatus(`Approve ${pegToken.symbol}`, 'Success');
@@ -218,7 +221,7 @@ function MintOrRedeem({
       const calls = [];
 
       // pull pegToken on gateway
-      if (usePermit && permitSig) {
+      if (withPermit && permitSig) {
         calls.push(
           encodeFunctionData({
             abi: GatewayABI as Abi,
@@ -295,7 +298,6 @@ function MintOrRedeem({
   }
 
   async function doRedeem() {
-    let usePermit: boolean = true;
     const amount = parseUnits(value.toString(), 18);
 
     const steps = [];

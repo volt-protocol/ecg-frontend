@@ -6,6 +6,23 @@ import {} from 'next/navigation';
 import { getPublicClient } from '@wagmi/core';
 import { wagmiConfig } from 'contexts/Web3Provider';
 
+export interface PendleConfig {
+  [ptAddress: string]: {
+    chainId: number;
+    market: string;
+    syTokenOut: string;
+  };
+}
+
+export const pendleConfig: PendleConfig = {
+  // ERC20_PT_WEETH_27JUN2024
+  '0x1c27ad8a19ba026adabd615f6bc77158130cfbe4': {
+    chainId: 42161,
+    market: '0x952083cde7aaa11AB8449057F7de23A970AA8472', // market
+    syTokenOut: '0x35751007a407ca6FEFfE80b3cB397736D2cf4dbe' // weETH
+  }
+};
+
 export interface LendingTermConfig {
   termAddress: Address;
   maxLeverage: number;
@@ -14,6 +31,18 @@ export interface LendingTermConfig {
 
 // set borrowing configurations for each term here
 export const lendingTermConfig: LendingTermConfig[] = [
+  {
+    // Arbitrum gWETH-test -> PT-weETH-27JUN2024-0.70-20.0%
+    termAddress: '0xEd81318B543c1B32C5853B20E0cbdb8a5F2bc3E9',
+    maxLeverage: 3,
+    leverageDex: 'pendle'
+  },
+  {
+    // Arbitrum gWETH -> PT-weETH-27JUN2024-0.70-8.0%
+    termAddress: '0xCc2bb4bf184a456d00cf22B8E19EF5E410e373A7',
+    maxLeverage: 3,
+    leverageDex: 'pendle'
+  },
   {
     // Arbitrum gWETH -> wstETH-0.95-4.0%
     termAddress: '0x0b3C054FB1d20C9d3E3B16E2FCe672Ddcf44B40e',
@@ -42,6 +71,12 @@ export interface PermitConfig {
 
 //set permit configurations for each collateral token here
 export const permitConfig: PermitConfig[] = [
+  {
+    // Arbitrum PT_WEETH_27JUN2024
+    address: '0x1c27Ad8a19Ba026ADaBD615F6Bc77158130cfBE4',
+    hasPermit: true,
+    version: '1'
+  },
   {
     // Arbitrum USDC
     address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',

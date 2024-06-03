@@ -1,3 +1,4 @@
+import { pendleConfig } from 'config';
 import { HttpGet, HttpPost } from './HttpHelper';
 
 export async function getDexRouterData(
@@ -47,6 +48,57 @@ export async function getDexRouterData(
       routerGas: Number(dataPost.data.gas)
     };
   }
+  if (dex === 'pendle') {
+    let _pendleConfig = pendleConfig[toToken.toLowerCase()];
+    let toTokenIsPt = false;
+    let fromTokenIsPt = false;
+    let urlGet;
+    const slippage = 0.005; // 0.5% max slippage
+    if (_pendleConfig) {
+      toTokenIsPt = true;
+      urlGet = `https://api-v2.pendle.finance/sdk/api/v1/swapExactTokenForPt?chainId=${
+        _pendleConfig.chainId
+      }&receiverAddr=${recipient}&marketAddr=${
+        _pendleConfig.market
+      }&amountTokenIn=${amountIn.toString()}&tokenInAddr=${fromToken}&syTokenOutAddr=${
+        _pendleConfig.syTokenOut
+      }&slippage=${slippage}`;
+    } else {
+      _pendleConfig = pendleConfig[fromToken.toLowerCase()];
+      if (_pendleConfig) {
+        fromTokenIsPt = true;
+        urlGet = `https://api-v2.pendle.finance/sdk/api/v1/swapExactPtForToken?chainId=${
+          _pendleConfig.chainId
+        }&receiverAddr=${recipient}&marketAddr=${
+          _pendleConfig.market
+        }&amountPtIn=${amountIn.toString()}&tokenOutAddr=${toToken}&syTokenOutAddr=${
+          _pendleConfig.syTokenOut
+        }&slippage=${slippage}`;
+      } else {
+        throw 'Unsupported pendle fromToken[' + fromToken + '] or toToken[' + toToken + ']';
+      }
+    }
+    const dataGet = await HttpGet<any>(urlGet);
+    if (toTokenIsPt) {
+      return {
+        amountOut: BigInt(dataGet.data.amountPtOut),
+        amountInUsd: 1,
+        amountOutUsd: 1 + dataGet.data.priceImpact,
+        routerAddress: dataGet.transaction.to,
+        routerData: dataGet.transaction.data,
+        routerGas: 2_000_000
+      };
+    } else {
+      return {
+        amountOut: BigInt(dataGet.data.amountTokenOut),
+        amountInUsd: 1,
+        amountOutUsd: 1 + dataGet.data.priceImpact,
+        routerAddress: dataGet.transaction.to,
+        routerData: dataGet.transaction.data,
+        routerGas: 2_000_000
+      };
+    }
+  }
 
-  throw 'Unsupported dex [' + router + ']';
+  throw 'Unsupported dex [' + dex + ']';
 }

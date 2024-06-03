@@ -403,7 +403,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   const getActionButton = (item: ActiveOffboardingPolls) => {
     if (!data || !data.pollDurationBlock || !data.quorum) return null;
 
-    if (!isActivePoll(item.snapshotBlock, item.currentBlock, data.pollDurationBlock) && item.userWeight < data.quorum) {
+    if (!isActivePoll(item.snapshotBlock, item.currentBlock, data.pollDurationBlock) && Number(formatUnits(item.userWeight, 18)) < data.quorum) {
       return (
         <div className="flex items-center gap-1">
           <span className="items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-500">Failed</span>
@@ -412,7 +412,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
     }
 
     //vote active and quorum not reached yet
-    if (isActivePoll(item.snapshotBlock, item.currentBlock, data.pollDurationBlock) && item.userWeight < data.quorum) {
+    if (isActivePoll(item.snapshotBlock, item.currentBlock, data.pollDurationBlock) && Number(formatUnits(item.userWeight, 18)) < data.quorum) {
       return (
         <ButtonPrimary
           disabled={!guildVotingWeight}
@@ -423,7 +423,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
       );
     }
 
-    if (item.userWeight >= data.quorum && !data.deprecatedTerms.includes(item.term)) {
+    if (Number(formatUnits(item.userWeight, 18)) >= data.quorum && !data.deprecatedTerms.includes(item.term)) {
       return <ButtonPrimary variant="xs" title="Offboard" onClick={() => offboard(item.term)} />;
     }
 

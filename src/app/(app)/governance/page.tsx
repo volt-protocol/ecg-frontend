@@ -8,7 +8,7 @@ import DelegateGuild from './components/DelegateGuild';
 import DelegateCredit from './components/DelegateCredit';
 import OffboardTerm from './components/OffboardTerm';
 import OnboardNewterm from './components/OnboardNewTerm';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import Spinner from 'components/spinner';
 
 export type Delegatee = {
@@ -17,7 +17,8 @@ export type Delegatee = {
 };
 
 function Governance() {
-  const { appChainId, appMarketId, contractsList, coinDetails, delegateLockupPeriod } = useAppStore();
+  const { contractsList, coinDetails, delegateLockupPeriod } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const { address, isConnected, isDisconnected } = useAccount();
   const [reloadGuild, setReloadGuild] = React.useState<boolean>(false);
   const [reloadCredit, setReloadCredit] = React.useState<boolean>(false);

@@ -339,7 +339,8 @@ function MintOrRedeem({
             deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
             nonce: creditTokenNonces,
             chainId: appChainId,
-            version: '1'
+            version:
+            permitConfig.find((item) => item.address.toLowerCase() === creditAddress.toLowerCase())?.version || '1'
           });
 
           if (!permitSig) {

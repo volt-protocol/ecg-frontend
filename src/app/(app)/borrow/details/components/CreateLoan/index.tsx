@@ -235,8 +235,7 @@ function CreateLoan({
           nonce: data?.collateralNonces,
           chainId: appChainId,
           version:
-            permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
-              ?.version || '1'
+              permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())?.version || '1'
         });
 
         if (!signatureCollateral) {
@@ -279,17 +278,18 @@ function CreateLoan({
       try {
         updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'In Progress');
 
-        permitSigCreditToken = await signPermit({
-          contractAddress: creditAddress as Address,
-          erc20Name: data?.creditTokenName,
-          ownerAddress: address,
-          spenderAddress: contractsList.gatewayAddress as Address,
-          value: borrowAmount,
-          deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
-          nonce: creditTokenNonces,
-          chainId: appChainId,
-          version: '1'
-        });
+      permitSigCreditToken = await signPermit({
+        contractAddress: creditAddress as Address,
+        erc20Name: data?.creditTokenName,
+        ownerAddress: address,
+        spenderAddress: contractsList.gatewayAddress as Address,
+        value: borrowAmount,
+        deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
+        nonce: creditTokenNonces,
+        chainId: appChainId,
+        version:
+              permitConfig.find((item) => item.address.toLowerCase() === creditAddress.toLowerCase())?.version || '1'
+      });
 
         if (!permitSigCreditToken) {
           updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Error');
@@ -430,8 +430,7 @@ function CreateLoan({
           nonce: data?.collateralNonces,
           chainId: appChainId,
           version:
-            permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
-              ?.version || '1'
+              permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())?.version || '1'
         });
 
         if (!signatureCollateral) {
@@ -474,17 +473,18 @@ function CreateLoan({
       try {
         updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'In Progress');
 
-        permitSigCreditToken = await signPermit({
-          contractAddress: creditAddress as Address,
-          erc20Name: data?.creditTokenName,
-          ownerAddress: address,
-          spenderAddress: contractsList.gatewayAddress as Address,
-          value: leverageData.borrowAmount,
-          deadline: BigInt(Math.floor((Date.now() + 20 * 60 * 1000) / 1000)),
-          nonce: creditTokenNonces,
-          chainId: appChainId,
-          version: '1'
-        });
+      permitSigCreditToken = await signPermit({
+        contractAddress: creditAddress as Address,
+        erc20Name: data?.creditTokenName,
+        ownerAddress: address,
+        spenderAddress: contractsList.gatewayAddress as Address,
+        value: leverageData.borrowAmount,
+        deadline: BigInt(Math.floor((Date.now() + 20 * 60 * 1000) / 1000)),
+        nonce: creditTokenNonces,
+        chainId: appChainId,
+        version:
+              permitConfig.find((item) => item.address.toLowerCase() === creditAddress.toLowerCase())?.version || '1'
+      });
 
         if (!permitSigCreditToken) {
           updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Error');

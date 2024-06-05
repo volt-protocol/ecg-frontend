@@ -62,7 +62,7 @@ export async function getDexRouterData(
         _pendleConfig.market
       }&amountTokenIn=${amountIn.toString()}&tokenInAddr=${fromToken}&syTokenOutAddr=${
         _pendleConfig.syTokenOut
-      }&slippage=${slippage}`;
+      }&slippage=${slippage}&excludedSources=balancer-v1,balancer-v2-composable-stable,balancer-v2-stable,balancer-v2-weighted`;
     } else {
       _pendleConfig = pendleConfig[fromToken.toLowerCase()];
       if (_pendleConfig) {
@@ -73,7 +73,7 @@ export async function getDexRouterData(
           _pendleConfig.market
         }&amountPtIn=${amountIn.toString()}&tokenOutAddr=${toToken}&syTokenOutAddr=${
           _pendleConfig.syTokenOut
-        }&slippage=${slippage}`;
+        }&slippage=${slippage}&excludedSources=balancer-v1,balancer-v2-composable-stable,balancer-v2-stable,balancer-v2-weighted`;
       } else {
         throw 'Unsupported pendle fromToken[' + fromToken + '] or toToken[' + toToken + ']';
       }

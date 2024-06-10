@@ -18,6 +18,11 @@ export interface PendleConfig {
 }
 
 export const pendleConfig: PendleConfig = {
+  //'xxxx': { // lowercase pt token address
+  //  chainId: 42161, // arbitrum
+  //  market: 'xxxx', // checksumed market address
+  //  syTokenOut: 'xxxx' // checksumed underlying address
+  //},
   // ERC20_PT_WEETH_27JUN2024
   '0x1c27ad8a19ba026adabd615f6bc77158130cfbe4': {
     chainId: 42161,
@@ -29,6 +34,12 @@ export const pendleConfig: PendleConfig = {
     chainId: 42161,
     market: '0x6Ae79089b2CF4be441480801bb741A531d94312b', // market
     syTokenOut: '0x4186BFC76E2E237523CBC30FD220FE055156b41F' // rsETH
+  },
+  // ERC20_PT_USDe_29AUG2024
+  '0xad853eb4fb3fe4a66cdfcd7b75922a0494955292': {
+    chainId: 42161,
+    market: '0x2Dfaf9a5E4F293BceedE49f2dBa29aACDD88E0C4', // market
+    syTokenOut: '0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34' // USDe
   }
 };
 

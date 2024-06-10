@@ -390,7 +390,7 @@ function ActiveLoans({
       id: 'DebtAmount',
       header: 'Debt',
       cell: (info: any) => (
-        <p className="font-semibold text-gray-700 dark:text-white">
+        <div className="font-semibold text-gray-700 dark:text-white">
           <div className="flex justify-center gap-1">
             {formatDecimal(
               (Number(formatUnits(info.row.original.loanDebt, 18)) * Number(creditMultiplier)) / 1e18,
@@ -398,7 +398,7 @@ function ActiveLoans({
             )}
             <Image src={pegTokenLogo} width={25} height={25} alt="logo" />
           </div>
-        </p>
+        </div>
       )
     },
     {

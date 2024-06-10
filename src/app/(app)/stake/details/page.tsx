@@ -20,7 +20,7 @@ import { Abi, formatUnits, erc20Abi, Address } from 'viem';
 import { eq, generateTermName } from 'utils/strings';
 import { formatDecimal, toLocaleString } from 'utils/numbers';
 import { wagmiConfig } from 'contexts/Web3Provider';
-import { lendingTermConfig, getPegTokenLogo, getExplorerBaseUrl } from 'config';
+import { getPegTokenLogo, getExplorerBaseUrl } from 'config';
 import Image from 'next/image';
 import { MdArrowBack } from 'react-icons/md';
 import Link from 'next/link';

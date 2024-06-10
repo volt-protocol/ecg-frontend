@@ -27,7 +27,7 @@ import { signPermit } from 'lib/transactions/signPermit';
 import moment from 'moment';
 import { simpleRepay } from './helper/simpleRepay';
 import { HOURS_IN_YEAR } from 'utils/constants';
-import { getPegTokenLogo, lendingTermConfig, permitConfig } from 'config';
+import { getPegTokenLogo, getLeverageConfig, permitConfig } from 'config';
 import CustomTable from 'components/table/CustomTable';
 import { useAppStore, useUserPrefsStore } from 'store';
 import { marketsConfig } from 'config';
@@ -680,7 +680,8 @@ function Myloans({
       const ltv = (100 * debtValue) / collateralValue;
       const minCollateralRemaining = (collateralAmount * BigInt(Math.max(0, Math.ceil(100 - ltv - 1)))) / BigInt(100);
       const dexData = await getDexRouterData(
-        lendingTermConfig.find((item) => item.termAddress === lendingTerm.address)?.leverageDex,
+        getLeverageConfig(lendingTerm, coinDetails, contractsList?.marketContracts[appMarketId].pegTokenAddress)
+          .leverageDex,
         lendingTerm.collateral.address,
         pegToken?.address,
         collateralAmount - minCollateralRemaining,
@@ -1025,7 +1026,7 @@ function Myloans({
       cell: (info: any) => {
         return (
           <div className="ml-3 text-center">
-            <p className="font-semibold text-gray-700 dark:text-white">
+            <div className="font-semibold text-gray-700 dark:text-white">
               <div className="flex items-center justify-center gap-1">
                 <Image src={pegTokenLogo} width={20} height={20} alt="logo" />{' '}
                 {formatDecimal(
@@ -1033,14 +1034,14 @@ function Myloans({
                   creditTokenDecimalsToDisplay
                 )}
               </div>
-            </p>
-            <p className="text-sm text-gray-400 dark:text-gray-200">
+            </div>
+            <div className="text-sm text-gray-400 dark:text-gray-200">
               ${' '}
               {formatDecimal(
                 (((pegToken.price * Number(info.row.original.loanDebt)) / 1e18) * Number(creditMultiplier)) / 1e18,
                 2
               )}
-            </p>
+            </div>
           </div>
         );
       }
@@ -1058,7 +1059,7 @@ function Myloans({
       cell: (info: any) => {
         return (
           <div className="ml-3 text-center">
-            <p className="font-semibold text-gray-700 dark:text-white">
+            <div className="font-semibold text-gray-700 dark:text-white">
               <div className="flex items-center justify-center gap-1">
                 <ImageWithFallback
                   src={lendingTerm.collateral.logo}
@@ -1072,14 +1073,14 @@ function Myloans({
                   collateralTokenDecimalsToDisplay
                 )}
               </div>
-            </p>
-            <p className="text-sm text-gray-400 dark:text-gray-200">
+            </div>
+            <div className="text-sm text-gray-400 dark:text-gray-200">
               ${' '}
               {formatDecimal(
                 Number(formatUnits(info.getValue(), lendingTerm.collateral.decimals)) * collateralToken.price,
                 2
               )}
-            </p>
+            </div>
           </div>
         );
       }
@@ -1190,7 +1191,7 @@ function Myloans({
       id: 'repay',
       header: '',
       cell: (info: any) => (
-        <p className="text-center font-medium text-gray-600 dark:text-white">
+        <div className="text-center font-medium text-gray-600 dark:text-white">
           <button
             onClick={() => handleModalOpening(info.row.original)}
             type="button"
@@ -1198,7 +1199,7 @@ function Myloans({
           >
             Repay
           </button>
-        </p>
+        </div>
       )
     }
   ];

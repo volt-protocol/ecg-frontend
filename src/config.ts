@@ -5,6 +5,9 @@ import {} from 'next/navigation';
 
 import { getPublicClient } from '@wagmi/core';
 import { wagmiConfig } from 'contexts/Web3Provider';
+import { CoinSettings } from 'store/slices/coin-details';
+import { LendingTerms } from 'types/lending';
+import { ContractsList } from 'store/slices/contracts-list';
 
 export interface PendleConfig {
   [ptAddress: string]: {
@@ -28,6 +31,25 @@ export const pendleConfig: PendleConfig = {
     syTokenOut: '0x4186BFC76E2E237523CBC30FD220FE055156b41F' // rsETH
   }
 };
+
+export function getLeverageConfig(term: LendingTerms, coinDetails: CoinSettings[], pegTokenAddress: string) {
+  const collateralToken = coinDetails.find(
+    (item) => item.address.toLowerCase() === term.collateral.address.toLowerCase()
+  );
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === pegTokenAddress.toLowerCase());
+  const ltv = (term.borrowRatio * pegToken?.price) / collateralToken?.price;
+
+  // generic case
+  let leverageDex = 'kyber';
+  let maxLeverage = (1 / (1 - ltv)) * (0.99 - term.interestRate / 52);
+
+  // special cases
+  if (term?.label?.indexOf('PT-') === 0) {
+    leverageDex = 'pendle';
+  }
+
+  return { maxLeverage, leverageDex };
+}
 
 export interface LendingTermConfig {
   termAddress: Address;

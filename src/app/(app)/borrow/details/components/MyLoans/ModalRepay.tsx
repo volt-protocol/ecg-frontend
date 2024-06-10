@@ -9,7 +9,7 @@ import { formatDecimal } from 'utils/numbers';
 import { formatUnits, parseUnits } from 'viem';
 import { getTitleDisabled } from './helper';
 import Link from 'next/link';
-import { getPegTokenLogo, lendingTermConfig } from 'config';
+import { getPegTokenLogo, getLeverageConfig } from 'config';
 import clsx from 'clsx';
 import { useAppStore, useUserPrefsStore } from 'store';
 
@@ -43,7 +43,7 @@ export default function ModalRepay({
   const [value, setValue] = useState<string>('');
   const [match, setMatch] = useState<boolean>(false);
   const [withLeverage, setWithLeverage] = useState<boolean>(false);
-  const { coinDetails, contractsList } = useAppStore();
+  const { coinDetails, contractsList, lendingTerms } = useAppStore();
   const { appMarketId, appChainId } = useUserPrefsStore();
 
   const pegToken = coinDetails.find(
@@ -54,6 +54,7 @@ export default function ModalRepay({
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
   const normalizer = BigInt('1' + '0'.repeat(36 - pegToken.decimals));
   const pegTokenDebt: bigint = (BigInt(rowData?.loanDebt || 0) * creditMultiplier) / normalizer;
+  const lendingTerm = lendingTerms.find((item) => item.address.toLowerCase() == rowData?.termAddress.toLowerCase());
 
   // Reset value when modal opens
   useEffect(() => {
@@ -164,7 +165,11 @@ export default function ModalRepay({
                         />
                       )}
 
-                      {lendingTermConfig.find((item) => item.termAddress === rowData.termAddress)?.maxLeverage && (
+                      {getLeverageConfig(
+                        lendingTerm,
+                        coinDetails,
+                        contractsList?.marketContracts[appMarketId].pegTokenAddress
+                      ).maxLeverage && (
                         <div className="flex flex-col gap-4 rounded-xl bg-gray-100 py-4 dark:bg-navy-900">
                           <div className="mt w-full px-5">
                             <div className="flex items-center justify-between">

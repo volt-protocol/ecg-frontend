@@ -15,7 +15,7 @@ import DefiInputBox from 'components/box/DefiInputBox';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { RangeSlider } from 'components/rangeSlider/RangeSlider';
 import { useAccount, useReadContracts } from 'wagmi';
-import { lendingTermConfig, permitConfig } from 'config';
+import { getLeverageConfig, permitConfig } from 'config';
 import { signPermit } from 'lib/transactions/signPermit';
 import { getAllowBorrowedCreditCall, getPullCollateralCalls } from './helper/borrowWithLeverage';
 import { toastError } from 'components/toast';
@@ -235,7 +235,8 @@ function CreateLoan({
           nonce: data?.collateralNonces,
           chainId: appChainId,
           version:
-              permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())?.version || '1'
+            permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
+              ?.version || '1'
         });
 
         if (!signatureCollateral) {
@@ -278,18 +279,18 @@ function CreateLoan({
       try {
         updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'In Progress');
 
-      permitSigCreditToken = await signPermit({
-        contractAddress: creditAddress as Address,
-        erc20Name: data?.creditTokenName,
-        ownerAddress: address,
-        spenderAddress: contractsList.gatewayAddress as Address,
-        value: borrowAmount,
-        deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
-        nonce: creditTokenNonces,
-        chainId: appChainId,
-        version:
-              permitConfig.find((item) => item.address.toLowerCase() === creditAddress.toLowerCase())?.version || '1'
-      });
+        permitSigCreditToken = await signPermit({
+          contractAddress: creditAddress as Address,
+          erc20Name: data?.creditTokenName,
+          ownerAddress: address,
+          spenderAddress: contractsList.gatewayAddress as Address,
+          value: borrowAmount,
+          deadline: BigInt(Math.floor((Date.now() + 15 * 60 * 1000) / 1000)),
+          nonce: creditTokenNonces,
+          chainId: appChainId,
+          version:
+            permitConfig.find((item) => item.address.toLowerCase() === creditAddress.toLowerCase())?.version || '1'
+        });
 
         if (!permitSigCreditToken) {
           updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Error');
@@ -430,7 +431,8 @@ function CreateLoan({
           nonce: data?.collateralNonces,
           chainId: appChainId,
           version:
-              permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())?.version || '1'
+            permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
+              ?.version || '1'
         });
 
         if (!signatureCollateral) {
@@ -473,18 +475,18 @@ function CreateLoan({
       try {
         updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'In Progress');
 
-      permitSigCreditToken = await signPermit({
-        contractAddress: creditAddress as Address,
-        erc20Name: data?.creditTokenName,
-        ownerAddress: address,
-        spenderAddress: contractsList.gatewayAddress as Address,
-        value: leverageData.borrowAmount,
-        deadline: BigInt(Math.floor((Date.now() + 20 * 60 * 1000) / 1000)),
-        nonce: creditTokenNonces,
-        chainId: appChainId,
-        version:
-              permitConfig.find((item) => item.address.toLowerCase() === creditAddress.toLowerCase())?.version || '1'
-      });
+        permitSigCreditToken = await signPermit({
+          contractAddress: creditAddress as Address,
+          erc20Name: data?.creditTokenName,
+          ownerAddress: address,
+          spenderAddress: contractsList.gatewayAddress as Address,
+          value: leverageData.borrowAmount,
+          deadline: BigInt(Math.floor((Date.now() + 20 * 60 * 1000) / 1000)),
+          nonce: creditTokenNonces,
+          chainId: appChainId,
+          version:
+            permitConfig.find((item) => item.address.toLowerCase() === creditAddress.toLowerCase())?.version || '1'
+        });
 
         if (!permitSigCreditToken) {
           updateStepStatus(`Sign Permit for ${creditTokenSymbol}`, 'Error');
@@ -676,7 +678,8 @@ function CreateLoan({
       let borrowAmountPegToken = borrowAmountCreditToken / BigInt(Math.floor(10 ** (18 - pegToken.decimals)));
 
       const dexData = await getDexRouterData(
-        lendingTermConfig.find((item) => item.termAddress === lendingTerm.address)?.leverageDex,
+        getLeverageConfig(lendingTerm, coinDetails, contractsList?.marketContracts[appMarketId].pegTokenAddress)
+          .leverageDex,
         pegToken?.address,
         lendingTerm.collateral.address,
         borrowAmountPegToken,
@@ -875,7 +878,8 @@ function CreateLoan({
               </div>
             )}
 
-            {lendingTermConfig.find((item) => item.termAddress === lendingTerm.address)?.maxLeverage && (
+            {getLeverageConfig(lendingTerm, coinDetails, contractsList?.marketContracts[appMarketId].pegTokenAddress)
+              .maxLeverage > 0 && (
               <div className="mt w-full px-5">
                 <RangeSlider
                   withSwitch={true}
@@ -886,7 +890,13 @@ function CreateLoan({
                     requestLeverageDex(collateralAmount, value);
                   }}
                   min={1}
-                  max={lendingTermConfig.find((item) => item.termAddress === lendingTerm.address)?.maxLeverage}
+                  max={
+                    getLeverageConfig(
+                      lendingTerm,
+                      coinDetails,
+                      contractsList?.marketContracts[appMarketId].pegTokenAddress
+                    ).maxLeverage
+                  }
                   step={0.01}
                   show={withLeverage}
                   setShow={() => {
@@ -943,8 +953,11 @@ function CreateLoan({
                     </div>
                     <div className="mt-1 text-xs">
                       <span className="font-mono">2.</span>{' '}
-                      {lendingTermConfig.find((item) => item.termAddress === lendingTerm.address)?.leverageDex ===
-                      'pendle' ? (
+                      {getLeverageConfig(
+                        lendingTerm,
+                        coinDetails,
+                        contractsList?.marketContracts[appMarketId].pegTokenAddress
+                      ).leverageDex === 'pendle' ? (
                         <Image
                           src="/img/crypto-logos/pendle.png"
                           width={24}

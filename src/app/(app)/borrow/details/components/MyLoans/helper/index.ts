@@ -9,8 +9,11 @@ export const getTitleDisabled = (
   pegTokenBalance: bigint,
   creditMultiplier: bigint,
   minBorrow: bigint,
-  match: boolean
+  match: boolean,
+  withLeverage: boolean
 ): string => {
+  if (withLeverage) return '';
+
   if (!value || Number(value) <= 0) {
     return `Enter ${pegTokenSymbol} amount`;
   }

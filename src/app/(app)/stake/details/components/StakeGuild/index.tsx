@@ -13,7 +13,7 @@ import { getTitleDisabledStake, getTitleDisabledUnstake } from './helper';
 import { AlertMessage } from 'components/message/AlertMessage';
 import { LendingTerms } from 'types/lending';
 import { wagmiConfig } from 'contexts/Web3Provider';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { getPegTokenLogo, marketsConfig } from 'config';
 import Image from 'next/image';
 
@@ -38,7 +38,9 @@ function StakeGuild({
   creditMultiplier: bigint;
   reload: Dispatch<SetStateAction<boolean>>;
 }) {
-  const { appMarketId, appChainId, coinDetails, contractsList, fetchLendingTermsUntilBlock } = useAppStore();
+  const { coinDetails, contractsList, fetchLendingTermsUntilBlock } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
+
   const [value, setValue] = useState<string>('');
   const { isConnected } = useAccount();
   const [showModal, setShowModal] = useState(false);

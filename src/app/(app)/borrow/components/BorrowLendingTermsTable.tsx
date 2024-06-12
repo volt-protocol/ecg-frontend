@@ -25,11 +25,12 @@ import { FaSort, FaSortDown, FaSortUp } from 'react-icons/fa';
 import { Abi, formatUnits, Address } from 'viem';
 import { useReadContracts } from 'wagmi';
 import { wagmiConfig } from 'contexts/Web3Provider';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { MdChevronLeft, MdChevronRight, MdVisibility, MdVisibilityOff } from 'react-icons/md';
 
 export default function BorrowLendingTermsTable(props: { tableData: LendingTerms[]; showFilters?: boolean }) {
-  const { appChainId, appMarketId, contractsList, coinDetails, creditSupply, creditMultiplier } = useAppStore();
+  const { contractsList, coinDetails, creditSupply, creditMultiplier } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const { tableData } = props;
   const [showNoDebtCeilingTerms, setShowNoDebtCeilingTerms] = React.useState<boolean>(false);
   const [sorting, setSorting] = React.useState<SortingState>([]);

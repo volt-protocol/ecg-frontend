@@ -23,16 +23,17 @@ import { ActivOnboardingVetoVotes } from 'types/governance';
 import { fromNow } from 'utils/date';
 import { Address, decodeFunctionData, formatUnits } from 'viem';
 import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
-import { checkVetoVoteValidity, getProposalIdFromActionId, getVotableTerms } from './helper';
+import { checkVetoVoteValidity, getProposalIdFromActionId } from './helper';
 import Progress from 'components/progress';
 import clsx from 'clsx';
 import { wagmiConfig } from 'contexts/Web3Provider';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { getExplorerBaseUrl, getL1BlockNumber } from 'config';
 import { SECONDS_IN_DAY } from 'utils/constants';
 
 function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: bigint; guildVotingWeight: bigint }) {
-  const { contractsList, coinDetails, appMarketId, appChainId, proposals, fetchProposalsUntilBlock } = useAppStore();
+  const { contractsList, coinDetails, proposals, fetchProposalsUntilBlock } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const { address } = useAccount();
   const [showModal, setShowModal] = useState(false);
   const [activeVetoVotes, setActiveVetoVotes] = useState<ActivOnboardingVetoVotes[]>([]);
@@ -164,73 +165,73 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
                 address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: 'proposalVotes',
-                args: [item.proposalId],
+                args: [item.proposalId]
               },
               {
                 address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: 'quorum',
-                args: [item.scheduleBlockNumber],
+                args: [item.scheduleBlockNumber]
               },
               {
                 address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: 'state',
-                args: [item.proposalId],
+                args: [item.proposalId]
               },
               {
                 address: contractsList.onboardVetoGuildAddress,
                 abi: OnboardVetoGuildABI,
                 functionName: 'proposalVotes',
-                args: [item.proposalId],
+                args: [item.proposalId]
               },
               {
                 address: contractsList.onboardVetoGuildAddress,
                 abi: OnboardVetoGuildABI,
                 functionName: 'quorum',
-                args: [item.scheduleBlockNumber],
+                args: [item.scheduleBlockNumber]
               },
               {
                 address: contractsList.onboardVetoGuildAddress,
                 abi: OnboardVetoGuildABI,
                 functionName: 'state',
-                args: [item.proposalId],
+                args: [item.proposalId]
               },
               {
                 address: contractsList.onboardTimelockAddress,
                 abi: OnboardTimelockABI,
                 functionName: 'isOperationPending',
-                args: [item.timelockId],
+                args: [item.timelockId]
               },
               {
                 address: contractsList.onboardTimelockAddress,
                 abi: OnboardTimelockABI,
                 functionName: 'isOperationReady',
-                args: [item.timelockId],
+                args: [item.timelockId]
               },
               {
                 address: contractsList.onboardTimelockAddress,
                 abi: OnboardTimelockABI,
                 functionName: 'isOperationDone',
-                args: [item.timelockId],
+                args: [item.timelockId]
               },
               {
                 address: contractsList.marketContracts[appMarketId].onboardVetoCreditAddress,
                 abi: OnboardVetoCreditABI,
                 functionName: 'hasVoted',
-                args: [item.proposalId, address],
+                args: [item.proposalId, address]
               },
               {
                 address: contractsList.onboardVetoGuildAddress,
                 abi: OnboardVetoGuildABI,
                 functionName: 'hasVoted',
-                args: [item.proposalId, address],
+                args: [item.proposalId, address]
               },
               {
                 address: contractsList.onboardTimelockAddress,
                 abi: OnboardTimelockABI,
                 functionName: 'getTimestamp',
-                args: [item.timelockId],
+                args: [item.timelockId]
               }
             ]
           });

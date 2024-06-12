@@ -7,14 +7,14 @@ export const simpleBorrow = (
   lendingTerm: LendingTerms,
   borrowAmount: bigint,
   collateralAmount: bigint,
-  permitDataCollateral: any | undefined,
-  permitDatagUSDC: any,
+  permitSigCollateralToken: any | undefined,
+  permitSigCreditToken: any | undefined,
   creditAddress: string,
   psmAddress: string
 ) => {
   const calls = [];
 
-  if (permitDataCollateral) {
+  if (permitSigCollateralToken) {
     calls.push(
       encodeFunctionData({
         abi: GatewayABI as Abi,
@@ -22,10 +22,10 @@ export const simpleBorrow = (
         args: [
           lendingTerm.collateral.address,
           collateralAmount,
-          permitDataCollateral.deadline,
-          permitDataCollateral.v,
-          permitDataCollateral.r,
-          permitDataCollateral.s
+          permitSigCollateralToken.deadline,
+          permitSigCollateralToken.v,
+          permitSigCollateralToken.r,
+          permitSigCollateralToken.s
         ]
       })
     );
@@ -69,20 +69,22 @@ export const simpleBorrow = (
     })
   );
 
-  calls.push(
-    encodeFunctionData({
-      abi: GatewayABI as Abi,
-      functionName: 'consumePermit',
-      args: [
-        creditAddress,
-        borrowAmount,
-        permitDatagUSDC.deadline,
-        permitDatagUSDC.v,
-        permitDatagUSDC.r,
-        permitDatagUSDC.s
-      ]
-    })
-  );
+  if (permitSigCreditToken) {
+    calls.push(
+      encodeFunctionData({
+        abi: GatewayABI as Abi,
+        functionName: 'consumePermit',
+        args: [
+          creditAddress,
+          borrowAmount,
+          permitSigCreditToken.deadline,
+          permitSigCreditToken.v,
+          permitSigCreditToken.r,
+          permitSigCreditToken.s
+        ]
+      })
+    );
+  }
 
   calls.push(
     encodeFunctionData({

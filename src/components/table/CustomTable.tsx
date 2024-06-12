@@ -48,9 +48,9 @@ export default function CustomTable<T>({
                     className="cursor-pointer border-b-[1px] border-gray-200 pb-2 pt-4 text-center text-start dark:border-gray-400"
                   >
                     <div className="flex items-center justify-center">
-                      <p className="text-sm font-medium text-gray-500 dark:text-white">
+                      <div className="text-sm font-medium text-gray-500 dark:text-white">
                         {flexRender(header.column.columnDef.header, header.getContext())}
-                      </p>
+                      </div>
                       {header.column.columnDef.enableSorting && (
                         <span className="text-sm text-gray-400">
                           {{

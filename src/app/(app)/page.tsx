@@ -1,7 +1,7 @@
 'use client';
 import Image from 'next/image';
 import { readContract, multicall } from '@wagmi/core';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { Abi, Address, formatUnits, erc20Abi } from 'viem';
 import { getApiBaseUrl, getPegTokenLogo } from 'config';
 import { ProfitManagerABI } from 'lib/contracts';
@@ -28,9 +28,9 @@ interface CurrentChartData {
   lastTvl: number;
 }
 const GlobalDashboard = () => {
+  const { appMarketId, appChainId } = useUserPrefsStore();
+
   const {
-    appMarketId,
-    appChainId,
     lendingTerms,
     coinDetails,
     historicalData,
@@ -44,6 +44,7 @@ const GlobalDashboard = () => {
     totalIssuance,
     creditTargetSupply
   } = useAppStore();
+
   const [totalActiveLoans, setTotalActiveLoans] = useState<number>();
   const [dataLoading, setDataLoading] = useState<boolean>(true);
   const [debtCeilingData, setDebtCeilingData] = useState([]);

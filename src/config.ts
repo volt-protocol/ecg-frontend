@@ -5,10 +5,61 @@ import {} from 'next/navigation';
 
 import { getPublicClient } from '@wagmi/core';
 import { wagmiConfig } from 'contexts/Web3Provider';
+import { CoinSettings } from 'store/slices/coin-details';
+import { LendingTerms } from 'types/lending';
+import { ContractsList } from 'store/slices/contracts-list';
 
-export interface LendingTermConfig {
-  termAddress: Address;
-  maxLeverage: number;
+export interface PendleConfig {
+  [ptAddress: string]: {
+    chainId: number;
+    market: string;
+    syTokenOut: string;
+  };
+}
+
+export const pendleConfig: PendleConfig = {
+  //'xxxx': { // lowercase pt token address
+  //  chainId: 42161, // arbitrum
+  //  market: 'xxxx', // checksumed market address
+  //  syTokenOut: 'xxxx' // checksumed underlying address
+  //},
+  // ERC20_PT_WEETH_27JUN2024
+  '0x1c27ad8a19ba026adabd615f6bc77158130cfbe4': {
+    chainId: 42161,
+    market: '0x952083cde7aaa11AB8449057F7de23A970AA8472', // market
+    syTokenOut: '0x35751007a407ca6FEFfE80b3cB397736D2cf4dbe' // weETH
+  },
+  // ERC20_PT_RSETH_27JUN2024
+  '0xafd22f824d51fb7eed4778d303d4388ac644b026': {
+    chainId: 42161,
+    market: '0x6Ae79089b2CF4be441480801bb741A531d94312b', // market
+    syTokenOut: '0x4186BFC76E2E237523CBC30FD220FE055156b41F' // rsETH
+  },
+  // ERC20_PT_USDe_29AUG2024
+  '0xad853eb4fb3fe4a66cdfcd7b75922a0494955292': {
+    chainId: 42161,
+    market: '0x2Dfaf9a5E4F293BceedE49f2dBa29aACDD88E0C4', // market
+    syTokenOut: '0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34' // USDe
+  }
+};
+
+export function getLeverageConfig(term: LendingTerms, coinDetails: CoinSettings[], pegTokenAddress: string) {
+  const collateralToken = coinDetails.find(
+    (item) => item.address.toLowerCase() === term.collateral.address.toLowerCase()
+  );
+  const pegToken = coinDetails.find((item) => item.address.toLowerCase() === pegTokenAddress.toLowerCase());
+  const ltv = (term.borrowRatio * pegToken?.price) / collateralToken?.price;
+
+  // generic case
+  let leverageDex = 'kyber';
+  let maxLeverage = (1 / (1 - ltv)) * (0.99 - term.interestRate / 52);
+
+  // special cases
+  if (term?.label?.indexOf('PT-') === 0) {
+    leverageDex = 'pendle';
+  }
+
+  return { maxLeverage, leverageDex };
 }
 
 export interface PermitConfig {
@@ -17,17 +68,20 @@ export interface PermitConfig {
   version?: string;
 }
 
-// set borrowing configurations for each term here
-export const lendingTermConfig: LendingTermConfig[] = [
-  /*{
-    // Sepolia sDAI-8%
-    termAddress: '0xA6751F2CB086CCF9bB4cc4424a9dE9Ae97496eDe',
-    maxLeverage: 5
-  }*/
-];
-
 //set permit configurations for each collateral token here
 export const permitConfig: PermitConfig[] = [
+  {
+    // Arbitrum PT_WEETH_27JUN2024
+    address: '0x1c27Ad8a19Ba026ADaBD615F6Bc77158130cfBE4',
+    hasPermit: true,
+    version: '1'
+  },
+  {
+    // Arbitrum ERC20_PT_RSETH_27JUN2024
+    address: '0xafd22f824d51fb7eed4778d303d4388ac644b026',
+    hasPermit: true,
+    version: '1'
+  },
   {
     // Arbitrum USDC
     address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
@@ -219,7 +273,11 @@ export function getBlockLengthMs(chainId: number) {
 }
 
 export function getPegTokenLogo(chainId: number, marketId: number) {
-  return marketsConfig[chainId].find((item) => item.marketId == marketId).logo;
+  if (marketsConfig[chainId].some((item) => item.marketId == marketId)) {
+    return marketsConfig[chainId].find((item) => item.marketId == marketId).logo;
+  } else {
+    return '/img/crypto-logos/unk.png';
+  }
 }
 
 export async function getL1BlockNumber(chainId: number) {

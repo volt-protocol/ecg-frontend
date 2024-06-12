@@ -27,11 +27,12 @@ import { signPermit } from 'lib/transactions/signPermit';
 import moment from 'moment';
 import { simpleRepay } from './helper/simpleRepay';
 import { HOURS_IN_YEAR } from 'utils/constants';
-import { getPegTokenLogo, permitConfig } from 'config';
+import { getPegTokenLogo, getLeverageConfig, permitConfig } from 'config';
 import CustomTable from 'components/table/CustomTable';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { marketsConfig } from 'config';
 import { approvalStepsFlow } from 'utils/approvalHelper';
+import { getDexRouterData } from 'utils/dexApi';
 
 function Myloans({
   lendingTerm,
@@ -56,7 +57,8 @@ function Myloans({
   reload: boolean;
   setReload: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const { appMarketId, appChainId, coinDetails, contractsList } = useAppStore();
+  const { coinDetails, contractsList } = useAppStore();
+  const { appMarketId, appChainId, usePermit } = useUserPrefsStore();
   const { address } = useAccount();
   const [showModal, setShowModal] = useState(false);
   const [tableDataWithDebts, setTableDataWithDebts] = useState<loanObj[]>([]);
@@ -356,7 +358,10 @@ function Myloans({
 
     const createSteps = (): Step[] => {
       const baseSteps: Step[] = [];
-      if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+      if (
+        usePermit &&
+        permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit
+      ) {
         baseSteps.push({
           name: `Sign Permit for ${pegToken.symbol}`,
           status: 'Not Started'
@@ -382,7 +387,10 @@ function Myloans({
     setShowModal(true);
 
     /* Set allowance for pegToken */
-    if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+    if (
+      usePermit &&
+      permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit
+    ) {
       try {
         updateStepStatus(`Sign Permit for ${pegToken.symbol}`, 'In Progress');
 
@@ -440,7 +448,10 @@ function Myloans({
       const calls = [];
 
       // pull pegToken on gateway
-      if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+      if (
+        usePermit &&
+        permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit
+      ) {
         calls.push(
           encodeFunctionData({
             abi: GatewayABI as Abi,
@@ -562,7 +573,8 @@ function Myloans({
       }
 
       updateStepStatus(`Mint + Partial repay (Multicall)`, 'Success');
-    } catch (e) {
+    } catch (e: any) {
+      console.log(e?.shortMessage);
       console.log(e);
       updateStepStatus('Mint + Partial repay (Multicall)', 'Error');
       return;
@@ -573,6 +585,8 @@ function Myloans({
     setOpen(false);
     const createSteps = (): Step[] => {
       const baseSteps = [
+        { name: `Check ${lendingTerm.collateral.name} allowance`, status: 'Not Started' },
+        usePermit &&
         permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
           ?.hasPermit
           ? {
@@ -580,7 +594,7 @@ function Myloans({
               status: 'Not Started'
             }
           : { name: `Approve ${lendingTerm.collateral.symbol}`, status: 'Not Started' },
-        { name: 'Repay with Leverage', status: 'Not Started' }
+        { name: 'Repay with Flashloan', status: 'Not Started' }
       ];
       return baseSteps;
     };
@@ -588,27 +602,30 @@ function Myloans({
 
     let signatureCollateral: any;
 
-    const collateralAmount = tableDataWithDebts.find((item) => item.id == loanId).collateralAmount as bigint;
+    const loan = tableDataWithDebts.find((item) => item.id == loanId);
+    const collateralAmount = loan.collateralAmount as bigint;
 
     setShowModal(true);
 
     /* Set allowance for collateral token */
     if (
+      usePermit &&
       permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
         ?.hasPermit
     ) {
       try {
+        updateStepStatus(`Check ${lendingTerm.collateral.name} allowance`, 'Success');
         updateStepStatus(`Sign Permit for ${lendingTerm.collateral.symbol}`, 'In Progress');
 
         signatureCollateral = await signPermit({
           contractAddress: lendingTerm.collateral.address,
-          erc20Name: lendingTerm.collateral.name,
+          erc20Name: contractData?.collaternalTokenName,
           ownerAddress: address,
           spenderAddress: contractsList.gatewayAddress as Address,
           value: collateralAmount,
-          deadline: BigInt(Number(moment().add(10, 'seconds'))),
+          deadline: BigInt(Math.floor((Date.now() + 20 * 60 * 1000) / 1000)),
           nonce: contractData?.collateralNonces,
-          chainId: wagmiConfig.chains[0].id,
+          chainId: appChainId,
           version:
             permitConfig.find((item) => item.address.toLowerCase() === lendingTerm.collateral.address.toLowerCase())
               ?.version || '1'
@@ -651,19 +668,36 @@ function Myloans({
 
     /* Call gateway.multicall() */
     try {
-      updateStepStatus('Repay with Leverage', 'In Progress');
-      const hash = await writeContract(wagmiConfig, {
-        address: contractsList.gatewayAddress,
-        abi: GatewayABI,
-        functionName: 'repayWithBalancerFlashLoan',
-        args: [
-          loanId,
-          lendingTerm.address,
-          psmAddress,
-          contractsList.uniswapRouterAddress,
-          lendingTerm.collateral.address,
-          pegToken.address,
-          collateralAmount,
+      updateStepStatus('Repay with Flashloan', 'In Progress');
+      const collateralValue = formatUnits(collateralAmount, collateralToken.decimals) * collateralToken.price;
+      const quarterHourInterests =
+        (parseUnits(lendingTerm.interestRate.toString(), 2) * loan.loanDebt) /
+        BigInt(100) /
+        (BigInt(4) * BigInt(HOURS_IN_YEAR));
+      const decimalNormalizer = BigInt('1' + '0'.repeat(36 - pegToken.decimals));
+      const pegTokenDebt = ((loan.loanDebt + quarterHourInterests) * creditMultiplier) / decimalNormalizer + BigInt(1); // add 1 wei for rounding
+      const debtValue = Number(formatUnits(pegTokenDebt, pegToken.decimals)) * pegToken.price;
+      const ltv = (100 * debtValue) / collateralValue;
+      const minCollateralRemaining = (collateralAmount * BigInt(Math.max(0, Math.ceil(100 - ltv - 1)))) / BigInt(100);
+      const dexData = await getDexRouterData(
+        getLeverageConfig(lendingTerm, coinDetails, contractsList?.marketContracts[appMarketId].pegTokenAddress)
+          .leverageDex,
+        lendingTerm.collateral.address,
+        pegToken?.address,
+        collateralAmount - minCollateralRemaining,
+        0.005, // 0.5% max slippage
+        contractsList.gatewayAddress,
+        contractsList.gatewayAddress
+      );
+      let pullCollateralCalls = [
+        encodeFunctionData({
+          abi: GatewayABI as Abi,
+          functionName: 'consumeAllowance',
+          args: [lendingTerm.collateral.address, collateralAmount]
+        })
+      ];
+      if (signatureCollateral) {
+        pullCollateralCalls.unshift(
           encodeFunctionData({
             abi: GatewayABI as Abi,
             functionName: 'consumePermit',
@@ -676,27 +710,48 @@ function Myloans({
               signatureCollateral.s
             ]
           })
-        ]
+        );
+      }
+
+      const hash = await writeContract(wagmiConfig, {
+        address: contractsList.gatewayAddress,
+        abi: GatewayABI,
+        functionName: 'repayWithBalancerFlashLoan',
+        args: [
+          {
+            loanId: loanId,
+            term: lendingTerm.address,
+            psm: psmAddress,
+            collateralToken: lendingTerm.collateral.address,
+            pegToken: pegToken.address,
+            minCollateralRemaining: minCollateralRemaining,
+            pullCollateralCalls: pullCollateralCalls,
+            routerAddress: dexData.routerAddress,
+            routerCallData: dexData.routerData
+          }
+        ],
+        gas: dexData.routerGas + 5_000_000
       });
 
-      const checkBorrow = await waitForTransactionReceipt(wagmiConfig, {
+      const txReceipt = await waitForTransactionReceipt(wagmiConfig, {
         hash: hash
       });
 
-      if (checkBorrow.status === 'success') {
+      if (txReceipt.status === 'success') {
         setTimeout(function () {
           setReload(true);
         }, 5000);
-        updateStepStatus('Repay with Leverage', 'Success');
+        updateStepStatus('Repay with Flashloan', 'Success');
         return;
       } else {
-        updateStepStatus('Repay with Leverage', 'Error');
+        updateStepStatus('Repay with Flashloan', 'Error');
       }
 
-      updateStepStatus(`Repay with Leverage`, 'Success');
+      updateStepStatus(`Repay with Flashloan`, 'Success');
     } catch (e) {
+      console.log(e?.shortMessage);
       console.log(e);
-      updateStepStatus('Repay with Leverage', 'Error');
+      updateStepStatus('Repay with Flashloan', 'Error');
       return;
     }
   }
@@ -709,7 +764,10 @@ function Myloans({
 
     const createSteps = (): Step[] => {
       const baseSteps: Step[] = [];
-      if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+      if (
+        usePermit &&
+        permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit
+      ) {
         baseSteps.push({
           name: `Sign Permit for ${pegToken.symbol}`,
           status: 'Not Started'
@@ -740,7 +798,10 @@ function Myloans({
     setShowModal(true);
 
     /* Set allowance for pegToken */
-    if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+    if (
+      usePermit &&
+      permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit
+    ) {
       try {
         updateStepStatus(`Sign Permit for ${pegToken.symbol}`, 'In Progress');
 
@@ -798,7 +859,10 @@ function Myloans({
       const calls = [];
 
       // pull pegToken on gateway
-      if (permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit) {
+      if (
+        usePermit &&
+        permitConfig.find((item) => item.address.toLowerCase() === pegToken.address.toLowerCase())?.hasPermit
+      ) {
         calls.push(
           encodeFunctionData({
             abi: GatewayABI as Abi,
@@ -962,7 +1026,7 @@ function Myloans({
       cell: (info: any) => {
         return (
           <div className="ml-3 text-center">
-            <p className="font-semibold text-gray-700 dark:text-white">
+            <div className="font-semibold text-gray-700 dark:text-white">
               <div className="flex items-center justify-center gap-1">
                 <Image src={pegTokenLogo} width={20} height={20} alt="logo" />{' '}
                 {formatDecimal(
@@ -970,14 +1034,14 @@ function Myloans({
                   creditTokenDecimalsToDisplay
                 )}
               </div>
-            </p>
-            <p className="text-sm text-gray-400 dark:text-gray-200">
+            </div>
+            <div className="text-sm text-gray-400 dark:text-gray-200">
               ${' '}
               {formatDecimal(
                 (((pegToken.price * Number(info.row.original.loanDebt)) / 1e18) * Number(creditMultiplier)) / 1e18,
                 2
               )}
-            </p>
+            </div>
           </div>
         );
       }
@@ -995,7 +1059,7 @@ function Myloans({
       cell: (info: any) => {
         return (
           <div className="ml-3 text-center">
-            <p className="font-semibold text-gray-700 dark:text-white">
+            <div className="font-semibold text-gray-700 dark:text-white">
               <div className="flex items-center justify-center gap-1">
                 <ImageWithFallback
                   src={lendingTerm.collateral.logo}
@@ -1009,14 +1073,14 @@ function Myloans({
                   collateralTokenDecimalsToDisplay
                 )}
               </div>
-            </p>
-            <p className="text-sm text-gray-400 dark:text-gray-200">
+            </div>
+            <div className="text-sm text-gray-400 dark:text-gray-200">
               ${' '}
               {formatDecimal(
                 Number(formatUnits(info.getValue(), lendingTerm.collateral.decimals)) * collateralToken.price,
                 2
               )}
-            </p>
+            </div>
           </div>
         );
       }
@@ -1127,7 +1191,7 @@ function Myloans({
       id: 'repay',
       header: '',
       cell: (info: any) => (
-        <p className="text-center font-medium text-gray-600 dark:text-white">
+        <div className="text-center font-medium text-gray-600 dark:text-white">
           <button
             onClick={() => handleModalOpening(info.row.original)}
             type="button"
@@ -1135,7 +1199,7 @@ function Myloans({
           >
             Repay
           </button>
-        </p>
+        </div>
       )
     }
   ];

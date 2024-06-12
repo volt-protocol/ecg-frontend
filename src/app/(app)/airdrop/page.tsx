@@ -6,7 +6,7 @@ import { useAccount } from 'wagmi';
 import { default as cycleAirdropData } from './data/cycle1.json';
 import Image from 'next/image';
 import { getExplorerBaseUrl } from 'config';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { AddressBadge } from 'components/badge/AddressBadge';
 import { marketsConfig, getPegTokenLogo } from 'config';
 import { formatCurrencyValue } from 'utils/numbers';
@@ -32,7 +32,7 @@ interface MarketBalance {
 
 function Airdrop() {
   const { address, isConnected } = useAccount();
-  const { appChainId } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
   const [userDetail, setUserDetail] = useState('');
 
   const data = cycleAirdropData as UserDailyData;

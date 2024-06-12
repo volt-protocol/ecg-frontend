@@ -13,22 +13,23 @@ import { MdOutlineOpenInNew } from 'react-icons/md';
 import { TooltipHorizon, QuestionMarkIcon } from 'components/tooltip';
 import { getActiveLoanDetails } from 'lib/logs/loans';
 import { useSearchParams } from 'next/navigation';
-import { useAppStore } from 'store';
+import { useAppStore, useUserPrefsStore } from 'store';
 import { Tab } from '@headlessui/react';
 import clsx from 'clsx';
 import { Abi, formatUnits, erc20Abi, Address } from 'viem';
 import { eq, generateTermName } from 'utils/strings';
 import { formatDecimal, toLocaleString } from 'utils/numbers';
 import { wagmiConfig } from 'contexts/Web3Provider';
-import { lendingTermConfig, getPegTokenLogo, getExplorerBaseUrl } from 'config';
-import { ToggleCredit } from 'components/switch/ToggleCredit';
+import { getPegTokenLogo, getExplorerBaseUrl } from 'config';
 import Image from 'next/image';
 import { MdArrowBack } from 'react-icons/md';
 import Link from 'next/link';
 
 const LendingDetails = () => {
   const { address, isConnected } = useAccount();
-  const { appMarketId, coinDetails, lendingTerms, contractsList, appChainId, fetchLendingTerms } = useAppStore();
+  const { coinDetails, lendingTerms, contractsList, fetchLendingTerms } = useAppStore();
+  const { appMarketId, appChainId } = useUserPrefsStore();
+
   const searchParams = useSearchParams();
   const termAddress = searchParams.get('term');
   const [lendingTermData, setLendingTermData] = useState<LendingTerms>();

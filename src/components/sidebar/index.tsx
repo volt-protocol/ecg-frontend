@@ -3,18 +3,61 @@ import Image from 'next/image';
 import { HiX } from 'react-icons/hi';
 import Links from './components/Links';
 import clsx from 'clsx';
+import React, { useState } from 'react';
 import { IRoute } from 'types/navigation';
 import DropdownSelect from 'components/select/DropdownSelect';
 import NavLink from 'components/link/NavLink';
 import { MdOpenInNew, MdOutlineWarningAmber } from 'react-icons/md';
 import { useSwitchChain } from 'wagmi';
-import { useAppStore } from 'store';
-import { SelectableChainId, marketsConfig } from 'config';
+import { useUserPrefsStore } from 'store';
+import { SelectableChainId, marketsConfig, SupportedMarket } from 'config';
+import { Switch } from '@headlessui/react';
 
 function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
   const { chains } = useSwitchChain();
-  const { appChainId, setAppMarket, appMarket, setAppChainId } = useAppStore();
+  const { appChainId, setAppMarket, appMarket, setAppChainId, usePermit, setUsePermit } = useUserPrefsStore();
   const { routes, open, setOpen } = props;
+  const [localUsePermit, setLocalUsePermit] = useState(usePermit);
+
+  if (marketsConfig[appChainId] == undefined) {
+    console.log(`using default chaindId ${Number(Object.keys(marketsConfig)[0])}`);
+    setAppChainId(Number(Object.keys(marketsConfig)[0]));
+  }
+
+  if (!marketsConfig[appChainId].some((_) => _.marketId == appMarket.marketId)) {
+    console.log(`using default market: ${marketsConfig[appChainId][0].name}`);
+    setAppMarket(marketsConfig[appChainId][0]);
+  }
+
+  function handleChangeChain(chainId: number) {
+    console.log('handleChangeChain', { chainId });
+    // if selected chain is not in the config list
+    // use the first one
+    // this can happen when loading chainId from store
+    if (marketsConfig[chainId] == undefined) {
+      chainId = Number(Object.keys(marketsConfig)[0]);
+    }
+
+    setAppChainId(chainId);
+  }
+
+  function handleChangeMarket(market: SupportedMarket) {
+    console.log('handleChangeMarket', { market });
+
+    // search if market exists in network
+    // if not, use first one
+    // this can happen when loading marketId from chain
+    if (!marketsConfig[appChainId].some((_) => _.marketId == market.marketId)) {
+      market = marketsConfig[appChainId][0];
+    }
+
+    setAppMarket(market);
+  }
+
+  function handleUsePermitChange(val) {
+    setLocalUsePermit(val);
+    setUsePermit(val);
+  }
 
   return (
     <div
@@ -35,9 +78,9 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
         </div>
         <div className="mt-2 px-1">
           <DropdownSelect
-            options={chains.filter(_ => SelectableChainId.includes(_.id)).map((chain) => chain.id)}
+            options={chains.filter((_) => SelectableChainId.includes(_.id)).map((chain) => chain.id)}
             selectedOption={appChainId}
-            onChange={(option) => setAppChainId(option)}
+            onChange={(option) => handleChangeChain(Number(option))}
             getLabel={(option) => {
               const chainFound = chains.find((chain) => chain.id == option);
               if (chainFound) {
@@ -57,7 +100,7 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
           <DropdownSelect
             options={marketsConfig[appChainId]}
             selectedOption={marketsConfig[appChainId].find((market) => market.key === appMarket.key)}
-            onChange={(option) => setAppMarket(option)}
+            onChange={(option) => handleChangeMarket(option as SupportedMarket)}
             getLabel={(option) => (
               <div className="flex items-center gap-1 text-sm">
                 <Image src={option.logo} width={25} height={25} alt={option.name} />
@@ -97,6 +140,27 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
 
       {/* Nav item end */}
       <div className="flex flex-col justify-end">
+        <div className="mb-2 text-center text-sm">
+          <Switch
+            checked={localUsePermit}
+            onChange={handleUsePermitChange}
+            className={clsx(
+              localUsePermit ? 'bg-brand-500' : 'bg-gray-200',
+              'border-transparent relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out'
+            )}
+          >
+            <span
+              aria-hidden="true"
+              className={clsx(
+                localUsePermit ? 'translate-x-5' : 'translate-x-0',
+                'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out'
+              )}
+            />
+          </Switch>
+          <span className="ml-2" style={{ display: 'inline-block', height: '24px', verticalAlign: 'bottom' }}>
+            Use Permit if available
+          </span>
+        </div>
         <a href={process.env.NEXT_PUBLIC_DOCS_URL} target="_blank">
           <div
             className={clsx(

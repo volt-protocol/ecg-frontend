@@ -11,7 +11,10 @@ export const getTitleDisabled = (
   minBorrow: number,
   pegTokenBorrowAmount: number,
   pegTokenBalance: number,
-  withLeverage: boolean
+  withLeverage: boolean,
+  leverageDataCallThreshold: number,
+  leverageBorrowAmount: number,
+  leverageBorrowAmountPegToken: number
 ): string => {
   if (!collateralAmount || collateralAmount <= 0) {
     return 'Enter collateral amount';
@@ -31,6 +34,21 @@ export const getTitleDisabled = (
 
   if (!withLeverage && borrowAmount > maxBorrow) {
     return 'Not enough collateral';
+  }
+
+  if (withLeverage) {
+    if (leverageBorrowAmount > maxDebt) {
+      return `Only ${formatCurrencyValue(maxDebt)} ${pegTokenSymbol} available debt`;
+    }
+    if (leverageBorrowAmount < minBorrow) {
+      return `Minimum borrow is ${formatCurrencyValue(minBorrow)} ${pegTokenSymbol}`;
+    }
+    if (leverageBorrowAmountPegToken > pegTokenBalance) {
+      return `Only ${formatCurrencyValue(pegTokenBalance)} ${pegTokenSymbol} liquidity available`;
+    }
+    if (leverageDataCallThreshold > 1) {
+      return 'Leverage too high';
+    }
   }
 
   if (collateralAmount > collateralBalance) {

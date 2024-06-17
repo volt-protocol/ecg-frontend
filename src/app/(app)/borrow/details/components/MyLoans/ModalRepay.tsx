@@ -12,6 +12,8 @@ import Link from 'next/link';
 import { getPegTokenLogo, getLeverageConfig } from 'config';
 import clsx from 'clsx';
 import { useAppStore, useUserPrefsStore } from 'store';
+import Image from 'next/image';
+import { TooltipHorizon } from 'components/tooltip';
 
 export default function ModalRepay({
   isOpen,
@@ -25,6 +27,7 @@ export default function ModalRepay({
   repayGateway,
   partialRepayGateway,
   repayGatewayLeverage,
+  getRepayGatewayLeverageData,
   minBorrow
 }: {
   isOpen: boolean;
@@ -38,10 +41,12 @@ export default function ModalRepay({
   repayGateway: (id: string, amount: string) => void;
   partialRepayGateway: (id: string, amount: string) => void;
   repayGatewayLeverage: (id: string) => void;
+  getRepayGatewayLeverageData: (id: string) => any;
   minBorrow: bigint;
 }) {
   const [value, setValue] = useState<string>('');
   const [match, setMatch] = useState<boolean>(false);
+  const [leverageData, setLeverageData] = useState<any>(null);
   const [withLeverage, setWithLeverage] = useState<boolean>(false);
   const { coinDetails, contractsList, lendingTerms } = useAppStore();
   const { appMarketId, appChainId } = useUserPrefsStore();
@@ -55,6 +60,17 @@ export default function ModalRepay({
   const normalizer = BigInt('1' + '0'.repeat(36 - pegToken.decimals));
   const pegTokenDebt: bigint = (BigInt(rowData?.loanDebt || 0) * creditMultiplier) / normalizer;
   const lendingTerm = lendingTerms.find((item) => item.address.toLowerCase() == rowData?.termAddress.toLowerCase());
+  const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
+  const collateralToken = coinDetails.find(
+    (item) => item.address.toLowerCase() === lendingTerm?.collateral.address.toLowerCase()
+  );
+  const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken?.price * 100)), 0);
+
+  if (rowData && withLeverage && !leverageData) {
+    getRepayGatewayLeverageData(rowData?.id).then(function (data) {
+      setLeverageData(data);
+    });
+  }
 
   // Reset value when modal opens
   useEffect(() => {
@@ -194,11 +210,206 @@ export default function ModalRepay({
                               </Switch>
                             </div>
                             {withLeverage && (
-                              <div className="mt-1 text-sm opacity-50 dark:text-white">
-                                This will not use any tokens in your wallet. Instead, you will take a flashloan of the
-                                amount of your debt, repay your debt, and swap as much collateral as needed to repay the
-                                flashloan. This option will only work if your loan is overcollateralized. The remaining
-                                collateral and debt tokens will be sent to your wallet if any.
+                              <div>
+                                <div className="mt-1 text-sm opacity-50 dark:text-white">
+                                  This will not use any tokens in your wallet. Instead, you will take a flashloan of the
+                                  amount of your debt, repay your debt, and swap as much collateral as needed to repay
+                                  the flashloan. This option will only work if your loan is overcollateralized. The
+                                  remaining collateral and debt tokens will be sent to your wallet if any.
+                                </div>
+                                {leverageData && (
+                                  <div className="mt-1 text-sm dark:text-white">
+                                    <div className="px-5">
+                                      <div className="text-xs">
+                                        <span className="font-mono">1.</span>{' '}
+                                        <Image
+                                          src="/img/balancer.png"
+                                          width={24}
+                                          height={24}
+                                          alt={''}
+                                          className="mr-1 inline-block rounded-full align-middle"
+                                        />
+                                        Flashloan{' '}
+                                        <Image
+                                          src={pegTokenLogo}
+                                          width={18}
+                                          height={18}
+                                          alt={''}
+                                          className="mr-1 inline-block rounded-full align-middle"
+                                        />
+                                        {formatDecimal(
+                                          Number(formatUnits(leverageData.input.pegTokenDebt, pegToken?.decimals)),
+                                          pegTokenDecimalsToDisplay
+                                        )}{' '}
+                                        {pegToken?.symbol}
+                                      </div>
+                                      <div className="text-xs">
+                                        <span className="font-mono">2.</span>{' '}
+                                        <Image
+                                          src="/img/crypto-logos/guild.png"
+                                          width={24}
+                                          height={24}
+                                          alt={''}
+                                          className="mr-1 inline-block rounded-full align-middle"
+                                        />
+                                        Repay debt{' '}
+                                      </div>
+                                      <div className="text-xs">
+                                        <span className="font-mono">3.</span>{' '}
+                                        {getLeverageConfig(
+                                          lendingTerm,
+                                          coinDetails,
+                                          contractsList?.marketContracts[appMarketId].pegTokenAddress
+                                        ).leverageDex === 'pendle' ? (
+                                          <Image
+                                            src="/img/crypto-logos/pendle.png"
+                                            width={24}
+                                            height={24}
+                                            alt={''}
+                                            className="mr-1 inline-block rounded-full align-middle"
+                                          />
+                                        ) : (
+                                          <Image
+                                            src="/img/kyberswap.png"
+                                            width={24}
+                                            height={24}
+                                            alt={''}
+                                            className="mr-1 inline-block rounded-full align-middle"
+                                          />
+                                        )}
+                                        Swap{' '}
+                                        <Image
+                                          src={lendingTerm.collateral.logo}
+                                          width={18}
+                                          height={18}
+                                          alt={''}
+                                          className="mr-1 inline-block rounded-full align-middle"
+                                        />
+                                        {false ? (
+                                          <span>
+                                            {formatDecimal(
+                                              Math.round(
+                                                1e6 *
+                                                  Number(
+                                                    formatUnits(
+                                                      leverageData.input.collateralAmount -
+                                                        leverageData.input.minCollateralRemaining,
+                                                      collateralToken?.decimals
+                                                    )
+                                                  )
+                                              ) / 1e6,
+                                              collateralTokenDecimalsToDisplay
+                                            )}{' '}
+                                          </span>
+                                        ) : null}
+                                        {collateralToken?.symbol} for{' '}
+                                        <Image
+                                          src={pegTokenLogo}
+                                          width={18}
+                                          height={18}
+                                          alt={''}
+                                          className="mr-1 inline-block rounded-full align-middle"
+                                        />
+                                        {pegToken?.symbol} (
+                                        <TooltipHorizon
+                                          extra=""
+                                          content={
+                                            <div className="p-2 dark:text-white">
+                                              Amount in: ${formatDecimal(leverageData.output.amountInUsd, 2)}
+                                              <br />
+                                              Amount out: ${formatDecimal(leverageData.output.amountOutUsd, 2)}
+                                            </div>
+                                          }
+                                          trigger={
+                                            <span>
+                                              {leverageData.output.amountOutUsd >= leverageData.output.amountInUsd
+                                                ? '+'
+                                                : '-'}
+                                              {Math.round(
+                                                10000 *
+                                                  Math.abs(
+                                                    1 -
+                                                      leverageData.output.amountOutUsd / leverageData.output.amountInUsd
+                                                  )
+                                              ) / 100}
+                                              %
+                                            </span>
+                                          }
+                                          placement="top"
+                                        />
+                                        )
+                                      </div>
+                                      <div className="text-xs">
+                                        <span className="font-mono">4.</span>{' '}
+                                        <Image
+                                          src="/img/balancer.png"
+                                          width={24}
+                                          height={24}
+                                          alt={''}
+                                          className="mr-1 inline-block rounded-full align-middle"
+                                        />
+                                        Repay Flashloan
+                                      </div>
+                                      <div className="text-xs">
+                                        <span className="font-mono">5.</span>{' '}
+                                        <Image
+                                          src="/img/crypto-logos/guild.png"
+                                          width={24}
+                                          height={24}
+                                          alt={''}
+                                          className="mr-1 inline-block rounded-full align-middle"
+                                        />
+                                        Receive at least{' '}
+                                        <Image
+                                          src={lendingTerm.collateral.logo}
+                                          width={18}
+                                          height={18}
+                                          alt={''}
+                                          className="mr-1 inline-block rounded-full align-middle"
+                                        />
+                                        {formatDecimal(
+                                          Math.round(
+                                            1e6 *
+                                              Number(
+                                                formatUnits(
+                                                  leverageData.input.minCollateralRemaining,
+                                                  collateralToken?.decimals
+                                                )
+                                              )
+                                          ) / 1e6,
+                                          collateralTokenDecimalsToDisplay
+                                        )}{' '}
+                                        {collateralToken?.symbol}
+                                      </div>
+                                      <div className="text-xs">
+                                        <span className="font-mono">6.</span>{' '}
+                                        <Image
+                                          src="/img/crypto-logos/guild.png"
+                                          width={24}
+                                          height={24}
+                                          alt={''}
+                                          className="mr-1 inline-block rounded-full align-middle"
+                                        />
+                                        Receive dust{' '}
+                                        <Image
+                                          src={lendingTerm.collateral.logo}
+                                          width={18}
+                                          height={18}
+                                          alt={''}
+                                          className="mr-1 inline-block rounded-full align-middle"
+                                        />
+                                        <Image
+                                          src={pegTokenLogo}
+                                          width={18}
+                                          height={18}
+                                          alt={''}
+                                          className="mr-1 inline-block rounded-full align-middle"
+                                        />
+                                        (swap amounts have to be estimated)
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>

@@ -36,3 +36,14 @@ option {
 .dark .apexcharts-text {
   fill: #bbb !important;
 }
+
+/* airdrop */
+.airdroptable tbody td {
+  padding: 5px;
+}
+.airdroptable tbody td table td:nth-child(2n + 3):not(:last-child) {
+  border-right: 1px solid;
+}
+.airdroptable tbody td table td:nth-child(2) {
+  border-right: 1px solid;
+}

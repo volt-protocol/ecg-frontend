@@ -581,6 +581,40 @@ function Myloans({
     }
   }
 
+  async function getRepayGatewayLeverageData(loanId: string) {
+    const loan = tableDataWithDebts.find((item) => item.id == loanId);
+    const collateralAmount = loan.collateralAmount as bigint;
+    const collateralValue: number = formatUnits(collateralAmount, collateralToken.decimals) * collateralToken.price;
+    const quarterHourInterests =
+      (parseUnits(lendingTerm.interestRate.toString(), 2) * loan.loanDebt) /
+      BigInt(100) /
+      (BigInt(4) * BigInt(HOURS_IN_YEAR));
+    const decimalNormalizer = BigInt('1' + '0'.repeat(36 - pegToken.decimals));
+    const pegTokenDebt = ((loan.loanDebt + quarterHourInterests) * creditMultiplier) / decimalNormalizer + BigInt(1); // add 1 wei for rounding
+    const debtValue = Number(formatUnits(pegTokenDebt, pegToken.decimals)) * pegToken.price;
+    const ltv = (100 * debtValue) / collateralValue;
+    const minCollateralRemaining = (collateralAmount * BigInt(Math.max(0, Math.ceil(100 - ltv - 1)))) / BigInt(100);
+    const dexData = await getDexRouterData(
+      getLeverageConfig(lendingTerm, coinDetails, contractsList?.marketContracts[appMarketId].pegTokenAddress)
+        .leverageDex,
+      lendingTerm.collateral.address,
+      pegToken?.address,
+      collateralAmount - minCollateralRemaining,
+      0.005, // 0.5% max slippage
+      contractsList.gatewayAddress,
+      contractsList.gatewayAddress
+    );
+    return {
+      input: {
+        collateralAmount,
+        minCollateralRemaining,
+        pegTokenDebt,
+        ltv
+      },
+      output: dexData
+    };
+  }
+
   async function repayGatewayLeverage(loanId: string) {
     setOpen(false);
     const createSteps = (): Step[] => {
@@ -669,26 +703,7 @@ function Myloans({
     /* Call gateway.multicall() */
     try {
       updateStepStatus('Repay with Flashloan', 'In Progress');
-      const collateralValue = formatUnits(collateralAmount, collateralToken.decimals) * collateralToken.price;
-      const quarterHourInterests =
-        (parseUnits(lendingTerm.interestRate.toString(), 2) * loan.loanDebt) /
-        BigInt(100) /
-        (BigInt(4) * BigInt(HOURS_IN_YEAR));
-      const decimalNormalizer = BigInt('1' + '0'.repeat(36 - pegToken.decimals));
-      const pegTokenDebt = ((loan.loanDebt + quarterHourInterests) * creditMultiplier) / decimalNormalizer + BigInt(1); // add 1 wei for rounding
-      const debtValue = Number(formatUnits(pegTokenDebt, pegToken.decimals)) * pegToken.price;
-      const ltv = (100 * debtValue) / collateralValue;
-      const minCollateralRemaining = (collateralAmount * BigInt(Math.max(0, Math.ceil(100 - ltv - 1)))) / BigInt(100);
-      const dexData = await getDexRouterData(
-        getLeverageConfig(lendingTerm, coinDetails, contractsList?.marketContracts[appMarketId].pegTokenAddress)
-          .leverageDex,
-        lendingTerm.collateral.address,
-        pegToken?.address,
-        collateralAmount - minCollateralRemaining,
-        0.005, // 0.5% max slippage
-        contractsList.gatewayAddress,
-        contractsList.gatewayAddress
-      );
+      const dexData = await getRepayGatewayLeverageData(loanId);
       let pullCollateralCalls = [
         encodeFunctionData({
           abi: GatewayABI as Abi,
@@ -724,13 +739,13 @@ function Myloans({
             psm: psmAddress,
             collateralToken: lendingTerm.collateral.address,
             pegToken: pegToken.address,
-            minCollateralRemaining: minCollateralRemaining,
+            minCollateralRemaining: dexData.input.minCollateralRemaining,
             pullCollateralCalls: pullCollateralCalls,
-            routerAddress: dexData.routerAddress,
-            routerCallData: dexData.routerData
+            routerAddress: dexData.output.routerAddress,
+            routerCallData: dexData.output.routerData
           }
         ],
-        gas: dexData.routerGas + 5_000_000
+        gas: dexData.output.routerGas + 5_000_000
       });
 
       const txReceipt = await waitForTransactionReceipt(wagmiConfig, {
@@ -1244,6 +1259,7 @@ function Myloans({
         repayGateway={repayGateway}
         partialRepayGateway={partialRepayGateway}
         repayGatewayLeverage={repayGatewayLeverage}
+        getRepayGatewayLeverageData={getRepayGatewayLeverageData}
         creditMultiplier={creditMultiplier}
         minBorrow={minBorrow}
       />

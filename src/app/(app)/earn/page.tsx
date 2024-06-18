@@ -71,7 +71,7 @@ function MintAndSaving() {
   }, 0);
   const marketWeight = airdropData.marketDebt[appMarketId];
   console.log('market earns', Math.round((10000 * marketWeight) / totalMarketWeights) / 100, '% of lender rewards');
-  const dailyGuildToLenders = dailyGuild * 0.7; // 70% to lenders
+  const dailyGuildToLenders = dailyGuild * 0.75; // 75% to lenders
   const dailyGuildToMarketLenders = dailyGuildToLenders * (marketWeight / totalMarketWeights);
   const marketCreditSupply = Number(historicalData.aprData.values.rebasingSupply.slice(-1)[0]);
   const marketCreditSupplyValue =
@@ -639,10 +639,10 @@ function MintAndSaving() {
                     GUILD airdrop : <span className="font-semibold">10M</span>
                   </p>
                   <p>
-                    Period duration : <span className="font-semibold">30 days</span>
+                    Period duration : <span className="font-semibold">28 days</span>
                   </p>
                   <p>
-                    GUILD to lenders : <span className="font-semibold">70%</span>
+                    GUILD to lenders : <span className="font-semibold">75%</span>
                   </p>
                   <p>
                     Daily GUILD to lenders :{' '}

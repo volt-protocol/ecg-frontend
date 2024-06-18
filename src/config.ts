@@ -35,6 +35,18 @@ export const pendleConfig: PendleConfig = {
     market: '0x6Ae79089b2CF4be441480801bb741A531d94312b', // market
     syTokenOut: '0x4186BFC76E2E237523CBC30FD220FE055156b41F' // rsETH
   },
+  // ERC20_PT_WEETH_26SEP2024
+  '0xb8b0a120f6a68dd06209619f62429fb1a8e92fec': {
+    chainId: 42161,
+    market: '0xf9f9779d8ff604732eba9ad345e6a27ef5c2a9d6', // market
+    syTokenOut: '0x35751007a407ca6FEFfE80b3cB397736D2cf4dbe' // weETH
+  },
+  // ERC20_PT_RSETH_26SEP2024
+  '0x30c98c0139b62290e26ac2a2158ac341dcaf1333': {
+    chainId: 42161,
+    market: '0xed99fc8bdb8e9e7b8240f62f69609a125a0fbf14', // market
+    syTokenOut: '0x4186BFC76E2E237523CBC30FD220FE055156b41F' // rsETH
+  },
   // ERC20_PT_USDe_29AUG2024
   '0xad853eb4fb3fe4a66cdfcd7b75922a0494955292': {
     chainId: 42161,
@@ -71,14 +83,26 @@ export interface PermitConfig {
 //set permit configurations for each collateral token here
 export const permitConfig: PermitConfig[] = [
   {
+    // Arbitrum PT_WEETH_26SEP2024
+    address: '0xb8b0a120F6A68Dd06209619F62429fB1a8e92feC',
+    hasPermit: true,
+    version: '1'
+  },
+  {
+    // Arbitrum PT_RSETH_26SEP2024
+    address: '0x30c98c0139B62290E26aC2a2158AC341Dcaf1333',
+    hasPermit: true,
+    version: '1'
+  },
+  {
     // Arbitrum PT_WEETH_27JUN2024
     address: '0x1c27Ad8a19Ba026ADaBD615F6Bc77158130cfBE4',
     hasPermit: true,
     version: '1'
   },
   {
-    // Arbitrum ERC20_PT_RSETH_27JUN2024
-    address: '0xafd22f824d51fb7eed4778d303d4388ac644b026',
+    // Arbitrum PT_RSETH_27JUN2024
+    address: '0xAFD22F824D51Fb7EeD4778d303d4388AC644b026',
     hasPermit: true,
     version: '1'
   },
@@ -132,6 +156,14 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
       logo: '/img/crypto-logos/weth.png'
     },
     {
+      key: 'usdc-1',
+      pegToken: 'USDC',
+      name: 'USDC',
+      marketId: 1,
+      networkId: 42161,
+      logo: '/img/crypto-logos/usdc.png'
+    },
+    {
       key: 'arb-4',
       pegToken: 'ARB',
       name: 'ARB',
@@ -140,12 +172,12 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
       logo: '/img/crypto-logos/arb.png'
     },
     {
-      key: 'usdc-1',
-      pegToken: 'USDC',
-      name: 'USDC',
-      marketId: 1,
+      key: 'od-5',
+      pegToken: 'OD',
+      name: 'OD',
+      marketId: 5,
       networkId: 42161,
-      logo: '/img/crypto-logos/usdc.png'
+      logo: '/img/crypto-logos/od.png'
     },
     {
       key: 'usdc-test',

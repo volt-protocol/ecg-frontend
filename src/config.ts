@@ -244,7 +244,15 @@ if (process.env.NEXT_PUBLIC_APP_ENV.toLowerCase() == 'production') {
         marketId: 4,
         networkId: 42161,
         logo: '/img/crypto-logos/arb.png'
-      }
+      },
+      {
+        key: 'od-5',
+        pegToken: 'OD',
+        name: 'OD',
+        marketId: 5,
+        networkId: 42161,
+        logo: '/img/crypto-logos/od.png'
+      },
     ]
   };
 }

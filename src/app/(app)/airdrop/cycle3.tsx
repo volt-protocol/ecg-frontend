@@ -12,7 +12,12 @@ function AirdropCycle3() {
         </span>
       </h3>
 
-      <p className="mb-1 italic opacity-50">In this epoch, rewards are computed in a similar fashion to Cycle 2.</p>
+      <p className="mb-1 italic opacity-50">
+        In this epoch, rewards are computed in a similar fashion to Cycle 2, but proportion of rewards change :
+      </p>
+      <p className="mb-1 italic opacity-50">
+        10M GUILD Airdrop (unchanged). 75% to Lenders, 10% to Borrowers, 15% to Stakers.
+      </p>
     </Card>
   );
 }

@@ -356,14 +356,12 @@ const GlobalDashboard = () => {
               <dd className="mt-1 flex items-baseline justify-between md:block lg:flex">
                 <div className="flex items-center gap-2 overflow-hidden text-lg font-semibold text-gray-700 dark:text-gray-200 xl:text-2xl">
                   <Image src={pegTokenLogo} width={32} height={32} alt={''} />
-                  {firstLossData && firstLossData.length != 0 ? (
-                    formatDecimal(
-                      firstLossData[firstLossData.length - 1].value * data?.creditMultiplier,
-                      pegTokenDecimalsToDisplay
-                    )
-                  ) : (
-                    <div className="h-5 w-28 animate-pulse rounded-md bg-gray-200" />
-                  )}
+                  {firstLossData && firstLossData.length != 0
+                    ? formatDecimal(
+                        firstLossData[firstLossData.length - 1].value * data?.creditMultiplier,
+                        pegTokenDecimalsToDisplay
+                      )
+                    : 0}
                 </div>
               </dd>
             </div>
@@ -372,15 +370,13 @@ const GlobalDashboard = () => {
               <dd className="mt-1 flex items-baseline justify-between md:block lg:flex">
                 <div className="flex items-center gap-2 overflow-hidden text-lg font-semibold text-gray-700 dark:text-gray-200 xl:text-2xl">
                   <Image src={pegTokenLogo} width={32} height={32} alt={''} />
-                  {firstLossData && firstLossData.length != 0 ? (
-                    formatDecimal(
-                      firstLossData.filter((item) => item.term != 'Global').reduce((a, b) => a + b.value, 0) *
-                        data?.creditMultiplier,
-                      pegTokenDecimalsToDisplay
-                    )
-                  ) : (
-                    <div className="h-5 w-28 animate-pulse rounded-md bg-gray-200" />
-                  )}
+                  {firstLossData && firstLossData.length != 0
+                    ? formatDecimal(
+                        firstLossData.filter((item) => item.term != 'Global').reduce((a, b) => a + b.value, 0) *
+                          data?.creditMultiplier,
+                        pegTokenDecimalsToDisplay
+                      )
+                    : 0}
                 </div>
               </dd>
             </div>

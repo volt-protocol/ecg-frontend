@@ -30,19 +30,15 @@ export const CreditTotalSupply = ({
   const { appMarketId, appChainId } = useUserPrefsStore();
 
   useEffect(() => {
-    if (
-      !creditSupply ||
-      !creditTotalIssuance ||
-      lastCreditSupply == -1 ||
-      lastCreditTotalIssuance == -1 ||
-      !creditMultiplierHistory
-    )
-      return;
+    if (!creditSupply || !creditTotalIssuance || !creditMultiplierHistory) return;
 
-    creditSupply.values.push(lastCreditSupply);
-    creditSupply.timestamps.push(Date.now());
-    creditTotalIssuance.values.push(lastCreditTotalIssuance);
-    creditTotalIssuance.timestamps.push(Date.now());
+    if (lastCreditSupply != -1 && lastCreditTotalIssuance != -1) {
+      creditSupply.values.push(lastCreditSupply);
+      creditSupply.timestamps.push(Date.now());
+      creditTotalIssuance.values.push(lastCreditTotalIssuance);
+      creditTotalIssuance.timestamps.push(Date.now());
+    }
+
     creditMultiplierHistory.timestamps.push(Date.now());
     creditMultiplierHistory.values.push(Number(formatUnits(creditMultiplier, 18)));
 

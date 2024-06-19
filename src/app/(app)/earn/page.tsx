@@ -57,7 +57,7 @@ function MintAndSaving() {
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
   const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10((pegToken ? pegToken.price : 0) * 100)), 0);
-  const creditTokenSymbol = 'g' + pegToken?.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
 
   // airdrop computations

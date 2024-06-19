@@ -56,7 +56,7 @@ const LendingDetails = () => {
   const profitManagerAddress = contractsList?.marketContracts[appMarketId]?.profitManagerAddress;
   const surplusGuildMinterAddress = contractsList?.marketContracts[appMarketId]?.surplusGuildMinterAddress;
 
-  const creditTokenSymbol = 'g' + pegToken?.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
 
   // airdrop computations

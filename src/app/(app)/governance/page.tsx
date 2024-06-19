@@ -25,7 +25,7 @@ function Governance() {
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
-  const creditTokenSymbol = 'g' + pegToken?.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
 
   //TODO:  optimize contracts call with useReadContracts
   const { data, isError, isLoading, refetch } = useReadContracts({

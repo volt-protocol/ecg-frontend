@@ -30,7 +30,7 @@ import { ConnectWeb3Button } from 'components/button/ConnectWeb3Button';
 import { TransactionBadge } from 'components/badge/TransactionBadge';
 import { ItemIdBadge } from 'components/badge/ItemIdBadge';
 import { useAppStore, useUserPrefsStore } from 'store';
-import { shortenUint } from 'utils/strings';
+import { getCreditTokenSymbol, shortenUint } from 'utils/strings';
 import { Auction, AuctionHouse } from '../../../../store/slices/auctions';
 import { getExplorerBaseUrl } from 'config';
 import { approvalStepsFlow } from 'utils/approvalHelper';
@@ -57,7 +57,7 @@ export default function AuctionsTable({
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
   const creditAddress = contractsList?.marketContracts[appMarketId]?.creditAddress;
-  const creditTokenSymbol = 'g' + pegToken?.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
   const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken?.price * 100)), 0);
 

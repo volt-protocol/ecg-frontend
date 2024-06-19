@@ -103,11 +103,11 @@ const GlobalDashboard = () => {
       setDataLoading(false);
     };
 
-    if (lendingTerms.length == 0) {
-      setDataLoading(false);
-    } else {
+    // if (lendingTerms.length == 0) {
+    //   setDataLoading(false);
+    // } else {
       asyncFunc();
-    }
+    // }
   }, [lendingTerms]);
 
   if (!contractsList?.marketContracts[appMarketId]) {

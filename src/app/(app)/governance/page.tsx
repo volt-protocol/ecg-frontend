@@ -10,6 +10,7 @@ import OffboardTerm from './components/OffboardTerm';
 import OnboardNewterm from './components/OnboardNewTerm';
 import { useAppStore, useUserPrefsStore } from 'store';
 import Spinner from 'components/spinner';
+import { getCreditTokenSymbol } from 'utils/strings';
 
 export type Delegatee = {
   address: string;

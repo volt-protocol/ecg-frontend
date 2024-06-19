@@ -14,7 +14,7 @@ import { fromNow } from 'utils/date';
 import { BLOCK_LENGTH_MILLISECONDS } from 'utils/constants';
 import { MintRedeemLogs } from 'lib/logs/mint-redeem';
 import { VoteLogs } from 'lib/logs/votes';
-import { addSlash, camelCasetoString, shortenUint } from 'utils/strings';
+import { addSlash, camelCasetoString, getCreditTokenSymbol, shortenUint } from 'utils/strings';
 import { getLastVoteEventDescription } from '../profile/helper';
 import { AddressBadge } from 'components/badge/AddressBadge';
 import { Address } from 'viem';
@@ -33,7 +33,7 @@ export const LastProtocolActivity = ({ data, currentBlock }: { data: LastActivit
     (item) => item.address.toLowerCase() === contractsList.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
   );
 
-  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
   const getDescription = (event: LastActivity): any => {
     if (event.category === 'mintRedeem') {
       return (

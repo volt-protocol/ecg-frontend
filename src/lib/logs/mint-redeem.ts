@@ -2,6 +2,7 @@ import { getPublicClient } from '@wagmi/core';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { CoinSettings } from 'store/slices/coin-details';
 import { ContractsList } from 'store/slices/contracts-list';
+import { getCreditTokenSymbol } from 'utils/strings';
 import { Address, formatUnits } from 'viem';
 
 export interface MintRedeemLogs {
@@ -63,7 +64,7 @@ export async function getAllMintRedeemLogs(
     (item) => item.address.toLowerCase() === contractsList.marketContracts[appMarketId].creditAddress.toLowerCase()
   );
 
-  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
 
   const mintLogsMod = mintLogs.map((log) => {
     return {

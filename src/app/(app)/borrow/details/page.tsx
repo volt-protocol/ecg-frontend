@@ -19,7 +19,7 @@ import { useAppStore, useUserPrefsStore } from 'store';
 import { Tab } from '@headlessui/react';
 import clsx from 'clsx';
 import { Abi, formatUnits, erc20Abi, Address } from 'viem';
-import { eq, generateTermName } from 'utils/strings';
+import { eq, generateTermName, getCreditTokenSymbol } from 'utils/strings';
 import { formatDecimal, formatCurrencyValue } from 'utils/numbers';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { getPegTokenLogo, getExplorerBaseUrl } from 'config';

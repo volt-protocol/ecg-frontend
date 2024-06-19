@@ -398,11 +398,7 @@ function AirdropCycle2() {
                             Staker Rewards
                           </th>
                           {marketsConfig[appChainId].map((marketConfig) => {
-                            const creditTokenSymbol =
-                              'g' +
-                              marketConfig.pegToken +
-                              '-' +
-                              (marketConfig.marketId > 999e6 ? 'test' : marketConfig.marketId);
+                            const creditTokenSymbol = 'g' + marketConfig.pegToken
 
                             return (
                               <th className="whitespace-nowrap text-center" colSpan={2}>

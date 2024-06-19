@@ -14,6 +14,7 @@ import clsx from 'clsx';
 import { useAppStore, useUserPrefsStore } from 'store';
 import Image from 'next/image';
 import { TooltipHorizon } from 'components/tooltip';
+import { getCreditTokenSymbol } from 'utils/strings';
 
 export default function ModalRepay({
   isOpen,
@@ -54,7 +55,7 @@ export default function ModalRepay({
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
   );
-  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
   const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
   const normalizer = BigInt('1' + '0'.repeat(36 - pegToken.decimals));

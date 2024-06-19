@@ -10,14 +10,15 @@ import Card from 'components/card';
 import { formatCurrencyValue } from 'utils/numbers';
 
 export const TVLChart = ({ tvl, lastTVL }: { tvl: any; lastTVL: number }) => {
-  const [chartData, setChartData] = useState<any>([]);
+  const [chartData, setChartData] = useState<any>(null);
   const [timeline, setTimeline] = useState<ChartTimeline>('all');
 
   useEffect(() => {
     if (!tvl) return;
-    if (lastTVL == -1) return;
-    tvl.values.push(lastTVL);
-    tvl.timestamps.push(Date.now());
+    if (lastTVL != -1) {
+      tvl.values.push(lastTVL);
+      tvl.timestamps.push(Date.now());
+    }
 
     const state = {
       series: [
@@ -98,7 +99,7 @@ export const TVLChart = ({ tvl, lastTVL }: { tvl: any; lastTVL: number }) => {
       extra="w-full min-h-[300px] md:col-span-2 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4"
       rightText={getTimelineButton({ timeline, updateData })}
     >
-      {chartData.length === 0 ? (
+      {chartData === null ? (
         <div className="flex h-96 items-center justify-center">
           <Spinner />
         </div>

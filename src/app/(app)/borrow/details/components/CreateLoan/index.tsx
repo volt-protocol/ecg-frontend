@@ -27,6 +27,7 @@ import { approvalStepsFlow } from 'utils/approvalHelper';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import Image from 'next/image';
 import { getDexRouterData } from 'utils/dexApi';
+import { getCreditTokenSymbol } from 'utils/strings';
 
 let doRequestTimeout;
 
@@ -728,7 +729,7 @@ function CreateLoan({
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
   );
-  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
   const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
 

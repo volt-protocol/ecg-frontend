@@ -33,6 +33,7 @@ import { useAppStore, useUserPrefsStore } from 'store';
 import { marketsConfig } from 'config';
 import { approvalStepsFlow } from 'utils/approvalHelper';
 import { getDexRouterData } from 'utils/dexApi';
+import { getCreditTokenSymbol } from 'utils/strings';
 
 function Myloans({
   lendingTerm,
@@ -75,7 +76,7 @@ function Myloans({
   const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken.price * 100)), 0);
   const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
-  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
 
   const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
   const psmAddress = contractsList?.marketContracts[appMarketId].psmAddress;

@@ -13,6 +13,7 @@ import { getPegTokenLogo, marketsConfig } from 'config';
 import { useAppStore, useUserPrefsStore } from 'store';
 import Image from 'next/image';
 import ImageWithFallback from 'components/image/ImageWithFallback';
+import { getCreditTokenSymbol } from 'utils/strings';
 
 export default function LendingStats({
   lendingTermData,
@@ -36,7 +37,7 @@ export default function LendingStats({
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
   );
   const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken.price * 100)), 0);
-  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
   const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
   const creditMultiplierNumber = Number(formatUnits(creditMultiplier, 18));

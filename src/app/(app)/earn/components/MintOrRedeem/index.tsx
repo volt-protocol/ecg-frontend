@@ -17,6 +17,7 @@ import { getPegTokenLogo, getExplorerBaseUrl, permitConfig } from 'config';
 import Image from 'next/image';
 import { MdOpenInNew } from 'react-icons/md';
 import { signPermit } from 'lib/transactions/signPermit';
+import { getCreditTokenSymbol } from 'utils/strings';
 
 function MintOrRedeem({
   reloadMintRedeem,
@@ -55,7 +56,7 @@ function MintOrRedeem({
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
   );
-  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
 
   const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);

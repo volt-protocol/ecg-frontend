@@ -24,6 +24,7 @@ import { BsClock, BsPerson, BsSafe2, BsPercent, BsFire } from 'react-icons/bs';
 import Widget from 'components/widget/Widget';
 import { ApexChartWrapper } from 'components/charts/ApexChartWrapper';
 import DefiInputBox from 'components/box/DefiInputBox';
+import { getCreditTokenSymbol } from 'utils/strings';
 
 function MintAndSaving() {
   const { contractsList, coinDetails, historicalData, airdropData, creditHolderCount, profitSharingConfig } =
@@ -57,7 +58,7 @@ function MintAndSaving() {
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
   const pegTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10((pegToken ? pegToken.price : 0) * 100)), 0);
-  const creditTokenSymbol = 'g' + pegToken?.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
 
   // airdrop computations

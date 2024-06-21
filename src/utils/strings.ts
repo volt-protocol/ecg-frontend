@@ -15,7 +15,7 @@ export function getPegToken(coinDetails: CoinSettings[], appMarketId: number, co
 
 export function getCreditTokenSymbol(coinDetails: CoinSettings[], appMarketId: number, contractsList: ContractsList) {
   const pegToken = getPegToken(coinDetails, appMarketId, contractsList);
-  const creditTokenSymbol = 'g' + pegToken?.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = 'g' + pegToken?.symbol;
   return creditTokenSymbol;
 }
 

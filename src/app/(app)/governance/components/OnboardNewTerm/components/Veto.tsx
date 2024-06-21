@@ -30,6 +30,7 @@ import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore, useUserPrefsStore } from 'store';
 import { getExplorerBaseUrl, getL1BlockNumber } from 'config';
 import { SECONDS_IN_DAY } from 'utils/constants';
+import { getCreditTokenSymbol } from 'utils/strings';
 
 function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: bigint; guildVotingWeight: bigint }) {
   const { contractsList, coinDetails, proposals, fetchProposalsUntilBlock } = useAppStore();
@@ -43,7 +44,7 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
   );
-  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
 
   useEffect(() => {
     address && fetchActiveOnboardingVetoVotes();

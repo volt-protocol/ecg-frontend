@@ -10,6 +10,7 @@ import { useAppStore, useUserPrefsStore } from 'store';
 import { AddressBadge } from 'components/badge/AddressBadge';
 import { marketsConfig, getPegTokenLogo } from 'config';
 import { formatCurrencyValue } from 'utils/numbers';
+import { getCreditTokenSymbol } from 'utils/strings';
 
 interface UserDailyData {
   [userAddress: string]: DailyData;
@@ -280,11 +281,7 @@ function AirdropCycle1() {
                           GUILD
                         </th>
                         {marketsConfig[appChainId].map((marketConfig) => {
-                          const creditTokenSymbol =
-                            'g' +
-                            marketConfig.pegToken +
-                            '-' +
-                            (marketConfig.marketId > 999e6 ? 'test' : marketConfig.marketId);
+                          const creditTokenSymbol = 'g' + marketConfig.pegToken;
 
                           return (
                             <th className="whitespace-nowrap text-center" colSpan={3}>

@@ -20,6 +20,7 @@ import { useAppStore, useUserPrefsStore } from 'store';
 import { getPegTokenLogo, marketsConfig } from 'config';
 import Image from 'next/image';
 import { approvalStepsFlow } from 'utils/approvalHelper';
+import { getCreditTokenSymbol } from 'utils/strings';
 
 function StakeCredit({
   debtCeiling,
@@ -58,7 +59,7 @@ function StakeCredit({
   );
   const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
   const surplusGuildMinterAddress = contractsList?.marketContracts[appMarketId].surplusGuildMinterAddress;
-  const creditTokenSymbol = 'g' + pegToken.symbol + '-' + (appMarketId > 999e6 ? 'test' : appMarketId);
+  const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
   const creditTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(pegToken.price * 100)), 0);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
   const creditMultiplierNumber = Number(formatUnits(creditMultiplier, 18));

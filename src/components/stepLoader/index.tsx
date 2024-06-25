@@ -1,4 +1,4 @@
-import React, { Dispatch, SetStateAction, useEffect } from 'react';
+import React, { Dispatch, ReactElement, SetStateAction, useEffect } from 'react';
 import { Step } from './stepType';
 import Spinner from 'components/spinner';
 import { camelCasetoString } from 'utils/strings';
@@ -7,12 +7,14 @@ function StepModal({
   steps,
   close,
   initialStep,
-  setSteps
+  setSteps,
+  message
 }: {
   steps: Step[];
   close: Dispatch<SetStateAction<boolean>>;
   initialStep?: () => Step[];
   setSteps: Dispatch<SetStateAction<Step[]>>;
+  message?: string | ReactElement;
 }) {
   const [showCloseButton, setShowCloseButton] = React.useState(false);
 
@@ -103,6 +105,8 @@ function StepModal({
             </div>
           ))}
         </div>
+
+        {message !== undefined ? <div className="mt-2 text-sm">{message}</div> : null}
 
         {showCloseButton && (
           <div className="flex">

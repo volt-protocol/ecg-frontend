@@ -515,7 +515,24 @@ export default function AuctionsTable({
 
   return (
     <>
-      {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
+      {showModal && (
+        <StepModal
+          steps={steps}
+          close={setShowModal}
+          initialStep={createSteps}
+          setSteps={setSteps}
+          message={
+            <div className="text-center">
+              🍜 Take your time!
+              <div className="max-w-md opacity-70">
+                In the Credit Guild, the first bid wins the auction. Auction price decreases over time, so if you bid
+                too early, you might buy the borrower's collateral above market price, and if you bid too late, someone
+                might take the deal before you.
+              </div>
+            </div>
+          }
+        />
+      )}
       <div className="mt-4 overflow-auto">
         <table className="w-full">
           <thead>

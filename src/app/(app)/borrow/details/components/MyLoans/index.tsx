@@ -594,17 +594,18 @@ function Myloans({
     const pegTokenDebt = ((loan.loanDebt + quarterHourInterests) * creditMultiplier) / decimalNormalizer + BigInt(1); // add 1 wei for rounding
     const debtValue = Number(formatUnits(pegTokenDebt, pegToken.decimals)) * pegToken.price;
     const ltv = (100 * debtValue) / collateralValue;
-    const minCollateralRemaining = (collateralAmount * BigInt(Math.max(0, Math.ceil(100 - ltv - 1)))) / BigInt(100);
+    const minCollateralRemaining = (collateralAmount * BigInt(Math.max(0, Math.ceil(100 - ltv - 3)))) / BigInt(100);
     const dexData = await getDexRouterData(
       getLeverageConfig(lendingTerm, coinDetails, contractsList?.marketContracts[appMarketId].pegTokenAddress)
-        .leverageDex,
-      lendingTerm.collateral.address,
-      pegToken?.address,
-      collateralAmount - minCollateralRemaining,
+        .leverageDex, // dex
+      lendingTerm.collateral.address, // fromToken
+      pegToken?.address, // toToken
+      collateralAmount - minCollateralRemaining, // amountIn
       0.005, // 0.5% max slippage
-      contractsList.gatewayAddress,
-      contractsList.gatewayAddress
+      contractsList.gatewayAddress, // sender
+      contractsList.gatewayAddress // recipient
     );
+
     return {
       input: {
         collateralAmount,

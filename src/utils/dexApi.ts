@@ -67,13 +67,22 @@ export async function getDexRouterData(
       _pendleConfig = pendleConfig[fromToken.toLowerCase()];
       if (_pendleConfig) {
         fromTokenIsPt = true;
-        urlGet = `https://api-v2.pendle.finance/sdk/api/v1/swapExactPtForToken?chainId=${
-          _pendleConfig.chainId
-        }&receiverAddr=${recipient}&marketAddr=${
-          _pendleConfig.market
-        }&amountPtIn=${amountIn.toString()}&tokenOutAddr=${toToken}&syTokenOutAddr=${
-          _pendleConfig.syTokenOut
-        }&slippage=${slippage}&excludedSources=balancer-v1,balancer-v2-composable-stable,balancer-v2-stable,balancer-v2-weighted`;
+        const expired = new Date(_pendleConfig.expiry).getTime() < Date.now();
+        urlGet = expired
+          ? `https://api-v2.pendle.finance/sdk/api/v1/redeemPyToToken?chainId=${
+              _pendleConfig.chainId
+            }&receiverAddr=${recipient}&ytAddr=${
+              _pendleConfig.ytAddress
+            }&amountPyIn=${amountIn.toString()}&tokenOutAddr=${toToken}&syTokenOutAddr=${
+              _pendleConfig.syTokenOut
+            }&slippage=${slippage}&excludedSources=balancer-v1,balancer-v2-composable-stable,balancer-v2-stable,balancer-v2-weighted`
+          : `https://api-v2.pendle.finance/sdk/api/v1/swapExactPtForToken?chainId=${
+              _pendleConfig.chainId
+            }&receiverAddr=${recipient}&marketAddr=${
+              _pendleConfig.market
+            }&amountPtIn=${amountIn.toString()}&tokenOutAddr=${toToken}&syTokenOutAddr=${
+              _pendleConfig.syTokenOut
+            }&slippage=${slippage}&excludedSources=balancer-v1,balancer-v2-composable-stable,balancer-v2-stable,balancer-v2-weighted`;
       } else {
         throw 'Unsupported pendle fromToken[' + fromToken + '] or toToken[' + toToken + ']';
       }

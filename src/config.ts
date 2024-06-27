@@ -14,44 +14,51 @@ export interface PendleConfig {
     chainId: number;
     market: string;
     syTokenOut: string;
+    ytAddress: string;
+    expiry: string;
   };
 }
 
 export const pendleConfig: PendleConfig = {
-  //'xxxx': { // lowercase pt token address
-  //  chainId: 42161, // arbitrum
-  //  market: 'xxxx', // checksumed market address
-  //  syTokenOut: 'xxxx' // checksumed underlying address
-  //},
   // ERC20_PT_WEETH_27JUN2024
   '0x1c27ad8a19ba026adabd615f6bc77158130cfbe4': {
     chainId: 42161,
     market: '0x952083cde7aaa11AB8449057F7de23A970AA8472', // market
-    syTokenOut: '0x35751007a407ca6FEFfE80b3cB397736D2cf4dbe' // weETH
+    syTokenOut: '0x35751007a407ca6FEFfE80b3cB397736D2cf4dbe', // weETH
+    ytAddress: '0xDcdC1004d5C271ADc048982d7EB900cC4F472333', // YT-weETH-27JUN2024
+    expiry: '2024-06-27T00:00:00.000Z'
   },
   // ERC20_PT_RSETH_27JUN2024
   '0xafd22f824d51fb7eed4778d303d4388ac644b026': {
     chainId: 42161,
     market: '0x6Ae79089b2CF4be441480801bb741A531d94312b', // market
-    syTokenOut: '0x4186BFC76E2E237523CBC30FD220FE055156b41F' // rsETH
+    syTokenOut: '0x4186BFC76E2E237523CBC30FD220FE055156b41F', // rsETH,
+    ytAddress: '0xDA53c73a28dfF704Fe757b8B4f6f6359707533Da', // YT-rsETH-27JUN2024
+    expiry: '2024-06-27T00:00:00.000Z'
   },
   // ERC20_PT_WEETH_26SEP2024
   '0xb8b0a120f6a68dd06209619f62429fb1a8e92fec': {
     chainId: 42161,
     market: '0xf9f9779d8ff604732eba9ad345e6a27ef5c2a9d6', // market
-    syTokenOut: '0x35751007a407ca6FEFfE80b3cB397736D2cf4dbe' // weETH
+    syTokenOut: '0x35751007a407ca6FEFfE80b3cB397736D2cf4dbe', // weETH
+    ytAddress: '0xfB2A7AC0372C2425c273932f8d438518402A873E', // YT-weETH-26SEP2024
+    expiry: '2024-09-26T00:00:00.000Z'
   },
   // ERC20_PT_RSETH_26SEP2024
   '0x30c98c0139b62290e26ac2a2158ac341dcaf1333': {
     chainId: 42161,
     market: '0xed99fc8bdb8e9e7b8240f62f69609a125a0fbf14', // market
-    syTokenOut: '0x4186BFC76E2E237523CBC30FD220FE055156b41F' // rsETH
+    syTokenOut: '0x4186BFC76E2E237523CBC30FD220FE055156b41F', // rsETH
+    ytAddress: '0x2FDc424946AA72D42E2F897447d7c335E64845F0', // YT-rsETH-26SEP2024
+    expiry: '2024-09-26T00:00:00.000Z'
   },
   // ERC20_PT_USDe_29AUG2024
   '0xad853eb4fb3fe4a66cdfcd7b75922a0494955292': {
     chainId: 42161,
     market: '0x2Dfaf9a5E4F293BceedE49f2dBa29aACDD88E0C4', // market
-    syTokenOut: '0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34' // USDe
+    syTokenOut: '0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34', // USDe
+    ytAddress: '0xF478f7FeaeAB0DFdC91E02cDd6C63c66E30a7335', // YT-USDe-29AUG2024
+    expiry: '2024-08-29T00:00:00.000Z'
   }
 };
 
@@ -252,7 +259,7 @@ if (process.env.NEXT_PUBLIC_APP_ENV.toLowerCase() == 'production') {
         marketId: 5,
         networkId: 42161,
         logo: '/img/crypto-logos/od.png'
-      },
+      }
     ]
   };
 }

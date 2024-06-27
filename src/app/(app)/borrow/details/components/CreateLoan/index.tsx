@@ -22,7 +22,7 @@ import { toastError } from 'components/toast';
 import { useAppStore, useUserPrefsStore } from 'store';
 import { secondsToAppropriateUnit } from 'utils/date';
 import { TooltipHorizon } from 'components/tooltip';
-import { getPegTokenLogo } from 'config';
+import { getPegTokenLogo, pendleConfig } from 'config';
 import { approvalStepsFlow } from 'utils/approvalHelper';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import Image from 'next/image';
@@ -105,6 +105,8 @@ function CreateLoan({
 
   const creditAddress = contractsList?.marketContracts[appMarketId].creditAddress;
   const psmAddress = contractsList?.marketContracts[appMarketId].psmAddress;
+
+  const _pendleConfig = pendleConfig[lendingTerm.collateral.address.toLowerCase()] || null;
 
   /* Smart contract reads */
   const { data, isError, isLoading, refetch } = useReadContracts({
@@ -880,41 +882,46 @@ function CreateLoan({
             )}
 
             {getLeverageConfig(lendingTerm, coinDetails, contractsList?.marketContracts[appMarketId].pegTokenAddress)
-              .maxLeverage > 0 && (
-              <div className="mt w-full px-5">
-                <RangeSlider
-                  withSwitch={true}
-                  title={`Loop: ${leverageValue}x`}
-                  value={leverageValue}
-                  onChange={(value) => {
-                    setLeverageValue(value);
-                    requestLeverageDex(collateralAmount, value);
-                  }}
-                  min={1}
-                  max={
-                    getLeverageConfig(
-                      lendingTerm,
-                      coinDetails,
-                      contractsList?.marketContracts[appMarketId].pegTokenAddress
-                    ).maxLeverage
-                  }
-                  step={0.01}
-                  show={withLeverage}
-                  setShow={() => {
-                    setLeverageValue(1);
-                    setWithLeverage(!withLeverage);
-                    if (!withLeverage) {
-                      setWithOverCollateralization(false);
-                      setOverCollateralizationValue(0);
-                      requestLeverageDex(collateralAmount, 1);
-                    } else {
-                      setWithOverCollateralization(true);
-                      setOverCollateralizationValue(Math.round(105 + lendingTerm.openingFee * 100));
+              .maxLeverage > 0 &&
+              (_pendleConfig && new Date(_pendleConfig.expiry).getTime() < Date.now() ? (
+                <div>
+                  <AlertMessage type="warning" message={<p>Maturity reached, leverage unavailable.</p>} />
+                </div>
+              ) : (
+                <div className="mt w-full px-5">
+                  <RangeSlider
+                    withSwitch={true}
+                    title={`Loop: ${leverageValue}x`}
+                    value={leverageValue}
+                    onChange={(value) => {
+                      setLeverageValue(value);
+                      requestLeverageDex(collateralAmount, value);
+                    }}
+                    min={1}
+                    max={
+                      getLeverageConfig(
+                        lendingTerm,
+                        coinDetails,
+                        contractsList?.marketContracts[appMarketId].pegTokenAddress
+                      ).maxLeverage
                     }
-                  }}
-                />
-              </div>
-            )}
+                    step={0.01}
+                    show={withLeverage}
+                    setShow={() => {
+                      setLeverageValue(1);
+                      setWithLeverage(!withLeverage);
+                      if (!withLeverage) {
+                        setWithOverCollateralization(false);
+                        setOverCollateralizationValue(0);
+                        requestLeverageDex(collateralAmount, 1);
+                      } else {
+                        setWithOverCollateralization(true);
+                        setOverCollateralizationValue(Math.round(105 + lendingTerm.openingFee * 100));
+                      }
+                    }}
+                  />
+                </div>
+              ))}
 
             {withLeverage && Number(collateralAmount) != 0 && (
               <div className="mt-2">

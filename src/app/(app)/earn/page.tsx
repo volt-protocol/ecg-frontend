@@ -71,13 +71,20 @@ function MintAndSaving() {
     return acc;
   }, 0);
   const marketWeight = airdropData.marketDebt[appMarketId];
-  console.log('market earns', Math.round((10000 * marketWeight) / totalMarketWeights) / 100, '% of lender rewards');
   const dailyGuildToLenders = dailyGuild * 0.75; // 75% to lenders
   const dailyGuildToMarketLenders = dailyGuildToLenders * (marketWeight / totalMarketWeights);
+  // minimum reward rate = market's share of total lending deposits / 10 * total lender rewards
+  const totalMarketsTVL = Object.keys(airdropData.marketTVL).reduce((acc, cur) => {
+    acc += airdropData.marketTVL[cur];
+    return acc;
+  }, 0);
+  const marketTVL = airdropData.marketTVL[appMarketId];
+  const minDailyGuildToMarketLenders = (marketTVL / totalMarketsTVL / 10) * dailyGuildToLenders;
   const marketCreditSupply = Number(historicalData.aprData.values.rebasingSupply.slice(-1)[0]);
   const marketCreditSupplyValue =
     marketCreditSupply * pegToken?.price * Number(historicalData.creditMultiplier.values.slice(-1)[0]);
-  const currentDailyGuildPerDollarLent = dailyGuildToMarketLenders / marketCreditSupplyValue;
+  const currentDailyGuildPerDollarLent =
+    Math.max(dailyGuildToMarketLenders, minDailyGuildToMarketLenders) / marketCreditSupplyValue;
   const lenderApr = (365 * currentDailyGuildPerDollarLent * fdv) / 1e9;
 
   /* Smart contract reads */

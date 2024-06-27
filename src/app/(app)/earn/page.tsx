@@ -19,6 +19,7 @@ import { useAppStore, useUserPrefsStore } from 'store';
 import Spinner from 'components/spinner';
 import { getPegTokenLogo, marketsConfig } from 'config';
 import Image from 'next/image';
+import ImageWithFallback from 'components/image/ImageWithFallback';
 import { TooltipHorizon, QuestionMarkIcon } from 'components/tooltip';
 import { BsClock, BsPerson, BsSafe2, BsPercent, BsFire } from 'react-icons/bs';
 import Widget from 'components/widget/Widget';
@@ -86,6 +87,20 @@ function MintAndSaving() {
   const currentDailyGuildPerDollarLent =
     Math.max(dailyGuildToMarketLenders, minDailyGuildToMarketLenders) / marketCreditSupplyValue;
   const lenderApr = (365 * currentDailyGuildPerDollarLent * fdv) / 1e9;
+
+  const additionalRewards = {
+    enabled: false,
+    token: null,
+    dailyAmount: 0
+  };
+  if (pegToken.symbol == 'OD' && Date.now() < new Date('2024-08-09').getTime()) {
+    additionalRewards.enabled = true;
+    additionalRewards.token = coinDetails.find(
+      (item) => item.address.toLowerCase() == '0x000d636bd52bfc1b3a699165ef5aa340bea8939c' // ODG
+    );
+    additionalRewards.dailyAmount = 8500 / (8 * 7);
+    console.log('OD market earns additional ODG rewards', additionalRewards);
+  }
 
   /* Smart contract reads */
   const { data, isError, isLoading, refetch } = useReadContracts({
@@ -503,6 +518,28 @@ function MintAndSaving() {
                       ? formatDecimal(lenderApr * 100, 2) + '% *'
                       : formatDecimal(currentDailyGuildPerDollarLent * 1000, 0) + ' / 1k$ daily'}
                   </span>
+                  {additionalRewards.enabled ? (
+                    <span>
+                      {' '}
+                      +{' '}
+                      <ImageWithFallback
+                        className="inline-block align-bottom"
+                        src={'/img/crypto-logos/' + additionalRewards.token.symbol.toLowerCase() + '.png'}
+                        fallbackSrc="/img/crypto-logos/unk.png"
+                        width={24}
+                        height={24}
+                        alt={'logo'}
+                      />{' '}
+                      {formatDecimal(
+                        ((100 * 365 * additionalRewards.dailyAmount * additionalRewards.token.price) /
+                          Number(historicalData.creditSupply.values.slice(-1)[0])) *
+                          pegToken.price,
+                        0
+                      ) +
+                        '% ' +
+                        additionalRewards.token.symbol}
+                    </span>
+                  ) : null}
                 </div>
               }
               placement="bottom"
@@ -578,6 +615,28 @@ function MintAndSaving() {
                       ? formatDecimal(lenderApr * 100, 2) + '% *'
                       : formatDecimal(currentDailyGuildPerDollarLent * 1000, 0) + ' / 1k$ daily'}
                   </span>
+                  {additionalRewards.enabled ? (
+                    <span>
+                      {' '}
+                      +{' '}
+                      <ImageWithFallback
+                        className="inline-block align-bottom"
+                        src={'/img/crypto-logos/' + additionalRewards.token.symbol.toLowerCase() + '.png'}
+                        fallbackSrc="/img/crypto-logos/unk.png"
+                        width={24}
+                        height={24}
+                        alt={'logo'}
+                      />{' '}
+                      {formatDecimal(
+                        ((100 * 365 * additionalRewards.dailyAmount * additionalRewards.token.price) /
+                          Number(historicalData.creditSupply.values.slice(-1)[0])) *
+                          pegToken.price,
+                        0
+                      ) +
+                        '% ' +
+                        additionalRewards.token.symbol}
+                    </span>
+                  ) : null}
                 </div>
               }
               placement="bottom"

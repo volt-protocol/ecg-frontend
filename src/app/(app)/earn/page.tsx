@@ -222,7 +222,9 @@ function MintAndSaving() {
     const marketSaving = Number(historicalData.aprData.values.rebasingSupply.slice(-1)[0]);
     const multiplier = marketLent / marketSaving;
     const averageInterestPaidByBorrowers = Number(historicalData.averageInterestRate.values.slice(-1)[0]) / 100;
-    const futureApr = ((averageInterestPaidByBorrowers * Number(profitSharingConfig[1])) / 1e18) * multiplier;
+    const totalBorrowUsd = airdropData.marketDebt[appMarketId];
+    const totalLendingsUsd = historicalData.aprData.values.rebasingSupply.at(-1) * pegToken.price;
+    const futureApr = ((averageInterestPaidByBorrowers * Number(profitSharingConfig[1])) / 1e18) * multiplier * totalBorrowUsd / totalLendingsUsd;
 
     let _apr = 100 * apr;
     if (isNaN(_apr)) _apr = 0;

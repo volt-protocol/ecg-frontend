@@ -59,10 +59,15 @@ export default function Create() {
     symbol: string;
     address: Address;
     decimals: number;
+    price: number;
   }>({});
   const pegToken = coinDetails.find(
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
   );
+  let ltv = 1;
+  if (collateralToken?.price && watchBorrowRatio) {
+    ltv = (watchBorrowRatio * pegToken?.price) / collateralToken?.price;
+  }
 
   const createSteps = (): Step[] => {
     return [{ name: 'Propose Offboarding', status: 'Not Started' }];
@@ -83,7 +88,8 @@ export default function Create() {
       setCollateralToken({
         symbol: result[1].result,
         address: tokenAddress,
-        decimals: result[0].result
+        decimals: result[0].result,
+        price: result.price
       });
       setCollateralTokenAddressInput(result[1].result);
       setCollateralTokenInputDisabled(true);
@@ -252,9 +258,9 @@ export default function Create() {
                   placeholder="0xe44...7EeB"
                   className={clsx(
                     collateralTokenInputDisabled
-                      ? 'text-black-400 cursor-not-allowed border border-gray-300 bg-gray-200 pl-2 text-center placeholder:text-gray-500'
+                      ? 'text-black-400 cursor-not-allowed border border-gray-300 bg-gray-200 pl-2 text-center placeholder:text-gray-500 dark:bg-navy-700 dark:ring-navy-600'
                       : 'focus:ring-brand-400/80',
-                    'sm:text-md block w-full rounded-md border-0 py-1.5 pl-2 pr-8 ring-1 ring-inset ring-gray-300 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:leading-6'
+                    'sm:text-md block w-full rounded-md border-0 py-1.5 pl-2 pr-10 ring-1 ring-inset ring-gray-300 transition-all duration-150 ease-in-out placeholder:text-gray-400 focus:ring-2 focus:ring-inset dark:bg-navy-700 dark:text-gray-200 dark:ring-navy-600 dark:placeholder:text-gray-300 sm:leading-6'
                   )}
                 />
                 {collateralTokenInputDisabled && (
@@ -441,8 +447,22 @@ export default function Create() {
               ${watchBorrowRatio ? '-' + formatNumberDecimal(watchBorrowRatio) : ''}
               ${watchInterestRate ? '-' + formatNumberDecimal(watchInterestRate) + '%' : ''}`}
               extra="w-full"
-              disabled={!collateralToken.decimals || !formState.isValid}
+              disabled={!collateralToken.decimals || !formState.isValid || ltv >= 1}
             />
+          </div>
+          <div
+            className={
+              'mt-3 block w-full rounded-md px-3 py-2 text-center text-sm ring-1 ring-inset ' +
+              (ltv >= 1
+                ? 'text-red-500 ring-red-500'
+                : ltv >= 0.8
+                ? 'text-orange-500 ring-orange-500'
+                : ltv >= 0.6
+                ? 'text-yellow-500 ring-yellow-500'
+                : 'text-green-500 ring-green-500')
+            }
+          >
+            LTV at current market price : {ltv >= 1 ? '>=100%' : formatNumberDecimal(ltv * 100) + '%'}
           </div>
         </form>
       </div>

@@ -90,6 +90,12 @@ export interface PermitConfig {
 //set permit configurations for each collateral token here
 export const permitConfig: PermitConfig[] = [
   {
+    // Arbitrum DOLA
+    address: '0x6A7661795C374c0bFC635934efAddFf3A7Ee23b6',
+    hasPermit: true,
+    version: '1'
+  },
+  {
     // Arbitrum PT_WEETH_26SEP2024
     address: '0xb8b0a120F6A68Dd06209619F62429fB1a8e92feC',
     hasPermit: true,
@@ -187,6 +193,30 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
       logo: '/img/crypto-logos/od.png'
     },
     {
+      key: 'dola-6',
+      pegToken: 'DOLA',
+      name: 'DOLA',
+      marketId: 6,
+      networkId: 42161,
+      logo: '/img/crypto-logos/dola.png'
+    },
+    {
+      key: 'wsteth-7',
+      pegToken: 'wstETH',
+      name: 'wstETH',
+      marketId: 7,
+      networkId: 42161,
+      logo: '/img/crypto-logos/wsteth.png'
+    },
+    {
+      key: 'stusd-8',
+      pegToken: 'stUSD',
+      name: 'stUSD',
+      marketId: 8,
+      networkId: 42161,
+      logo: '/img/crypto-logos/stusd.png'
+    },
+    {
       key: 'usdc-test',
       pegToken: 'USDC',
       name: 'USDC (test)',
@@ -228,38 +258,13 @@ if (process.env.NEXT_PUBLIC_APP_ENV.toLowerCase() == 'production') {
   SelectableChainId = [42161];
   marketsConfig = {
     42161: [
-      {
-        key: 'weth-3',
-        pegToken: 'WETH',
-        name: 'WETH',
-        marketId: 3,
-        networkId: 42161,
-        logo: '/img/crypto-logos/weth.png'
-      },
-      {
-        key: 'usdc-1',
-        pegToken: 'USDC',
-        name: 'USDC',
-        marketId: 1,
-        networkId: 42161,
-        logo: '/img/crypto-logos/usdc.png'
-      },
-      {
-        key: 'arb-4',
-        pegToken: 'ARB',
-        name: 'ARB',
-        marketId: 4,
-        networkId: 42161,
-        logo: '/img/crypto-logos/arb.png'
-      },
-      {
-        key: 'od-5',
-        pegToken: 'OD',
-        name: 'OD',
-        marketId: 5,
-        networkId: 42161,
-        logo: '/img/crypto-logos/od.png'
-      }
+      marketsConfig[42161].find((_) => _.key == 'weth-3'),
+      marketsConfig[42161].find((_) => _.key == 'usdc-1'),
+      marketsConfig[42161].find((_) => _.key == 'arb-4'),
+      marketsConfig[42161].find((_) => _.key == 'od-5'),
+      marketsConfig[42161].find((_) => _.key == 'dola-6'),
+      marketsConfig[42161].find((_) => _.key == 'wsteth-7'),
+      marketsConfig[42161].find((_) => _.key == 'stusd-8')
     ]
   };
 }

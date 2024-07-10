@@ -94,6 +94,15 @@ const LendingDetails = () => {
     additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
     additionalRewards.dailyAmount = 200 / 7 / Math.max(effectiveBalanceSum || 1, 1);
     console.log('additional rewards', additionalRewards, 'effectiveBalanceSum', effectiveBalanceSum);
+  } else if (
+    effectiveBalanceSum !== -1 &&
+    Date.now() < new Date('2024-08-01').getTime() &&
+    collateralToken?.address.toLowerCase() == '0xad853eb4fb3fe4a66cdfcd7b75922a0494955292' /*ERC20_PT_USDe_29AUG2024*/
+  ) {
+    additionalRewards.enabled = true;
+    additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
+    additionalRewards.dailyAmount = 200 / 7 / Math.max(effectiveBalanceSum || 1, 1);
+    console.log('additional rewards', additionalRewards, 'effectiveBalanceSum', effectiveBalanceSum);
   }
 
   /* Smart contract reads */

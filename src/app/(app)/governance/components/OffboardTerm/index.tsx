@@ -31,9 +31,11 @@ import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
 import { isActivePoll } from './helper';
 import { wagmiConfig } from 'contexts/Web3Provider';
 import { getExplorerBaseUrl, getL1BlockNumber } from 'config';
+import { MdWarning } from 'react-icons/md';
 
 function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   const {
+    coinDetails,
     lendingTerms,
     contractsList,
     fetchLendingTermsUntilBlock,
@@ -52,6 +54,16 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
     pollDurationBlock: Number(offboardDurationBlock),
     deprecatedTerms: deprecatedGauges
   };
+
+  const pegToken = coinDetails.find(
+    (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId].pegTokenAddress.toLowerCase()
+  );
+
+  // list of market terms with added 'issuance' and 'canOffboard' fields
+  const marketTerms: (LendingTerms & {
+    issuance?: number;
+    canOffboard?: number;
+  })[] = JSON.parse(JSON.stringify(lendingTerms)); // copy obj
 
   useEffect(() => {
     fetchActiveOffboardingPolls();
@@ -81,6 +93,30 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
       toBlock: currentBlock
     });
 
+    const termCalls = [];
+    marketTerms.forEach(function (term) {
+      termCalls.push(
+        {
+          ...termContract(term.address as Address),
+          functionName: 'issuance'
+        },
+        {
+          address: contractsList.lendingTermOffboardingAddress,
+          abi: OffboardGovernorGuildABI,
+          functionName: 'canOffboard',
+          args: [term.address as Address]
+        }
+      );
+    });
+    const termInfo = await multicall(wagmiConfig, {
+      chainId: appChainId as any,
+      contracts: termCalls
+    });
+    for (var i = 0; i < termInfo.length; i += 2) {
+      marketTerms[Math.floor(i / 2)].issuance = Number(formatUnits(termInfo[i].result as bigint, 18));
+      marketTerms[Math.floor(i / 2)].canOffboard = Number(termInfo[i + 1].result as bigint);
+    }
+
     const activePolls = await Promise.all(
       logs
         // .filter((log) => log.args.term === selectedTerm.address)
@@ -96,7 +132,7 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         })
         .filter(function (log) {
           const isMarketTerm =
-            lendingTerms.find((term) => term.address.toLowerCase() === log.term.toLowerCase()) != null;
+            marketTerms.find((term) => term.address.toLowerCase() === log.term.toLowerCase()) != null;
           return isMarketTerm;
         })
         .reduce((acc, item) => {
@@ -109,26 +145,12 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
           return acc;
         }, [] as ActiveOffboardingPolls[])
         .map(async (item) => {
-          const termInfo = await multicall(wagmiConfig, {
-            chainId: appChainId as any,
-            contracts: [
-              {
-                ...termContract(item.term as Address),
-                functionName: 'issuance'
-              },
-              {
-                address: contractsList.lendingTermOffboardingAddress,
-                abi: OffboardGovernorGuildABI,
-                functionName: 'canOffboard',
-                args: [item.term as Address]
-              }
-            ]
-          });
+          const termInfo = marketTerms.find((term) => term.address.toLowerCase() === item.term.toLowerCase());
 
           return {
             ...item,
-            issuance: Number(formatUnits(termInfo[0].result as bigint, 18)),
-            canOffboard: termInfo[1].result
+            issuance: termInfo.issuance,
+            canOffboard: termInfo.canOffboard
           };
         })
     );
@@ -333,6 +355,18 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         );
       }
     }),
+    columnHelper.accessor('issuance', {
+      id: 'issuance',
+      header: 'Current Debt',
+      enableSorting: true,
+      cell: (info) => {
+        return (
+          <p className="text-sm font-bold text-gray-600 dark:text-white">
+            $ {toLocaleString(formatDecimal(pegToken?.price * info.row.original.issuance, 0))}
+          </p>
+        );
+      }
+    }),
     {
       id: 'support',
       header: 'Support',
@@ -403,7 +437,10 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
   const getActionButton = (item: ActiveOffboardingPolls) => {
     if (!data || !data.pollDurationBlock || !data.quorum) return null;
 
-    if (!isActivePoll(item.snapshotBlock, item.currentBlock, data.pollDurationBlock) && Number(formatUnits(item.userWeight, 18)) < data.quorum) {
+    if (
+      !isActivePoll(item.snapshotBlock, item.currentBlock, data.pollDurationBlock) &&
+      Number(formatUnits(item.userWeight, 18)) < data.quorum
+    ) {
       return (
         <div className="flex items-center gap-1">
           <span className="items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-500">Failed</span>
@@ -412,7 +449,10 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
     }
 
     //vote active and quorum not reached yet
-    if (isActivePoll(item.snapshotBlock, item.currentBlock, data.pollDurationBlock) && Number(formatUnits(item.userWeight, 18)) < data.quorum) {
+    if (
+      isActivePoll(item.snapshotBlock, item.currentBlock, data.pollDurationBlock) &&
+      Number(formatUnits(item.userWeight, 18)) < data.quorum
+    ) {
       return (
         <ButtonPrimary
           disabled={!guildVotingWeight}
@@ -469,17 +509,31 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
     <>
       {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
       <div className="text-gray-700 dark:text-gray-100">
-        <div className="mt-4 flex w-full flex-col items-center gap-2 xl:flex-row">
+        <div className="mt-4 w-full">
           <DropdownSelect
+            extra="w-full"
             onChange={setSelectedTerm}
-            options={lendingTerms}
+            options={marketTerms}
             selectedOption={selectedTerm}
             getLabel={(item) => {
-              return generateTermName(item.collateral.symbol, item.interestRate, item.borrowRatio);
+              let label = generateTermName(item.collateral.symbol, item.interestRate, item.borrowRatio);
+              if (item.issuance) {
+                return (
+                  <span>
+                    {label}
+                    <MdWarning className="ml-2 mr-2 inline h-4 w-4 align-text-top" />
+                    {'$ ' + toLocaleString(formatDecimal(pegToken?.price * item.issuance, 0)) + ' debt'}
+                  </span>
+                );
+              }
+              return label;
             }}
             textNoOptionSelected="Select Term"
           />
+        </div>
+        <div className="mt-2">
           <ButtonPrimary
+            extra="w-full"
             title="Propose Offboard"
             disabled={!selectedTerm}
             onClick={() => proposeOffboard(selectedTerm.address as Address)}

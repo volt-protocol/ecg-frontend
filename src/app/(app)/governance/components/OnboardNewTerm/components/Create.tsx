@@ -447,7 +447,11 @@ export default function Create() {
               ${watchBorrowRatio ? '-' + formatNumberDecimal(watchBorrowRatio) : ''}
               ${watchInterestRate ? '-' + formatNumberDecimal(watchInterestRate) + '%' : ''}`}
               extra="w-full"
-              disabled={!collateralToken.decimals || !formState.isValid || ltv >= 1}
+              disabled={
+                !collateralToken.decimals ||
+                !formState.isValid ||
+                (ltv >= 1 && document.location.href.indexOf('app.creditguild.org') !== -1)
+              }
             />
           </div>
           <div
@@ -461,6 +465,7 @@ export default function Create() {
                 ? 'text-yellow-500 ring-yellow-500'
                 : 'text-green-500 ring-green-500')
             }
+            title={'Collateral price: ' + (collateralToken?.price || '???') + '\nPeg token price: ' + pegToken?.price}
           >
             LTV at current market price : {ltv >= 1 ? '>=100%' : formatNumberDecimal(ltv * 100) + '%'}
           </div>

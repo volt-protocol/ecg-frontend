@@ -298,7 +298,7 @@ export default function Create() {
                 type="number"
                 name="openingFee"
                 id="openingFee"
-                step=".1"
+                step=".01"
                 placeholder="0.00"
                 className={clsx(
                   formState.errors.openingFee ? 'ring-red-500' : 'focus:ring-brand-400/80',
@@ -321,7 +321,7 @@ export default function Create() {
               <input
                 {...register('interestRate')}
                 type="number"
-                step=".1"
+                step=".01"
                 name="interestRate"
                 id="interestRate"
                 placeholder="0.00"
@@ -358,7 +358,7 @@ export default function Create() {
               <input
                 {...register('borrowRatio')}
                 type="number"
-                step=".01"
+                step=".000001"
                 name="borrowRatio"
                 id="borrowRatio"
                 placeholder="0.00"

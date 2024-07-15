@@ -283,7 +283,7 @@ export default function Create() {
           </div>
           <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">
             <TooltipHorizon
-              extra=""
+              extra="dark:text-gray-200"
               trigger={
                 <label htmlFor="openingFee" className="text-md block font-medium leading-6 sm:pt-1.5">
                   Opening Fee <BiInfoCircle className="ml-1 inline" />
@@ -340,7 +340,7 @@ export default function Create() {
           <ErrorMessage title={formState.errors.interestRate?.message} variant="error" />
           <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">
             <TooltipHorizon
-              extra=""
+              extra="dark:text-gray-200"
               trigger={
                 <label htmlFor="borrowRatio" className="text-md block font-medium leading-6 sm:pt-1.5">
                   Borrow Ratio <BiInfoCircle className="ml-1 inline" />
@@ -373,7 +373,7 @@ export default function Create() {
 
           <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">
             <TooltipHorizon
-              extra=""
+              extra="dark:text-gray-200"
               trigger={
                 <label htmlFor="auctionHouse" className="text-md block font-medium leading-6 sm:pt-1.5">
                   Auction house <BiInfoCircle className="ml-1 inline" />
@@ -395,7 +395,7 @@ export default function Create() {
           </div>
           <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">
             <TooltipHorizon
-              extra=""
+              extra="dark:text-gray-200"
               trigger={
                 <label htmlFor="periodicPayments" className="text-md block font-medium leading-6 sm:pt-1.5">
                   Periodic Payments <BiInfoCircle className="ml-1 inline" />
@@ -416,7 +416,7 @@ export default function Create() {
           </div>
           <div className="my-3 sm:grid sm:grid-cols-3 sm:items-start">
             <TooltipHorizon
-              extra=""
+              extra="dark:text-gray-200"
               trigger={
                 <label htmlFor="hardCap" className="text-md block font-medium leading-6 sm:pt-1.5">
                   Hard Cap <BiInfoCircle className="ml-1 inline" />

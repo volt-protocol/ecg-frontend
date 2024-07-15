@@ -61,15 +61,6 @@ function AirdropCycle3() {
   const PERCENT_BORROWERS = 0.1; // 10%
   const PERCENT_STAKERS = 0.15; // 15%
 
-  const additionalRewards = {
-    5: [
-      {
-        tokenAddress: '0x000d636bd52bfc1b3a699165ef5aa340bea8939c', // ODG
-        dailyAmount: 1500 / (8 * 7)
-      }
-    ]
-  };
-
   const excludedAddresses = [
     '0x9722bec2524B4b4E37Df3ACd24F1431f66c62706', // Market 1 (USDC) ProfitManager
     '0x5D87B2f530e9C1E605EeE48e41c10534B7E29C78', // Market 3 (WETH) ProfitManager
@@ -290,6 +281,40 @@ function AirdropCycle3() {
     });
   window.txBuilderJson = txBuilderJson;
   console.log('txBuilderJson', txBuilderJson);
+
+  const odgAddress = '0x000d636bd52bfc1b3a699165ef5aa340bea8939c';
+  const odgDaily = 1500 / (8 * 7);
+  const odgAirdrop: {
+    [userAddress: string]: number;
+  } = {};
+  for (var dayKey in data.marketUtilizationUsd) {
+    for (var userAddress in data.userData) {
+      const userLentOD = data.userData[userAddress].dailyBalances[dayKey]['5']?.creditBalanceUsd || 0;
+      if (userLentOD != 0) {
+        if (!odgAirdrop[userAddress]) {
+          odgAirdrop[userAddress] = 0;
+        }
+        odgAirdrop[userAddress] += (odgDaily * userLentOD) / dailyTotals[dayKey].markets['5'].creditBalanceUsd;
+      }
+    }
+  }
+  console.log(
+    'odgAirdrop\n',
+    Object.keys(odgAirdrop)
+      .map((userAddress, i, arr) => {
+        return {
+          address: userAddress,
+          amount: odgAirdrop[userAddress]
+        };
+      })
+      .sort(function (a, b) {
+        return a.amount < b.amount ? 1 : -1;
+      })
+      .map(function (o) {
+        return o.address + ' : ' + o.amount;
+      })
+      .join('\n')
+  );
 
   return (
     <div>

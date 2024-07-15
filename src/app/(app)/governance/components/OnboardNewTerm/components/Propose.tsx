@@ -5,7 +5,7 @@ import StepModal from 'components/stepLoader';
 import { Step } from 'components/stepLoader/stepType';
 import { useEffect, useState } from 'react';
 import { Address, formatUnits } from 'viem';
-import { formatDecimal, formatNumberDecimal } from 'utils/numbers';
+import { formatDecimal, formatNumberDecimal, formatCurrencyValue } from 'utils/numbers';
 import { toastError } from 'components/toast';
 import { getProposableTerms } from './helper';
 import ButtonPrimary from 'components/button/ButtonPrimary';
@@ -266,7 +266,12 @@ export default function Propose() {
                   {data?.guildVotes < data?.proposalThreshold && (
                     <AlertMessage
                       type="danger"
-                      message={<>{formatUnits(data?.proposalThreshold, 18) + ' GUILD available to Propose Onboard'}</>}
+                      message={
+                        <>
+                          {formatCurrencyValue(Number(formatUnits(data?.proposalThreshold, 18))) +
+                            ' GUILD required to Propose Onboard'}
+                        </>
+                      }
                     />
                   )}
                 </div>

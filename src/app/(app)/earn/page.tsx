@@ -98,7 +98,7 @@ function MintAndSaving() {
     additionalRewards.token = coinDetails.find(
       (item) => item.address.toLowerCase() == '0x000d636bd52bfc1b3a699165ef5aa340bea8939c' // ODG
     );
-    additionalRewards.dailyAmount = 8500 / (8 * 7);
+    additionalRewards.dailyAmount = 1500 / (8 * 7);
     console.log('OD market earns additional ODG rewards', additionalRewards);
   }
 
@@ -224,7 +224,9 @@ function MintAndSaving() {
     const averageInterestPaidByBorrowers = Number(historicalData.averageInterestRate.values.slice(-1)[0]) / 100;
     const totalBorrowUsd = airdropData.marketDebt[appMarketId];
     const totalLendingsUsd = historicalData.aprData.values.rebasingSupply.at(-1) * pegToken.price;
-    const futureApr = ((averageInterestPaidByBorrowers * Number(profitSharingConfig[1])) / 1e18) * multiplier * totalBorrowUsd / totalLendingsUsd;
+    const futureApr =
+      (((averageInterestPaidByBorrowers * Number(profitSharingConfig[1])) / 1e18) * multiplier * totalBorrowUsd) /
+      totalLendingsUsd;
 
     let _apr = 100 * apr;
     if (isNaN(_apr)) _apr = 0;

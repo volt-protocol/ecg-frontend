@@ -331,7 +331,7 @@ function StakeCredit({
                     </span>{' '}
                     GUILD tokens.{' '}
                     <TooltipHorizon
-                      extra=""
+                      extra="dark:text-gray-200"
                       trigger={
                         <div className="inline-block">
                           <QuestionMarkIcon />

@@ -116,6 +116,8 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
           };
         })
     );
+    console.log('proposals', proposals);
+    console.log('activeVotes', activeVotes);
 
     setLoading(false);
     setActiveOnboardingVotes(activeVotes);
@@ -346,7 +348,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
         return (
           <div>
             <TooltipHorizon
-              extra=""
+              extra="dark:text-gray-200"
               content={
                 <div className="text-gray-700 dark:text-white">
                   <ul>
@@ -462,7 +464,7 @@ function Vote({ guildVotingWeight }: { guildVotingWeight: bigint }) {
     if (proposal.proposalState === ProposalState.Queued && Number(moment().unix()) < proposal.queueEnd) {
       return (
         <TooltipHorizon
-          extra=""
+          extra="dark:text-gray-200"
           trigger={
             <span className="items-center rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-600">
               Queued

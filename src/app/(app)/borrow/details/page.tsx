@@ -22,10 +22,12 @@ import { Abi, formatUnits, erc20Abi, Address } from 'viem';
 import { eq, generateTermName, getCreditTokenSymbol } from 'utils/strings';
 import { formatDecimal, formatCurrencyValue } from 'utils/numbers';
 import { wagmiConfig } from 'contexts/Web3Provider';
-import { getPegTokenLogo, getExplorerBaseUrl } from 'config';
+import { getPegTokenLogo, getExplorerBaseUrl, getApiBaseUrl } from 'config';
 import Image from 'next/image';
+import ImageWithFallback from 'components/image/ImageWithFallback';
 import { MdArrowBack } from 'react-icons/md';
 import Link from 'next/link';
+import { HttpGet } from 'utils/HttpHelper';
 
 const LendingDetails = () => {
   const { address, isConnected } = useAccount();
@@ -37,6 +39,7 @@ const LendingDetails = () => {
   const [lendingTermData, setLendingTermData] = useState<LendingTerms>();
   const [termTotalCollateral, setTermTotalCollateral] = useState(0);
   const [isLoadingEventLoans, setIsLoadingEventLoans] = useState<boolean>(true);
+  const [effectiveBalanceSum, setEffectiveBalanceSum] = useState<number>(-1);
   const [reload, setReload] = useState<boolean>(true);
   const [eventLoans, setEventLoans] = useState<loanObj[]>([]);
   const [editingFdv, setEditingFdv] = useState(false);
@@ -67,6 +70,40 @@ const LendingDetails = () => {
   const dailyGuildToBorrowers = dailyGuild * 0.1; // 10% to lenders
   const currentDailyGuildPerDollar = dailyGuildToBorrowers / airdropData.totalIssuanceUsd;
   const borrowerApr = (365 * currentDailyGuildPerDollar * fdv) / 1e9;
+
+  const collateralToken = coinDetails.find(
+    (item) => item.address.toLowerCase() === lendingTermData?.collateral.address.toLowerCase()
+  );
+
+  const additionalRewards = {
+    enabled: false,
+    token: null,
+    dailyAmount: 0
+  };
+  if (
+    effectiveBalanceSum !== -1 &&
+    Date.now() < new Date('2024-07-11').getTime() &&
+    (collateralToken?.address.toLowerCase() ==
+      '0xad853eb4fb3fe4a66cdfcd7b75922a0494955292' /*ERC20_PT_USDe_29AUG2024*/ ||
+      collateralToken?.address.toLowerCase() ==
+        '0x30c98c0139b62290e26ac2a2158ac341dcaf1333' /*ERC20_PT_RSETH_26SEP2024*/ ||
+      collateralToken?.address.toLowerCase() ==
+        '0xb8b0a120f6a68dd06209619f62429fb1a8e92fec') /*ERC20_PT_WEETH_26SEP2024*/
+  ) {
+    additionalRewards.enabled = true;
+    additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
+    additionalRewards.dailyAmount = 200 / 7 / Math.max(effectiveBalanceSum || 1, 1);
+    console.log('additional rewards', additionalRewards, 'effectiveBalanceSum', effectiveBalanceSum);
+  } else if (
+    effectiveBalanceSum !== -1 &&
+    Date.now() < new Date('2024-08-01').getTime() &&
+    collateralToken?.address.toLowerCase() == '0xad853eb4fb3fe4a66cdfcd7b75922a0494955292' /*ERC20_PT_USDe_29AUG2024*/
+  ) {
+    additionalRewards.enabled = true;
+    additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
+    additionalRewards.dailyAmount = 200 / 7 / Math.max(effectiveBalanceSum || 1, 1);
+    console.log('additional rewards', additionalRewards, 'effectiveBalanceSum', effectiveBalanceSum);
+  }
 
   /* Smart contract reads */
   const { data, isError, isLoading, refetch } = useReadContracts({
@@ -256,6 +293,22 @@ const LendingDetails = () => {
   }, [lendingTermData, data?.creditTotalSupply, data?.gaugeWeight, data?.totalWeight]);
 
   useEffect(() => {
+    async function getEffectiveBalances() {
+      const url = getApiBaseUrl(appChainId) + `/partnership/collateralHolders?tokenAddress=${collateralToken.address}`;
+      const data = await HttpGet<any>(url);
+      let sum = 0;
+      data.Result.forEach(function (o) {
+        sum += o.effective_balance;
+      });
+      setEffectiveBalanceSum(sum);
+    }
+
+    if (lendingTermData && collateralToken?.address) {
+      getEffectiveBalances();
+    }
+  }, [lendingTermData]);
+
+  useEffect(() => {
     if (!reload) {
       return;
     }
@@ -361,6 +414,27 @@ const LendingDetails = () => {
                     alt="logo"
                   />
                   <span className="font-bold">{formatDecimal(borrowerApr * 100, 0)}%</span> *
+                  {additionalRewards.enabled ? (
+                    <span>
+                      {' '}
+                      +{' '}
+                      <ImageWithFallback
+                        className="inline-block align-text-top"
+                        src={'/img/crypto-logos/' + additionalRewards.token.symbol.toLowerCase() + '.png'}
+                        fallbackSrc="/img/crypto-logos/unk.png"
+                        width={24}
+                        height={24}
+                        alt={'logo'}
+                      />{' '}
+                      {formatDecimal(
+                        (100 * 365 * additionalRewards.dailyAmount * additionalRewards.token.price) /
+                          collateralToken?.price,
+                        0
+                      ) +
+                        '% ' +
+                        additionalRewards.token.symbol}
+                    </span>
+                  ) : null}
                   <div className="mt-1 text-xs font-normal opacity-50">
                     * Assuming ${formatCurrencyValue(fdv)} FDV, GUILD is not transferable yet
                   </div>
@@ -375,6 +449,27 @@ const LendingDetails = () => {
                     alt="logo"
                   />
                   {formatDecimal(currentDailyGuildPerDollar * 1000, 0)} GUILD / 1k$
+                  {additionalRewards.enabled ? (
+                    <span>
+                      {' '}
+                      +{' '}
+                      <ImageWithFallback
+                        className="inline-block align-text-top"
+                        src={'/img/crypto-logos/' + additionalRewards.token.symbol.toLowerCase() + '.png'}
+                        fallbackSrc="/img/crypto-logos/unk.png"
+                        width={24}
+                        height={24}
+                        alt={'logo'}
+                      />{' '}
+                      {formatDecimal(
+                        (100 * 365 * additionalRewards.dailyAmount * additionalRewards.token.price) /
+                          collateralToken?.price,
+                        0
+                      ) +
+                        '% ' +
+                        additionalRewards.token.symbol}
+                    </span>
+                  ) : null}
                 </div>
               )}
 

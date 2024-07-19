@@ -62,6 +62,12 @@ function MintAndSaving() {
   const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
 
+  // airdrop matching incentives
+  let additionalGuildPerDay = 0;
+  if (pegToken.symbol == 'OD' && Date.now() < new Date('2024-08-09').getTime()) {
+    additionalGuildPerDay += 55750 / 28;
+  }
+
   // airdrop computations
   const fdvSupply = 1e9; // 1B GUILD max supply
   const airdropPercent = 0.01; // 1% supply
@@ -85,7 +91,8 @@ function MintAndSaving() {
   const marketCreditSupplyValue =
     marketCreditSupply * pegToken?.price * Number(historicalData.creditMultiplier.values.slice(-1)[0]);
   const currentDailyGuildPerDollarLent =
-    Math.max(dailyGuildToMarketLenders, minDailyGuildToMarketLenders) / marketCreditSupplyValue;
+    (Math.max(dailyGuildToMarketLenders, minDailyGuildToMarketLenders) + additionalGuildPerDay) /
+    marketCreditSupplyValue;
   const lenderApr = (365 * currentDailyGuildPerDollarLent * fdv) / 1e9;
 
   const additionalRewards = {

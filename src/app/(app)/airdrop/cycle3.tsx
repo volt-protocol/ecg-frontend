@@ -79,6 +79,7 @@ function AirdropCycle3() {
     '0x72C0a3D34aABd20dB73a38C494f6e6bE503F4A5b', // Market 8 (stUSD) SGM
     '0x0d81Cf2515c02A7CdBd110c41E8DCe2bb1983962', // Market 9 (eUSD) SGM
     '0x1A1075cef632624153176CCf19Ae0175953CF010', // team msig
+    '0x4400cbe9f27f7BeF2c8240a5f81a75BE107d5b31', // dao timelock
     '0x0000000000000000000000000000000000000000' // zero addr
   ].map((_) => _.toLowerCase());
 
@@ -283,38 +284,109 @@ function AirdropCycle3() {
   console.log('txBuilderJson', txBuilderJson);
 
   const odgAddress = '0x000d636bd52bfc1b3a699165ef5aa340bea8939c';
-  const odgDaily = 1500 / (8 * 7);
-  const odgAirdrop: {
+  const odgDistributed = 750;
+  const odgDistributionMatchingGuild = 55750;
+  const odgAirdropPercent: {
     [userAddress: string]: number;
   } = {};
-  for (var dayKey in data.marketUtilizationUsd) {
-    for (var userAddress in data.userData) {
+
+  let totalLentOd = 0;
+  for (const userAddress in data.userData) {
+    // skip excluded addresses
+    if (excludedAddresses.includes(userAddress.toLowerCase())) continue;
+    for (const dayKey in data.userData[userAddress].dailyBalances) {
       const userLentOD = data.userData[userAddress].dailyBalances[dayKey]['5']?.creditBalanceUsd || 0;
-      if (userLentOD != 0) {
-        if (!odgAirdrop[userAddress]) {
-          odgAirdrop[userAddress] = 0;
-        }
-        odgAirdrop[userAddress] += (odgDaily * userLentOD) / dailyTotals[dayKey].markets['5'].creditBalanceUsd;
+
+      if (userLentOD == 0) continue;
+      if (!odgAirdropPercent[userAddress]) {
+        odgAirdropPercent[userAddress] = 0;
       }
+      odgAirdropPercent[userAddress] += userLentOD;
+      totalLentOd += userLentOD;
     }
   }
+  // normalize to percents
+  for (const userAddress in odgAirdropPercent) {
+    odgAirdropPercent[userAddress] /= totalLentOd;
+  }
+
+  let totalOdgDistributed = 0;
   console.log(
-    'odgAirdrop\n',
-    Object.keys(odgAirdrop)
-      .map((userAddress, i, arr) => {
-        return {
-          address: userAddress,
-          amount: odgAirdrop[userAddress]
-        };
-      })
-      .sort(function (a, b) {
-        return a.amount < b.amount ? 1 : -1;
-      })
-      .map(function (o) {
-        return o.address + ' : ' + o.amount;
-      })
-      .join('\n')
+    'odgAirdrop\n' +
+      Object.keys(odgAirdropPercent)
+        .map((userAddress, i, arr) => {
+          return {
+            address: userAddress,
+            amount: odgAirdropPercent[userAddress] * odgDistributed
+          };
+        })
+        .sort(function (a, b) {
+          return a.amount < b.amount ? 1 : -1;
+        })
+        .map(function (o) {
+          totalOdgDistributed += o.amount;
+          return o.address + ' : ' + Number(o.amount).toFixed(4);
+        })
+        .join('\n')
   );
+  console.log('totalOdgDistributed', totalOdgDistributed);
+
+  const txBuilderJsonMatchingGuild = {
+    version: '1.0',
+    chainId: '42161',
+    createdAt: 1713532237649,
+    meta: {
+      name: 'Transactions Batch',
+      description: '',
+      txBuilderVersion: '1.16.5',
+      createdFromSafeAddress: '0x1A1075cef632624153176CCf19Ae0175953CF010',
+      createdFromOwnerAddress: '',
+      checksum: '0x0'
+    },
+    transactions: []
+  };
+
+  Object.keys(odgAirdropPercent)
+    .map((userAddress, i, arr) => {
+      return {
+        address: userAddress,
+        amount: odgAirdropPercent[userAddress] * odgDistributionMatchingGuild
+      };
+    })
+    .sort(function (a, b) {
+      return a.amount < b.amount ? 1 : -1;
+    })
+    .map(function (o) {
+      txBuilderJsonMatchingGuild.transactions.push({
+        to: '0xe38d06840c9e527b8d40309cccf4b05af0f888a5',
+        value: '0',
+        data: null,
+        contractMethod: {
+          inputs: [
+            {
+              internalType: 'address',
+              name: 'to',
+              type: 'address'
+            },
+            {
+              internalType: 'uint256',
+              name: 'amount',
+              type: 'uint256'
+            }
+          ],
+          name: 'redeem',
+          payable: false
+        },
+        contractInputsValues: {
+          to: o.address,
+          amount: BigInt(Math.floor(1e18 * o.amount)).toString()
+        }
+      });
+      return o.address + ' : ' + Number(o.amount).toFixed(4);
+    })
+    .join('\n');
+  window.txBuilderJsonMatchingGuild = txBuilderJsonMatchingGuild;
+  console.log('txBuilderJsonMatchingGuild', txBuilderJsonMatchingGuild);
 
   return (
     <div>

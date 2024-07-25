@@ -96,6 +96,12 @@ export const permitConfig: PermitConfig[] = [
     version: '1'
   },
   {
+    // Arbitrum eUSD
+    address: '0x12275dcb9048680c4be40942ea4d92c74c63b844',
+    hasPermit: true,
+    version: '1'
+  },
+  {
     // Arbitrum PT_WEETH_26SEP2024
     address: '0xb8b0a120F6A68Dd06209619F62429fB1a8e92feC',
     hasPermit: true,
@@ -217,6 +223,14 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
       logo: '/img/crypto-logos/stusd.png'
     },
     {
+      key: 'eusd-9',
+      pegToken: 'eUSD',
+      name: 'eUSD',
+      marketId: 9,
+      networkId: 42161,
+      logo: '/img/crypto-logos/eusd.png'
+    },
+    {
       key: 'usdc-test',
       pegToken: 'USDC',
       name: 'USDC (test)',
@@ -264,7 +278,8 @@ if (process.env.NEXT_PUBLIC_APP_ENV.toLowerCase() == 'production') {
       marketsConfig[42161].find((_) => _.key == 'od-5'),
       marketsConfig[42161].find((_) => _.key == 'dola-6'),
       marketsConfig[42161].find((_) => _.key == 'wsteth-7'),
-      marketsConfig[42161].find((_) => _.key == 'stusd-8')
+      marketsConfig[42161].find((_) => _.key == 'stusd-8'),
+      marketsConfig[42161].find((_) => _.key == 'eusd-9')
     ]
   };
 }

@@ -15,7 +15,7 @@ export type ContractsList = {
   onboardVetoGuildAddress: Address;
   onboardTimelockAddress: Address;
   lendingTermOffboardingAddress: Address;
-  lendingTermV1ImplementationAddress: Address;
+  lendingTermV2ImplementationAddress: Address;
   lendingTermFactoryAddress: Address;
   guildAddress: Address;
   auctionHouseAddress: Address;
@@ -73,7 +73,7 @@ export const createContractsListSlice: StateCreator<ContractsListSlice> = (set, 
         onboardTimelockAddress: contractJsonFile.find((contract) => contract.name === 'ONBOARD_TIMELOCK').addr,
         lendingTermOffboardingAddress: contractJsonFile.find((contract) => contract.name === 'OFFBOARD_GOVERNOR_GUILD')
           .addr,
-        lendingTermV1ImplementationAddress: contractJsonFile.find((contract) => contract.name === 'LENDING_TERM_V1')
+        lendingTermV2ImplementationAddress: contractJsonFile.find((contract) => contract.name === 'LENDING_TERM_V2')
           .addr,
         lendingTermFactoryAddress: contractJsonFile.find((contract) => contract.name === 'LENDING_TERM_FACTORY').addr,
         guildAddress: contractJsonFile.find((contract) => contract.name === 'ERC20_GUILD').addr,

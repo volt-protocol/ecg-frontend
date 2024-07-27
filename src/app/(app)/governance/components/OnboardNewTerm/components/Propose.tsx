@@ -1,15 +1,15 @@
-import { writeContract, waitForTransactionReceipt } from '@wagmi/core';
+import { writeContract, waitForTransactionReceipt, multicall } from '@wagmi/core';
 import DropdownSelect from 'components/select/DropdownSelect';
 import Spinner from 'components/spinner';
 import StepModal from 'components/stepLoader';
 import { Step } from 'components/stepLoader/stepType';
 import { useEffect, useState } from 'react';
-import { Address, formatUnits } from 'viem';
+import { Abi, Address, formatUnits } from 'viem';
 import { formatDecimal, formatNumberDecimal, formatCurrencyValue } from 'utils/numbers';
 import { toastError } from 'components/toast';
 import { getProposableTerms } from './helper';
 import ButtonPrimary from 'components/button/ButtonPrimary';
-import { OnboardGovernorGuildABI, GuildABI } from 'lib/contracts';
+import { OnboardGovernorGuildABI, GuildABI, LendingTermFactoryABI } from 'lib/contracts';
 import { MdOpenInNew } from 'react-icons/md';
 import { useAccount, useReadContracts } from 'wagmi';
 import { AlertMessage } from 'components/message/AlertMessage';
@@ -30,6 +30,7 @@ export type ProposedTerm = {
   maxDelayBetweenPartialRepay: string;
   minPartialRepayPercent: string;
   auctionHouse: string;
+  implementation?: Address;
 };
 
 export default function Propose() {
@@ -91,7 +92,16 @@ export default function Propose() {
 
     const terms: ProposedTerm[] = [];
 
+    const calls = [];
     for (const p of proposals.filter((_) => _.status == 'created')) {
+      calls.push(
+        {
+          address: contractsList.lendingTermFactoryAddress as Address,
+          abi: LendingTermFactoryABI as Abi,
+          functionName: 'termImplementations',
+          args: [p.termAddress as Address]
+        }
+      );
       terms.push({
         termAddress: p.termAddress as Address,
         collateralTokenSymbol: p.collateralTokenSymbol,
@@ -105,6 +115,13 @@ export default function Propose() {
         hardCap: p.hardCap,
         auctionHouse: p.auctionHouse
       });
+    }
+    const termInfo = await multicall(wagmiConfig, {
+      chainId: appChainId as any,
+      contracts: calls
+    });
+    for (var i = 0; i < terms.length; i ++) {
+      terms[i].implementation = termInfo[i].result as Address;
     }
 
     setLoading(false);
@@ -251,6 +268,12 @@ export default function Propose() {
                           {selectedTerm?.auctionHouse.slice(0, 4) + '...' + selectedTerm?.auctionHouse.slice(-4)}{' '}
                           <MdOpenInNew />
                         </a>
+                      </dd>
+                    </div>
+                    <div className="px-1 py-0.5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                      <dt className="font-medium ">Implementation</dt>
+                      <dd className="mt-1 leading-6  sm:col-span-2 sm:mt-0">
+                        {selectedTerm?.implementation.toLowerCase() == contractsList.lendingTermV2ImplementationAddress.toLowerCase() ? 'Adjustable' : 'Legacy (non-adjustable)'}
                       </dd>
                     </div>
                   </dl>

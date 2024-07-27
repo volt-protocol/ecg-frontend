@@ -202,7 +202,7 @@ export default function Create() {
         functionName: 'createTerm',
         args: [
           appMarketId, //gauge type
-          contractsList.lendingTermV1ImplementationAddress, //implementation
+          contractsList.lendingTermV2ImplementationAddress, //implementation
           args.auctionHouseAddress, //auction house
           encodedLendingTermParameters
         ]

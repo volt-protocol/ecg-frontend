@@ -75,45 +75,6 @@ const LendingDetails = () => {
     (item) => item.address.toLowerCase() === lendingTermData?.collateral.address.toLowerCase()
   );
 
-  const additionalRewards = {
-    enabled: false,
-    token: null,
-    dailyAmount: 0
-  };
-  if (
-    effectiveBalanceSum !== -1 &&
-    Date.now() < new Date('2024-07-11').getTime() &&
-    (collateralToken?.address.toLowerCase() ==
-      '0xad853eb4fb3fe4a66cdfcd7b75922a0494955292' /*ERC20_PT_USDe_29AUG2024*/ ||
-      collateralToken?.address.toLowerCase() ==
-        '0x30c98c0139b62290e26ac2a2158ac341dcaf1333' /*ERC20_PT_RSETH_26SEP2024*/ ||
-      collateralToken?.address.toLowerCase() ==
-        '0xb8b0a120f6a68dd06209619f62429fb1a8e92fec') /*ERC20_PT_WEETH_26SEP2024*/
-  ) {
-    additionalRewards.enabled = true;
-    additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
-    additionalRewards.dailyAmount = 200 / 7 / Math.max(effectiveBalanceSum || 1, 1);
-    console.log('additional rewards', additionalRewards, 'effectiveBalanceSum', effectiveBalanceSum);
-  } else if (
-    effectiveBalanceSum !== -1 &&
-    Date.now() < new Date('2024-08-01').getTime() &&
-    collateralToken?.address.toLowerCase() == '0xad853eb4fb3fe4a66cdfcd7b75922a0494955292' /*ERC20_PT_USDe_29AUG2024*/
-  ) {
-    additionalRewards.enabled = true;
-    additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
-    additionalRewards.dailyAmount = 200 / 7 / Math.max(effectiveBalanceSum || 1, 1);
-    console.log('additional rewards', additionalRewards, 'effectiveBalanceSum', effectiveBalanceSum);
-  } else if (
-    effectiveBalanceSum !== -1 &&
-    Date.now() < new Date('2024-08-22').getTime() &&
-    collateralToken?.address.toLowerCase() == '0xad853eb4fb3fe4a66cdfcd7b75922a0494955292' /*ERC20_PT_USDe_29AUG2024*/
-  ) {
-    additionalRewards.enabled = true;
-    additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
-    additionalRewards.dailyAmount = 200 / 7 / Math.max(effectiveBalanceSum || 1, 1);
-    console.log('additional rewards', additionalRewards, 'effectiveBalanceSum', effectiveBalanceSum);
-  }
-
   /* Smart contract reads */
   const { data, isError, isLoading, refetch } = useReadContracts({
     contracts: [
@@ -248,6 +209,12 @@ const LendingDetails = () => {
         abi: TermABI,
         functionName: 'getParameters',
         chainId: appChainId
+      },
+      {
+        address: profitManagerAddress,
+        abi: ProfitManagerABI,
+        functionName: 'totalIssuance',
+        chainId: appChainId
       }
     ],
     query: {
@@ -276,12 +243,70 @@ const LendingDetails = () => {
             surplusBufferSplit: formatDecimal(Number(formatUnits(data[17].result[0] as bigint, 18)) * 100, 2)
           },
           termSurplusBuffer: Number(formatUnits(data[18].result as bigint, 18)),
-          hardCap: Number(formatUnits(data[19].result?.hardCap as bigint, 18))
+          hardCap: Number(formatUnits(data[19].result?.hardCap as bigint, 18)),
+          totalIssuance: Number(formatUnits(data[20].result as bigint, 18))
         };
       }
     }
   });
   /* End Smart contract reads */
+
+  const additionalRewards = {
+    enabled: false,
+    token: null,
+    dailyAmount: 0
+  };
+  if (
+    effectiveBalanceSum !== -1 &&
+    Date.now() < new Date('2024-07-11').getTime() &&
+    (collateralToken?.address.toLowerCase() ==
+      '0xad853eb4fb3fe4a66cdfcd7b75922a0494955292' /*ERC20_PT_USDe_29AUG2024*/ ||
+      collateralToken?.address.toLowerCase() ==
+        '0x30c98c0139b62290e26ac2a2158ac341dcaf1333' /*ERC20_PT_RSETH_26SEP2024*/ ||
+      collateralToken?.address.toLowerCase() ==
+        '0xb8b0a120f6a68dd06209619f62429fb1a8e92fec') /*ERC20_PT_WEETH_26SEP2024*/
+  ) {
+    additionalRewards.enabled = true;
+    additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
+    additionalRewards.dailyAmount = 200 / 7 / Math.max(effectiveBalanceSum || 1, 1);
+    console.log('additional rewards', additionalRewards, 'effectiveBalanceSum', effectiveBalanceSum);
+  } else if (
+    effectiveBalanceSum !== -1 &&
+    Date.now() < new Date('2024-08-01').getTime() &&
+    collateralToken?.address.toLowerCase() == '0xad853eb4fb3fe4a66cdfcd7b75922a0494955292' /*ERC20_PT_USDe_29AUG2024*/
+  ) {
+    additionalRewards.enabled = true;
+    additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
+    additionalRewards.dailyAmount = 200 / 7 / Math.max(effectiveBalanceSum || 1, 1);
+    console.log('additional rewards', additionalRewards, 'effectiveBalanceSum', effectiveBalanceSum);
+  } else if (
+    effectiveBalanceSum !== -1 &&
+    Date.now() < new Date('2024-08-22').getTime() &&
+    collateralToken?.address.toLowerCase() == '0xad853eb4fb3fe4a66cdfcd7b75922a0494955292' /*ERC20_PT_USDe_29AUG2024*/
+  ) {
+    additionalRewards.enabled = true;
+    additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
+    additionalRewards.dailyAmount = 200 / 7 / Math.max(effectiveBalanceSum || 1, 1);
+    console.log('additional rewards', additionalRewards, 'effectiveBalanceSum', effectiveBalanceSum);
+  } else if (
+    effectiveBalanceSum !== -1 &&
+    Date.now() < new Date('2024-08-31').getTime() &&
+    collateralToken?.address.toLowerCase() == '0x18c14c2d707b2212e17d1579789fc06010cfca23' /*ETH+*/
+  ) {
+    additionalRewards.enabled = true;
+    additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
+    additionalRewards.dailyAmount = 2033 / 31 / Math.max(effectiveBalanceSum || 1, 1);
+    console.log('additional rewards', additionalRewards, 'effectiveBalanceSum', effectiveBalanceSum);
+  } else if (
+    data?.totalIssuance != undefined &&
+    Date.now() < new Date('2024-08-31').getTime() &&
+    pegToken?.symbol == 'eUSD' /*eUSD borrow*/
+  ) {
+    additionalRewards.enabled = true;
+    additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
+    additionalRewards.dailyAmount = 2033 / 31 / Math.max(data?.totalIssuance || 1, 1);
+    console.log('additional rewards', additionalRewards, 'data?.totalIssuance', data?.totalIssuance);
+  }
 
   useEffect(() => {
     async function getTermsTotalCollateral() {

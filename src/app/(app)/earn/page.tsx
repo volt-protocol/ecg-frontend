@@ -114,6 +114,13 @@ function MintAndSaving() {
     );
     additionalRewards.dailyAmount = 3750 / (4 * 7);
     console.log('DOLA market earns additional DOLA rewards', additionalRewards);
+  } else if (pegToken.symbol == 'eUSD' && Date.now() < new Date('2024-08-31').getTime()) {
+    additionalRewards.enabled = true;
+    additionalRewards.token = coinDetails.find(
+      (item) => item.address.toLowerCase() == '0x912ce59144191c1204e64559fe8253a0e49e6548' // ARB
+    );
+    additionalRewards.dailyAmount = 5081 / 31;
+    console.log('eUSD market earns additional ARB rewards', additionalRewards);
   }
 
   /* Smart contract reads */

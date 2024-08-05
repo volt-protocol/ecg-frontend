@@ -291,7 +291,8 @@ const LendingDetails = () => {
   } else if (
     effectiveBalanceSum !== -1 &&
     Date.now() < new Date('2024-08-31').getTime() &&
-    collateralToken?.address.toLowerCase() == '0x18c14c2d707b2212e17d1579789fc06010cfca23' /*ETH+*/
+    collateralToken?.address.toLowerCase() == '0x18c14c2d707b2212e17d1579789fc06010cfca23' && /*ETH+*/
+    pegToken?.symbol.toLowerCase() == 'weth'
   ) {
     additionalRewards.enabled = true;
     additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');

@@ -258,29 +258,6 @@ const LendingDetails = () => {
   };
   if (
     effectiveBalanceSum !== -1 &&
-    Date.now() < new Date('2024-07-11').getTime() &&
-    (collateralToken?.address.toLowerCase() ==
-      '0xad853eb4fb3fe4a66cdfcd7b75922a0494955292' /*ERC20_PT_USDe_29AUG2024*/ ||
-      collateralToken?.address.toLowerCase() ==
-        '0x30c98c0139b62290e26ac2a2158ac341dcaf1333' /*ERC20_PT_RSETH_26SEP2024*/ ||
-      collateralToken?.address.toLowerCase() ==
-        '0xb8b0a120f6a68dd06209619f62429fb1a8e92fec') /*ERC20_PT_WEETH_26SEP2024*/
-  ) {
-    additionalRewards.enabled = true;
-    additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
-    additionalRewards.dailyAmount = 200 / 7 / Math.max(effectiveBalanceSum || 1, 1);
-    console.log('additional rewards', additionalRewards, 'effectiveBalanceSum', effectiveBalanceSum);
-  } else if (
-    effectiveBalanceSum !== -1 &&
-    Date.now() < new Date('2024-08-01').getTime() &&
-    collateralToken?.address.toLowerCase() == '0xad853eb4fb3fe4a66cdfcd7b75922a0494955292' /*ERC20_PT_USDe_29AUG2024*/
-  ) {
-    additionalRewards.enabled = true;
-    additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
-    additionalRewards.dailyAmount = 200 / 7 / Math.max(effectiveBalanceSum || 1, 1);
-    console.log('additional rewards', additionalRewards, 'effectiveBalanceSum', effectiveBalanceSum);
-  } else if (
-    effectiveBalanceSum !== -1 &&
     Date.now() < new Date('2024-08-22').getTime() &&
     collateralToken?.address.toLowerCase() == '0xad853eb4fb3fe4a66cdfcd7b75922a0494955292' /*ERC20_PT_USDe_29AUG2024*/
   ) {

@@ -90,13 +90,6 @@ const routes = [
     show: true
   },
   {
-    name: 'Cross chain Bridge',
-    layout: '/',
-    path: 'bridge',
-    icon: <MdOutlineBalance className="h-6 w-6" />,
-    show: false
-  },
-  {
     name: 'Terms & Conditions',
     layout: '/',
     path: 'terms-conditions',

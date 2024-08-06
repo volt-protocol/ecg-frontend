@@ -190,15 +190,15 @@ function MintAndSaving() {
     query: {
       select: (data) => {
         return {
-          pegTokenBalance: data[0].result as bigint,
-          creditTokenBalance: data[1].result as bigint,
-          creditMultiplier: data[2].result as bigint,
-          pegTokenPSMBalance: data[3].result as bigint,
-          isRebasing: data[4].result as boolean,
-          creditTokenNonces: data[5].result as bigint,
-          pegTokenNonces: data[6].result as bigint,
-          creditTokenName: data[7].result as string,
-          pegTokenName: data[8].result as string
+          pegTokenBalance: (data[0].result as bigint) || BigInt(0),
+          creditTokenBalance: (data[1].result as bigint) || BigInt(0),
+          creditMultiplier: (data[2].result as bigint) || BigInt(1e18),
+          pegTokenPSMBalance: (data[3].result as bigint) || BigInt(0),
+          isRebasing: (data[4].result as boolean) || false,
+          creditTokenNonces: (data[5].result as bigint) || BigInt(0),
+          pegTokenNonces: (data[6].result as bigint) || BigInt(0),
+          creditTokenName: (data[7].result as string) || '',
+          pegTokenName: (data[8].result as string) || ''
         };
       }
     }
@@ -483,9 +483,9 @@ function MintAndSaving() {
     }
   }
 
-  if (!isConnected) {
+  /*if (!isConnected) {
     return <Disconnected />;
-  }
+  }*/
 
   if (isLoading) return <Spinner />;
 

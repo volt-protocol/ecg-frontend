@@ -111,6 +111,8 @@ function DelegateGuild({
         });
         setIsLoadingDelegations(false);
       });
+    } else {
+      setIsLoadingDelegations(false);
     }
   }, [isConnected, guildNotUsed]);
 

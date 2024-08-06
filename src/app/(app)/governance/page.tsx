@@ -77,12 +77,12 @@ function Governance() {
     query: {
       select: (data) => {
         return {
-          guildBalance: data[0].result as bigint,
-          guildNotUsed: data[1].result as bigint,
-          guildVotingWeight: data[2].result as bigint,
-          creditBalance: data[3].result as bigint,
-          creditNotUsed: data[4].result as bigint,
-          creditVotingWeight: data[5].result as bigint,
+          guildBalance: (data[0].result as bigint) || BigInt(0),
+          guildNotUsed: (data[1].result as bigint) || BigInt(0),
+          guildVotingWeight: (data[2].result as bigint) || BigInt(0),
+          creditBalance: (data[3].result as bigint) || BigInt(0),
+          creditNotUsed: (data[4].result as bigint) || BigInt(0),
+          creditVotingWeight: (data[5].result as bigint) || BigInt(0),
           delegateLockupPeriod: delegateLockupPeriod
         };
       }
@@ -102,9 +102,9 @@ function Governance() {
     return <Spinner />;
   }
 
-  if (!isConnected) {
+  /*if (!isConnected) {
     return <Disconnected />;
-  }
+  }*/
 
   if (isLoading) return <Spinner />;
 

@@ -230,164 +230,6 @@ function AirdropCycle3() {
     }
   }
 
-  const txBuilderJson = {
-    version: '1.0',
-    chainId: '42161',
-    createdAt: 1713532237649,
-    meta: {
-      name: 'Transactions Batch',
-      description: '',
-      txBuilderVersion: '1.16.5',
-      createdFromSafeAddress: '0x1A1075cef632624153176CCf19Ae0175953CF010',
-      createdFromOwnerAddress: '',
-      checksum: '0x0'
-    },
-    transactions: []
-  };
-  for (var userAddress in airdrop) {
-    let totalUser = BigInt(Math.floor(airdrop[userAddress].total * 1e18)).toString();
-    if (totalUser == '0') continue;
-    txBuilderJson.transactions.push({
-      to: '0xe38d06840c9e527b8d40309cccf4b05af0f888a5',
-      value: '0',
-      data: null,
-      contractMethod: {
-        inputs: [
-          {
-            internalType: 'address',
-            name: 'to',
-            type: 'address'
-          },
-          {
-            internalType: 'uint256',
-            name: 'amount',
-            type: 'uint256'
-          }
-        ],
-        name: 'redeem',
-        payable: false
-      },
-      contractInputsValues: {
-        to: userAddress,
-        amount: totalUser
-      }
-    });
-  }
-  txBuilderJson.transactions = txBuilderJson.transactions
-    .sort(function (a, b) {
-      return Number(a.contractInputsValues.amount) < Number(b.contractInputsValues.amount) ? 1 : -1;
-    })
-    .filter(function (x) {
-      return Number(x.contractInputsValues.amount) > 100e18;
-    });
-  window.txBuilderJson = txBuilderJson;
-  console.log('txBuilderJson', txBuilderJson);
-
-  const odgAddress = '0x000d636bd52bfc1b3a699165ef5aa340bea8939c';
-  const odgDistributed = 750;
-  const odgDistributionMatchingGuild = 55750;
-  const odgAirdropPercent: {
-    [userAddress: string]: number;
-  } = {};
-
-  let totalLentOd = 0;
-  for (const userAddress in data.userData) {
-    // skip excluded addresses
-    if (excludedAddresses.includes(userAddress.toLowerCase())) continue;
-    for (const dayKey in data.userData[userAddress].dailyBalances) {
-      const userLentOD = data.userData[userAddress].dailyBalances[dayKey]['5']?.creditBalanceUsd || 0;
-
-      if (userLentOD == 0) continue;
-      if (!odgAirdropPercent[userAddress]) {
-        odgAirdropPercent[userAddress] = 0;
-      }
-      odgAirdropPercent[userAddress] += userLentOD;
-      totalLentOd += userLentOD;
-    }
-  }
-  // normalize to percents
-  for (const userAddress in odgAirdropPercent) {
-    odgAirdropPercent[userAddress] /= totalLentOd;
-  }
-
-  let totalOdgDistributed = 0;
-  console.log(
-    'odgAirdrop\n' +
-      Object.keys(odgAirdropPercent)
-        .map((userAddress, i, arr) => {
-          return {
-            address: userAddress,
-            amount: odgAirdropPercent[userAddress] * odgDistributed
-          };
-        })
-        .sort(function (a, b) {
-          return a.amount < b.amount ? 1 : -1;
-        })
-        .map(function (o) {
-          totalOdgDistributed += o.amount;
-          return o.address + ' : ' + Number(o.amount).toFixed(4);
-        })
-        .join('\n')
-  );
-  console.log('totalOdgDistributed', totalOdgDistributed);
-
-  const txBuilderJsonMatchingGuild = {
-    version: '1.0',
-    chainId: '42161',
-    createdAt: 1713532237649,
-    meta: {
-      name: 'Transactions Batch',
-      description: '',
-      txBuilderVersion: '1.16.5',
-      createdFromSafeAddress: '0x1A1075cef632624153176CCf19Ae0175953CF010',
-      createdFromOwnerAddress: '',
-      checksum: '0x0'
-    },
-    transactions: []
-  };
-
-  Object.keys(odgAirdropPercent)
-    .map((userAddress, i, arr) => {
-      return {
-        address: userAddress,
-        amount: odgAirdropPercent[userAddress] * odgDistributionMatchingGuild
-      };
-    })
-    .sort(function (a, b) {
-      return a.amount < b.amount ? 1 : -1;
-    })
-    .map(function (o) {
-      txBuilderJsonMatchingGuild.transactions.push({
-        to: '0xe38d06840c9e527b8d40309cccf4b05af0f888a5',
-        value: '0',
-        data: null,
-        contractMethod: {
-          inputs: [
-            {
-              internalType: 'address',
-              name: 'to',
-              type: 'address'
-            },
-            {
-              internalType: 'uint256',
-              name: 'amount',
-              type: 'uint256'
-            }
-          ],
-          name: 'redeem',
-          payable: false
-        },
-        contractInputsValues: {
-          to: o.address,
-          amount: BigInt(Math.floor(1e18 * o.amount)).toString()
-        }
-      });
-      return o.address + ' : ' + Number(o.amount).toFixed(4);
-    })
-    .join('\n');
-  window.txBuilderJsonMatchingGuild = txBuilderJsonMatchingGuild;
-  console.log('txBuilderJsonMatchingGuild', txBuilderJsonMatchingGuild);
-
   return (
     <div>
       <Card title="" extra="w-full mb-2 md:col-span-1 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
@@ -413,12 +255,14 @@ function AirdropCycle3() {
 
         <table className="airdroptable w-full">
           <thead>
-            <th className="text-left">User</th>
-            <th className="text-right">Total rewards</th>
-            <th className="text-right">Lender rewards</th>
-            <th className="text-right">Staker rewards</th>
-            <th className="text-right">Borrower rewards</th>
-            <th></th>
+            <tr>
+              <th className="text-left">User</th>
+              <th className="text-right">Total rewards</th>
+              <th className="text-right">Lender rewards</th>
+              <th className="text-right">Staker rewards</th>
+              <th className="text-right">Borrower rewards</th>
+              <th></th>
+            </tr>
           </thead>
           <tbody>
             {Object.keys(airdrop)
@@ -502,7 +346,7 @@ function AirdropCycle3() {
                     </button>
                   </td>
                 </tr>,
-                <tr className={userDetail == o.userAddress ? '' : 'hidden'}>
+                <tr key={i + '-detail'} className={userDetail == o.userAddress ? '' : 'hidden'}>
                   <td colSpan={6} className="rounded-lg bg-gray-100 px-2 py-2 dark:bg-navy-700">
                     <table className="w-full">
                       <thead>

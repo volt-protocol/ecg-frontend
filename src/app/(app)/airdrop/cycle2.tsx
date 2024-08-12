@@ -294,12 +294,14 @@ function AirdropCycle2() {
 
         <table className="airdroptable w-full">
           <thead>
-            <th className="text-left">User</th>
-            <th className="text-right">Total rewards</th>
-            <th className="text-right">Lender rewards</th>
-            <th className="text-right">Staker rewards</th>
-            <th className="text-right">Borrower rewards</th>
-            <th></th>
+            <tr>
+              <th className="text-left">User</th>
+              <th className="text-right">Total rewards</th>
+              <th className="text-right">Lender rewards</th>
+              <th className="text-right">Staker rewards</th>
+              <th className="text-right">Borrower rewards</th>
+              <th></th>
+            </tr>
           </thead>
           <tbody>
             {Object.keys(airdrop)
@@ -308,8 +310,8 @@ function AirdropCycle2() {
               })
               .sort((a, b) => b.airdrop.total - a.airdrop.total)
               .filter((o) => o.airdrop.total > 100)
-              .map((o) => [
-                <tr>
+              .map((o, i) => [
+                <tr key={i}>
                   <td className="font-mono">
                     {false ? (
                       <a target="_blank" href={getExplorerBaseUrl(appChainId) + '/address/' + o.userAddress}>
@@ -383,7 +385,7 @@ function AirdropCycle2() {
                     </button>
                   </td>
                 </tr>,
-                <tr className={userDetail == o.userAddress ? '' : 'hidden'}>
+                <tr key={i + '-detail'} className={userDetail == o.userAddress ? '' : 'hidden'}>
                   <td colSpan={6} className="rounded-lg bg-gray-100 px-2 py-2 dark:bg-navy-700">
                     <table className="w-full">
                       <thead>
@@ -398,7 +400,7 @@ function AirdropCycle2() {
                             Staker Rewards
                           </th>
                           {marketsConfig[appChainId].map((marketConfig) => {
-                            const creditTokenSymbol = 'g' + marketConfig.pegToken
+                            const creditTokenSymbol = 'g' + marketConfig.pegToken;
 
                             return (
                               <th className="whitespace-nowrap text-center" colSpan={2}>

@@ -582,7 +582,8 @@ function Myloans({
     }
   }
 
-  async function getRepayGatewayLeverageData(loanId: string) {
+  async function getRepayGatewayLeverageData(loanId: string, ltvMargin: number) {
+    ltvMargin = ltvMargin || 3;
     const loan = tableDataWithDebts.find((item) => item.id == loanId);
     const collateralAmount = loan.collateralAmount as bigint;
     const collateralValue: number = formatUnits(collateralAmount, collateralToken.decimals) * collateralToken.price;
@@ -594,7 +595,8 @@ function Myloans({
     const pegTokenDebt = ((loan.loanDebt + quarterHourInterests) * creditMultiplier) / decimalNormalizer + BigInt(1); // add 1 wei for rounding
     const debtValue = Number(formatUnits(pegTokenDebt, pegToken.decimals)) * pegToken.price;
     const ltv = (100 * debtValue) / collateralValue;
-    const minCollateralRemaining = (collateralAmount * BigInt(Math.max(0, Math.ceil(100 - ltv - 3)))) / BigInt(100);
+    const minCollateralRemaining =
+      (collateralAmount * BigInt(Math.max(0, Math.ceil(100 - ltv - ltvMargin)))) / BigInt(100);
     const dexData = await getDexRouterData(
       getLeverageConfig(lendingTerm, coinDetails, contractsList?.marketContracts[appMarketId].pegTokenAddress)
         .leverageDex, // dex
@@ -605,6 +607,14 @@ function Myloans({
       contractsList.gatewayAddress, // sender
       contractsList.gatewayAddress // recipient
     );
+
+    let dust = dexData.amountOut - pegTokenDebt;
+    let dustPercent = Number(dust) / Number(pegTokenDebt);
+    if (dustPercent > 0.005 && ltvMargin == 3) {
+      // > 0.5% dust, first retry
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // wait 1s
+      return getRepayGatewayLeverageData(loanId, ltvMargin - dustPercent * 95);
+    }
 
     return {
       input: {

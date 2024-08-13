@@ -1,5 +1,4 @@
 // Libraries
-import { LoansObj, LoansResponse } from 'types/lending';
 import { StateCreator } from 'zustand';
 import { HttpGet } from 'utils/HttpHelper';
 import { getApiBaseUrl } from 'config';

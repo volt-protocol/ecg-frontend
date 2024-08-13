@@ -32,3 +32,27 @@ export interface ProposalsApiResponse {
   updatedHuman: string;
   proposals: Proposal[];
 }
+
+export interface ProposalParams {
+  status: 'proposed' | 'queued' | 'active';
+  createdBlock: number;
+  termAddress: string;
+  paramName: 'interestRate' | 'hardCap' | 'maxDebtPerCollateralToken';
+  paramValue: string;
+  proposalId: string;
+  description: string;
+  calldatas: string[];
+  values: string[];
+  targets: string[];
+  proposer: string;
+  voteStart: number;
+  voteEnd: number;
+  quorum: string;
+}
+
+export interface ProposalsParamsApiResponse {
+  updated: number;
+  updateBlock: number;
+  updatedHuman: string;
+  proposals: ProposalParams[];
+}

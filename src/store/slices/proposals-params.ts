@@ -18,7 +18,6 @@ export const createProposalsParamsSlice: StateCreator<ProposalsParamsSlice> = (s
   fetchProposalsParams: async (marketId: number, chainId: number) => {
     const apiUrl = getApiBaseUrl(chainId) + `/markets/${marketId}/proposalsParams`;
     const apiResponse = await HttpGet<ProposalsParamsApiResponse>(apiUrl);
-    console.log('GET', apiUrl, apiResponse);
     set({
       proposalsParams: apiResponse.proposals,
       lastUpdatedProposals: apiResponse.updated

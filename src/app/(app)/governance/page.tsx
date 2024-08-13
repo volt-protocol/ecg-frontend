@@ -8,6 +8,7 @@ import DelegateGuild from './components/DelegateGuild';
 import DelegateCredit from './components/DelegateCredit';
 import OffboardTerm from './components/OffboardTerm';
 import OnboardNewterm from './components/OnboardNewTerm';
+import UpdateTermParams from './components/UpdateTermParams';
 import { useAppStore, useUserPrefsStore } from 'store';
 import Spinner from 'components/spinner';
 import { getCreditTokenSymbol } from 'utils/strings';
@@ -140,12 +141,20 @@ function Governance() {
           </Card>
         </div>
         <h3 className="mb-4 ml-8 mt-6 text-xl font-semibold text-gray-700 dark:text-white">Participate</h3>
-        <div className="mb-40 mt-3 grid grid-cols-1 gap-5 md:grid-cols-2">
-          <Card title="Onboard Active Term" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
+        <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-2">
+          <Card title="Onboard New Term" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
             <OnboardNewterm guildVotingWeight={data?.guildVotingWeight} creditVotingWeight={data?.creditVotingWeight} />
           </Card>
           <Card title="Offboard Active Term" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
             <OffboardTerm guildVotingWeight={data?.guildVotingWeight} />
+          </Card>
+        </div>
+        <div className="mb-40 mt-5 grid grid-cols-1 gap-5 md:grid-cols-1">
+          <Card title="Update Term Parameters" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
+            <UpdateTermParams
+              guildVotingWeight={data?.guildVotingWeight}
+              creditVotingWeight={data?.creditVotingWeight}
+            />
           </Card>
         </div>
       </div>

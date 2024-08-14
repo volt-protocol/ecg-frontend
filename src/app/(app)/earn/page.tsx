@@ -107,7 +107,7 @@ function MintAndSaving() {
     );
     additionalRewards.dailyAmount = 1500 / (8 * 7);
     console.log('OD market earns additional ODG rewards', additionalRewards);
-  } else if (pegToken.symbol == 'DOLA' && Date.now() < new Date('2024-08-09').getTime()) {
+  } else if (pegToken.symbol == 'DOLA' && Date.now() < new Date('2024-08-17').getTime()) {
     additionalRewards.enabled = true;
     additionalRewards.token = coinDetails.find(
       (item) => item.address.toLowerCase() == '0x6a7661795c374c0bfc635934efaddff3a7ee23b6' // DOLA

@@ -312,7 +312,7 @@ function AirdropCycle4() {
 
   let totalOdgDistributed = 0;
   console.log(
-    'odgAirdrop\n' +
+    'odgAirdrop cycle 4\n' +
       Object.keys(odgAirdropPercent)
         .map((userAddress, i, arr) => {
           return {

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { RadioGroup } from '@headlessui/react';
 import { getPublicClient, readContracts, waitForTransactionReceipt, writeContract, multicall } from '@wagmi/core';
 import { toastError } from 'components/toast';
-import { OnboardVetoCreditABI, OnboardVetoGuildABI, GuildABI, OnboardTimelockABI } from 'lib/contracts';
+import { OnboardVetoCreditABI, OnboardVetoGuildABI, GuildABI, OnboardTimelockABI, TermABI } from 'lib/contracts';
 import { FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import { Step } from 'components/stepLoader/stepType';
 import StepModal from 'components/stepLoader';
@@ -19,7 +19,6 @@ import Spinner from 'components/spinner';
 import ButtonPrimary from 'components/button/ButtonPrimary';
 import { useAccount } from 'wagmi';
 import { formatCurrencyValue, formatDecimal, toLocaleString } from 'utils/numbers';
-import { ActivOnboardingVetoVotes } from 'types/governance';
 import { fromNow } from 'utils/date';
 import { Address, decodeFunctionData, formatUnits } from 'viem';
 import { QuestionMarkIcon, TooltipHorizon } from 'components/tooltip';
@@ -30,14 +29,14 @@ import { wagmiConfig } from 'contexts/Web3Provider';
 import { useAppStore, useUserPrefsStore } from 'store';
 import { getExplorerBaseUrl, getL1BlockNumber } from 'config';
 import { SECONDS_IN_DAY } from 'utils/constants';
-import { getCreditTokenSymbol } from 'utils/strings';
+import { generateTermName, getCreditTokenSymbol } from 'utils/strings';
 
 function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: bigint; guildVotingWeight: bigint }) {
-  const { contractsList, coinDetails, proposals, fetchProposalsUntilBlock } = useAppStore();
+  const { contractsList, coinDetails, proposalsParams, lendingTerms } = useAppStore();
   const { appMarketId, appChainId } = useUserPrefsStore();
   const { address } = useAccount();
   const [showModal, setShowModal] = useState(false);
-  const [activeVetoVotes, setActiveVetoVotes] = useState<ActivOnboardingVetoVotes[]>([]);
+  const [activeVetoVotes, setActiveVetoVotes] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [currentBlock, setCurrentBlock] = useState<BigInt>();
   const [selectHolderType, setSelectHolderType] = useState<'guild' | 'credit'>('credit');
@@ -47,11 +46,11 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
   const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
 
   useEffect(() => {
-    address && fetchActiveOnboardingVetoVotes();
-  }, [address, proposals]);
+    address && fetchActiveVetoVotes();
+  }, [address, proposalsParams]);
 
   /* Getters */
-  const fetchActiveOnboardingVetoVotes = async () => {
+  const fetchActiveVetoVotes = async () => {
     setLoading(true);
     const l1BlockNumber = await getL1BlockNumber(appChainId);
     const currentBlockNumber = await getPublicClient(wagmiConfig).getBlockNumber();
@@ -77,34 +76,6 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
       fromBlock: BigInt(0),
       toBlock: currentBlockNumber
     });
-
-    const termsCreated: {
-      termAddress: Address;
-      collateralTokenSymbol: any;
-      termName: string;
-      collateralToken: Address;
-      openingFee: number;
-      interestRate: string;
-      borrowRatio: number;
-      maxDelayBetweenPartialRepay: string;
-      minPartialRepayPercent: string;
-      hardCap: string;
-    }[] = proposals
-      .filter((_) => _.status == 'queued')
-      .map((p) => {
-        return {
-          termAddress: p.termAddress as Address,
-          collateralTokenSymbol: p.collateralTokenSymbol,
-          termName: p.termName,
-          collateralToken: p.collateralTokenAddress as Address,
-          openingFee: Number(formatUnits(BigInt(p.openingFee), 18)),
-          interestRate: (Number(formatUnits(BigInt(p.interestRate), 18)) * 100).toFixed(1),
-          borrowRatio: p.borrowRatio,
-          maxDelayBetweenPartialRepay: formatDecimal(p.maxDelayBetweenPartialRepay / SECONDS_IN_DAY, 1),
-          minPartialRepayPercent: formatDecimal(p.minPartialRepayPercent * 100, 4),
-          hardCap: p.hardCap
-        };
-      });
 
     const activeVetoVotes = await Promise.all(
       logs
@@ -133,29 +104,39 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
           return acc;
         }, [] as { timelockId: string; targets: Address[]; datas: string[]; scheduleBlockNumber: number }[])
         // .filter((item) => checkVetoVoteValidity(contractsList, item.targets, item.datas))
-        .map((item) => {
-          //TODO : get term name decoding data[0]
-          const { functionName, args } = decodeFunctionData({
-            abi: GuildABI,
-            data: item.datas[0] as `0x${string}`
-          });
-
-          // get TermCreated logs
-          const term = termsCreated.find((term) => term.termAddress.toLowerCase() === args[1].toLowerCase());
-
-          // TODO : transform action id to proposalID
-          const proposalId = getProposalIdFromActionId(contractsList, item.timelockId);
-
+        .filter((timelockAction) => {
+          return (
+            timelockAction.datas.length == 1 &&
+            (timelockAction.datas[0].toLowerCase().indexOf('0x5f84f302') == 0 /*setInterestRate(uint256)*/ ||
+              timelockAction.datas[0].toLowerCase().indexOf('0xd18d944b') == 0 /*setHardCap(uint256)*/ ||
+              timelockAction.datas[0].toLowerCase().indexOf('0x730e7446') ==
+                0) /*setMaxDebtPerCollateralToken(uint256)*/
+          );
+        })
+        .map((timelockAction) => {
+          let paramName = 'hardCap';
+          let paramValue = Number('0x' + timelockAction.datas[0].toLowerCase().slice(10)) / 1e18;
+          if (timelockAction.datas[0].toLowerCase().indexOf('0x5f84f302') == 0) {
+            paramName = 'interestRate';
+          } else if (timelockAction.datas[0].toLowerCase().indexOf('0x730e7446') == 0) {
+            paramName = 'maxDebtPerCollateralToken';
+          }
+          const term = lendingTerms.find((_) => _.address.toLowerCase() == timelockAction.targets[0].toLowerCase());
+          const termName = generateTermName(term?.collateral.symbol, term?.interestRate, term?.borrowRatio);
+          const proposalId = getProposalIdFromActionId(contractsList, timelockAction.timelockId);
           return {
-            ...item,
-            termAddress: term?.termAddress,
-            termName: term?.termName,
-            proposalId: proposalId
+            ...timelockAction,
+            termAddress: term?.address,
+            term: term || undefined,
+            termName,
+            paramName,
+            paramValue,
+            proposalId
           };
         })
         .filter((item) => {
           // filter out votes that are for terms in other markets
-          return item.termAddress != undefined;
+          return item.term != undefined;
         })
         .map(async (item) => {
           //get proposal votes
@@ -233,6 +214,11 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
                 abi: OnboardTimelockABI,
                 functionName: 'getTimestamp',
                 args: [item.timelockId]
+              },
+              {
+                address: item.termAddress,
+                abi: TermABI,
+                functionName: 'getParameters'
               }
             ]
           });
@@ -256,7 +242,8 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
               isOperationReady: data[7].status == 'success' ? data[7].result : false,
               isOperationDone: data[8].status == 'success' ? data[8].result : false,
               getTimestamp: data[11].status == 'success' ? data[11].result : 0
-            }
+            },
+            hardCap: data[12].status == 'success' ? Number(formatUnits(data[12].result.hardCap, 18)) : 0
           };
         })
     );
@@ -315,7 +302,7 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
       }
 
       updateStepStatus('Support Veto against Term Proposal ' + proposalId.toString().slice(0, 6) + '...', 'Success');
-      await fetchActiveOnboardingVetoVotes();
+      await fetchActiveVetoVotes();
     } catch (e: any) {
       console.log(e);
       updateStepStatus('Support Veto against Term Proposal ' + proposalId.toString().slice(0, 6) + '...', 'Error');
@@ -366,7 +353,7 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
       }
 
       updateStepStatus('Create Veto for Term Proposal ' + timelockId.toString().slice(0, 6) + '...', 'Success');
-      await fetchActiveOnboardingVetoVotes();
+      await fetchActiveVetoVotes();
     } catch (e: any) {
       console.log(e);
       updateStepStatus('Create Veto for Term Proposal ' + timelockId.toString().slice(0, 6) + '...', 'Error');
@@ -417,7 +404,7 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
       }
 
       updateStepStatus('Execute Veto for Term Proposal ' + timelockId.toString().slice(0, 6) + '...', 'Success');
-      await fetchActiveOnboardingVetoVotes();
+      await fetchActiveVetoVotes();
     } catch (e: any) {
       console.log(e);
       updateStepStatus('Execute Veto for Term Proposal ' + timelockId.toString().slice(0, 6) + '...', 'Error');
@@ -456,9 +443,52 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
         );
       }
     }),
+    columnHelper.accessor('paramName', {
+      id: 'paramName',
+      header: 'Parameter',
+      enableSorting: true,
+      cell: (info) => {
+        if (info.row.original.paramName == 'maxDebtPerCollateralToken') {
+          return '⚖️ Borrow Ratio';
+        }
+        if (info.row.original.paramName == 'interestRate') {
+          return '💰 Interest Rate';
+        }
+        if (info.row.original.paramName == 'hardCap') {
+          return '🛑 Hard Cap';
+        }
+        return '?';
+      }
+    }),
+    columnHelper.accessor('paramValue', {
+      id: 'paramValue',
+      header: 'Change',
+      enableSorting: true,
+      cell: (info) => {
+        const term = lendingTerms.find((_) => _.address.toLowerCase() == info.row.original.termAddress.toLowerCase());
+        if (info.row.original.paramName == 'maxDebtPerCollateralToken') {
+          return [term.borrowRatio, '→', info.row.original.paramValue].join(' ');
+        }
+        if (info.row.original.paramName == 'interestRate') {
+          return [
+            formatDecimal(term.interestRate * 100, 2) + '%',
+            '→',
+            formatDecimal(info.row.original.paramValue * 100, 2) + '%'
+          ].join(' ');
+        }
+        if (info.row.original.paramName == 'hardCap') {
+          return [
+            formatCurrencyValue(info.row.original.hardCap),
+            '→',
+            formatCurrencyValue(info.row.original.paramValue)
+          ].join(' ');
+        }
+        return '? ' + info.row.original.paramValue;
+      }
+    }),
     columnHelper.accessor('scheduleBlockNumber', {
       id: 'scheduleBlockNumber',
-      header: 'Onboard in',
+      header: 'Execute in',
       enableSorting: true,
       cell: (info) => {
         return (
@@ -550,7 +580,7 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
   });
   /* End Create Table */
 
-  const getActionButton = (item: ActivOnboardingVetoVotes) => {
+  const getActionButton = (item: any) => {
     const state = selectHolderType == 'credit' ? item.creditVeto.state : item.guildVeto.state;
     const otherState = selectHolderType == 'credit' ? item.guildVeto.state : item.creditVeto.state;
 
@@ -575,7 +605,6 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
     }
 
     if (state == 'Reverts' || state == 0 /*Pending*/) {
-      console.log('vetorow', item, state, hasVoted);
       return <ButtonPrimary variant="xs" title="Create Veto" onClick={() => createVeto(item.timelockId)} />;
     }
 
@@ -683,8 +712,8 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
         </RadioGroup>
 
         <p className="mt-4">
-          Using {selectHolderType == 'credit' ? `${creditTokenSymbol}` : 'GUILD'} veto power will cancel the onboarding
-          of a lending term that GUILD votes successfully voted to add.
+          Using {selectHolderType == 'credit' ? `${creditTokenSymbol}` : 'GUILD'} veto power will cancel the parameter
+          change of a lending term that GUILD votes successfully voted to perform.
         </p>
         <div>
           {loading ? (

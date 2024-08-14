@@ -30,12 +30,12 @@ export const createProposalsParamsSlice: StateCreator<ProposalsParamsSlice> = (s
       if (apiResponse.updateBlock < block) {
         await sleep(2000);
         console.log(
-          `fetchLendingTermsUntilBlock[${block}]: fetched data up to block ${apiResponse.updateBlock}, will retry`
+          `fetchProposalsParamsUntilBlock[${block}]: fetched data up to block ${apiResponse.updateBlock}, will retry`
         );
         continue;
       }
       console.log(
-        `fetchLendingTermsUntilBlock[${block}]: success. Fetched data up to block ${apiResponse.updateBlock}`
+        `fetchProposalsParamsUntilBlock[${block}]: success. Fetched data up to block ${apiResponse.updateBlock}`
       );
       set({
         proposalsParams: apiResponse.proposals,

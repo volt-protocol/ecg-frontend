@@ -12,6 +12,7 @@ export type ContractsList = {
   daoVetoGuildAddress: Address;
   daoTimelockAddress: Address;
   onboardGovernorGuildAddress: Address;
+  termParamGovernorGuildAddress: Address;
   onboardVetoGuildAddress: Address;
   onboardTimelockAddress: Address;
   lendingTermOffboardingAddress: Address;
@@ -71,6 +72,9 @@ export const createContractsListSlice: StateCreator<ContractsListSlice> = (set, 
           .addr,
         onboardVetoGuildAddress: contractJsonFile.find((contract) => contract.name === 'ONBOARD_VETO_GUILD').addr,
         onboardTimelockAddress: contractJsonFile.find((contract) => contract.name === 'ONBOARD_TIMELOCK').addr,
+        termParamGovernorGuildAddress: contractJsonFile.find(
+          (contract) => contract.name === 'TERM_PARAM_GOVERNOR_GUILD'
+        ).addr,
         lendingTermOffboardingAddress: contractJsonFile.find((contract) => contract.name === 'OFFBOARD_GOVERNOR_GUILD')
           .addr,
         lendingTermV2ImplementationAddress: contractJsonFile.find((contract) => contract.name === 'LENDING_TERM_V2')

@@ -33,7 +33,7 @@ export const formatCurrencyValue = (num: number): string => {
     return `${roundTo(num / 1e9, 2)}B`;
   } else if (num >= 1e6) {
     return `${roundTo(num / 1e6, 2)}M`;
-  } else if (num >= 1e3) {
+  } else if (num >= 50e3) {
     return `${roundTo(num / 1e3, 2)}K`;
   } else if (num < 1 / 1e3) {
     return num.toExponential();

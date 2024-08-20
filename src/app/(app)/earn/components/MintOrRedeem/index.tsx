@@ -341,7 +341,7 @@ function MintOrRedeem({
             nonce: creditTokenNonces,
             chainId: appChainId,
             version:
-            permitConfig.find((item) => item.address.toLowerCase() === creditAddress.toLowerCase())?.version || '1'
+              permitConfig.find((item) => item.address.toLowerCase() === creditAddress.toLowerCase())?.version || '1'
           });
 
           if (!permitSig) {
@@ -482,38 +482,44 @@ function MintOrRedeem({
       <div>
         {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
 
-        <div className="mb-3 mt-4 rounded-md bg-gray-100 text-sm dark:bg-navy-900">
-          <a
-            className="block p-1 text-center text-gray-500 dark:text-gray-200"
-            target="__blank"
-            href={`${getExplorerBaseUrl(appChainId)}/address/${address}`}
-          >
-            Your balances <MdOpenInNew className="inline" />
-          </a>
-          <div className="flex space-x-1 rounded-md pb-2">
-            <div className="w-full text-center">
-              <Image className="inline-block align-top" src={pegTokenLogo} width={20} height={20} alt="logo" />{' '}
-              <strong>
-                {pegTokenBalanceNumber ? formatDecimal(pegTokenBalanceNumber, pegTokenDecimalsToDisplay) : 0}
-              </strong>{' '}
-              {pegToken.symbol}
-            </div>
-            <div className="w-full text-center">
-              <Image
-                className="inline-block align-top"
-                src={pegTokenLogo}
-                width={20}
-                height={20}
-                alt="logo"
-                style={{ borderRadius: '50%', border: '2px solid #3e6b7d' }}
-              />{' '}
-              <strong>
-                {creditTokenBalanceNumber ? formatDecimal(creditTokenBalanceNumber, pegTokenDecimalsToDisplay) : 0}
-              </strong>{' '}
-              {creditTokenSymbol}
+        {!address ? (
+          <div className="mb-3 mt-4 rounded-md bg-gray-100 px-5 py-2 text-center text-sm dark:bg-navy-900">
+            Connect your wallet to see your balances
+          </div>
+        ) : (
+          <div className="mb-3 mt-4 rounded-md bg-gray-100 text-sm dark:bg-navy-900">
+            <a
+              className="block p-1 text-center text-gray-500 dark:text-gray-200"
+              target="__blank"
+              href={`${getExplorerBaseUrl(appChainId)}/address/${address}`}
+            >
+              Your balances <MdOpenInNew className="inline" />
+            </a>
+            <div className="flex space-x-1 rounded-md pb-2">
+              <div className="w-full text-center">
+                <Image className="inline-block align-top" src={pegTokenLogo} width={20} height={20} alt="logo" />{' '}
+                <strong>
+                  {pegTokenBalanceNumber ? formatDecimal(pegTokenBalanceNumber, pegTokenDecimalsToDisplay) : 0}
+                </strong>{' '}
+                {pegToken.symbol}
+              </div>
+              <div className="w-full text-center">
+                <Image
+                  className="inline-block align-top"
+                  src={pegTokenLogo}
+                  width={20}
+                  height={20}
+                  alt="logo"
+                  style={{ borderRadius: '50%', border: '2px solid #3e6b7d' }}
+                />{' '}
+                <strong>
+                  {creditTokenBalanceNumber ? formatDecimal(creditTokenBalanceNumber, pegTokenDecimalsToDisplay) : 0}
+                </strong>{' '}
+                {creditTokenSymbol}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <Tab.Group
           onChange={(index) => {

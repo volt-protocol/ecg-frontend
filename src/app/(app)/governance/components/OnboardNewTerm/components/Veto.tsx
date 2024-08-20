@@ -132,6 +132,13 @@ function Veto({ creditVotingWeight, guildVotingWeight }: { creditVotingWeight: b
           }
           return acc;
         }, [] as { timelockId: string; targets: Address[]; datas: string[]; scheduleBlockNumber: number }[])
+        .filter((_) => {
+          return (
+            _.targets.length == 4 &&
+            _.targets[0].toLowerCase() == contractsList.guildAddress.toLowerCase() &&
+            _.datas[0].toLowerCase().indexOf('0xcd2ea841') == 0 /*addGauge(uint256,address)*/
+          );
+        })
         // .filter((item) => checkVetoVoteValidity(contractsList, item.targets, item.datas))
         .map((item) => {
           //TODO : get term name decoding data[0]

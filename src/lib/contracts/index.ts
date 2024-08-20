@@ -16,6 +16,7 @@ export { default as DaoVetoCreditABI } from './abi/DaoVetoCreditABI.json';
 export { default as DaoVetoGuildABI } from './abi/DaoVetoGuildABI.json';
 export { default as DaoTimelockABI } from './abi/DaoTimelockABI.json';
 export { default as OnboardGovernorGuildABI } from './abi/OnboardGovernorGuildABI.json';
+export { default as TermParamGovernorABI } from './abi/TermParamGovernorABI.json';
 export { default as OnboardVetoCreditABI } from './abi/OnboardVetoCreditABI.json';
 export { default as OnboardVetoGuildABI } from './abi/OnboardVetoGuildABI.json';
 export { default as OnboardTimelockABI } from './abi/OnboardTimelockABI.json';

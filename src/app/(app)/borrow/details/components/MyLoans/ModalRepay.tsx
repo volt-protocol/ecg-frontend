@@ -48,6 +48,7 @@ export default function ModalRepay({
   const [value, setValue] = useState<string>('');
   const [match, setMatch] = useState<boolean>(false);
   const [leverageData, setLeverageData] = useState<any>(null);
+  const [loadingLeverageData, setLoadingLeverageData] = useState<any>(false);
   const [withLeverage, setWithLeverage] = useState<boolean>(false);
   const { coinDetails, contractsList, lendingTerms } = useAppStore();
   const { appMarketId, appChainId } = useUserPrefsStore();
@@ -67,9 +68,11 @@ export default function ModalRepay({
   );
   const collateralTokenDecimalsToDisplay = Math.max(Math.ceil(Math.log10(collateralToken?.price * 100)), 0);
 
-  if (rowData && withLeverage && !leverageData) {
+  if (rowData && withLeverage && !leverageData && !loadingLeverageData) {
+    setLoadingLeverageData(true);
     getRepayGatewayLeverageData(rowData?.id).then(function (data) {
       setLeverageData(data);
+      setLoadingLeverageData(false);
     });
   }
 
@@ -319,6 +322,27 @@ export default function ModalRepay({
                                               Amount in: ${formatDecimal(leverageData.output.amountInUsd, 2)}
                                               <br />
                                               Amount out: ${formatDecimal(leverageData.output.amountOutUsd, 2)}
+                                              <br />
+                                              <br />
+                                              Amount in:{' '}
+                                              {formatDecimal(
+                                                Number(
+                                                  formatUnits(
+                                                    leverageData.input.collateralAmount -
+                                                      leverageData.input.minCollateralRemaining,
+                                                    collateralToken?.decimals
+                                                  )
+                                                ),
+                                                collateralTokenDecimalsToDisplay
+                                              )}{' '}
+                                              {collateralToken?.symbol}
+                                              <br />
+                                              Amount out: ≈{' '}
+                                              {formatDecimal(
+                                                Number(formatUnits(leverageData.output.amountOut, pegToken?.decimals)),
+                                                pegTokenDecimalsToDisplay
+                                              )}{' '}
+                                              {pegToken?.symbol}
                                             </div>
                                           }
                                           trigger={
@@ -391,14 +415,7 @@ export default function ModalRepay({
                                           alt={''}
                                           className="mr-1 inline-block rounded-full align-middle"
                                         />
-                                        Receive dust{' '}
-                                        <Image
-                                          src={lendingTerm.collateral.logo}
-                                          width={18}
-                                          height={18}
-                                          alt={''}
-                                          className="mr-1 inline-block rounded-full align-middle"
-                                        />
+                                        Receive approximately{' '}
                                         <Image
                                           src={pegTokenLogo}
                                           width={18}
@@ -406,7 +423,17 @@ export default function ModalRepay({
                                           alt={''}
                                           className="mr-1 inline-block rounded-full align-middle"
                                         />
-                                        (swap amounts have to be estimated)
+                                        {formatDecimal(
+                                          Math.round(
+                                            1e6 *
+                                              (Number(formatUnits(leverageData.output.amountOut, pegToken?.decimals)) -
+                                                Number(
+                                                  formatUnits(leverageData.input.pegTokenDebt, pegToken?.decimals)
+                                                ))
+                                          ) / 1e6,
+                                          collateralTokenDecimalsToDisplay
+                                        )}{' '}
+                                        {pegToken?.symbol}
                                       </div>
                                     </div>
                                   </div>

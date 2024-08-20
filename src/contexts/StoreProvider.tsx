@@ -18,7 +18,8 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
     fetchContractsList,
     fetchProtocolData,
     fetchAirdropData,
-    fetchProposals
+    fetchProposals,
+    fetchProposalsParams
   } = useAppStore();
 
   //Note: when several chains will be supported, reload the data when the appChainId changes
@@ -33,6 +34,7 @@ const StoreProvider = ({ children }: { children: React.ReactNode }) => {
         fetchLoans(appMarketId, appChainId),
         fetchAuctions(appMarketId, appChainId),
         fetchProposals(appMarketId, appChainId),
+        fetchProposalsParams(appMarketId, appChainId),
         fetchProtocolData(appMarketId, appChainId, contractsList),
         fetchAirdropData(appChainId)
       ]);

@@ -117,6 +117,8 @@ function DelegateCredit({
         });
         setIsLoadingDelegations(false);
       });
+    } else {
+      setIsLoadingDelegations(false);
     }
   }, [isConnected, creditNotUsed]);
 

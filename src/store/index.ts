@@ -11,6 +11,7 @@ import { persist } from 'zustand/middleware';
 import { ProtocolDataSlice, createProtocolDataSlice } from './slices/protocol-data';
 import { AirdropDataSlice, createAirdropDataSlice } from './slices/airdrop-data';
 import { ProposalsSlice, createProposalsSlice } from './slices/proposals';
+import { ProposalsParamsSlice, createProposalsParamsSlice } from './slices/proposals-params';
 
 type StoreState = LendingTermsSlice &
   LoansSlice &
@@ -20,7 +21,8 @@ type StoreState = LendingTermsSlice &
   ContractsListSlice &
   ProtocolDataSlice &
   AirdropDataSlice &
-  ProposalsSlice;
+  ProposalsSlice &
+  ProposalsParamsSlice;
 
 type TosState = TosSlice;
 
@@ -35,7 +37,8 @@ export const useAppStore = create<StoreState, any>((...a) => ({
   ...createContractsListSlice(...a),
   ...createProtocolDataSlice(...a),
   ...createAirdropDataSlice(...a),
-  ...createProposalsSlice(...a)
+  ...createProposalsSlice(...a),
+  ...createProposalsParamsSlice(...a)
 }));
 
 export const useTosStore = create<TosState, any>(

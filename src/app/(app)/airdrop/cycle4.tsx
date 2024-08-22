@@ -388,6 +388,52 @@ function AirdropCycle4() {
   window.txBuilderJsonMatchingGuild = txBuilderJsonMatchingGuild;
   console.log('txBuilderJsonMatchingGuild', txBuilderJsonMatchingGuild);
 
+  const dolaDistributed = 3750;
+  const dolaAirdropPercent: {
+    [userAddress: string]: number;
+  } = {};
+
+  let totalLentDola = 0;
+  for (const userAddress in data.userData) {
+    // skip excluded addresses
+    if (excludedAddresses.includes(userAddress.toLowerCase())) continue;
+    for (const dayKey in data.userData[userAddress].dailyBalances) {
+      const userLentDola = data.userData[userAddress].dailyBalances[dayKey]['6']?.creditBalanceUsd || 0;
+
+      if (userLentDola == 0) continue;
+      if (!dolaAirdropPercent[userAddress]) {
+        dolaAirdropPercent[userAddress] = 0;
+      }
+      dolaAirdropPercent[userAddress] += userLentDola;
+      totalLentDola += userLentDola;
+    }
+  }
+  // normalize to percents
+  for (const userAddress in dolaAirdropPercent) {
+    dolaAirdropPercent[userAddress] /= totalLentDola;
+  }
+
+  let totalDolaDistributed = 0;
+  console.log(
+    'dolaAirdrop cycle 4\n' +
+      Object.keys(dolaAirdropPercent)
+        .map((userAddress, i, arr) => {
+          return {
+            address: userAddress,
+            amount: dolaAirdropPercent[userAddress] * dolaDistributed
+          };
+        })
+        .sort(function (a, b) {
+          return a.amount < b.amount ? 1 : -1;
+        })
+        .map(function (o) {
+          totalDolaDistributed += o.amount;
+          return o.address + ' : ' + Number(o.amount).toFixed(4);
+        })
+        .join('\n')
+  );
+  console.log('totalDolaDistributed', totalDolaDistributed);
+
   return (
     <div>
       <Card title="" extra="w-full mb-2 md:col-span-1 sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">

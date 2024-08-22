@@ -254,27 +254,34 @@ const LendingDetails = () => {
   const additionalRewards = {
     enabled: false,
     token: null,
-    dailyAmount: 0
+    dailyAmount: 0,
+    apr: 0
   };
   if (
     effectiveBalanceSum !== -1 &&
-    Date.now() < new Date('2024-08-22').getTime() &&
-    collateralToken?.address.toLowerCase() == '0xad853eb4fb3fe4a66cdfcd7b75922a0494955292' /*ERC20_PT_USDe_29AUG2024*/
+    Date.now() < new Date('2024-09-19').getTime() &&
+    collateralToken?.address.toLowerCase() == '0x1fa42e6730df74ff2742704761da41111bb7f019' /*ERC20_PT_USDe_28NOV2024*/
   ) {
     additionalRewards.enabled = true;
     additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
-    additionalRewards.dailyAmount = 200 / 7 / Math.max(effectiveBalanceSum || 1, 1);
-    console.log('additional rewards', additionalRewards, 'effectiveBalanceSum', effectiveBalanceSum);
+    additionalRewards.dailyAmount = 200 / 7;
+    additionalRewards.apr =
+      (365 * additionalRewards.dailyAmount * additionalRewards.token.price) /
+      ((effectiveBalanceSum || 1) * collateralToken?.price);
+    console.log('PT_USDe_28NOV2024.collateral additional rewards', additionalRewards);
   } else if (
     effectiveBalanceSum !== -1 &&
     Date.now() < new Date('2024-08-31').getTime() &&
-    collateralToken?.address.toLowerCase() == '0x18c14c2d707b2212e17d1579789fc06010cfca23' && /*ETH+*/
+    collateralToken?.address.toLowerCase() == '0x18c14c2d707b2212e17d1579789fc06010cfca23' /*ETH+*/ &&
     pegToken?.symbol.toLowerCase() == 'weth'
   ) {
     additionalRewards.enabled = true;
     additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
-    additionalRewards.dailyAmount = 2033 / 31 / Math.max(effectiveBalanceSum || 1, 1);
-    console.log('additional rewards', additionalRewards, 'effectiveBalanceSum', effectiveBalanceSum);
+    additionalRewards.dailyAmount = 2033 / 31;
+    additionalRewards.apr =
+      (365 * additionalRewards.dailyAmount * additionalRewards.token.price) /
+      ((effectiveBalanceSum || 1) * collateralToken?.price);
+    console.log('ETH+.collateral additional rewards', additionalRewards);
   } else if (
     data?.totalIssuance != undefined &&
     Date.now() < new Date('2024-08-31').getTime() &&
@@ -282,8 +289,11 @@ const LendingDetails = () => {
   ) {
     additionalRewards.enabled = true;
     additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
-    additionalRewards.dailyAmount = 2033 / 31 / Math.max(data?.totalIssuance || 1, 1);
-    console.log('additional rewards', additionalRewards, 'data?.totalIssuance', data?.totalIssuance);
+    additionalRewards.dailyAmount = 2033 / 31;
+    additionalRewards.apr =
+      (365 * additionalRewards.dailyAmount * additionalRewards.token.price) /
+      (Math.max(data?.totalIssuance || 1, 1) * pegToken?.price);
+    console.log('eUSD.borrow additional rewards', additionalRewards);
   }
 
   useEffect(() => {
@@ -438,13 +448,7 @@ const LendingDetails = () => {
                         height={24}
                         alt={'logo'}
                       />{' '}
-                      {formatDecimal(
-                        (100 * 365 * additionalRewards.dailyAmount * additionalRewards.token.price) /
-                          collateralToken?.price,
-                        0
-                      ) +
-                        '% ' +
-                        additionalRewards.token.symbol}
+                      {formatDecimal(100 * additionalRewards.apr, 0) + '% ' + additionalRewards.token.symbol}
                     </span>
                   ) : null}
                   <div className="mt-1 text-xs font-normal opacity-50">
@@ -473,13 +477,7 @@ const LendingDetails = () => {
                         height={24}
                         alt={'logo'}
                       />{' '}
-                      {formatDecimal(
-                        (100 * 365 * additionalRewards.dailyAmount * additionalRewards.token.price) /
-                          collateralToken?.price,
-                        0
-                      ) +
-                        '% ' +
-                        additionalRewards.token.symbol}
+                      {formatDecimal(100 * additionalRewards.apr, 0) + '% ' + additionalRewards.token.symbol}
                     </span>
                   ) : null}
                 </div>

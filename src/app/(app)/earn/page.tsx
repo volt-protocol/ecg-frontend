@@ -100,21 +100,38 @@ function MintAndSaving() {
     token: null,
     dailyAmount: 0
   };
-  if (pegToken.symbol == 'OD' && Date.now() < new Date('2024-08-09').getTime()) {
+  // ODG rewards in OD market (cycle 3 & 4)
+  if (
+    pegToken.symbol == 'OD' &&
+    Date.now() > new Date('2024-06-14').getTime() &&
+    Date.now() < new Date('2024-08-09').getTime()
+  ) {
     additionalRewards.enabled = true;
     additionalRewards.token = coinDetails.find(
       (item) => item.address.toLowerCase() == '0x000d636bd52bfc1b3a699165ef5aa340bea8939c' // ODG
     );
     additionalRewards.dailyAmount = 1500 / (8 * 7);
     console.log('OD market earns additional ODG rewards', additionalRewards);
-  } else if (pegToken.symbol == 'DOLA' && Date.now() < new Date('2024-08-17').getTime()) {
+  }
+  // DOLA rewards in DOLA market (cycle 4)
+  else if (
+    pegToken.symbol == 'DOLA' &&
+    Date.now() > new Date('2024-07-12').getTime() &&
+    Date.now() < new Date('2024-08-09').getTime()
+  ) {
     additionalRewards.enabled = true;
     additionalRewards.token = coinDetails.find(
       (item) => item.address.toLowerCase() == '0x6a7661795c374c0bfc635934efaddff3a7ee23b6' // DOLA
     );
     additionalRewards.dailyAmount = 3750 / (4 * 7);
     console.log('DOLA market earns additional DOLA rewards', additionalRewards);
-  } else if (pegToken.symbol == 'eUSD' && Date.now() < new Date('2024-08-31').getTime()) {
+  }
+  // ARB rewards in eUSD market (off-cycle, August)
+  else if (
+    pegToken.symbol == 'eUSD' &&
+    Date.now() > new Date('2024-08-01').getTime() &&
+    Date.now() < new Date('2024-08-31').getTime()
+  ) {
     additionalRewards.enabled = true;
     additionalRewards.token = coinDetails.find(
       (item) => item.address.toLowerCase() == '0x912ce59144191c1204e64559fe8253a0e49e6548' // ARB

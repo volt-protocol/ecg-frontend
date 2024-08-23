@@ -513,10 +513,17 @@ function OffboardTerm({ guildVotingWeight }: { guildVotingWeight: bigint }) {
           <DropdownSelect
             extra="w-full"
             onChange={setSelectedTerm}
-            options={marketTerms}
+            options={marketTerms.filter((term) => term.status === 'live')}
             selectedOption={selectedTerm}
             getLabel={(item) => {
               let label = generateTermName(item.collateral.symbol, item.interestRate, item.borrowRatio);
+              if (item.issuance > 0) {
+                label = '🟢 ' + label;
+              } else if (item.availableDebt > 0) {
+                label = '🟡 ' + label;
+              } else {
+                label = '🟠 ' + label;
+              }
               if (item.issuance) {
                 return (
                   <span>

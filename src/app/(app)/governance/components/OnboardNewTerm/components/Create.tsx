@@ -76,6 +76,19 @@ export default function Create() {
   const [steps, setSteps] = useState<Step[]>(createSteps());
 
   async function getTokenDetails(tokenAddress: Address): Promise<void> {
+    const coinDetail = coinDetails.find((item) => item.address.toLowerCase() === tokenAddress.toLowerCase());
+    if (coinDetail) {
+      setCollateralToken({
+        symbol: coinDetail.symbol,
+        address: tokenAddress,
+        decimals: coinDetail.decimals,
+        price: coinDetail.price
+      });
+      setCollateralTokenAddressInput(coinDetail.symbol);
+      setCollateralTokenInputDisabled(true);
+      return;
+    }
+
     try {
       const result = await getToken(tokenAddress, appChainId);
 
@@ -93,7 +106,7 @@ export default function Create() {
       });
       setCollateralTokenAddressInput(result[1].result);
       setCollateralTokenInputDisabled(true);
-      return result[1].result;
+      return;
     } catch (e: any) {
       setCollateralToken({});
       toastError('Collateral address is not a valid ERC20 token');

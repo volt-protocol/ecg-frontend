@@ -126,6 +126,19 @@ function MintAndSaving() {
     additionalRewards.dailyAmount = 3750 / (4 * 7);
     console.log('DOLA market earns additional DOLA rewards', additionalRewards);
   }
+  // DOLA rewards in DOLA market (~cycle 5)
+  else if (
+    pegToken.symbol == 'DOLA' &&
+    Date.now() > new Date('2024-08-26').getTime() &&
+    Date.now() < new Date('2024-09-23').getTime()
+  ) {
+    additionalRewards.enabled = true;
+    additionalRewards.token = coinDetails.find(
+      (item) => item.address.toLowerCase() == '0x6a7661795c374c0bfc635934efaddff3a7ee23b6' // DOLA
+    );
+    additionalRewards.dailyAmount = 1875 / (4 * 7);
+    console.log('DOLA market earns additional DOLA rewards', additionalRewards);
+  }
   // ARB rewards in eUSD market (off-cycle, August)
   else if (
     pegToken.symbol == 'eUSD' &&

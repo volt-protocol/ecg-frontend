@@ -4,7 +4,7 @@ import { ContractsList } from 'store/slices/contracts-list';
 import { CoinSettings } from 'store/slices/coin-details';
 
 export const generateTermName = (collateral: string, interestRate: number, borrowRatio: number) => {
-  return `${collateral}-${formatNumberDecimal(borrowRatio)}-${(interestRate * 100).toFixed(1)}%`;
+  return `${collateral}-${borrowRatio}-${(interestRate * 100).toFixed(1)}%`;
 };
 
 export function getPegToken(coinDetails: CoinSettings[], appMarketId: number, contractsList: ContractsList) {

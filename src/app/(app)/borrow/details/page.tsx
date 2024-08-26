@@ -353,20 +353,6 @@ const LendingDetails = () => {
     return <Disconnected />;
   }
 
-  function getPercentageAllocation(alreadyAllocated: bigint, totalBalance: bigint) {
-    const total = Number(formatUnits(totalBalance, 18)) + Number(formatUnits(alreadyAllocated, 18));
-    if (total == 0) {
-      return '0';
-    }
-
-    return formatDecimal(
-      (Number(formatUnits(alreadyAllocated, 18)) /
-        (Number(formatUnits(totalBalance, 18)) + Number(formatUnits(alreadyAllocated, 18)))) *
-        100,
-      2
-    );
-  }
-
   const isMarketLendingTerm =
     lendingTerms.find((term) => term.address.toLowerCase() == termAddress.toLowerCase()) != undefined;
   if (!isMarketLendingTerm) {

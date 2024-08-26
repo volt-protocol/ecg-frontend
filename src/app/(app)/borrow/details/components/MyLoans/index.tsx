@@ -582,8 +582,11 @@ function Myloans({
     }
   }
 
-  async function getRepayGatewayLeverageData(loanId: string, ltvMargin: number) {
-    ltvMargin = ltvMargin || 3;
+  async function getRepayGatewayLeverageData(
+    loanId: string,
+    ltvMargin: number = 3,
+    stopOnNextPositive: boolean = false
+  ) {
     const loan = tableDataWithDebts.find((item) => item.id == loanId);
     const collateralAmount = loan.collateralAmount as bigint;
     const collateralValue: number = formatUnits(collateralAmount, collateralToken.decimals) * collateralToken.price;
@@ -610,10 +613,14 @@ function Myloans({
 
     let dust = dexData.amountOut - pegTokenDebt;
     let dustPercent = Number(dust) / Number(pegTokenDebt);
-    if (dustPercent > 0.005 && ltvMargin == 3) {
-      // > 0.5% dust, first retry
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // wait 1s
-      return getRepayGatewayLeverageData(loanId, ltvMargin - dustPercent * 95);
+    if (dustPercent < 0) {
+      await new Promise((resolve) => setTimeout(resolve, 200)); // wait .2s
+      return getRepayGatewayLeverageData(loanId, ltvMargin + 0.1, true);
+    }
+    if (dustPercent > 0.005 && !stopOnNextPositive) {
+      // > 0.5% dust
+      await new Promise((resolve) => setTimeout(resolve, 200)); // wait .2s
+      return getRepayGatewayLeverageData(loanId, ltvMargin - dustPercent * 50, false);
     }
 
     return {

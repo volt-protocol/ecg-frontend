@@ -221,6 +221,14 @@ export default function ModalRepay({
                                   the flashloan. This option will only work if your loan is overcollateralized. The
                                   remaining collateral and debt tokens will be sent to your wallet if any.
                                 </div>
+                                {loadingLeverageData ? (
+                                  <div className="mt-2 flex items-center justify-center">
+                                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500"></div>
+                                    <span className="ml-2 text-sm opacity-50 dark:text-white">
+                                      Finding the optimal swap parameters...
+                                    </span>
+                                  </div>
+                                ) : null}
                                 {leverageData && (
                                   <div className="mt-1 text-sm dark:text-white">
                                     <div className="px-5">
@@ -346,23 +354,46 @@ export default function ModalRepay({
                                             </div>
                                           }
                                           trigger={
-                                            <span>
-                                              {leverageData.output.amountOutUsd >= leverageData.output.amountInUsd
-                                                ? '+'
-                                                : '-'}
-                                              {Math.round(
-                                                10000 *
-                                                  Math.abs(
-                                                    1 -
-                                                      leverageData.output.amountOutUsd / leverageData.output.amountInUsd
-                                                  )
-                                              ) / 100}
-                                              %
-                                            </span>
+                                            !leverageData.output.amountInUsd ? null : (
+                                              <span>
+                                                {leverageData.output.amountOutUsd >= leverageData.output.amountInUsd
+                                                  ? '+'
+                                                  : '-'}
+                                                {Math.round(
+                                                  10000 *
+                                                    Math.abs(
+                                                      1 -
+                                                        leverageData.output.amountOutUsd /
+                                                          leverageData.output.amountInUsd
+                                                    )
+                                                ) / 100}
+                                                %
+                                              </span>
+                                            )
                                           }
                                           placement="top"
                                         />
                                         )
+                                      </div>
+                                      <div className="pl-10 font-mono text-xs">
+                                        -{' '}
+                                        {formatDecimal(
+                                          Number(
+                                            formatUnits(
+                                              leverageData.input.collateralAmount -
+                                                leverageData.input.minCollateralRemaining,
+                                              collateralToken?.decimals
+                                            )
+                                          ),
+                                          collateralTokenDecimalsToDisplay
+                                        )}{' '}
+                                        {collateralToken?.symbol}
+                                        <br />+{' '}
+                                        {formatDecimal(
+                                          Number(formatUnits(leverageData.output.amountOut, pegToken?.decimals)),
+                                          pegTokenDecimalsToDisplay
+                                        )}{' '}
+                                        {pegToken?.symbol} (estimated)
                                       </div>
                                       <div className="text-xs">
                                         <span className="font-mono">4.</span>{' '}
@@ -476,7 +507,7 @@ export default function ModalRepay({
                             minBorrow,
                             match,
                             withLeverage
-                          ).length != 0
+                          ).length != 0 || loadingLeverageData
                         }
                         onClick={doRepay}
                       />

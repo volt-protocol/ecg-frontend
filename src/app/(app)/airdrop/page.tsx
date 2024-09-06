@@ -6,16 +6,18 @@ import AirdropCycle2 from './cycle2';
 import AirdropCycle3 from './cycle3';
 import AirdropCycle4 from './cycle4';
 import AirdropCycle5 from './cycle5';
+import AirdropCycle6 from './cycle6';
 
 function Airdrop() {
   const [showPastRounds, setShowPastRounds] = useState(false);
 
   return (
     <div>
+      <AirdropCycle6 />
       <AirdropCycle5 />
-      <AirdropCycle4 />
       {showPastRounds ? (
         <div>
+          <AirdropCycle4 />
           <AirdropCycle3 />
           <AirdropCycle2 />
           <AirdropCycle1 />

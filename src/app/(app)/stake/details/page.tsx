@@ -24,11 +24,13 @@ import { getPegTokenLogo, getExplorerBaseUrl } from 'config';
 import Image from 'next/image';
 import { MdArrowBack } from 'react-icons/md';
 import Link from 'next/link';
+import { marketsConfig } from 'config';
 
 const LendingDetails = () => {
   const { address, isConnected } = useAccount();
   const { coinDetails, lendingTerms, contractsList, fetchLendingTerms } = useAppStore();
   const { appMarketId, appChainId } = useUserPrefsStore();
+  const market = marketsConfig[appChainId].find((_) => _.marketId == appMarketId);
 
   const searchParams = useSearchParams();
   const termAddress = searchParams.get('term');
@@ -279,6 +281,15 @@ const LendingDetails = () => {
   if (!isMarketLendingTerm) {
     return (
       <div>
+        {market.deprecated ? (
+          <div className="mb-3 rounded-md bg-white p-5 text-center dark:bg-navy-800 dark:text-white">
+            <div className="text-xl font-semibold text-yellow-600">This market is deprecated</div>
+            <div className="text-m mt-3">
+              Consider repaying open borrows and redeeming your lent assets, as no new loans can be opened and no new
+              lenders can enter the market.
+            </div>
+          </div>
+        ) : null}
         <div className="py-10 text-center text-gray-400" style={{ fontSize: '1.3em' }}>
           This Lending Term is not part of the selected market.
           <br />
@@ -300,6 +311,15 @@ const LendingDetails = () => {
   if (lendingTermData && data) {
     return (
       <div>
+        {market.deprecated ? (
+          <div className="mb-3 rounded-md bg-white p-5 text-center dark:bg-navy-800 dark:text-white">
+            <div className="text-xl font-semibold text-yellow-600">This market is deprecated</div>
+            <div className="text-m mt-3">
+              Consider repaying open borrows and redeeming your lent assets, as no new loans can be opened and no new
+              lenders can enter the market.
+            </div>
+          </div>
+        ) : null}
         <div className="my-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h3 className="text-2xl font-semibold text-gray-700 dark:text-white">
@@ -556,17 +576,27 @@ const LendingDetails = () => {
                     </Tab.List>
                     <Tab.Panels className="mt-2">
                       <Tab.Panel key="stake-guild" className={'px-3 py-1'}>
-                        <StakeGuild
-                          debtCeiling={data?.debtCeiling}
-                          lendingTerm={lendingTermData}
-                          textButton="Stake"
-                          guildUserGaugeWeight={data?.guildUserGaugeWeight}
-                          guildBalance={data?.guildBalance}
-                          smartContractAddress={termAddress}
-                          guildUserWeight={data?.guildUserWeight}
-                          creditMultiplier={data?.creditMultiplier}
-                          reload={setReload}
-                        />
+                        {market.deprecated ? (
+                          <div className="mb-3 rounded-md bg-white p-5 text-center dark:bg-navy-800 dark:text-white">
+                            <div className="text-xl font-semibold text-yellow-600">This market is deprecated</div>
+                            <div className="text-m mt-3">
+                              Consider repaying open borrows and redeeming your lent assets, as no new loans can be
+                              opened and no new lenders can enter the market.
+                            </div>
+                          </div>
+                        ) : (
+                          <StakeGuild
+                            debtCeiling={data?.debtCeiling}
+                            lendingTerm={lendingTermData}
+                            textButton="Stake"
+                            guildUserGaugeWeight={data?.guildUserGaugeWeight}
+                            guildBalance={data?.guildBalance}
+                            smartContractAddress={termAddress}
+                            guildUserWeight={data?.guildUserWeight}
+                            creditMultiplier={data?.creditMultiplier}
+                            reload={setReload}
+                          />
+                        )}
                       </Tab.Panel>
                       <Tab.Panel key="unstake-guild" className={'px-3 py-1'}>
                         <StakeGuild
@@ -802,18 +832,28 @@ const LendingDetails = () => {
                     </Tab.List>
                     <Tab.Panels className="mt-2">
                       <Tab.Panel className={'px-3 py-1'}>
-                        <StakeCredit
-                          debtCeiling={data?.debtCeiling}
-                          lendingTerm={lendingTermData}
-                          textButton="Stake"
-                          creditAllocated={data?.creditAllocated}
-                          creditBalance={data?.creditBalance}
-                          termAddress={termAddress}
-                          sgmMintRatio={data?.sgmMintRatio}
-                          sgmRewardRatio={data?.sgmRewardRatio}
-                          creditMultiplier={data?.creditMultiplier}
-                          reload={setReload}
-                        />
+                        {market.deprecated ? (
+                          <div className="mb-3 rounded-md bg-white p-5 text-center dark:bg-navy-800 dark:text-white">
+                            <div className="text-xl font-semibold text-yellow-600">This market is deprecated</div>
+                            <div className="text-m mt-3">
+                              Consider repaying open borrows and redeeming your lent assets, as no new loans can be
+                              opened and no new lenders can enter the market.
+                            </div>
+                          </div>
+                        ) : (
+                          <StakeCredit
+                            debtCeiling={data?.debtCeiling}
+                            lendingTerm={lendingTermData}
+                            textButton="Stake"
+                            creditAllocated={data?.creditAllocated}
+                            creditBalance={data?.creditBalance}
+                            termAddress={termAddress}
+                            sgmMintRatio={data?.sgmMintRatio}
+                            sgmRewardRatio={data?.sgmRewardRatio}
+                            creditMultiplier={data?.creditMultiplier}
+                            reload={setReload}
+                          />
+                        )}
                       </Tab.Panel>
                       <Tab.Panel className={'px-3 py-1'}>
                         <StakeCredit

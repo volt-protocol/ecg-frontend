@@ -12,6 +12,7 @@ import UpdateTermParams from './components/UpdateTermParams';
 import { useAppStore, useUserPrefsStore } from 'store';
 import Spinner from 'components/spinner';
 import { getCreditTokenSymbol } from 'utils/strings';
+import { marketsConfig } from 'config';
 
 export type Delegatee = {
   address: string;
@@ -28,6 +29,7 @@ function Governance() {
     (item) => item.address.toLowerCase() === contractsList?.marketContracts[appMarketId]?.pegTokenAddress.toLowerCase()
   );
   const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
+  const market = marketsConfig[appChainId].find((_) => _.marketId == appMarketId);
 
   //TODO:  optimize contracts call with useReadContracts
   const { data, isError, isLoading, refetch } = useReadContracts({
@@ -106,6 +108,23 @@ function Governance() {
   /*if (!isConnected) {
     return <Disconnected />;
   }*/
+
+  if (market.deprecated) {
+    return (
+      <div>
+        <div className="mb-3 rounded-md bg-white p-5 text-center dark:bg-navy-800 dark:text-white">
+          <div className="text-xl font-semibold text-yellow-600">This market is deprecated</div>
+          <div className="text-m mt-3">
+            Consider repaying open borrows and redeeming your lent assets, as no new loans can be opened and no new
+            lenders can enter the market.
+          </div>
+        </div>
+        <Card title="Offboard Active Term" extra="w-full min-h-[300px] sm:overflow-auto px-3 py-2 sm:px-6 sm:py-4">
+          <OffboardTerm guildVotingWeight={data?.guildVotingWeight} />
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) return <Spinner />;
 

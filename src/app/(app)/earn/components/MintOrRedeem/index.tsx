@@ -18,6 +18,7 @@ import Image from 'next/image';
 import { MdOpenInNew } from 'react-icons/md';
 import { signPermit } from 'lib/transactions/signPermit';
 import { getCreditTokenSymbol } from 'utils/strings';
+import { marketsConfig } from 'config';
 
 function MintOrRedeem({
   reloadMintRedeem,
@@ -65,6 +66,8 @@ function MintOrRedeem({
   const creditMultiplierNumber = Number(formatUnits(creditMultiplier, 18));
   const pegTokenPSMBalanceNumber = Number(formatUnits(pegTokenPSMBalance, pegToken.decimals));
   const creditTokenBalanceNumber = Number(formatUnits(creditTokenBalance, 18));
+
+  const market = marketsConfig[appChainId].find((_) => _.marketId == appMarketId);
 
   function getTitleDisabled(type: 'Mint' | 'Redeem', value: number, max: number) {
     if (!value || value <= 0) {
@@ -556,94 +559,104 @@ function MintOrRedeem({
           </Tab.List>
           <Tab.Panels className="mt-2">
             <Tab.Panel key="mint" className={'px-3 py-1'}>
-              <div className="flex flex-col items-center gap-2">
-                <DefiInputBox
-                  topLabel={`Mint ${creditTokenSymbol} from ${pegToken.symbol}`}
-                  currencyLogo={pegTokenLogo}
-                  currencySymbol={pegToken.symbol}
-                  placeholder="0"
-                  pattern="^[0-9]*[.,]?[0-9]*$"
-                  inputSize="text-2xl sm:text-3xl"
-                  value={value}
-                  onChange={handleInputChange}
-                  rightLabel={
-                    <>
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Available:{' '}
-                        {pegTokenBalance ? formatDecimal(pegTokenBalanceNumber, pegTokenDecimalsToDisplay) : 0}
-                      </p>
-                      <button
-                        className="text-sm font-medium text-brand-500 hover:text-brand-400"
-                        onClick={(e) => setValue(formatUnits(pegTokenBalance, pegToken.decimals))}
-                      >
-                        Max
-                      </button>
-                    </>
-                  }
-                />
-                <div className="flex w-full flex-col rounded-xl bg-gray-100 py-4 dark:bg-navy-900">
-                  <div className="sm:w-ha flex w-full items-center justify-between px-5">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {!isRebasing ? (
-                        <span>Enter Saving Rate</span>
-                      ) : (
-                        <span>
-                          <span className="line-through">Enter Saving Rate</span>{' '}
-                          <span className="opacity-50">Already entered savings rate! 🚀</span>
-                        </span>
-                      )}
-                    </label>
-                    <Switch
-                      disabled={isRebasing}
-                      checked={show}
-                      onChange={setShow}
-                      className={clsx(
-                        show ? 'bg-brand-500' : 'bg-gray-200',
-                        isRebasing ? 'cursor-not-allowed' : 'cursor-pointer',
-                        'border-transparent relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 transition-colors duration-200 ease-in-out'
-                      )}
-                    >
-                      <span
-                        aria-hidden="true"
-                        className={clsx(
-                          show ? 'translate-x-5' : 'translate-x-0',
-                          'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out'
-                        )}
-                      />
-                    </Switch>
+              {market.deprecated ? (
+                <div className="mb-3 rounded-md bg-white p-5 text-center dark:bg-navy-800 dark:text-white">
+                  <div className="text-xl font-semibold text-yellow-600">This market is deprecated</div>
+                  <div className="text-m mt-3">
+                    Consider repaying open borrows and redeeming your lent assets, as no new loans can be opened and no
+                    new lenders can enter the market.
                   </div>
                 </div>
-                <ButtonPrimary
-                  variant="lg"
-                  title={show ? 'Mint and start saving' : 'Mint'}
-                  titleDisabled={getTitleDisabled('Mint', Number(value), pegTokenBalanceNumber)}
-                  extra="w-full !rounded-xl"
-                  onClick={doMint}
-                  disabled={Number(value) > pegTokenBalanceNumber || Number(value) <= 0 || !value}
-                />
-                <AlertMessage
-                  type="info"
-                  message={
-                    <>
-                      <p>
-                        You will receive{' '}
-                        <Image
-                          className="inline-block align-top"
-                          src={pegTokenLogo}
-                          width={20}
-                          height={20}
-                          alt="logo"
-                          style={{ borderRadius: '50%', border: '2px solid #3e6b7d' }}
-                        />{' '}
-                        <span className="font-bold">
-                          {formatDecimal(Number(value) / creditMultiplierNumber, pegTokenDecimalsToDisplay)}
-                        </span>{' '}
-                        {creditTokenSymbol}
-                      </p>
-                    </>
-                  }
-                />
-              </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <DefiInputBox
+                    topLabel={`Mint ${creditTokenSymbol} from ${pegToken.symbol}`}
+                    currencyLogo={pegTokenLogo}
+                    currencySymbol={pegToken.symbol}
+                    placeholder="0"
+                    pattern="^[0-9]*[.,]?[0-9]*$"
+                    inputSize="text-2xl sm:text-3xl"
+                    value={value}
+                    onChange={handleInputChange}
+                    rightLabel={
+                      <>
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Available:{' '}
+                          {pegTokenBalance ? formatDecimal(pegTokenBalanceNumber, pegTokenDecimalsToDisplay) : 0}
+                        </p>
+                        <button
+                          className="text-sm font-medium text-brand-500 hover:text-brand-400"
+                          onClick={(e) => setValue(formatUnits(pegTokenBalance, pegToken.decimals))}
+                        >
+                          Max
+                        </button>
+                      </>
+                    }
+                  />
+                  <div className="flex w-full flex-col rounded-xl bg-gray-100 py-4 dark:bg-navy-900">
+                    <div className="sm:w-ha flex w-full items-center justify-between px-5">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {!isRebasing ? (
+                          <span>Enter Saving Rate</span>
+                        ) : (
+                          <span>
+                            <span className="line-through">Enter Saving Rate</span>{' '}
+                            <span className="opacity-50">Already entered savings rate! 🚀</span>
+                          </span>
+                        )}
+                      </label>
+                      <Switch
+                        disabled={isRebasing}
+                        checked={show}
+                        onChange={setShow}
+                        className={clsx(
+                          show ? 'bg-brand-500' : 'bg-gray-200',
+                          isRebasing ? 'cursor-not-allowed' : 'cursor-pointer',
+                          'border-transparent relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 transition-colors duration-200 ease-in-out'
+                        )}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={clsx(
+                            show ? 'translate-x-5' : 'translate-x-0',
+                            'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out'
+                          )}
+                        />
+                      </Switch>
+                    </div>
+                  </div>
+                  <ButtonPrimary
+                    variant="lg"
+                    title={show ? 'Mint and start saving' : 'Mint'}
+                    titleDisabled={getTitleDisabled('Mint', Number(value), pegTokenBalanceNumber)}
+                    extra="w-full !rounded-xl"
+                    onClick={doMint}
+                    disabled={Number(value) > pegTokenBalanceNumber || Number(value) <= 0 || !value}
+                  />
+                  <AlertMessage
+                    type="info"
+                    message={
+                      <>
+                        <p>
+                          You will receive{' '}
+                          <Image
+                            className="inline-block align-top"
+                            src={pegTokenLogo}
+                            width={20}
+                            height={20}
+                            alt="logo"
+                            style={{ borderRadius: '50%', border: '2px solid #3e6b7d' }}
+                          />{' '}
+                          <span className="font-bold">
+                            {formatDecimal(Number(value) / creditMultiplierNumber, pegTokenDecimalsToDisplay)}
+                          </span>{' '}
+                          {creditTokenSymbol}
+                        </p>
+                      </>
+                    }
+                  />
+                </div>
+              )}
             </Tab.Panel>
             <Tab.Panel key="redeem" className={'px-3 py-1'}>
               <div className="flex flex-col items-center gap-2">

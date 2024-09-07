@@ -21,6 +21,7 @@ import { TVLChart } from './components/TVLChart';
 import { HttpGet } from 'utils/HttpHelper';
 import { LastActivityApiResponse } from 'types/activities';
 import { MdOutlineHandshake } from 'react-icons/md';
+import { marketsConfig } from 'config';
 
 interface CurrentChartData {
   lastSupply: number;
@@ -71,6 +72,8 @@ const GlobalDashboard = () => {
     creditTotalSupply: Number(formatUnits(creditSupply, 18))
   };
 
+  const market = marketsConfig[appChainId].find((_) => _.marketId == appMarketId);
+
   useEffect(() => {
     setDataLoading(true);
     const asyncFunc = async () => {
@@ -106,7 +109,7 @@ const GlobalDashboard = () => {
     // if (lendingTerms.length == 0) {
     //   setDataLoading(false);
     // } else {
-      asyncFunc();
+    asyncFunc();
     // }
   }, [lendingTerms]);
 
@@ -254,6 +257,15 @@ const GlobalDashboard = () => {
 
   return (
     <div>
+      {market.deprecated ? (
+        <div className="mb-3 rounded-md bg-white p-5 text-center dark:bg-navy-800 dark:text-white">
+          <div className="text-xl font-semibold text-yellow-600">This market is deprecated</div>
+          <div className="text-m mt-3">
+            Consider repaying open borrows and redeeming your lent assets, as no new loans can be opened and no new
+            lenders can enter the market.
+          </div>
+        </div>
+      ) : null}
       {/* Card widget */}
       <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 3xl:grid-cols-6">
         <GlobalStatCarts

@@ -154,6 +154,7 @@ export const permitConfig: PermitConfig[] = [
 ];
 
 export type SupportedMarket = {
+  deprecated?: boolean;
   key: string;
   name: string;
   logo: string;
@@ -183,6 +184,7 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
       logo: '/img/crypto-logos/usdc.png'
     },
     {
+      deprecated: true,
       key: 'arb-4',
       pegToken: 'ARB',
       name: 'ARB',
@@ -207,6 +209,7 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
       logo: '/img/crypto-logos/dola.png'
     },
     {
+      deprecated: true,
       key: 'wsteth-7',
       pegToken: 'wstETH',
       name: 'wstETH',
@@ -215,6 +218,7 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
       logo: '/img/crypto-logos/wsteth.png'
     },
     {
+      deprecated: true,
       key: 'stusd-8',
       pegToken: 'stUSD',
       name: 'stUSD',

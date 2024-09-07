@@ -105,7 +105,9 @@ function Sidebar(props: { routes: IRoute[]; [x: string]: any }) {
               <div className="flex items-center gap-1 text-sm">
                 <Image src={option.logo} width={25} height={25} alt={option.name} />
                 {option.name}
-                {option.name.indexOf('(test)') != -1 ? <MdOutlineWarningAmber style={{ color: '#FFA000' }} /> : null}
+                {option.name.indexOf('(test)') != -1 || option.deprecated ? (
+                  <MdOutlineWarningAmber style={{ color: '#FFA000' }} />
+                ) : null}
               </div>
             )}
             extra="min-w-[180px]"

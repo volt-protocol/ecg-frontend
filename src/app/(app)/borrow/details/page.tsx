@@ -28,6 +28,7 @@ import ImageWithFallback from 'components/image/ImageWithFallback';
 import { MdArrowBack } from 'react-icons/md';
 import Link from 'next/link';
 import { HttpGet } from 'utils/HttpHelper';
+import { marketsConfig } from 'config';
 
 const LendingDetails = () => {
   const { address, isConnected } = useAccount();
@@ -61,6 +62,8 @@ const LendingDetails = () => {
 
   const creditTokenSymbol = getCreditTokenSymbol(coinDetails, appMarketId, contractsList);
   const pegTokenLogo = getPegTokenLogo(appChainId, appMarketId);
+
+  const market = marketsConfig[appChainId].find((_) => _.marketId == appMarketId);
 
   // airdrop computations
   const fdvSupply = 1e9; // 1B GUILD max supply
@@ -358,6 +361,15 @@ const LendingDetails = () => {
   if (!isMarketLendingTerm) {
     return (
       <div>
+        {market.deprecated ? (
+          <div className="mb-3 rounded-md bg-white p-5 text-center dark:bg-navy-800 dark:text-white">
+            <div className="text-xl font-semibold text-yellow-600">This market is deprecated</div>
+            <div className="text-m mt-3">
+              Consider repaying open borrows and redeeming your lent assets, as no new loans can be opened and no new
+              lenders can enter the market.
+            </div>
+          </div>
+        ) : null}
         <div className="py-10 text-center text-gray-400" style={{ fontSize: '1.3em' }}>
           This Lending Term is not part of the selected market.
           <br />
@@ -379,6 +391,15 @@ const LendingDetails = () => {
   if (lendingTermData && data) {
     return (
       <div>
+        {market.deprecated ? (
+          <div className="mb-3 rounded-md bg-white p-5 text-center dark:bg-navy-800 dark:text-white">
+            <div className="text-xl font-semibold text-yellow-600">This market is deprecated</div>
+            <div className="text-m mt-3">
+              Consider repaying open borrows and redeeming your lent assets, as no new loans can be opened and no new
+              lenders can enter the market.
+            </div>
+          </div>
+        ) : null}
         <div className="my-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h3 className="text-2xl font-semibold text-gray-700 dark:text-white">
@@ -566,21 +587,31 @@ const LendingDetails = () => {
         <h3 className="mb-4 ml-8 mt-5 text-xl font-semibold text-gray-700 dark:text-white">Loan</h3>
         <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-3 ">
           <Card extra="order-1 w-full h-full sm:overflow-auto px-6 py-4" title="New Loan">
-            <CreateLoan
-              lendingTerm={lendingTermData}
-              availableDebt={
-                Math.min(data?.debtCeiling, data?.hardCap) - data?.currentDebt > 0
-                  ? Math.min(data?.debtCeiling, data?.hardCap) - data?.currentDebt
-                  : 0
-              }
-              creditMultiplier={data?.creditMultiplier}
-              creditBalance={data?.creditBalance}
-              pegTokenBalance={data?.pegTokenBalance}
-              creditTokenNonces={data?.creditTokenNonces}
-              minBorrow={Number(formatUnits(data?.minBorrow, 18))}
-              setReload={setReload}
-              reload={reload}
-            />
+            {market.deprecated ? (
+              <div className="mb-3 rounded-md bg-white p-5 text-center dark:bg-navy-800 dark:text-white">
+                <div className="text-xl font-semibold text-yellow-600">This market is deprecated</div>
+                <div className="text-m mt-3">
+                  Consider repaying open borrows and redeeming your lent assets, as no new loans can be opened and no
+                  new lenders can enter the market.
+                </div>
+              </div>
+            ) : (
+              <CreateLoan
+                lendingTerm={lendingTermData}
+                availableDebt={
+                  Math.min(data?.debtCeiling, data?.hardCap) - data?.currentDebt > 0
+                    ? Math.min(data?.debtCeiling, data?.hardCap) - data?.currentDebt
+                    : 0
+                }
+                creditMultiplier={data?.creditMultiplier}
+                creditBalance={data?.creditBalance}
+                pegTokenBalance={data?.pegTokenBalance}
+                creditTokenNonces={data?.creditTokenNonces}
+                minBorrow={Number(formatUnits(data?.minBorrow, 18))}
+                setReload={setReload}
+                reload={reload}
+              />
+            )}
           </Card>
           <Card
             extra="md:col-span-2 order-2 w-full h-full px-6 py-4 sm:overflow-x-auto relative"

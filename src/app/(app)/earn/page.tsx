@@ -43,6 +43,8 @@ function MintAndSaving() {
   const [userBalance, setUserBalance] = useState<bigint>(BigInt(0));
   const [chartData, setChartData] = useState<any>([]);
 
+  const market = marketsConfig[appChainId].find((_) => _.marketId == appMarketId);
+
   const createSteps = (): Step[] => {
     const baseSteps = [{ name: 'Rebasing', status: 'Not Started' }];
     return baseSteps;
@@ -523,6 +525,16 @@ function MintAndSaving() {
     return (
       <div>
         {showModal && <StepModal steps={steps} close={setShowModal} initialStep={createSteps} setSteps={setSteps} />}
+
+        {market.deprecated ? (
+          <div className="mb-3 rounded-md bg-white p-5 text-center dark:bg-navy-800 dark:text-white">
+            <div className="text-xl font-semibold text-yellow-600">This market is deprecated</div>
+            <div className="text-m mt-3">
+              Consider repaying open borrows and redeeming your lent assets, as no new loans can be opened and no new
+              lenders can enter the market.
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-3 grid gap-5 xs:grid-cols-1 lg:grid-cols-6 2xl:grid-cols-6 3xl:grid-cols-6">
           <Card

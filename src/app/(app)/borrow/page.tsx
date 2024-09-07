@@ -8,15 +8,27 @@ import { fromNow } from 'utils/date';
 import { MdCached } from 'react-icons/md';
 import clsx from 'clsx';
 import { useAppStore, useUserPrefsStore } from 'store';
+import { marketsConfig } from 'config';
 
 const Lending = () => {
   const { contractsList, lendingTerms, lastUpdatedTerms, fetchLendingTerms } = useAppStore();
   const { appMarketId, appChainId } = useUserPrefsStore();
 
+  const market = marketsConfig[appChainId].find((_) => _.marketId == appMarketId);
+
   if (!lendingTerms) return <LendingSkeleton />;
 
   return (
     <div>
+      {market.deprecated ? (
+        <div className="mb-3 rounded-md bg-white p-5 text-center dark:bg-navy-800 dark:text-white">
+          <div className="text-xl font-semibold text-yellow-600">This market is deprecated</div>
+          <div className="text-m mt-3">
+            Consider repaying open borrows and redeeming your lent assets, as no new loans can be opened and no new
+            lenders can enter the market.
+          </div>
+        </div>
+      ) : null}
       <div className="mt-3 flex justify-end">
         <div className="flex items-center gap-1 text-xs font-light text-gray-400 dark:text-gray-100">
           <span>Data updated</span>

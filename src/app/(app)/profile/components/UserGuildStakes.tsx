@@ -70,7 +70,7 @@ export default function UserGuildStakes({ userAddress }: { userAddress: Address 
       const contractCalls = [];
 
       console.log({ userAddress });
-      for (const term of lendingTerms.filter((_) => _.debtCeiling > 0)) {
+      for (const term of lendingTerms) {
         contractCalls.push({
           address: contractsList.guildAddress,
           abi: GuildABI,
@@ -88,7 +88,7 @@ export default function UserGuildStakes({ userAddress }: { userAddress: Address 
 
       // re read in the same order
       let cursor = 0;
-      for (const term of lendingTerms.filter((_) => _.debtCeiling > 0)) {
+      for (const term of lendingTerms) {
         const userGaugeWeightNorm = Number(formatUnits(userStakesData[cursor++].result as bigint, 18));
         if (userGaugeWeightNorm > 0) {
           stakes.push({

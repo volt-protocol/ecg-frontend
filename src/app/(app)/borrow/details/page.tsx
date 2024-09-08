@@ -274,7 +274,7 @@ const LendingDetails = () => {
     console.log('PT_USDe_28NOV2024.collateral additional rewards', additionalRewards);
   } else if (
     effectiveBalanceSum !== -1 &&
-    Date.now() < new Date('2024-08-31').getTime() &&
+    Date.now() < new Date('2024-09-30').getTime() &&
     collateralToken?.address.toLowerCase() == '0x18c14c2d707b2212e17d1579789fc06010cfca23' /*ETH+*/ &&
     pegToken?.symbol.toLowerCase() == 'weth'
   ) {
@@ -287,7 +287,7 @@ const LendingDetails = () => {
     console.log('ETH+.collateral additional rewards', additionalRewards);
   } else if (
     data?.totalIssuance != undefined &&
-    Date.now() < new Date('2024-08-31').getTime() &&
+    Date.now() < new Date('2024-09-30').getTime() &&
     pegToken?.symbol == 'eUSD' /*eUSD borrow*/
   ) {
     additionalRewards.enabled = true;

@@ -145,7 +145,7 @@ function MintAndSaving() {
   else if (
     pegToken.symbol == 'eUSD' &&
     Date.now() > new Date('2024-08-01').getTime() &&
-    Date.now() < new Date('2024-08-31').getTime()
+    Date.now() < new Date('2024-09-30').getTime()
   ) {
     additionalRewards.enabled = true;
     additionalRewards.token = coinDetails.find(

@@ -71,7 +71,7 @@ function MintAndSaving() {
   }
 
   // airdrop computations
-  const fdvSupply = 1e9; // 1B GUILD max supply
+  const fdvSupply = 0; // 1B GUILD max supply
   const airdropPercent = 0.01; // 1% supply
   const airdropSize = airdropPercent * fdvSupply;
   const dailyGuild = airdropSize / 28; // days in period
@@ -102,58 +102,6 @@ function MintAndSaving() {
     token: null,
     dailyAmount: 0
   };
-  // ODG rewards in OD market (cycle 3 & 4)
-  if (
-    pegToken.symbol == 'OD' &&
-    Date.now() > new Date('2024-06-14').getTime() &&
-    Date.now() < new Date('2024-08-09').getTime()
-  ) {
-    additionalRewards.enabled = true;
-    additionalRewards.token = coinDetails.find(
-      (item) => item.address.toLowerCase() == '0x000d636bd52bfc1b3a699165ef5aa340bea8939c' // ODG
-    );
-    additionalRewards.dailyAmount = 1500 / (8 * 7);
-    console.log('OD market earns additional ODG rewards', additionalRewards);
-  }
-  // DOLA rewards in DOLA market (cycle 4)
-  else if (
-    pegToken.symbol == 'DOLA' &&
-    Date.now() > new Date('2024-07-12').getTime() &&
-    Date.now() < new Date('2024-08-09').getTime()
-  ) {
-    additionalRewards.enabled = true;
-    additionalRewards.token = coinDetails.find(
-      (item) => item.address.toLowerCase() == '0x6a7661795c374c0bfc635934efaddff3a7ee23b6' // DOLA
-    );
-    additionalRewards.dailyAmount = 3750 / (4 * 7);
-    console.log('DOLA market earns additional DOLA rewards', additionalRewards);
-  }
-  // DOLA rewards in DOLA market (~cycle 5)
-  else if (
-    pegToken.symbol == 'DOLA' &&
-    Date.now() > new Date('2024-08-26').getTime() &&
-    Date.now() < new Date('2024-09-23').getTime()
-  ) {
-    additionalRewards.enabled = true;
-    additionalRewards.token = coinDetails.find(
-      (item) => item.address.toLowerCase() == '0x6a7661795c374c0bfc635934efaddff3a7ee23b6' // DOLA
-    );
-    additionalRewards.dailyAmount = 1875 / (4 * 7);
-    console.log('DOLA market earns additional DOLA rewards', additionalRewards);
-  }
-  // ARB rewards in eUSD market (off-cycle, August)
-  else if (
-    pegToken.symbol == 'eUSD' &&
-    Date.now() > new Date('2024-08-01').getTime() &&
-    Date.now() < new Date('2024-09-30').getTime()
-  ) {
-    additionalRewards.enabled = true;
-    additionalRewards.token = coinDetails.find(
-      (item) => item.address.toLowerCase() == '0x912ce59144191c1204e64559fe8253a0e49e6548' // ARB
-    );
-    additionalRewards.dailyAmount = 5081 / 31;
-    console.log('eUSD market earns additional ARB rewards', additionalRewards);
-  }
 
   /* Smart contract reads */
   const { data, isError, isLoading, refetch } = useReadContracts({

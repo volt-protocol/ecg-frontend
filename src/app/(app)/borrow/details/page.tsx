@@ -66,7 +66,7 @@ const LendingDetails = () => {
   const market = marketsConfig[appChainId].find((_) => _.marketId == appMarketId);
 
   // airdrop computations
-  const fdvSupply = 1e9; // 1B GUILD max supply
+  const fdvSupply = 0; // 1B GUILD max supply
   const airdropPercent = 0.01; // 1% supply
   const airdropSize = airdropPercent * fdvSupply;
   const dailyGuild = airdropSize / 28; // days per periods
@@ -260,44 +260,6 @@ const LendingDetails = () => {
     dailyAmount: 0,
     apr: 0
   };
-  if (
-    effectiveBalanceSum !== -1 &&
-    Date.now() < new Date('2024-09-19').getTime() &&
-    collateralToken?.address.toLowerCase() == '0x1fa42e6730df74ff2742704761da41111bb7f019' /*ERC20_PT_USDe_28NOV2024*/
-  ) {
-    additionalRewards.enabled = true;
-    additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
-    additionalRewards.dailyAmount = 200 / 7;
-    additionalRewards.apr =
-      (365 * additionalRewards.dailyAmount * additionalRewards.token.price) /
-      ((effectiveBalanceSum || 1) * collateralToken?.price);
-    console.log('PT_USDe_28NOV2024.collateral additional rewards', additionalRewards);
-  } else if (
-    effectiveBalanceSum !== -1 &&
-    Date.now() < new Date('2024-09-30').getTime() &&
-    collateralToken?.address.toLowerCase() == '0x18c14c2d707b2212e17d1579789fc06010cfca23' /*ETH+*/ &&
-    pegToken?.symbol.toLowerCase() == 'weth'
-  ) {
-    additionalRewards.enabled = true;
-    additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
-    additionalRewards.dailyAmount = 2033 / 31;
-    additionalRewards.apr =
-      (365 * additionalRewards.dailyAmount * additionalRewards.token.price) /
-      ((effectiveBalanceSum || 1) * collateralToken?.price);
-    console.log('ETH+.collateral additional rewards', additionalRewards);
-  } else if (
-    data?.totalIssuance != undefined &&
-    Date.now() < new Date('2024-09-30').getTime() &&
-    pegToken?.symbol == 'eUSD' /*eUSD borrow*/
-  ) {
-    additionalRewards.enabled = true;
-    additionalRewards.token = coinDetails.find((item) => item.symbol.toLowerCase() == 'arb');
-    additionalRewards.dailyAmount = 2033 / 31;
-    additionalRewards.apr =
-      (365 * additionalRewards.dailyAmount * additionalRewards.token.price) /
-      (Math.max(data?.totalIssuance || 1, 1) * pegToken?.price);
-    console.log('eUSD.borrow additional rewards', additionalRewards);
-  }
 
   useEffect(() => {
     async function getTermsTotalCollateral() {

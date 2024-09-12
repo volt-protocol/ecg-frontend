@@ -42,7 +42,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         )}
         {/* Main Content */}
-        <main className={`mx-2.5 flex-none dark:bg-navy-900 md:pr-2 xl:ml-[280px]`}>
+        <main className={`mx-2.5 flex-none dark:bg-navy-900 md:pr-2 xl:ml-[280px]`} style={{ paddingTop: '40px' }}>
+          <a href="https://discord.com/channels/897604493817045063/897604833769558036/1283487133520105573">
+            <div
+              style={{
+                height: '40px',
+                background: '#FFC107',
+                color: '#212121',
+                margin: '-40px -18px 0',
+                padding: '0 20px',
+                lineHeight: '40px',
+                textAlign: 'center'
+              }}
+            >
+              The Credit Guild is being deprecated, consider withdrawing from the protocol. Click to read the
+              announcement.
+            </div>
+          </a>
           {/* Routes */}
           <div className="min-h-screen">
             <Navbar

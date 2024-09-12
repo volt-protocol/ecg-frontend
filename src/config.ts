@@ -168,6 +168,7 @@ export let SelectableChainId = [42161, 11155111];
 export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
   42161: [
     {
+      deprecated: true,
       key: 'weth-3',
       pegToken: 'WETH',
       name: 'WETH',
@@ -176,6 +177,7 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
       logo: '/img/crypto-logos/weth.png'
     },
     {
+      deprecated: true,
       key: 'usdc-1',
       pegToken: 'USDC',
       name: 'USDC',
@@ -193,6 +195,7 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
       logo: '/img/crypto-logos/arb.png'
     },
     {
+      deprecated: true,
       key: 'od-5',
       pegToken: 'OD',
       name: 'OD',
@@ -201,6 +204,7 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
       logo: '/img/crypto-logos/od.png'
     },
     {
+      deprecated: true,
       key: 'dola-6',
       pegToken: 'DOLA',
       name: 'DOLA',
@@ -227,6 +231,7 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
       logo: '/img/crypto-logos/stusd.png'
     },
     {
+      deprecated: true,
       key: 'eusd-9',
       pegToken: 'eUSD',
       name: 'eUSD',
@@ -235,6 +240,7 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
       logo: '/img/crypto-logos/eusd.png'
     },
     {
+      deprecated: true,
       key: 'usdc-test',
       pegToken: 'USDC',
       name: 'USDC (test)',
@@ -243,6 +249,7 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
       logo: '/img/crypto-logos/usdc.png'
     },
     {
+      deprecated: true,
       key: 'weth-test',
       pegToken: 'WETH',
       name: 'WETH (test)',
@@ -253,6 +260,7 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
   ],
   11155111: [
     {
+      deprecated: true,
       key: 'USDC-sepolia',
       pegToken: 'USDC',
       name: 'USDC (test)',
@@ -261,6 +269,7 @@ export let marketsConfig: { [chainId: number]: SupportedMarket[] } = {
       logo: '/img/crypto-logos/usdc.png'
     },
     {
+      deprecated: true,
       key: 'MEME-sepolia',
       pegToken: 'WBTC',
       name: 'WBTC (test)',
